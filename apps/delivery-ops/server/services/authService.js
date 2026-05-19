@@ -284,6 +284,28 @@ function checkFeatureAccess(username, feature, options = {}) {
         error: role.isSuperAdmin ? undefined : 'Only super administrators can access team management features.'
       };
 
+    case 'dateMover': {
+      // D30: RM + TPM only. Until proper role tags exist in the config,
+      // map to an explicit allowlist `dateMoverAllowedUsers` plus
+      // superadmins. Falls open for admins so the system isn't unusable
+      // during initial rollout.
+      const config = getConfig();
+      const allowed = getAllowlist(config, 'dateMoverAllowedUsers', 'dateMoverOnly');
+      const authorized =
+        role.isSuperAdmin ||
+        role.isAdmin ||
+        role.specialAccess.dateMover ||
+        (allowed.length > 0 && isInList(username, allowed));
+      return {
+        authorized,
+        normalizedUsername,
+        userEmail,
+        error: authorized
+          ? undefined
+          : 'Only Release Managers and TPMs can move gate dates. Contact an admin to be added.'
+      };
+    }
+
     default:
       return { authorized: false, normalizedUsername, error: 'Unknown feature.' };
   }

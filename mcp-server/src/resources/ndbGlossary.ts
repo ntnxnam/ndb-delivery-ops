@@ -23,7 +23,7 @@ export function registerNdbGlossary(server: McpServer): void {
     {
       title: 'NDB-Ops Glossary',
       description:
-        'Authoritative definitions for NDB-Ops domain terms (VP, EC, CG, X-FEAT, ...). Pulled from ~/.cursor/context/ndb-ops/glossary.md so a single source of truth feeds both Cursor and MCP clients.',
+        'Authoritative definitions for NDB-Ops domain terms (Team Executive, EC, CG, X-FEAT, ...). Pulled from ~/.cursor/context/ndb-ops/glossary.md so a single source of truth feeds both Cursor and MCP clients.',
       mimeType: 'text/markdown',
     },
     async (uri) => {

@@ -19,7 +19,6 @@ import EmailHistoryTab from './components/EmailHistoryTab';
 import SprintReportPage from './components/SprintReportPage';
 import KPIPage from './components/KPIPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
-import ReleaseAnalysisPage from './components/ReleaseAnalysisPage';
 
 import './App.css';
 
@@ -133,17 +132,6 @@ const AuthenticatedApp = () => {
           <ProtectedRoute permissions={['release_trends_view']}>
             <Layout>
               <ReleaseTrendsPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/release-analysis" 
-        element={
-          <ProtectedRoute permissions={['release_trends_view']}>
-            <Layout>
-              <ReleaseAnalysisPage />
             </Layout>
           </ProtectedRoute>
         } 

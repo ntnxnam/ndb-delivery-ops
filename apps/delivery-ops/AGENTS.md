@@ -104,18 +104,17 @@ When working in the JIRA routes, do NOT inline these helpers — import them:
 ## Gotchas
 
 - Frontend port changed from 8888 → 6100 in a recent commit; old bookmarks fail.
-- `client/src/components/ReleaseAnalysisPage.js` has an intentional eslint-disable on its `useEffect`; reintroducing dependencies causes an infinite loop. Don't "fix" the warning.
 - Some tabs (Release Trends, Release Analysis) are gated behind `release_trends_view`; only granted via legacy `allowedUsers` mapping.
 
 ## Skills available
 
 The user-level skills under `~/.cursor/skills/` are all directly useful here:
 
-- `vp-release-report` — when the user asks for a VP-style release summary
+- `team-exec-release-report` — when the user asks for a Team Executive-style release summary
 - `sprint-gantt-chart` — when building a Gantt visualization
 - `fetch-project-tickets` — when gathering ticket data using the NDB JIRA hierarchy
 - `confluence-width-cleanup` — when fixing Confluence HTML pasted into descriptions
-- `predictive-vp-analytics` — when predictive/forecasting analysis is requested
+- `predictive-team-exec-analytics` — when predictive/forecasting analysis is requested
 
 ## When in doubt
 

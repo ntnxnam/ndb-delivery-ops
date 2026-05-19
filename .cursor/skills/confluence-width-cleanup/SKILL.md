@@ -23,7 +23,7 @@ procedure.
   (mandatory pre-push step)
 - A user pastes Confluence HTML/XML and asks to clean it
 - A weekly status email is being rendered to Confluence (D17, D15d)
-- A VP Executive report is being rendered to Confluence (D9, D15d)
+- A Team Executive report is being rendered to Confluence (D9, D15d)
 
 ## Quick Start
 

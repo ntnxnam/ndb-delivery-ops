@@ -11,7 +11,7 @@ const { formatDateWithHistoryHTML, formatAllCheckpointDatesHTML } = require('../
 const { formatContentForEmail, formatJiraWikiMarkupForEmail, adfToHtml } = require('../../utils/emailFormatter');
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { requireAuth } = require('../../middleware/authMiddleware');
-const { jiraTimeout, releaseAnalysisTimeout } = require('../../middleware/timeout');
+const { jiraTimeout } = require('../../middleware/timeout');
 const { getCached, setCached } = require('../../utils/simpleCache');
 const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
 const allowedUsersConfig = require('../../config/allowedUsers.json');
@@ -275,33 +275,6 @@ router.post('/test-jql', [
     res.status(500).json(formatErrorResponse(
       'test-jql',
       'JQL test failed',
-      apiError,
-      jiraMessage,
-      requestId
-    ));
-  }
-});
-
-/**
- * Release Analysis endpoint - fetch historical ticket data for velocity analysis
- * Fetches tickets for multiple releases using the specified JQL pattern
- */
-router.post('/release-analysis', [
-  releaseAnalysisTimeout,
-  requireAuth,
-  validateJiraTokenMiddleware
-], async (req, res) => {
-  const requestId = `release-analysis-${Date.now()}`;
-  try {
-    const data = await releaseAnalysisService.analyzeReleases(req.jiraToken, req.body || {});
-    return res.json({ success: true, ...data });
-  } catch (error) {
-    console.error(`[${requestId}] Release analysis error:`, error);
-    const apiError = extractApiError(error);
-    const jiraMessage = getJiraErrorMessage(error);
-    return res.status(500).json(formatErrorResponse(
-      'release-analysis',
-      'Failed to fetch release analysis data',
       apiError,
       jiraMessage,
       requestId
@@ -3667,7 +3640,7 @@ router.post('/generate-exec-summary', releaseVersionsLimiter, validateJiraTokenM
       !item.isLongTermFunded
     );
 
-    // Generate executive summary using VP report logic
+    // Generate executive summary using Team Executive report logic
     const execSummary = generateExecutiveSummary(version, commitItems, riskCounts, breakdownData);
 
     return res.json({ 
@@ -5226,10 +5199,10 @@ router.post('/validate-nai-key', async (req, res) => {
 });
 
 /**
- * Generate AI VP Report using NAI API
+ * Generate AI Team Executive Report using NAI API
  * POST /api/jira/generate-ai-vp-report
  * 
- * Generates a comprehensive VP executive report using NAI LLM and existing executive summary data
+ * Generates a comprehensive Team Executive executive report using NAI LLM and existing executive summary data
  */
 router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, res) => {
   try {
@@ -5253,7 +5226,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
       });
     }
 
-    console.log(`[generate-ai-vp-report] Generating AI VP Report for ${version}`);
+    console.log(`[generate-ai-vp-report] Generating AI Team Executive Report for ${version}`);
     const jiraToken = req.headers.authorization?.replace('Bearer ', '');
 
     // 1. Reuse the executive summary data logic
@@ -5406,7 +5379,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
       }
     };
 
-    // 3. Build VP Report prompt with improved formatting instructions
+    // 3. Build Team Executive Report prompt with improved formatting instructions
     const vpPrompt = buildVPReportPrompt(releaseData);
 
     console.log('[generate-ai-vp-report] Calling NAI API...');
@@ -5419,7 +5392,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
         messages: [
           {
             role: 'system',
-            content: 'You are a technical program analyst creating executive VP reports. Write in a HUMAN READABLE format that busy executives can quickly scan and understand. Use simple bullet points, clear language, and avoid dense tables. Focus on specific, actionable information from the actual JIRA data provided. NEVER invent fake names, percentages, dates, or generic corporate phrases. Skip generic risk categories like "slight risk to plan" - only mention specific, actionable issues. Reference actual JIRA tickets and real status data. Be factual, concise, and immediately actionable.'
+            content: 'You are a technical program analyst creating executive Team Executive reports. Write in a HUMAN READABLE format that busy executives can quickly scan and understand. Use simple bullet points, clear language, and avoid dense tables. Focus on specific, actionable information from the actual JIRA data provided. NEVER invent fake names, percentages, dates, or generic corporate phrases. Skip generic risk categories like "slight risk to plan" - only mention specific, actionable issues. Reference actual JIRA tickets and real status data. Be factual, concise, and immediately actionable.'
           },
           {
             role: 'user',
@@ -5446,12 +5419,12 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
 
     const aiGeneratedReport = naiResponse.data.choices[0].message.content;
 
-    console.log('[generate-ai-vp-report] AI VP Report generated successfully');
+    console.log('[generate-ai-vp-report] AI Team Executive Report generated successfully');
 
     return res.json({
       success: true,
       data: {
-        vpReport: aiGeneratedReport,
+        teamExecReport: aiGeneratedReport,
         releaseData: releaseData,
         generatedAt: new Date().toISOString(),
         version: version
@@ -5459,7 +5432,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
     });
 
   } catch (error) {
-    console.error('[generate-ai-vp-report] Error generating AI VP report:', error.message);
+    console.error('[generate-ai-vp-report] Error generating AI Team Executive report:', error.message);
     
     if (error.response?.status === 401) {
       return res.status(400).json({
@@ -5474,7 +5447,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
     } else {
       return res.status(500).json({
         success: false,
-        error: 'Failed to generate AI VP report',
+        error: 'Failed to generate AI Team Executive report',
         message: error.message
       });
     }
@@ -5563,7 +5536,7 @@ function analyzeProjectRisk(jiraItem) {
 }
 
 /**
- * Build optimized VP Report prompt - maximum insight with minimal tokens
+ * Build optimized Team Executive Report prompt - maximum insight with minimal tokens
  */
 function buildVPReportPrompt(releaseData) {
   const { version, totalProjects, p0BugsCount, riskCounts, projectDetails, dateMetrics, riskPercentages } = releaseData;
@@ -5713,7 +5686,7 @@ CRITICAL FORMATTING AND CONTENT REQUIREMENTS:
    - Skip generic risk reasons like "slight risk to plan" - only mention specific, actionable issues
    - Be factual and data-driven, avoiding phrases like "cascade into schedule slips" or "erode confidence"
 
-Generate a VP executive report that follows these requirements exactly.`;
+Generate a Team Executive executive report that follows these requirements exactly.`;
 
   return prompt;
 }

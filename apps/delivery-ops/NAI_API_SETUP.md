@@ -15,8 +15,8 @@ You now have the **Generate Executive Report** button in the Release Trends page
 3. Enter your NAI API key: **xxxxxxxxxxxxxxxxxx**
 4. Click **"Test & Save"** to validate and store the key
 
-### Step 3: Generate VP Reports
-- Once the key is validated and saved, you can generate AI-powered VP reports anytime
+### Step 3: Generate Team Executive Reports
+- Once the key is validated and saved, you can generate AI-powered Team Executive reports anytime
 - The key is stored securely in your browser's localStorage
 - If the key expires, you'll be prompted to update it
 

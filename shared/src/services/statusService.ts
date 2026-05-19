@@ -2,18 +2,18 @@
  * statusService — release status, risk, and rollup logic.
  *
  * This is the backbone service called by:
- *   - vp-specialist (releaseRag + topBlockers per D15)
+ *   - team-exec-specialist (releaseRag + topBlockers per D15)
  *   - tpm-specialist (releaseRagByActive, teamWeeklyDelta, featCallouts per D17)
  *   - rm-specialist (gateProgression per D20)
- *   - the VP / TPM / weekly-status workflows
+ *   - the Team Executive / TPM / weekly-status workflows
  *
  * Per `minimal-architecture.mdc`, business logic lives here, NOT in
  * route handlers. Per `citation-first-output.mdc`, every output includes
  * citations referencing the JQL queries + JIRA keys that produced it.
  *
  * Phase D1 implements:
- *   - releaseRag         (used by VP top tier, weekly status top tier)
- *   - topBlockers        (used by VP risk register)
+ *   - releaseRag         (used by Team Executive top tier, weekly status top tier)
+ *   - topBlockers        (used by Team Executive risk register)
  *   - getActiveReleases  (per D13)
  *
  * Phase D2 will add:
@@ -194,10 +194,10 @@ export class StatusService {
     };
   }
 
-  // ── D15a / VP risk register: topBlockers ─────────────────────────────────
+  // ── D15a / Team Executive risk register: topBlockers ─────────────────────────────────
 
   /**
-   * Return the ranked risk list for a release, used in the VP risk
+   * Return the ranked risk list for a release, used in the Team Executive risk
    * register (per D15b).
    *
    * Ranking: impact (P0 > P1 > P2) × proximity-to-RTM × uncertainty

@@ -45,6 +45,5 @@ const createTimeoutMiddleware = (timeoutMs = 30000) => {
 module.exports = {
   createTimeoutMiddleware,
   jiraTimeout: createTimeoutMiddleware(90000), // 90 seconds for JIRA endpoints
-  releaseAnalysisTimeout: createTimeoutMiddleware(180000), // 3 minutes for release analysis
   generalTimeout: createTimeoutMiddleware(30000) // 30 seconds for general endpoints
 };

@@ -42,7 +42,7 @@ export interface ReleaseRag {
   release: string;
   productId: string;
   rag: Rag;
-  /** One-line "why" — feeds the headline in VP audience output */
+  /** One-line "why" — feeds the headline in Team Executive audience output */
   headline: string;
   /** Citations supporting the RAG decision */
   citations: Citation[];
@@ -65,7 +65,7 @@ export type Confidence = 'high' | 'medium' | 'low';
 /**
  * Landing-date prediction — output of predictabilityService.predictLanding.
  *
- * Per D15 (VP protocol), this is half of the compound answer.
+ * Per D15 (Team Executive protocol), this is half of the compound answer.
  */
 export interface LandingPrediction {
   release: string;
@@ -85,7 +85,7 @@ export interface LandingPrediction {
 }
 
 /**
- * Risk register entry — D15's required output shape for VP audience.
+ * Risk register entry — D15's required output shape for Team Executive audience.
  *
  * Per D15b, the answer is NOT compressed bullets — it's a register format
  * with each entry containing what / owner / ETA / mitigation / impact.
@@ -107,7 +107,7 @@ export interface Risk {
 }
 
 /**
- * Top-blockers output — the second half of the VP compound answer (D15a).
+ * Top-blockers output — the second half of the Team Executive compound answer (D15a).
  */
 export interface TopBlockers {
   release: string;

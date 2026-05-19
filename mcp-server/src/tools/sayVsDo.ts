@@ -3,7 +3,7 @@
  *
  * For a release version, compare what we *committed* (planned story
  * points) against what we *delivered* (resolved story points). The
- * canonical Nutanix VP-level metric for release predictability.
+ * canonical Nutanix team-exec-level metric for release predictability.
  *
  * Replaces the standalone ~/ndb-say-vs-do/ Node app, which combined the
  * JIRA aggregation with its own React UI. We move the aggregation here;
@@ -37,7 +37,7 @@ const inputSchema = {
   version: z.string()
     .describe('JIRA fixVersion name, e.g. "NDB-2.11".'),
   issueTypes: z.array(z.string()).optional()
-    .describe('Restrict to specific issue types. Defaults to ["Feature","Initiative","X-FEAT","Capability"] — VP-level units of commitment.'),
+    .describe('Restrict to specific issue types. Defaults to ["Feature","Initiative","X-FEAT","Capability"] — team-exec-level units of commitment.'),
 };
 
 export function registerSayVsDo(server: McpServer, env: Env): void {

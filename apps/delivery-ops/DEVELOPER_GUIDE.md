@@ -119,12 +119,12 @@ ndb-status-update-sender/
 │   │   ├── nutanix-jira-date-hierarchy.mdc   # JIRA date field logic by issue type
 │   │   └── react-useeffect-infinite-loop-prevention.md
 │   └── skills/                    # AI task skills
-│       ├── vp-release-report/
+│       ├── team-exec-release-report/
 │       ├── fetch-project-tickets/
 │       ├── sprint-gantt-chart/
-│       ├── predictive-vp-analytics/
+│       ├── predictive-team-exec-analytics/
 │       └── confluence-width-cleanup/
-├── reports/                       # Generated VP/Sprint/Prediction reports (with frontmatter)
+├── reports/                       # Generated Team Executive/Sprint/Prediction reports (with frontmatter)
 ├── docs/                          # REQUIREMENTS.md, TECH_DESIGN.md, TEST_PLAN.md
 └── package.json                   # Root: concurrently runs server + client
 ```
@@ -355,12 +355,12 @@ The cross-project rules live at the user level under `~/.cursor/rules/` and appl
 ```
 {ReportType}-{Product}-{Release}-{YYYY-MM-DD}{-Variant}.{ext}
 ```
-Example: `VP-Executive-NDB-2.11-2026-05-08.md`
+Example: `TeamExec-NDB-2.11-2026-05-08.md`
 
 **Report frontmatter** (required in every `.md` report):
 ```yaml
 ---
-report_type: VP-Executive | Sprint | Detailed | KPI | Prediction
+report_type: Team Executive-Executive | Sprint | Detailed | KPI | Prediction
 product: NDB
 release: "2.11"
 generated: YYYY-MM-DD

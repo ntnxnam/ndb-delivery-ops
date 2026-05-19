@@ -1,12 +1,12 @@
 ---
-name: vp-specialist
+name: team-exec-specialist
 role: specialist
 parent: ops-assistant
-description: Internal sub-agent invoked by ops-assistant when the audience is VP or Director. Owns the compound-question + risk-register answer protocol per D15.
-audience: vp, director
+description: Internal sub-agent invoked by ops-assistant when the audience is Team Executive or Director. Owns the compound-question + risk-register answer protocol per D15.
+audience: team-exec, director
 ---
 
-# VP Specialist Sub-Agent
+# Team Executive Specialist Sub-Agent
 
 Invoked by `ops-assistant` (the orchestrator). The user never addresses
 this specialist directly.
@@ -15,15 +15,15 @@ this specialist directly.
 
 - Caller's audience is `vp` or `director`
 - Question is about release status, release health, blockers, or "are we going to ship X?"
-- Or: scheduled VP email digest (Monday morning, opt-in per D14)
-- Or: a status answer that will be rendered into a Confluence VP page
+- Or: scheduled Team Executive email digest (Monday morning, opt-in per D14)
+- Or: a status answer that will be rendered into a Confluence Team Executive page
 
 ## What I do
 
-I run the locked **VP answer protocol** from D15. Every question I receive
+I run the locked **Team Executive answer protocol** from D15. Every question I receive
 is treated as a **compound question** — even if only one half is voiced.
 
-Skill: see `.cursor/skills/vp-status-answer/SKILL.md` for the full procedure.
+Skill: see `.cursor/skills/team-exec-status-answer/SKILL.md` for the full procedure.
 
 ### Inputs from orchestrator
 
@@ -31,7 +31,7 @@ Skill: see `.cursor/skills/vp-status-answer/SKILL.md` for the full procedure.
 - `audience`: `vp` or `director`
 - `outputSurface`: `chat` | `email` | `confluence` (drives renderer)
 - `productId` from session
-- `userIdentity` for tone calibration (per D10 — some VPs prefer hands-off)
+- `userIdentity` for tone calibration (per D10 — some Team Executives prefer hands-off)
 
 ### Outputs back to orchestrator
 
@@ -122,8 +122,8 @@ Same payload, three renderers:
 
 ## Cross-references
 
-- `.cursor/skills/vp-status-answer/SKILL.md` — the procedure
+- `.cursor/skills/team-exec-status-answer/SKILL.md` — the procedure
 - `.cursor/rules/citation-first-output.mdc` — citation policy
 - `.cursor/rules/persona-aware-output.mdc` — audience presenter rules
-- `~/.cursor/context/audience.md` — VP audience definition
+- `~/.cursor/context/audience.md` — Team Executive audience definition
 - `DECISIONS.md` — D4, D10, D15, D15d

@@ -43,8 +43,8 @@ export interface ProductCustomFields {
 }
 
 /**
- * Per-audience overrides per product. e.g. NDB's VP has a different
- * name than DataLens's VP; the renderer reads display names from here.
+ * Per-audience overrides per product. e.g. NDB's Team Executive has a different
+ * name than DataLens's Team Executive; the renderer reads display names from here.
  */
 export interface AudienceOverrides {
   /** Display name of the recipient ("Hi <recipientName>,") */

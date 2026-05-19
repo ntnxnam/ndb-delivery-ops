@@ -45,7 +45,7 @@ Bottom tier — FEAT-level callouts
   hit a gate, slipped on a date, etc.) — one paragraph each
 ```
 
-Audience is `broad_leadership` (D17): VPs read the top, EMs read the
+Audience is `broad_leadership` (D17): Team Executives read the top, EMs read the
 middle for their team, FEAT owners check the bottom. The 3-tier structure
 serves all three reading patterns.
 
@@ -104,7 +104,7 @@ The renderer produces ONE HTML email but with anchor links so different
 audiences jump to their section:
 
 ```html
-<a name="release-rollup">Release Rollup (VP section)</a>
+<a name="release-rollup">Release Rollup (Team Executive section)</a>
 <a name="team-status">Team Status (EM section)</a>
 <a name="feat-callouts">FEAT Callouts</a>
 ```
@@ -114,7 +114,7 @@ via `confluence-publisher-specialist`).
 
 ## When to ASK rather than answer
 
-- Audience is unclear: TPM-audience or VP-audience? Different density.
+- Audience is unclear: TPM-audience or Team Executive-audience? Different density.
 - Weekly email triggered but no active releases tagged (D13) — ask whether
   to include planning releases too
 - A team has no commits / sprints since last week — confirm whether to call

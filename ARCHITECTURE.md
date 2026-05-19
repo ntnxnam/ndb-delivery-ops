@@ -41,7 +41,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 │ Layer 5: UI & AI surfaces                                            │
 │  ┌────────────────────────────┐    ┌─────────────────────────────┐   │
 │  │ delivery-ops React app     │    │ Cursor agents & workflows   │   │
-│  │ (single :8888 runtime,     │    │ (TPM, RM, VP, FEAT Mgr,     │   │
+│  │ (single :8888 runtime,     │    │ (TPM, RM, Team Executive, FEAT Mgr,     │   │
 │  │  persona-aware sidebar)    │    │  Team Mgr, IC assistants)   │   │
 │  └────────────────────────────┘    └─────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
@@ -134,8 +134,8 @@ one domain's business logic. A service:
 | `sprintService` | Sprint health, classification, trends | `/api/sprints/*` (existing route, refactored) |
 | `dateService` | Bulk date moves with audit + rollback | `/api/dates/*`, `mcp:moveJiraDates` |
 | `storyPointsService` | Story-point roll-up across descendants | `/api/sizing/*`, `mcp:calculateStoryPoints` |
-| `chartService` *(new, D4)* | Render charts (RAG-over-time, predictability, scope creep, top risks by owner) as SVG/PNG, audience-aware | inline in chat, VP report, KPI dashboard, emails |
-| `nlpQueryService` *(new, D4)* | Natural language → tool-call plan. Routes VP/RM questions to the right MCP tools + connectors | Ops Assistant agent (primary), any chat surface |
+| `chartService` *(new, D4)* | Render charts (RAG-over-time, predictability, scope creep, top risks by owner) as SVG/PNG, audience-aware | inline in chat, Team Executive report, KPI dashboard, emails |
+| `nlpQueryService` *(new, D4)* | Natural language → tool-call plan. Routes Team Executive/RM questions to the right MCP tools + connectors | Ops Assistant agent (primary), any chat surface |
 | `productService` *(new, D1)* | Resolve `productId` → JIRA project key(s), Confluence space, GitHub org, audience config | every service that touches external systems |
 
 ### Layer 4 — API + MCP tools
@@ -158,7 +158,7 @@ Two parallel surfaces over the services:
 - **All capabilities visible to all users** (D6). The Portfolio Manager sees
   everything; specialists see everything too — they just lean on different
   pages. No nav-level filtering.
-- **Role lens dropdown** in the header (D6): "Show me this page as VP / EM /
+- **Role lens dropdown** in the header (D6): "Show me this page as Team Executive / EM /
   IC". Re-renders the current data using the audience preset, never hides
   data.
 - **Embedded chat panel** (D7): the Ops Assistant agent lives as a persistent
@@ -171,7 +171,7 @@ Two parallel surfaces over the services:
 
 **Cursor agents & workflows** (`.cursor/`)
 - One agent per persona (`vp-assistant.md`, `tpm-assistant.md`, etc.)
-- Workflows chain MCP tools for recurring playbooks (Monday status, quarterly VP report, …)
+- Workflows chain MCP tools for recurring playbooks (Monday status, quarterly Team Executive report, …)
 - Skills are reusable procedures (`vp-executive-report`, `confluence-width-cleanup`, …)
 - Rules are global constraints (`persona-aware-output`, `no-localhost`, …)
 

@@ -110,6 +110,7 @@ const jiraRoutes = require('./routes/jira');
 const emailRoutes = require('./routes/email');
 const statusSnapshotsRoutes = require('./routes/statusSnapshots');
 const adminRoutes = require('./routes/admin');
+const dateMoverRoutes = require('./routes/dateMover');
 // const crystalballRoutes = require('./routes/crystalball'); // Disabled - consolidated to NAI API
 
 // CORS preflight: ensure OPTIONS for /api/* always succeeds (avoid 404 for preflight)
@@ -128,6 +129,7 @@ app.use('/api/jira', jiraRoutes); // JIRA routes at /api/jira/*
 app.use('/api/email', emailRoutes); // Email routes at /api/email/*
 app.use('/api/status-snapshots', statusSnapshotsRoutes); // Snapshots & trends
 app.use('/api/admin', adminRoutes); // Admin team management routes
+app.use('/api/date-mover', dateMoverRoutes); // D30: gate-date moves w/ Confluence audit
 // app.use('/api/crystalball', crystalballRoutes); // Disabled - consolidated to NAI API
 
 // CrystalBallI Integration - Conversational AI

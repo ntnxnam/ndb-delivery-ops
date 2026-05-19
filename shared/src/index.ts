@@ -16,9 +16,16 @@ export * as services from './services/index.js';
 
 // Common re-exports for convenience.
 export { JiraConnector } from './connectors/jiraConnector.js';
+export { ConfluenceConnector } from './connectors/confluenceConnector.js';
 export { loadEnv } from './connectors/env.js';
 export { ProductService, getProductService } from './services/productService.js';
 export { StatusService } from './services/statusService.js';
 export { PredictabilityService } from './services/predictabilityService.js';
 export { DependencyService } from './services/dependencyService.js';
 export { ChartService } from './services/chartService.js';
+export {
+  DateMoverService,
+  GATE_DATE_FIELDS,
+  isGateDateField,
+  buildAuditRow,
+} from './services/dateMoverService.js';

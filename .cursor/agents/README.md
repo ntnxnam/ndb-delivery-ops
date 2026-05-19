@@ -19,7 +19,7 @@ not select these manually.
 
 | Specialist | File | Owns |
 |---|---|---|
-| VP Specialist | `specialists/vp-specialist.md` | VP / Director status answers (D15 protocol) |
+| Team Executive Specialist | `specialists/team-exec-specialist.md` | Team Executive / Director status answers (D15 protocol) |
 | TPM Specialist | `specialists/tpm-specialist.md` | Weekly status (D17), cross-team coordination |
 | RM Specialist | `specialists/rm-specialist.md` | Release readiness, gates, cascade renames |
 | Triage Specialist | `specialists/triage-specialist.md` | 4 triage flavours (D19) |

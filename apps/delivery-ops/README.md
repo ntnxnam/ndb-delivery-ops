@@ -24,7 +24,7 @@ A web application for Confluence-based status update emails and JIRA release ver
 
 **Documentation cleanup:**
 
-- All 5 skill files (`vp-release-report`, `confluence-width-cleanup`, `fetch-project-tickets`, `sprint-gantt-chart`, `predictive-vp-analytics`) normalised to the same 5-section structure: `When to Use`, `Quick Start`, `Core Rules`, `Output Format`, `Quality Validation`.
+- All 5 skill files (`team-exec-release-report`, `confluence-width-cleanup`, `fetch-project-tickets`, `sprint-gantt-chart`, `predictive-team-exec-analytics`) normalised to the same 5-section structure: `When to Use`, `Quick Start`, `Core Rules`, `Output Format`, `Quality Validation`.
 - All 10 existing `reports/*.md` files retrofitted with YAML frontmatter (`report_type`, `product`, `release`, `generated`, `data_source`).
 - `DEVELOPER_GUIDE.md` updated: directory structure, key files table, and new section 13 (Architecture Rules).
 

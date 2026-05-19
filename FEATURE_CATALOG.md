@@ -30,20 +30,20 @@ that needs it.
 
 | Capability (service) | Surfaces it appears in |
 |---|---|
-| **Story Point Roll-up** (`storyPointsService.rollUp`) | • standalone page (Domain 2) for "size my Feature" workflow  • column in Release Versions table (`/all-status`)  • column in Outstanding Work tracker  • field in VP Executive Report  • MCP tool `calculateStoryPoints` |
-| **RAG / Risk Score** (`statusService.calcRag`) | • column in Release Versions  • headline badge in VP Executive Report  • status cell in Sync Hub landing  • indicator in Release Brief  • indicator in Outstanding Work |
+| **Story Point Roll-up** (`storyPointsService.rollUp`) | • standalone page (Domain 2) for "size my Feature" workflow  • column in Release Versions table (`/all-status`)  • column in Outstanding Work tracker  • field in Team-Executive Report  • MCP tool `calculateStoryPoints` |
+| **RAG / Risk Score** (`statusService.calcRag`) | • column in Release Versions  • headline badge in Team-Executive Report  • status cell in Sync Hub landing  • indicator in Release Brief  • indicator in Outstanding Work |
 | **Date Shift** (`dateService.cascade`) | • standalone Date Mover page  • inline "shift dates" action on a Release Versions row  • used by Release Cascade Rename workflow  • MCP tool `moveJiraDates` |
-| **Say vs Do** (`predictabilityService.sayVsDo`) | • standalone page  • card in VP Dashboard  • badge on Team Profile  • column in Release Versions for FEAT predictability  • MCP tool `sayVsDo` |
+| **Say vs Do** (`predictabilityService.sayVsDo`) | • standalone page  • card in Team Executive Dashboard  • badge on Team Profile  • column in Release Versions for FEAT predictability  • MCP tool `sayVsDo` |
 | **Sprint Health metrics** (`sprintService.classify` + carryover/scope-creep) | • Sprint Report page  • tile in Team Profile  • sparkline in KPI Dashboard  • input to Sprint Planner |
 | **Capacity calc** (`capacityService.estimate`) | • standalone Capacity Planner page  • input column in Bin-Packing  • badge in Team Profile  • MCP tool `planCapacity` |
-| **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in VP Executive Report  • alert in Sync Hub |
-| **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in VP Executive Report |
+| **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in Team-Executive Report  • alert in Sync Hub |
+| **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in Team-Executive Report |
 | **Confluence Connector** (`confluenceConnector`) | • Bulk Page Creator  • Template Editor  • Confluence Extractor  • future Status Page Auto-Publisher  • any skill that publishes to Confluence |
 | **Confluence Width Cleanup** (`.cursor/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
 | **Sprint Classification** (`sprintService.classify`) | • used inside Sprint Health  • used inside Story Point Roll-up (only counts committed work)  • used inside Capacity calc (uses delivered velocity) |
 | **JIRA Connector** (`jiraConnector`) | every feature in every domain |
-| **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • VP Executive Report  • KPI Dashboard  • Status email HTML  • Sync Hub (release-analytics rebuild) |
-| **NLP → query plan** (`nlpQueryService` — D4) | • Ops Assistant agent (primary)  • VP "how's NDB-2.11?" intents  • any "ask in plain English" chat surface |
+| **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML  • Sync Hub (release-analytics rebuild) |
+| **NLP → query plan** (`nlpQueryService` — D4) | • Ops Assistant agent (primary)  • Team Executive "how's NDB-2.11?" intents  • any "ask in plain English" chat surface |
 | **Product context** (`productService` — D1) | • every Layer-3 service that touches external systems  • product picker in delivery-ops top bar  • per-product audience overrides for `audience.md` styles |
 
 How to read this: the rows are services in Layer 3. Every "Surface" is either
@@ -66,7 +66,7 @@ The "what's the status of release X?" job, in five different audiences.
 | Feature                       | Job                                                                          | Persona           | State    | Source                                                                       | Decision                                    |
 | ----------------------------- | ---------------------------------------------------------------------------- | ----------------- | -------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
 | Release Versions Table        | Show every FEAT/Initiative for a release with risk indicators, dates, owners | TPM, RM, FEAT Mgr | live     | `apps/delivery-ops` ReleaseVersionTab                                        | **keep**                                    |
-| VP Executive Report           | Single-page exec summary for a release, RAG + top risks                      | VP                | live     | `apps/delivery-ops` + vp-release-report skill                                | **keep, polish**                            |
+| Team-Executive Report           | Single-page exec summary for a release, RAG + top risks                      | Team Executive                | live     | `apps/delivery-ops` + team-exec-release-report skill                                | **keep, polish**                            |
 | Status Email Sender           | Compose + send a status email built from a JIRA query                        | TPM, FEAT Mgr     | live     | `apps/delivery-ops` GenericEmailer                                           | **keep**                                    |
 | Release Brief / One-Pager     | Compact, publishable release status doc                                      | RM, TPM           | archived | `_archive/ndb-release-sprint-analysis-with-chatbot/pages/7_Release_Brief.py` | **rebuild as React page**                   |
 | Outstanding Work Tracker      | List of work-not-done with realistic ETAs and blockers                       | RM, TPM           | archived | `_archive/NDB-Outstanding-Work-Realistic-Timelines.tar.gz`                   | **rebuild as React page**                   |
@@ -103,8 +103,8 @@ The "when will it land, and is our schedule realistic?" job.
 | ---------------------------------- | --------------------------------------------------------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
 | Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `mcp-server/src/tools/ganttReleaseTimeline.ts` + `apps/delivery-ops` ReleaseVersionGantt | **merge into one UI page**                    |
 | Sprint Gantt                       | Sprint-by-sprint timeline of tickets                            | EM      | live                    | `apps/delivery-ops` (sprint-gantt-chart skill)                                           | **keep**                                      |
-| Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | VP, RM  | mcp-only                | `mcp-server/src/tools/sayVsDo.ts`                                                        | **build UI page**                             |
-| Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | VP, RM  | live (mock data)        | `apps/delivery-ops` + `crystalball-i/`                                                   | **wire to real data**                         |
+| Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | Team Executive, RM  | mcp-only                | `mcp-server/src/tools/sayVsDo.ts`                                                        | **build UI page**                             |
+| Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | Team Executive, RM  | live (mock data)        | `apps/delivery-ops` + `crystalball-i/`                                                   | **wire to real data**                         |
 | Sprint Analysis                    | Per-sprint deep-dive: scope creep, carry-over, blockers         | EM, TPM | live                    | `apps/delivery-ops` SprintReportPage                                                     | **keep, merge with archived Sprint_Analysis** |
 | Release Analysis                   | Per-release deep-dive                                           | RM      | live                    | `apps/delivery-ops` ReleaseAnalysisPage                                                  | **keep**                                      |
 
@@ -166,10 +166,10 @@ The "track the metrics that matter to leadership" job.
 
 | Feature                  | Job                                                                      | Persona | State        | Source                                           | Decision                     |
 | ------------------------ | ------------------------------------------------------------------------ | ------- | ------------ | ------------------------------------------------ | ---------------------------- |
-| KPI Dashboard            | Track defined KPIs (bug count, velocity, predictability) over time       | VP, RM  | live         | `apps/delivery-ops` KPIPage                      | **keep**                     |
+| KPI Dashboard            | Track defined KPIs (bug count, velocity, predictability) over time       | Team Executive, RM  | live         | `apps/delivery-ops` KPIPage                      | **keep**                     |
 | KPI Editor               | Define + modify which KPIs are tracked and their thresholds              | Ops PM  | live         | `apps/delivery-ops` (KPI admin)                  | **keep**                     |
-| Leadership Commit Report | GitHub commit activity for leadership/managers (signal of hands-on time) | VP      | mcp-only     | `mcp-server/src/tools/leadershipCommitReport.ts` | **keep as MCP-only (niche)** |
-| Predictive VP Analytics  | Forecast quality, completion, risk for a release                         | VP      | live (skill) | `.cursor/skills/predictive-vp-analytics/`        | **keep**                     |
+| Leadership Commit Report | GitHub commit activity for leadership/managers (signal of hands-on time) | Team Executive      | mcp-only     | `mcp-server/src/tools/leadershipCommitReport.ts` | **keep as MCP-only (niche)** |
+| Predictive Team Executive Analytics  | Forecast quality, completion, risk for a release                         | Team Executive      | live (skill) | `.cursor/skills/predictive-team-exec-analytics/`        | **keep**                     |
 
 
 ---
@@ -183,7 +183,7 @@ Foundational features every other domain depends on.
 | ---------------------- | ------------------------------------------------------------------- | ------- | ------------------- | --------------------------------------- | ------------------------------------- |
 | User Management        | Add / remove users, set roles                                       | Admin   | live                | `apps/delivery-ops` AdminPanel          | **keep**                              |
 | Team Management        | Define teams, project keys, board IDs, base filters                 | Admin   | live                | `apps/delivery-ops` TeamList            | **keep**                              |
-| Role-Based Permissions | Map users to personas (VP / TPM / RM / FEAT / EM / IC) and to pages | Admin   | live (lightly used) | `apps/delivery-ops` auth/permissions    | **extend to drive persona-aware nav** |
+| Role-Based Permissions | Map users to personas (Team Executive / TPM / RM / FEAT / EM / IC) and to pages | Admin   | live (lightly used) | `apps/delivery-ops` auth/permissions    | **extend to drive persona-aware nav** |
 | Auth (JIRA PAT)        | Authenticate users via JIRA Personal Access Token                   | All     | live                | `apps/delivery-ops` auth/               | **keep**                              |
 | Notifications          | In-app toasts, error banners                                        | All     | live                | `apps/delivery-ops` notificationService | **keep**                              |
 
@@ -253,8 +253,8 @@ visibility filter.
 | Persona                       | Domains they live in                              | Default landing surface                 | Primary interaction mode                |
 | ----------------------------- | ------------------------------------------------- | --------------------------------------- | --------------------------------------- |
 | **Portfolio Manager** (you)   | all 8                                             | Ops Assistant chat + Release Versions   | agent + dashboards + workflows          |
-| VP / SVP                      | 1, 3, 7                                           | Ops Assistant chat (VP lens)            | **agent-first, NLP, charts** (D4)       |
-| Director                      | 1, 3, 7                                           | Ops Assistant chat (similar to VP)      | agent + dashboards                      |
+| Team Executive / SVP                      | 1, 3, 7                                           | Ops Assistant chat (Team Executive lens)            | **agent-first, NLP, charts** (D4)       |
+| Director                      | 1, 3, 7                                           | Ops Assistant chat (similar to Team Executive)      | agent + dashboards                      |
 | TPM                           | 1, 4, 5, 6                                        | Release Versions                        | pages + agent for triage                |
 | RM                            | 1, 2, 3, 6, 7                                     | Sync Hub (rebuilt as React)             | pages + workflows                       |
 | FEAT Manager                  | 1, 2 (story points, dates), 3                     | Release Versions filtered to their FEAT | pages                                   |
@@ -268,9 +268,9 @@ visibility filter.
 
 - Roles **6–11** (TPM down) primarily use **pages + dashboards**. They live in
   the data and click through tables.
-- Roles **2–5** (VP, Director, Portfolio Manager) primarily use the **Ops
+- Roles **2–5** (Team Executive, Director, Portfolio Manager) primarily use the **Ops
   Assistant agent** in chat. The page surfaces exist as drill-in / fallback.
 - The same React app serves both — what differs is which UI element gets the
-  user's first click. VPs land in chat; FEAT Mgrs land in a table.
+  user's first click. Team Executives land in chat; FEAT Mgrs land in a table.
 
 

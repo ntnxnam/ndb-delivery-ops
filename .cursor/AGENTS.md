@@ -30,7 +30,7 @@ The orchestrator:
 
 | Skill file | Specialist | Use when |
 |---|---|---|
-| `.cursor/skills/vp-status-answer/` | `vp-specialist` | VP / Director asks about release status |
+| `.cursor/skills/team-exec-status-answer/` | `team-exec-specialist` | Team Executive / Director asks about release status |
 | `.cursor/skills/weekly-status-email/` | `tpm-specialist` | Weekly TPM status email (Monday job or on demand) |
 | `.cursor/skills/bug-triage/` | `triage-specialist` | New defects need triage |
 | `.cursor/skills/crisis-triage/` | `triage-specialist` | P0 / escalation |
@@ -44,7 +44,7 @@ The orchestrator:
 Multi-step playbooks that chain MCP tools + skills. See `.cursor/workflows/`:
 
 - `monday-release-status.md` — weekly release status pipeline
-- `quarterly-vp-report.md` — predictive VP report + Confluence publish
+- `quarterly-team-exec-report.md` — predictive Team Executive report + Confluence publish
 - `release-cascade-rename.md` — safe end-to-end version rename
 
 ## Pillars (Anthropic agentic architecture)

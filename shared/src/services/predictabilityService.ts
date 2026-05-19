@@ -1,104 +1,46 @@
 /**
- * predictabilityService — landing predictions, say-vs-do.
+ * predictabilityService — RETIRED PENDING PORT.
  *
- * Phase D1 ships a stub returning a heuristic prediction with `low`
- * confidence so the VP path runs end-to-end without crashing. Phase D2
- * replaces it with the real historical-velocity-based predictor (existing
- * code lives in `apps/delivery-ops/server/services/releaseAnalysisService.js`
- * and the `crystalball-i/` package).
+ * This module previously held a Phase D1 stub. It has been retired in
+ * favour of two concrete capabilities tracked in `CONSOLIDATION.md`:
  *
- * Cross-references:
- *   - DECISIONS.md → D15 (VP protocol uses predictLanding)
- *   - .cursor/skills/vp-status-answer/SKILL.md
+ *   - #4  landingForecastService (port from
+ *         release-sprint-analysis-with-chatbot/landing_forecast.py)
+ *   - #8  predictiveAnalyticsService (port from
+ *         ~/.cursor/skills/predictive-team-exec-analytics/)
+ *   - #15 sayVsDoService (port from ndb-say-vs-do/)
+ *
+ * The class is kept as an export so existing type references resolve,
+ * but every method throws at runtime to surface the retirement loudly.
+ *
+ * When the real services land, delete this file and the re-export in
+ * `shared/src/index.ts`.
  */
 
-import type { JiraConnector } from '../connectors/jiraConnector.js';
-import type { ProductService } from './productService.js';
-import type { StatusService } from './statusService.js';
-import type {
-  LandingPrediction,
-  Citation,
-} from '../types/release.js';
+const RETIRED_MESSAGE =
+  'PredictabilityService is retired. ' +
+  'Use landingForecastService (#4), predictiveAnalyticsService (#8), or sayVsDoService (#15). ' +
+  'See CONSOLIDATION.md for the port plan.';
 
 export interface PredictabilityServiceOptions {
-  jira: JiraConnector;
-  products: ProductService;
-  status: StatusService;
+  // Kept loose: the retired class is a no-op shim.
+  [k: string]: unknown;
 }
 
 export class PredictabilityService {
-  // Reserved for Phase D2 — full velocity-based predictor will use these.
-  // private jira: JiraConnector;
-  // private products: ProductService;
-  private status: StatusService;
-
-  constructor(opts: PredictabilityServiceOptions) {
-    // this.jira = opts.jira;
-    // this.products = opts.products;
-    this.status = opts.status;
+  constructor(_opts: PredictabilityServiceOptions = {}) {
+    // No-op: the retired class is constructed but cannot be used.
   }
 
-  /**
-   * Phase D1 implementation: best-effort landing prediction.
-   *
-   * Algorithm:
-   *   1. Read the active release's targetRtmDate from JIRA (if set)
-   *   2. Compute open scope count via statusService
-   *   3. Adjust target date by a fixed "open-scope nudge" with low confidence
-   *
-   * Phase D2 will replace with real velocity-based forecasting (existing
-   * CrystalBall-I code).
-   */
-  async predictLanding(productId: string, releaseName: string): Promise<LandingPrediction> {
-    const activeReleases = await this.status.getActiveReleases(productId);
-    const release = activeReleases.find((r) => r.name === releaseName);
-    const baseDate = release?.targetRtmDate
-      ? new Date(release.targetRtmDate)
-      : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // +60d default
-    const predictedDate = baseDate.toISOString().split('T')[0]!;
-    const citations: Citation[] = [
-      {
-        kind: 'data-source',
-        label: 'predictabilityService.predictLanding (Phase D1 stub)',
-        reference: `release:${releaseName}, target_rtm:${release?.targetRtmDate ?? 'unset'}`,
-        capturedAt: new Date().toISOString(),
-      },
-    ];
-    return {
-      release: releaseName,
-      productId,
-      predictedDate,
-      confidence: 'low',
-      citations,
-      inputs: {
-        openTickets: 0, // Phase D2 will populate from statusService
-      },
-      computedAt: new Date().toISOString(),
-    };
+  async predictLanding(_productId: string, _releaseName: string): Promise<never> {
+    throw new Error(RETIRED_MESSAGE);
   }
 
-  /**
-   * Say-vs-Do predictability metric — % of committed sprint work
-   * actually delivered, averaged over N recent sprints.
-   *
-   * Phase D2: implement using sprintService once it exists.
-   */
   async sayVsDo(
     _productId: string,
     _releaseName: string,
-    _options: { sprints?: number } = {}
-  ): Promise<{ percent: number; confidence: 'high' | 'medium' | 'low'; citations: Citation[] }> {
-    // Phase D2 stub.
-    return {
-      percent: 0,
-      confidence: 'low',
-      citations: [
-        {
-          kind: 'data-source',
-          label: 'predictabilityService.sayVsDo (Phase D2 stub)',
-          reference: 'not-implemented',
-        },
-      ],
-    };
+    _options?: unknown
+  ): Promise<never> {
+    throw new Error(RETIRED_MESSAGE);
   }
 }

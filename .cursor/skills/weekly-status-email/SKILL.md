@@ -1,6 +1,6 @@
 ---
 name: weekly-status-email
-description: Generate the 3-tier hybrid weekly status email for broad leadership (VP + Directors + EMs + principal engineers + other TPMs). Use on Mondays for the weekly digest, or on demand when the TPM (or Portfolio Manager wearing TPM hat) asks for "this week's status."
+description: Generate the 3-tier hybrid weekly status email for broad leadership (Team Executive + Directors + EMs + principal engineers + other TPMs). Use on Mondays for the weekly digest, or on demand when the TPM (or Portfolio Manager wearing TPM hat) asks for "this week's status."
 audience: tpm, portfolio_mgr
 ---
 
@@ -43,7 +43,7 @@ Procedure:
 
 1. **Fixed 3-tier structure** (D17). Release-level top, team-level middle,
    FEAT-level callouts bottom. Don't introduce a 4th tier or collapse to 2.
-2. **Broad-leadership audience** — multi-section with anchor links so VPs
+2. **Broad-leadership audience** — multi-section with anchor links so Team Executives
    jump to top tier, EMs jump to their team's row in middle tier, FEAT
    owners jump to their callouts in bottom tier.
 3. **Citation on every status claim** (D10). Use the citation form
@@ -113,7 +113,7 @@ Procedure:
 - [ ] Only `status: active` releases in top tier
 - [ ] Each team in middle tier has at least one citation (commit OR ticket)
 - [ ] FEAT callouts are filtered to status-changed-this-week
-- [ ] Total length ≤ 1 screen for top tier (VPs read just that)
+- [ ] Total length ≤ 1 screen for top tier (Team Executives read just that)
 - [ ] Anchor links present (`#release-rollup`, `#team-status`, `#feat-callouts`)
 - [ ] Inline-CSS HTML, no external assets
 - [ ] Confluence variant runs `confluence-width-cleanup` before push (D15d, D17)

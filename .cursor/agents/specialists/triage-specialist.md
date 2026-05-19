@@ -107,8 +107,8 @@ Triage outputs are usually consumed by Portfolio Manager or TPM. Default
 audience: `portfolio_mgr` (full firehose) when invoked interactively;
 `tpm` when surfaced into a weekly digest.
 
-VPs do not see triage details — they see only the *aggregate* counts via
-the VP specialist.
+Team Executives do not see triage details — they see only the *aggregate* counts via
+the Team Executive specialist.
 
 ## Cross-references
 

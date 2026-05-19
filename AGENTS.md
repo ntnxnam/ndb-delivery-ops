@@ -13,7 +13,7 @@ per **D1** — NDB is one tenant, DataLens and others are equally valid.
 
 A single monorepo for **portfolio delivery operations** across products.
 Designed for one consumer category — the **Portfolio Manager** — and its
-adjacent personas (VP, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Architect).
+adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Architect).
 
 | Workspace | Stack | Purpose |
 |---|---|---|
@@ -44,12 +44,12 @@ adjacent personas (VP, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Architect).
 ## AI layer — orchestrator-workers pattern (D16)
 
 **One user-facing orchestrator agent**: `.cursor/agents/ops-assistant.md`.
-This is what every user (Portfolio Manager, VP, RM, TPM, EM, FEAT, IC)
+This is what every user (Portfolio Manager, Team Executive, RM, TPM, EM, FEAT, IC)
 interacts with. Specialists are internal sub-agents the orchestrator delegates to.
 
 **Specialist sub-agents** (in `.cursor/agents/specialists/`):
 
-- `vp-specialist` — VP protocol (D15: compound question, risk register, citations)
+- `team-exec-specialist` — Team Executive protocol (D15: compound question, risk register, citations)
 - `tpm-specialist` — weekly status (D17), cross-team deps (D18), 4 triage flavours (D19)
 - `rm-specialist` — release readiness, cascade renames, gate dates
 - `triage-specialist` — bug / crisis / stale-ticket / pending-response (D19)
@@ -63,7 +63,7 @@ The orchestrator decides delegation; users never address a specialist by name.
 Reusable capabilities the agent reads on demand. Each one is task-specific
 and references the specialist that owns it.
 
-- `vp-status-answer/` — D15 protocol
+- `team-exec-status-answer/` — D15 protocol
 - `weekly-status-email/` — D17 3-tier structure
 - `bug-triage/`, `crisis-triage/`, `stale-ticket-sweep/`, `pending-response-chase/` — D19
 - `dependency-walk/` — D18
@@ -88,7 +88,7 @@ Recovered + new:
 ## Recipient roles (audience tiers)
 
 Eleven audiences defined in `~/.cursor/context/audience.md`. Every output
-declares `audience: vp | director | portfolio_mgr | tpm | rm | feat |
+declares `audience: team-exec | director | portfolio_mgr | tpm | rm | feat |
 team_lead | team_mgr | ic | qa_lead | architect`.
 
 ## Project defaults

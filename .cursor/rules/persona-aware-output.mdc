@@ -23,7 +23,7 @@ Every output artifact declares its audience in one of these ways:
    `documentation-consistency.mdc`)
 2. **Agent answers in chat**: the orchestrator stores the active lens
    per-session; specialists read it via the agent's context
-3. **HTML emails**: `<!-- audience: vp -->` in the metadata comment
+3. **HTML emails**: `<!-- audience: team-exec -->` in the metadata comment
 4. **Confluence pages**: stored as a page label `audience-vp`
 
 If you generate an artifact without declaring its audience, you violated

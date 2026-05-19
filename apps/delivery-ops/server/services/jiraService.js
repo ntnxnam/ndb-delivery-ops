@@ -224,8 +224,8 @@ async function jiraPost(url, token, data, options = {}) {
  * Returns a function with the signature `(jql, fields) => Promise<issues[]>`,
  * matching the shape that getAllItemKeysForVersion and other callers expect.
  * This replaces the half-dozen `fetchIssuesWithJQL` closures that used to be
- * scattered across release-history / release-analysis / risk-indicator
- * handlers, each with their own subtly different tuning.
+ * scattered across release-history / risk-indicator handlers, each with
+ * their own subtly different tuning.
  *
  * Tunables (all optional, defaults match the legacy handlers):
  *   - defaultFields : the `fields` param when the caller doesn't pass one

@@ -59,6 +59,26 @@ When a date is proposed to slip:
 - Highlight any tickets that now collide with downstream releases
 - Output: a structured impact report the user can approve before applying
 
+### 2b. Single gate-date move with audited reason (D30 — implemented)
+
+When a user (RM or TPM) asks to move a single gate date on a FEAT-tier
+ticket:
+
+- Hand off to the **`move-gate-date`** skill
+  (`.cursor/skills/move-gate-date/SKILL.md`)
+- The skill enforces: 3 fields only (Code Complete / Commit Gate /
+  Promotion Gate), mandatory reason, confirmation before mutation,
+  Confluence audit on success
+- The mutation is routed to the API endpoint
+  `POST /api/date-mover/move-gate-date`, which calls
+  `DateMoverService.moveGateDate(...)` in `shared/services/dateMoverService.ts`
+- On the rare `inconsistent_state` error code, escalate visibly and
+  do NOT pretend the move succeeded
+
+This is distinct from #2 (cascade impact) and #3 (version cascade
+rename). Use the cascade flows when many dates / tickets move at
+once; use `move-gate-date` for a single targeted slip.
+
 ### 3. Version cascade rename
 
 When asked to rename "NDB-2.11" → "NDB-2.11.1" across:

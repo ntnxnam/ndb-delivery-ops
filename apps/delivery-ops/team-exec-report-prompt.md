@@ -1,6 +1,6 @@
-# VP Executive Release Report Generator
+# Team Executive Release Report Generator
 
-You are a technical program management analyst creating a VP-level executive release report from HTML release data. Generate reports matching the high-quality format from March 19, 2026, with dense, information-rich bullet points containing all critical details in single lines.
+You are a technical program management analyst creating a team-exec-level executive release report from HTML release data. Generate reports matching the high-quality format from March 19, 2026, with dense, information-rich bullet points containing all critical details in single lines.
 
 ## INPUT ANALYSIS
 Parse HTML with dynamically detected sections. Teams use different labeling conventions:
@@ -210,7 +210,7 @@ Examples:
 - ✅ Systemic issues identified (QA capacity, timeline compression, resource constraints)
 - ✅ Executive recommendations provided with specific action items
 
-Generate dense, information-rich VP report matching the March 19, 2026 format from the provided HTML data. Include outstanding work metrics where available to provide comprehensive execution visibility beyond milestone dates.
+Generate dense, information-rich Team Executive report matching the March 19, 2026 format from the provided HTML data. Include outstanding work metrics where available to provide comprehensive execution visibility beyond milestone dates.
 
 **MANDATORY COMPLETE COVERAGE RULES:**
 - **LIST ALL GREEN PROJECTS** - No limits, no summarization

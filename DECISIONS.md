@@ -30,7 +30,7 @@ products are equally valid.
 - Rename `ndb-delivery-ops` → `portfolio-delivery-ops` (see D2)
 - Every NDB-specific string in code becomes a config lookup
 - `teamBoardConfig.json` is per-user, not global
-- Audience definitions reference "the active product's VP", not "NDB VP"
+- Audience definitions reference "the active product's Team Executive", not "NDB Team Executive"
 - MCP tools take `productId` as input
 - Agents load product context at session start
 
@@ -70,24 +70,24 @@ dedicated connector modules in `shared/connectors/`:
 - Slack + Email are new builds (Phase B in `ARCHITECTURE.md` rollout)
 - New connector category goes through the same auth/retry/error patterns
 
-### D4 — VP is a primary agent user, not just a report consumer
+### D4 — Team Executive is a primary agent user, not just a report consumer
 
-**Statement.** The Engineering VP uses the platform **directly** via natural
+**Statement.** The Engineering Team Executive uses the platform **directly** via natural
 language. They do not write JQL. They do not click through menus. They ask
 plain-language questions ("how's NDB-2.11?") and expect back an **executive
 dashboard** of 3–5 charts.
 
 **Implications.**
-- VP becomes an agent user (was: report recipient only)
+- Team Executive becomes an agent user (was: report recipient only)
 - New Layer-3 service: `chartService` — renders RAG-over-time, predictability,
   top-risks-by-owner, scope-creep, etc., as inline images/SVG
 - New Layer-3 service: `nlpQueryService` — natural language → tool-call plan
-- The Ops Assistant agent gains "VP mode" — different presenter, different
+- The Ops Assistant agent gains "Team Executive mode" — different presenter, different
   density, charts-first per `audience.md`
-- The VP exec dashboard composition: agent runs 3–5 service calls in parallel,
+- The Team Executive exec dashboard composition: agent runs 3–5 service calls in parallel,
   collects chart data, composes layout (Anthropic's *parallelization* pattern)
 
-**Specific VP exec dashboard view (locked).** 3–5 charts:
+**Specific Team Executive exec dashboard view (locked).** 3–5 charts:
 - RAG over time
 - Top risks by owner
 - Predictability (say vs do)
@@ -113,10 +113,10 @@ boundaries until a non-NDB organisation actually signs up.
 **(a) Tab visibility — admin-only filter, nothing else.**
 - Admin tabs (user mgmt, team config, system settings) are gated by admin role.
 - Every other tab is visible to every user, regardless of specialist role.
-- A VP can navigate to Date Mover if they want; they just won't by default.
+- A Team Executive can navigate to Date Mover if they want; they just won't by default.
 
 **(b) Default landing page — per-role UX default (not a filter).**
-- VP / Director → Ops Assistant chat (D4: VP is agent-first)
+- Team Executive / Director → Ops Assistant chat (D4: Team Executive is agent-first)
 - Portfolio Manager / Admin → Ops Assistant chat + Release Versions
 - TPM → Release Versions
 - RM → Sync Hub (Phase E rebuild) / Release Versions
@@ -129,11 +129,11 @@ boundaries until a non-NDB organisation actually signs up.
 
 **(c) Role lens (preview-as-X) — universal, available to every user.**
 - Every page that emits audience-sensitive output has a lens dropdown in the header.
-- A user clicks "preview as VP" to re-render the current page in `vp` density
+- A user clicks "preview as Team Executive" to re-render the current page in `vp` density
   (chart-first, RAG-first, citation-first, no JQL inline per `audience.md`).
-- Useful for: VPs spot-checking what their report will look like; the
+- Useful for: Team Executives spot-checking what their report will look like; the
   Portfolio Manager drafting an EM-facing artefact; TPMs previewing their
-  weekly status as the VP will read it.
+  weekly status as the Team Executive will read it.
 - Default lens = the user's primary role.
 
 **Implications.**
@@ -167,7 +167,7 @@ Slack (for now).
 ### D8 — Reactive load is the dominant design driver
 
 **Statement.** Portfolio Manager's week is **70%+ reactive** — responding to
-pings from VP, RMs, TPMs, EMs. The platform's primary value is reducing this
+pings from Team Executive, RMs, TPMs, EMs. The platform's primary value is reducing this
 load by making the agent self-service to others (so they ping the agent, not
 the human).
 
@@ -177,9 +177,9 @@ the human).
 - Quality of agent answers is more important than dashboard polish
 - "Time saved per day for the Portfolio Manager" is the headline KPI
 
-### D9 — VP Executive Report is the single most-hated artifact
+### D9 — Team-Executive Report is the single most-hated artifact
 
-**Statement.** Among recurring artifacts, the VP Executive Report is the one
+**Statement.** Among recurring artifacts, the Team-Executive Report is the one
 the Portfolio Manager would most like to never hand-produce again. It's the
 priority candidate for a deterministic **workflow** (vs an agent).
 
@@ -192,25 +192,25 @@ priority candidate for a deterministic **workflow** (vs an agent).
 
 ---
 
-## Round 2 — VP persona deep-dive (locked this session)
+## Round 2 — Team Executive persona deep-dive (locked this session)
 
-### D10 — Dual trust model for VP-facing agent answers
+### D10 — Dual trust model for Team Executive-facing agent answers
 
-**Statement.** Different VPs have different tolerance for AI output. The
+**Statement.** Different Team Executives have different tolerance for AI output. The
 platform must support **both** workflows simultaneously:
 
 - **Draft mode** — agent produces output → Portfolio Manager reviews →
-  forwards/publishes to VP
-- **Direct mode** — agent answers VP directly, with citations on every claim
+  forwards/publishes to Team Executive
+- **Direct mode** — agent answers Team Executive directly, with citations on every claim
 
 **Implications.**
 - Every numerical or status claim in agent output must include a citation:
   JIRA ticket key, query, or data source link
-- Confidence indicator on every assertion (high / medium / low) — VP knows
+- Confidence indicator on every assertion (high / medium / low) — Team Executive knows
   when to push back
-- "Escalate to Portfolio Manager" button on any agent response in VP-lens
-- Audit log of which mode was used per VP per question (helps tune trust)
-- Citation-first design is a global rule (not VP-only) — promote to a rule
+- "Escalate to Portfolio Manager" button on any agent response in Team Executive-lens
+- Audit log of which mode was used per Team Executive per question (helps tune trust)
+- Citation-first design is a global rule (not Team Executive-only) — promote to a rule
   in `.cursor/rules/citation-first-output.mdc`
 
 ### D11 — Dashboard freshness = Sync Hub pattern
@@ -227,15 +227,15 @@ they need real-time. Optional background sync warms the cache on a schedule.
 - Charts in `chartService` invalidate when underlying data refreshes
 - UI shows "Last refreshed N min ago" with the Refresh button next to it
 
-### D12 — VP default landing = all active releases (per active product set)
+### D12 — Team Executive default landing = all active releases (per active product set)
 
-**Statement.** When the VP lands in chat without a prompt, the Ops Assistant
+**Statement.** When the Team Executive lands in chat without a prompt, the Ops Assistant
 greets them with a summary of **all currently-active releases** for their
 active products, RAG roll-up across them.
 
 **Implications.**
 - "Active release" = needs precise definition (see open D-question below)
-- VP lens default render:
+- Team Executive lens default render:
   - Summary line: "Showing 3 active releases — 1 green, 1 amber, 1 red"
   - One card per release with RAG + 1-sentence headline + click-through
   - Below: the 3–5 charts from D4 aggregated across releases (predictability,
@@ -257,20 +257,20 @@ ticket activity. Manual but precise.
 - Migration: existing releases need to be re-tagged (likely a one-time UI
   pass by Portfolio Manager)
 - Release Setup / Release Config UI gets a status toggle per release
-- All "give me active releases" queries (VP landing, dashboards, weekly
+- All "give me active releases" queries (Team Executive landing, dashboards, weekly
   status email) read from this single field
 - `statusService` exposes `getActiveReleases(productId)` as the canonical
   filter
 
-### D14 — VP cadence is per-VP, not platform-wide
+### D14 — Team Executive cadence is per-Team Executive, not platform-wide
 
-**Statement.** Different VPs check the platform at different cadences —
+**Statement.** Different Team Executives check the platform at different cadences —
 daily, weekly, or only when something escalates. The platform does not
 assume a cadence.
 
 **Implications.**
 - No mandatory daily digest, no forced weekly cron
-- **Per-user notification preferences**: each VP (or any user) can opt into:
+- **Per-user notification preferences**: each Team Executive (or any user) can opt into:
   - Daily digest email (default: off)
   - Weekly digest email (default: off)
   - Alert on RAG-status change (default: off)
@@ -280,24 +280,24 @@ assume a cadence.
 
 ---
 
-### D15 — VP answer protocol (the compound question + risk-register answer + always-clarify)
+### D15 — Team Executive answer protocol (the compound question + risk-register answer + always-clarify)
 
-**Statement.** Every VP question is effectively the same compound question:
+**Statement.** Every Team Executive question is effectively the same compound question:
 **"When are we landing a release?"** *and* **"What's blocking us?"** — even
 when only one half is voiced. The agent always answers **both halves** and
 always asks a clarifying question first if scope is ambiguous.
 
-**The locked protocol for the Ops Assistant agent in VP lens.**
+**The locked protocol for the Ops Assistant agent in Team Executive lens.**
 
 ```
-1. Receive VP question.
+1. Receive Team Executive question.
 2. If scope is ambiguous (no release named):
      ASK ("Which release? Active right now: NDB-2.11 (amber), NDB-3.0 (green), …")
    Else proceed.
 3. In parallel (Anthropic *parallelization* pattern):
      A. predictabilityService.predictLanding(release)  → date + confidence + chart
      B. statusService.topBlockers(release)            → ranked risk list w/ owners + mitigation
-4. Render in VP lens (risk-register format, NOT 3-bullet summary):
+4. Render in Team Executive lens (risk-register format, NOT 3-bullet summary):
      - Headline: release name + RAG + landing-date-with-confidence
      - Risk register: every high-impact risk, each with:
          · what
@@ -326,15 +326,15 @@ rendering targets share it:
 
 | Surface | Trigger | Renderer |
 |---|---|---|
-| VP-in-chat | VP types in the chat panel | inline HTML in chat (charts as SVG, citations as JIRA links) |
-| VP-in-email-digest | scheduled cron (opt-in per VP, D14) | inline-CSS HTML email, max 800px, citations as full URLs |
-| VP-in-Confluence-page | "Publish to Confluence" button or weekly workflow | Confluence storage XML (after width cleanup, per existing skill) |
+| Team Executive-in-chat | Team Executive types in the chat panel | inline HTML in chat (charts as SVG, citations as JIRA links) |
+| Team Executive-in-email-digest | scheduled cron (opt-in per Team Executive, D14) | inline-CSS HTML email, max 800px, citations as full URLs |
+| Team Executive-in-Confluence-page | "Publish to Confluence" button or weekly workflow | Confluence storage XML (after width cleanup, per existing skill) |
 
 Same content. Three renderers. Solves the format-conversion repetitive task
 (D8) at the protocol level: the canonical answer is built once, never re-authored.
 
 **Implications.**
-- Becomes a `.cursor/skills/vp-status-answer/SKILL.md` so the protocol is
+- Becomes a `.cursor/skills/team-exec-status-answer/SKILL.md` so the protocol is
   reproducible across sessions
 - `topBlockers` is a new method on `statusService` — ranks by `impact ×
   uncertainty × proximity-to-RTM`
@@ -342,7 +342,7 @@ Same content. Three renderers. Solves the format-conversion repetitive task
   burndown" — design this as one of the canonical chart types
 - Drill-in (step 6) implies the agent maintains conversation memory per
   session so "dig into risk X" can resolve which X
-- Every status email and VP report must use the same answer shape — no two
+- Every status email and Team Executive report must use the same answer shape — no two
   formats for the same content
 
 ---
@@ -355,13 +355,13 @@ Same content. Three renderers. Solves the format-conversion repetitive task
 pattern:
 
 - **One user-facing orchestrator**: `.cursor/agents/ops-assistant.md`. This is
-  what every user (Portfolio Manager, VP, RM, TPM, EM, FEAT, IC) interacts with.
+  what every user (Portfolio Manager, Team Executive, RM, TPM, EM, FEAT, IC) interacts with.
 - **N specialist sub-agents** internal to the orchestrator, each deep on one
   persona or task. Sub-agents are not directly addressable by users; the
   orchestrator delegates.
 
 **Specialist sub-agents (initial set).**
-- `vp-specialist` — VP protocol (D15: compound question, risk register,
+- `team-exec-specialist` — Team Executive protocol (D15: compound question, risk register,
   citation-first, parallel calls, drill-in)
 - `tpm-specialist` — weekly status, cross-team dependencies, triage flow
 - `rm-specialist` — release readiness, cascade renames, gate dates
@@ -386,14 +386,14 @@ pattern:
 ### D17 — Weekly status email = 3-tier hybrid, broad leadership audience
 
 **Statement.** The weekly status email (TPM's most-hated artifact, same as
-VP report is to Portfolio Manager) has a fixed 3-tier structure:
+Team Executive report is to Portfolio Manager) has a fixed 3-tier structure:
 
 1. **Top — Release-level**: per-release RAG + landing-date + 1-line "why" for each active release.
 2. **Middle — Team-level**: per-team weekly delta (what shipped, what's at risk, what's blocked).
 3. **Bottom — FEAT-level callouts**: standout features whose status changed this week, each as a paragraph with citations.
 
-**Audience**: VP + Directors + EMs + principal engineers + other TPMs. Each
-tier of the email serves a different segment — VPs read the top, EMs read
+**Audience**: Team Executive + Directors + EMs + principal engineers + other TPMs. Each
+tier of the email serves a different segment — Team Executives read the top, EMs read
 the middle for their team, FEAT owners check the bottom for callouts.
 
 **Implications.**
@@ -489,13 +489,13 @@ gets resolved when we actually build the `pending-response-chase` skill.
 Phase A is the **AI layer rebuild** — all markdown, no React code. Touches:
 
 - `.cursor/agents/ops-assistant.md` — the orchestrator (NEW)
-- `.cursor/agents/specialists/vp-specialist.md` (NEW)
+- `.cursor/agents/specialists/team-exec-specialist.md` (NEW)
 - `.cursor/agents/specialists/tpm-specialist.md` (NEW, replaces existing `tpm-assistant.md`)
 - `.cursor/agents/specialists/rm-specialist.md` (NEW, replaces existing `rm-assistant.md`)
 - `.cursor/agents/specialists/triage-specialist.md` (NEW)
 - `.cursor/agents/specialists/confluence-publisher-specialist.md` (NEW)
 - `.cursor/agents/specialists/dependency-tracker-specialist.md` (NEW)
-- `.cursor/skills/vp-status-answer/SKILL.md` (NEW — protocol from D15)
+- `.cursor/skills/team-exec-status-answer/SKILL.md` (NEW — protocol from D15)
 - `.cursor/skills/weekly-status-email/SKILL.md` (NEW — protocol from D17)
 - `.cursor/skills/bug-triage/SKILL.md` (NEW)
 - `.cursor/skills/crisis-triage/SKILL.md` (NEW)
@@ -529,7 +529,7 @@ D6 was revised this round (see updated text above).
 
 **Statement.** Each role has a sensible default landing page (per D6(b)),
 but the **specific value is stored as a user preference**, overridable per
-user. A new VP can change theirs from "Ops Assistant chat" to "VP Exec
+user. A new Team Executive can change theirs from "Ops Assistant chat" to "Team Executive Exec
 Dashboard" if they prefer.
 
 **Implications.**
@@ -542,6 +542,127 @@ Dashboard" if they prefer.
 
 ---
 
+## Round 8 — Consolidation porting (2026-05-19)
+
+### D33 — Drop "Team Executive" terminology; use "team-exec" (Team Executive)
+
+**Statement.** Across the platform, every "Team Executive" / "Team Executives" / "Team Executive" /
+"Team Executive Report" reference is replaced with **team-exec** (display: "Team
+Executive"). No backward-compatible aliases; the old term is dropped.
+
+**Rationale.**
+
+1. **D1 alignment.** The platform is product-agnostic and tenant-aware.
+   Different orgs and different products use different titles for the
+   same role — Team Executive (Nutanix), Director, Sr Director, GM, Head of
+   Engineering, etc. Baking "Team Executive" into audience IDs, skill names, and
+   report prefixes leaks Nutanix-isms into a platform that explicitly
+   serves DataLens, NCM, and future products.
+2. **Role > title.** What this audience actually is: *the leader the
+   team rolls up to*. They consume the team-executive view because
+   they're accountable for the team's delivery, regardless of org chart
+   level. "Team Executive" names the role neutrally.
+3. **Avoid recurrence.** The Portfolio Manager flagged this directly:
+   "I hate that I said Team Executive" — the term carried implicit assumptions
+   about a Nutanix-specific persona that the platform must not encode.
+
+**Locked replacements (deterministic).**
+
+| Old | New |
+|---|---|
+| audience id `vp` | `team-exec` |
+| display name "Team Executive" | "Team Executive" |
+| `team-exec-specialist` | `team-exec-specialist` |
+| `team-exec-status-answer` skill | `team-exec-status-answer` |
+| `team-exec-release-report` skill | `team-exec-release-report` |
+| `predictive-team-exec-analytics` skill | `predictive-team-exec-analytics` |
+| `quarterly-team-exec-report` workflow | `quarterly-team-exec-report` |
+| report file prefix `TeamExec-` | `TeamExec-` |
+| code identifiers `TeamExecReport*`, `TeamExecSpecialist`, etc. | `TeamExecReport*`, `TeamExecSpecialist`, etc. |
+
+**Scope of the rename.**
+
+- All active files in the monorepo: `.cursor/`, `shared/`, `mcp-server/`,
+  `apps/delivery-ops/` (source + docs).
+- User-level skills at `~/.cursor/skills/` are renamed too — they are
+  read by the project agent and must match.
+- **NOT** renamed: historical reports in `reports/CrystalBall-Enhanced-Team Executive-Report-*.md`
+  and similar (per `documentation-consistency.mdc`: "files already in
+  `reports/`: leave them"). New reports use the `TeamExec-` prefix.
+- **NOT** renamed: legacy code in `apps/delivery-ops/crystalball-i/` and
+  similar archived sub-trees — that code is on the retirement list and
+  doesn't shape the consolidated platform's surface.
+
+**Implications.**
+
+- `audience.md` at `~/.cursor/context/` updates its role catalog.
+- Any external doc / chat / email that previously used `vp-*` URLs
+  (e.g. `/team-exec-status`) needs a redirect — handled at the route level if
+  we ever published any such URL, otherwise nothing to do.
+- DECISIONS.md entries D4, D9, D10–D15, D17 etc. that used "Team Executive" in
+  their prose are not retroactively edited (decision text is immutable
+  for audit trail); when those decisions are *applied*, the new term
+  is what surfaces.
+
+### D30 — Date mover requires a reason, audited to Confluence
+
+**Statement.** When an authorised user moves a release gate date (Code
+Complete, Commit Gate, Promotion Gate — `customfield_11067 / 35863 /
+35864` on FEAT / X-FEAT / Capability tickets) through the consolidated
+app, the app MUST:
+
+1. Require a free-text **reason** before the mutation is sent to JIRA.
+   The form rejects empty / whitespace-only reasons.
+2. Apply the JIRA field update.
+3. Append a structured row to a Confluence audit page in the same
+   request lifecycle. The row carries: timestamp, actor (display name +
+   ldap), ticket key, field, old → new value, reason.
+4. If the Confluence write fails, the JIRA mutation MUST be rolled
+   back (or a follow-up retry queued) — the audit trail is not optional.
+
+**Authorisation.** RM and TPM roles can move dates. Other roles (Team Executive,
+IC, etc.) see history but the move action is hidden / 403'd.
+
+**Scope locked now.**
+- Fields in scope: Code Complete (`customfield_11067`), Commit Gate
+  (`customfield_35863`), Promotion Gate (`customfield_35864`). Other
+  fields the legacy app tracked (Test plan, FS/DS, `customfield_45660`)
+  remain *view-only* in the new app unless re-promoted later.
+- Audit-trail medium: **Confluence**, not a JIRA ticket comment, not a
+  JIRA custom field. JIRA's per-field changelog continues to exist for
+  raw before/after; Confluence is the *human-readable narrative log*.
+
+**Deferred to port time.**
+- Exact Confluence target — dedicated "Date Change Log" page per
+  release vs. section appended to the existing release status page vs.
+  shared per-product log — will be settled when implementation lands
+  against the actual execution page format (Portfolio Manager will
+  point at the page in chat at that time).
+- Whether the same audit also fires for moves made directly in JIRA
+  (outside this app) is a future question; first cut is "only moves
+  through our app".
+
+**Why this matters.** Today the reason for a date slip lives in
+people's heads or in random chat threads. The release goes from "we
+slipped by 2 weeks" to "we slipped by 2 weeks because vendor X missed
+delivery and we redirected a sprint to security CVE-2026-1234" only
+when the right human is awake. Capturing the reason inline makes the
+delivery narrative reconstructable from the artifact itself, which is
+exactly the workflow product this platform is building toward.
+
+**Implications for the port (capability #10 in `CONSOLIDATION.md`).**
+- `dateMoverService.ts` takes `{ ticketKey, fieldId, newValue, reason,
+  actor }` and orchestrates JIRA + Confluence in one atomic-ish step.
+- The Confluence connector (`shared/connectors/confluenceConnector.ts`)
+  is now a hard dependency of #10 — it can no longer be deferred to
+  "port #12 only". It must land before or alongside #10.
+- The legacy `ndb-date-mover/backend/ai_summarizer.py` (344 LOC) is
+  retained as a port: it can pre-fill / suggest the reason from
+  surrounding context (recent status updates, comments, etc.), but the
+  user still has to confirm or override.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
@@ -551,6 +672,8 @@ Dashboard" if they prefer.
 | D27 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
 | D28 | First gap to build (post-Phase-A) | Phase H planning |
 | D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |
+| D31 | Exact Confluence target for date-change audit log (per-release page / section on status page / per-product shared log) | Build-time of #10, when PM points at the actual execution page format |
+| D32 | Whether date moves made outside our app (directly in JIRA) should also be audited to Confluence (via webhook or scheduled diff) | After #10 ships first cut |
 
 ---
 

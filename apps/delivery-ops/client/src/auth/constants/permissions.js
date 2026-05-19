@@ -36,7 +36,6 @@ export const TAB_PERMISSIONS = {
   '/': [], // Email Sender - available to all authenticated users
   '/all-status': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/release-trends': [PERMISSIONS.RELEASE_TRENDS_VIEW],
-  '/release-analysis': [PERMISSIONS.RELEASE_TRENDS_VIEW], // Same permission as release trends
   '/release-setup': [PERMISSIONS.RELEASE_SETUP_MANAGE],
   '/release-config': [PERMISSIONS.RELEASE_CONFIG_MANAGE],
   '/generic-emailer': [PERMISSIONS.EMAIL_SEND_GENERIC],

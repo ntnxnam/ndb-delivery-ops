@@ -19,5 +19,5 @@ See `~/.cursor/skills-cursor/canvas/SKILL.md` for the broader pattern.
 Workflows in this repo (populated during Phase 6 of the consolidation):
 
 - `monday-release-status.md` — weekly release status pipeline.
-- `quarterly-vp-report.md` — predictive VP report + Confluence publish.
+- `quarterly-team-exec-report.md` — predictive Team Executive report + Confluence publish.
 - `release-cascade-rename.md` — safe end-to-end version rename across filters.

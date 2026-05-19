@@ -7,7 +7,7 @@
     "check:no-localhost": "node scripts/check-no-localhost.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
-    "client": "cd client && HOST=0.0.0.0 PORT=6100 npm start",
+    "client": "cd client && HOST=0.0.0.0 PORT=8888 npm start",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install",
     "test": "jest",
     "test:watch": "jest --watch",

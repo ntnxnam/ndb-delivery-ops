@@ -51,7 +51,7 @@ product: NDB
 release: "2.11"
 generated: YYYY-MM-DD
 data_source: live | skill | manual
-audience: vp | director | tpm | rm | feat | team | ic
+audience: team-exec | director | tpm | rm | feat | team | ic
 ---
 ```
 

@@ -8,7 +8,7 @@ specialist owns.
 
 | Skill | Owner specialist | Purpose | Decision IDs |
 |---|---|---|---|
-| `vp-status-answer/` | `vp-specialist` | Compound question + risk register answer for VP / Director | D4, D10, D15 |
+| `team-exec-status-answer/` | `team-exec-specialist` | Compound question + risk register answer for Team Executive / Director | D4, D10, D15 |
 | `weekly-status-email/` | `tpm-specialist` | 3-tier hybrid weekly status for broad leadership | D17, D15d |
 | `bug-triage/` | `triage-specialist` | Proposes owner/priority/component/severity for new defects | D19 |
 | `crisis-triage/` | `triage-specialist` | P0 / escalation response coordination | D19 |
@@ -16,17 +16,37 @@ specialist owns.
 | `pending-response-chase/` | `triage-specialist` | Chase un-answered dep / deferral asks (D24 open) | D19, D24 |
 | `dependency-walk/` | `dependency-tracker-specialist` | Upstream/downstream walk in JIRA dep graph | D18 |
 | `confluence-width-cleanup/` | `confluence-publisher-specialist` | Pre-push storage XML cleanup (canonical at user level) | D3, D15d |
+| `move-gate-date/` | `rm-specialist` | Gate-date moves (CC/CG/PG) with mandatory reason + Confluence audit | **D30** |
+| `fetch-project-tickets/` | `tpm-specialist` / `team-exec-specialist` | 8-clause portfolio-children JQL primitive (canonical at user level) | — |
+| `team-exec-release-report/` | `team-exec-specialist` | Team Executive-Executive release report with risk escalation rules | D9 |
+| `predictive-team-exec-analytics/` | `team-exec-specialist` | Monte Carlo + completion-probability forecasts | D8, D9 |
+| `sprint-gantt-chart/` | `tpm-specialist` / `rm-specialist` | Date-hierarchy-aware Gantt for sprint-tier tickets | — |
 
-## User-level skills also available
+The last five are project-level references whose canonical content
+lives at `~/.cursor/skills/`. Read the project copy for usage in this
+codebase; read the user-level copy for the full procedure / scripts /
+templates.
 
-Inherited automatically from `~/.cursor/skills/`:
+## Anthropic-pattern mapping
 
-- `vp-release-report/`
-- `fetch-project-tickets/`
-- `sprint-gantt-chart/`
-- `predictive-vp-analytics/`
-- `confluence-width-cleanup/` (canonical version)
-- `vp-release-report/` (user-level)
+For each skill, the layers it touches:
+
+- **Agent** — `ops-assistant.md` routes the user request
+- **Specialist** — one of `.cursor/agents/specialists/*.md` owns the
+  skill's domain
+- **Skill** — the file in this directory describes the workflow
+- **Tool** — usually an API endpoint in
+  `apps/delivery-ops/server/routes/` and/or an MCP tool in
+  `mcp-server/src/tools/`
+- **Service** — pure logic in `shared/src/services/`
+- **Connector** — JIRA / Confluence / GitHub / Slack / Email in
+  `shared/src/connectors/`
+
+The `move-gate-date` skill is the first one to exercise the *full*
+stack: orchestrator → rm-specialist → skill → `/api/date-mover/move-gate-date`
+→ `DateMoverService` → `JiraConnector` + `ConfluenceConnector`. Use it
+as the reference shape when porting other capabilities from
+`CONSOLIDATION.md`.
 
 ## Skill authoring rules
 

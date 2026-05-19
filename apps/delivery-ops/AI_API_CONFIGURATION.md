@@ -1,6 +1,6 @@
 # NAI API Key Configuration
 
-The VP Release Report system supports NAI API key management for generating executive reports.
+The Team Executive Release Report system supports NAI API key management for generating executive reports.
 
 ## Features
 
@@ -39,7 +39,7 @@ The VP Release Report system supports NAI API key management for generating exec
    - **Key Name** (optional): Friendly name for your API key (e.g., "My NAI Key", "Production Key")
    - **API Key** (required): Your NAI API key
 4. **Test & Save**: System validates connectivity before storing
-5. **Generate Report**: AI-powered VP report is generated
+5. **Generate Report**: AI-powered Team Executive report is generated
 
 ## Security Notes
 

@@ -18,7 +18,7 @@ Monday by schedule (set up via Cursor hooks separately).
 
 ## Owner agent
 
-`rm-assistant` (escalates to VP audience by default).
+`rm-assistant` (escalates to Team Executive audience by default).
 
 ## Steps
 
@@ -28,7 +28,7 @@ Monday by schedule (set up via Cursor hooks separately).
 
 2. **Compare to last week**
    - If `compareTo` not provided, read the prior snapshot from
-     `reports/VP-Executive-NDB-<version>-<compareTo>.md` if it exists.
+     `reports/TeamExec-NDB-<version>-<compareTo>.md` if it exists.
      - If no prior snapshot exists, skip this step and emit "no prior snapshot
        found" in the email footer.
    - Compute deltas: red Δ, yellow Δ, green Δ, item-count Δ, newly-red items.
@@ -37,13 +37,13 @@ Monday by schedule (set up via Cursor hooks separately).
    - Call `say_vs_do` with `{ version }` to attach the SP_said / SP_did line.
 
 4. **Compose the email**
-   - Use the `~/.cursor/skills/vp-release-report/` skill for the markdown
+   - Use the `~/.cursor/skills/team-exec-release-report/` skill for the markdown
      structure (frontmatter, Executive Summary, Release Health, Risk
      Assessment).
-   - Cap at one screen for VP. Two screens max for EM.
-   - File name: `reports/VP-Executive-NDB-<version>-<YYYY-MM-DD>.md`.
+   - Cap at one screen for Team Executive. Two screens max for EM.
+   - File name: `reports/TeamExec-NDB-<version>-<YYYY-MM-DD>.md`.
    - HTML version (inline-styled, 800px wide):
-     `reports/VP-Executive-NDB-<version>-<YYYY-MM-DD>-Email.html`.
+     `reports/TeamExec-NDB-<version>-<YYYY-MM-DD>-Email.html`.
 
 5. **Send**
    - Use the `apps/delivery-ops/server/services/emailerService` (the
@@ -56,8 +56,8 @@ Monday by schedule (set up via Cursor hooks separately).
 
 ## Outputs
 
-- `reports/VP-Executive-NDB-<version>-<YYYY-MM-DD>.md`
-- `reports/VP-Executive-NDB-<version>-<YYYY-MM-DD>-Email.html`
+- `reports/TeamExec-NDB-<version>-<YYYY-MM-DD>.md`
+- `reports/TeamExec-NDB-<version>-<YYYY-MM-DD>-Email.html`
 - Email delivered to recipients.
 
 ## Failure handling
@@ -73,7 +73,7 @@ Monday by schedule (set up via Cursor hooks separately).
 
 Before the user accepts the artefact:
 - [ ] Audience tone matches the chosen audience.
-- [ ] No JQL strings in a VP-tier email.
+- [ ] No JQL strings in a Team Executive-tier email.
 - [ ] RAG counts authoritative (every count traces to a tool call).
 - [ ] File names match the documentation-consistency rule.
 - [ ] HTML is self-contained (no external CSS, no localhost links).

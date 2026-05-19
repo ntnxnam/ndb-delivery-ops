@@ -19,7 +19,7 @@ sources to surface untracked dependencies.
 - "Who depends on team X?"
 - "Show me the dependency graph for NDB-2.11"
 - "Is feature A waiting on feature B?"
-- During VP / TPM weekly status rendering, when the risk register needs
+- During Team Executive / TPM weekly status rendering, when the risk register needs
   upstream dependency context
 
 ## My main operations
@@ -78,7 +78,7 @@ For a release, compute the longest dependency chain (the "critical path"):
 
 - Tickets on the critical path are landing-blocking
 - Any slip propagates to RTM
-- Used by `vp-specialist` to flag landing risk in the risk register
+- Used by `team-exec-specialist` to flag landing risk in the risk register
 
 ## Service interface
 

@@ -1,57 +1,30 @@
 /**
- * chartService — Phase D2 stub (per D4).
+ * chartService — RETIRED PENDING PORT.
  *
- * The full implementation will produce SVG (and optional PNG) charts for
- * inline use in agent answers, reports, and emails. For Phase D1 it
- * returns a placeholder ChartRef so the VP path can render end-to-end.
+ * This module previously held a Phase D1 placeholder that returned a
+ * grey "[chart placeholder]" SVG. It has been retired in favour of the
+ * concrete capability tracked in `CONSOLIDATION.md`:
  *
- * Anticipated chart kinds (per D4 + DECISIONS.md):
- *   - rag-over-time
- *   - landing-date-confidence
- *   - risk-burndown
- *   - top-risks-by-owner
- *   - predictability-say-vs-do
- *   - scope-creep
- *   - team-velocity
- *   - sprint-carryover
+ *   - #5 chartCatalogService (port from
+ *        release-sprint-analysis-with-chatbot/chart_catalog.py with
+ *        `[chart:<id>]` token substitution for the NAI chatbot)
  *
- * Cross-references:
- *   - DECISIONS.md → D4
- *   - .cursor/agents/specialists/vp-specialist.md (consumer)
+ * The class is kept as an export so existing type references resolve,
+ * but `render()` throws at runtime to surface the retirement loudly.
+ *
+ * When the real service lands, delete this file and the re-export in
+ * `shared/src/index.ts`.
  */
 
 import type { ChartSpec, ChartRef } from '../types/chart.js';
 
+const RETIRED_MESSAGE =
+  'ChartService is retired. ' +
+  'Use chartCatalogService (#5 in CONSOLIDATION.md) once it is ported. ' +
+  'The placeholder SVG implementation was misleading consumers.';
+
 export class ChartService {
-  /**
-   * Phase D1 placeholder. Phase D2 will use a real SVG generator (likely
-   * d3 or a hand-rolled minimal SVG builder for embed safety).
-   */
-  async render(spec: ChartSpec): Promise<ChartRef> {
-    const svg = this.placeholderSvg(spec);
-    return {
-      spec,
-      svg,
-      caption: `[chartService.${spec.kind} — Phase D1 placeholder] ${spec.title}`,
-    };
+  async render(_spec: ChartSpec): Promise<ChartRef> {
+    throw new Error(RETIRED_MESSAGE);
   }
-
-  private placeholderSvg(spec: ChartSpec): string {
-    const width = spec.width ?? 400;
-    const height = spec.height ?? 200;
-    return [
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-      `  <rect width="${width}" height="${height}" fill="#f5f5f5" stroke="#ccc"/>`,
-      `  <text x="${width / 2}" y="${height / 2}" font-family="system-ui" font-size="14" fill="#555" text-anchor="middle">`,
-      `    [chart placeholder: ${escapeXml(spec.title)} (${spec.kind})]`,
-      `  </text>`,
-      `</svg>`,
-    ].join('\n');
-  }
-}
-
-function escapeXml(s: string): string {
-  return s.replace(/[<>&'"]/g, (ch) =>
-    ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[ch]!)
-  );
 }

@@ -114,7 +114,7 @@ export default function ReleaseTrendsPage() {
   const [execSummaryLoading, setExecSummaryLoading] = useState(false);
   const [execSummaryError, setExecSummaryError] = useState(null);
 
-  // AI VP Report state
+  // AI Team Executive Report state
   const [naiApiKey, setNaiApiKey] = useState(localStorage.getItem('nai_api_key') || '');
   const [naiApiKeyName, setNaiApiKeyName] = useState(localStorage.getItem('nai_api_key_name') || '');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -343,7 +343,7 @@ export default function ReleaseTrendsPage() {
     fetchExecutiveSummary();
   };
 
-  // AI VP Report functions
+  // AI Team Executive Report functions
   const validateAndSaveApiKey = async () => {
     if (!tempApiKey.trim()) {
       setAiVpReportError('Please enter a valid API key');
@@ -405,7 +405,7 @@ export default function ReleaseTrendsPage() {
     }
 
     if (!effectiveVersion || effectiveVersion.trim() === '') {
-      setAiVpReportError('Please select a release version to generate the VP report');
+      setAiVpReportError('Please select a release version to generate the Team Executive report');
       return;
     }
 
@@ -428,7 +428,7 @@ export default function ReleaseTrendsPage() {
 
       if (response.data.success) {
         setAiVpReport(response.data.data);
-        console.log('AI VP Report generated successfully');
+        console.log('AI Team Executive Report generated successfully');
         
         // Scroll to report for better UX
         setTimeout(() => {
@@ -441,7 +441,7 @@ export default function ReleaseTrendsPage() {
         setAiVpReportError(response.data.error || 'Report generation failed');
       }
     } catch (error) {
-      console.error('Error generating AI VP report:', error);
+      console.error('Error generating AI Team Executive report:', error);
       
       // Intelligent error handling
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
@@ -708,7 +708,7 @@ export default function ReleaseTrendsPage() {
                   transition: 'all 0.2s ease',
                   boxShadow: !aiVpReportLoading && executiveSummary ? '0 2px 4px rgba(40, 167, 69, 0.2)' : 'none'
                 }}
-                title={!executiveSummary ? 'Please refresh summary data first' : 'Generate executive-level VP report using AI'}
+                title={!executiveSummary ? 'Please refresh summary data first' : 'Generate executive-level Team Executive report using AI'}
               >
                 {aiVpReportLoading ? (
                   <>
@@ -1330,7 +1330,7 @@ export default function ReleaseTrendsPage() {
           }}>
             <h4 style={{ marginTop: 0 }}>NAI API Key Required</h4>
             <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
-              Enter your NAI API key details to generate AI-powered VP reports. The configuration will be stored securely in your browser.
+              Enter your NAI API key details to generate AI-powered Team Executive reports. The configuration will be stored securely in your browser.
             </p>
             
             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 500, color: '#495057' }}>
@@ -1427,7 +1427,7 @@ export default function ReleaseTrendsPage() {
         </div>
       )}
 
-      {/* AI VP Report Display Section */}
+      {/* AI Team Executive Report Display Section */}
       {aiVpReport && (
         <div 
           data-ai-report
@@ -1443,7 +1443,7 @@ export default function ReleaseTrendsPage() {
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
             <h4 style={{ margin: 0, color: '#28a745', fontSize: '1.25rem', fontWeight: '600' }}>
               <span style={{ marginRight: '0.5rem' }}>🎯</span>
-              Executive VP Report
+              Executive Team Executive Report
             </h4>
             <div style={{ 
               marginLeft: 'auto', 
@@ -1474,7 +1474,7 @@ export default function ReleaseTrendsPage() {
               lineHeight: '1.6',
               color: '#212529'
             }}>
-              {aiVpReport.vpReport}
+              {aiVpReport.teamExecReport}
             </div>
           </div>
           
@@ -1487,8 +1487,8 @@ export default function ReleaseTrendsPage() {
             <button
               onClick={() => {
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-                const filename = `Executive-VP-Report-${aiVpReport.version}-${timestamp}.txt`;
-                const content = `EXECUTIVE VP REPORT\n==================\n\nRelease: ${aiVpReport.version}\nGenerated: ${new Date(aiVpReport.generatedAt).toLocaleString()}\nSource: AI Analysis with Automated Data Validation\n\n${aiVpReport.vpReport}`;
+                const filename = `Executive-Team Executive-Report-${aiVpReport.version}-${timestamp}.txt`;
+                const content = `EXECUTIVE Team Executive REPORT\n==================\n\nRelease: ${aiVpReport.version}\nGenerated: ${new Date(aiVpReport.generatedAt).toLocaleString()}\nSource: AI Analysis with Automated Data Validation\n\n${aiVpReport.teamExecReport}`;
                 
                 const element = document.createElement('a');
                 const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -1518,7 +1518,7 @@ export default function ReleaseTrendsPage() {
             
             <button
               onClick={(e) => {
-                navigator.clipboard.writeText(aiVpReport.vpReport).then(() => {
+                navigator.clipboard.writeText(aiVpReport.teamExecReport).then(() => {
                   // Show temporary success feedback
                   const btn = e.target;
                   const originalText = btn.textContent;
@@ -1574,7 +1574,7 @@ export default function ReleaseTrendsPage() {
           borderRadius: '4px',
           border: '1px solid #f5c6cb'
         }}>
-          <strong>AI VP Report Error:</strong> {aiVpReportError}
+          <strong>AI Team Executive Report Error:</strong> {aiVpReportError}
         </div>
       )}
       

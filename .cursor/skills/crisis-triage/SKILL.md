@@ -48,7 +48,7 @@ Procedure:
 3. **Component owner from `productService`** — never assign a generic
    "team lead" without naming the actual person.
 4. **Communications plan is part of triage.** Identify who needs to know
-   (VP? Customer success? Sales?) and propose the comm channel.
+   (Team Executive? Customer success? Sales?) and propose the comm channel.
 5. **Set up follow-up cadence.** P0s should have a 15-min / 1-hour / 4-hour
    check-in schedule, configurable per crisis.
 6. **Citation on every claim** (D10). Why is this P0? Cite the source
@@ -78,7 +78,7 @@ Proposed response plan:
   Comms:
     - Post kickoff comment to [NDB-12345]
     - Notify #storage-oncall Slack channel
-    - Notify VP via Email digest (high-priority flag)
+    - Notify Team Executive via Email digest (high-priority flag)
   Follow-up cadence:
     - 1-hour status check via Slack thread
     - 4-hour written update via Slack
@@ -93,7 +93,7 @@ After approval:
 ✓ NDB-12345 assigned to jane.doe, priority=P0
 ✓ Kickoff comment posted to NDB-12345
 ✓ Slack notification sent to #storage-oncall
-✓ Slack notification sent to VP (high-priority DM)
+✓ Slack notification sent to Team Executive (high-priority DM)
 ✓ Follow-up scheduled: 1-hour check at 2026-05-19 15:30 UTC
 
 Audit log: reports/audit/triage-crisis-NDB-12345-2026-05-19T14-30Z.json
@@ -117,7 +117,7 @@ Audit log: reports/audit/triage-crisis-NDB-12345-2026-05-19T14-30Z.json
 - ETAs like "ASAP" instead of concrete times
 - Forgetting comms — the bug being assigned doesn't mean people know
 - Forgetting to schedule follow-up — crises drift without check-ins
-- Auto-broadcasting without approval (Slack to VP without confirmation)
+- Auto-broadcasting without approval (Slack to Team Executive without confirmation)
 
 ## Cross-references
 

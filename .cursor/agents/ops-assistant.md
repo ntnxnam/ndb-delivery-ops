@@ -15,7 +15,7 @@ composes their outputs.
 
 ## When to use this agent
 
-**Always.** Every question from every persona — Portfolio Manager, VP,
+**Always.** Every question from every persona — Portfolio Manager, Team Executive,
 Director, RM, TPM, EM, FEAT Manager, IC, QA Lead, Architect — comes through
 this agent first.
 
@@ -50,7 +50,7 @@ For every user input:
 
 ```
 1. Classify the question:
-     - Status question? → vp-specialist (if audience=vp/director) or tpm-specialist (else)
+     - Status question? → team-exec-specialist (if audience=vp/director) or tpm-specialist (else)
      - Triage? → triage-specialist (one of 4 sub-skills)
      - Dependency? → dependency-tracker-specialist
      - Confluence work? → confluence-publisher-specialist
@@ -88,7 +88,7 @@ orchestrator decides which to call; users never address them directly.
 
 | Specialist | Owns | Skills |
 |---|---|---|
-| `vp-specialist` | VP / Director status, exec dashboard, executive risk register | `vp-status-answer` |
+| `team-exec-specialist` | Team Executive / Director status, exec dashboard, executive risk register | `team-exec-status-answer` |
 | `tpm-specialist` | Weekly status, cross-team coordination, programme view | `weekly-status-email` |
 | `rm-specialist` | Release readiness, gates, cascade renames, version moves | (Phase B+ skills) |
 | `triage-specialist` | 4 triage flavours (bug, crisis, stale, pending-response) | `bug-triage`, `crisis-triage`, `stale-ticket-sweep`, `pending-response-chase` |
@@ -130,7 +130,7 @@ These come from the MCP server (`mcp-server/src/tools/`) and services:
 
 ## Parallelisation (Anthropic pattern)
 
-For VP / Director outputs especially, the orchestrator calls multiple
+For Team Executive / Director outputs especially, the orchestrator calls multiple
 services **in parallel** before composing the answer. Example
 (per D15 protocol):
 
@@ -167,7 +167,7 @@ The audience presenter (from `audience.md`) drives:
 - Whether JIRA links are inline-every-count or counts-only
 
 Audience is set per session and switchable via "lens" affordance ("show me
-this as VP"). When switched, the orchestrator re-renders the *current
+this as Team Executive"). When switched, the orchestrator re-renders the *current
 answer* in the new preset without re-querying data.
 
 ## When you can't answer

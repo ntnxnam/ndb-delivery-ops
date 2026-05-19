@@ -12,7 +12,7 @@
  * Uses two JIRA conventions:
  *   - customfield_10002 — Story Points (Nutanix JIRA Server, standard)
  *   - portfolioChildrenOf("issue = KEY") — Portfolio for JIRA hierarchy
- *     traversal; same primitive the release-analysis service uses
+ *     traversal
  */
 
 import { z } from 'zod';
@@ -49,9 +49,9 @@ export function registerCalculateStoryPoints(server: McpServer, env: Env): void 
     },
     async ({ parentKey, includeDone, excludeIssueTypes }) => {
       try {
-        // Use portfolioChildrenOf (same primitive the release-analysis service uses)
-        // for the hierarchy walk; falls back to issuesInEpics for Epic-only parents
-        // — JQL function picks the right behaviour by parent type.
+        // Use portfolioChildrenOf for the hierarchy walk; falls back to
+        // issuesInEpics for Epic-only parents — JQL function picks the right
+        // behaviour by parent type.
         const excludeClause = excludeIssueTypes && excludeIssueTypes.length > 0
           ? ` AND issuetype not in (${excludeIssueTypes.map(t => `"${t}"`).join(',')})`
           : '';

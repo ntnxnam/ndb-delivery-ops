@@ -7,7 +7,7 @@ audience: tpm, rm, portfolio_mgr, feat
 ## When to Use This Skill
 
 - User asks "what's blocking [ticket]?" or "what's [feature] waiting on?"
-- The VP specialist needs upstream-risk context for the risk register
+- The Team Executive specialist needs upstream-risk context for the risk register
 - The TPM specialist needs cross-team dep callouts for the weekly status
 - The crisis-triage skill needs to find the root of a P0 chain
 - Computing critical path for a release's landing prediction
@@ -47,7 +47,7 @@ Procedure:
 6. **Visually distinguish JIRA-link edges from inferred edges** in any
    rendered output — never blend them.
 7. **Cross-release flag**: edges where source and target are in different
-   releases get `crossRelease: true` (high signal for VP risk register).
+   releases get `crossRelease: true` (high signal for Team Executive risk register).
 8. **Don't auto-create JIRA links** for inferred dependencies. Surface as
    suggestions; require user approval per D18.
 
@@ -109,7 +109,7 @@ Truncated: no (actualDepth=2, maxDepth=5)
 - [ ] Cross-release edges are flagged
 - [ ] Inferred edges (if any) are visually distinct from JIRA-link edges
 - [ ] Cache key includes refreshTimestamp
-- [ ] Audience-appropriate render: VP compact, TPM full, RM team-aggregated
+- [ ] Audience-appropriate render: Team Executive compact, TPM full, RM team-aggregated
 
 ## Common Mistakes to Avoid
 

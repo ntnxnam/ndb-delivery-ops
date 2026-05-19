@@ -36,7 +36,7 @@ const FIELDS = [
   'customfield_35864', // Promotion Gate Ready Estimation
 ].join(',');
 
-const AUDIENCES = ['vp', 'em', 'engineer'] as const;
+const AUDIENCES = ['team-exec', 'em', 'engineer'] as const;
 type Audience = (typeof AUDIENCES)[number];
 
 const inputSchema = {
@@ -175,7 +175,7 @@ function shapeForAudience(
   const header = `# Release Status — ${version}\n\n_Audience: ${audience}_\n`;
   const riskLine = `**Risk:** Red ${risk.red} • Yellow ${risk.yellow} • Green ${risk.green} • Not Set ${risk.not_set} (Total ${total})\n`;
 
-  if (audience === 'vp') {
+  if (audience === 'team-exec') {
     // Executive: 5 lines max, no individual tickets unless red.
     const reds = buckets.red.slice(0, 5).map((r) => `- ${r.key} (${r.status}) — ${r.summary}`).join('\n');
     const md = `${header}\n${riskLine}\n${reds ? `## Critical items\n\n${reds}\n` : '## Critical items\n\nNone.\n'}`;

@@ -11,7 +11,7 @@
  *   - Resolve product config by id
  *   - Return JIRA project key(s) for a product
  *   - Return custom-field IDs (with per-product overrides on top of globals)
- *   - Return audience overrides (per-product VP name, etc.)
+ *   - Return audience overrides (per-product Team Executive name, etc.)
  *   - Resolve JQL filter prefixes
  *   - Resolve a release-name → product mapping (for parent-projects with
  *     version patterns)
@@ -199,7 +199,7 @@ export class ProductService {
   }
 
   /**
-   * Per-audience overrides for a product (e.g. VP recipient name).
+   * Per-audience overrides for a product (e.g. Team Executive recipient name).
    * Returns an empty object if no override is configured.
    */
   getAudienceOverrides(productId: string, audience: AudienceId): AudienceOverrides {

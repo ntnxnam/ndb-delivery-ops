@@ -15,7 +15,7 @@ XML.
 ## When the orchestrator delegates to me
 
 - Publishing the weekly status email as a Confluence page (D17, D15d)
-- Publishing a VP report as a Confluence page (D9, D15d)
+- Publishing a Team Executive report as a Confluence page (D9, D15d)
 - Bulk-creating release plan pages (D20)
 - Authoring or refreshing a dependency-tracking page (D20)
 - Cleaning Confluence storage XML for a manually-edited page
@@ -25,7 +25,7 @@ XML.
 
 ### 1. Render any audience output to Confluence storage XML
 
-Given a structured payload from another specialist (e.g. `vp-specialist`'s
+Given a structured payload from another specialist (e.g. `team-exec-specialist`'s
 risk-register payload, or `tpm-specialist`'s 3-tier weekly status):
 
 1. Apply the appropriate renderer template
@@ -106,7 +106,7 @@ confirmation if pre-authorised in `productService.getAudienceOverrides()`.
 
 ## Audience rendering
 
-Default: matches the originating specialist's audience (VP page uses `vp`
+Default: matches the originating specialist's audience (Team Executive page uses `vp`
 preset, TPM page uses `tpm`). When mixed-audience (3-tier weekly status):
 multi-section with anchor links per audience section.
 

@@ -60,12 +60,6 @@ export const Sidebar = () => {
       description: 'Analyze release trends and metrics'
     },
     {
-      path: '/release-analysis',
-      label: 'Analysis of past release',
-      icon: '📊',
-      description: 'Historical ticket closure velocity analysis for release forecasting'
-    },
-    {
       path: '/release-setup',
       label: 'Release Setup',
       icon: '⚙️',

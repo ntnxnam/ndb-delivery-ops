@@ -16,7 +16,7 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "PORT=6100 BROWSER=none react-scripts start",
+    "start": "PORT=8888 BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "build:local": "CI= react-scripts build",
     "build:email-only": "REACT_APP_ENABLE_RELEASE_VERSIONS=false react-scripts build",

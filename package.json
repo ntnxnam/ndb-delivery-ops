@@ -5,6 +5,8 @@
   "description": "Consolidated NDB-Ops delivery tooling: web app, Streamlit TPM tools, and a custom MCP server. Workspace root.",
   "workspaces": [
     "apps/*",
+    "apps/delivery-ops/server",
+    "apps/delivery-ops/client",
     "mcp-server",
     "shared"
   ],

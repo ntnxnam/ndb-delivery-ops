@@ -1,16 +1,16 @@
 ---
-name: vp-status-answer
-description: Answer any VP / Director status question using the compound-question + risk-register protocol. Use when the audience is vp or director and the question relates to release status, blockers, landing date, or health.
-audience: vp, director
+name: team-exec-status-answer
+description: Answer any Team Executive / Director status question using the compound-question + risk-register protocol. Use when the audience is team-exec or director and the question relates to release status, blockers, landing date, or health.
+audience: team-exec, director
 ---
 
 ## When to Use This Skill
 
-- The Ops Assistant orchestrator delegates to `vp-specialist` and the
+- The Ops Assistant orchestrator delegates to `team-exec-specialist` and the
   audience is `vp` or `director`
-- The user (any role) explicitly asks for VP-lens output ("show me as VP")
-- The Monday VP digest job runs (per D14 opt-in cadence)
-- A status answer is being rendered for inclusion in a Confluence VP page
+- The user (any role) explicitly asks for Team Executive-lens output ("show me as Team Executive")
+- The Monday Team Executive digest job runs (per D14 opt-in cadence)
+- A status answer is being rendered for inclusion in a Confluence Team Executive page
 
 ## Quick Start
 
@@ -35,7 +35,7 @@ Procedure:
 
 ## Core Rules
 
-1. **Compound question always** (D15a). Every VP question is "when landing?"
+1. **Compound question always** (D15a). Every Team Executive question is "when landing?"
    AND "what's blocking us?" — answer both halves even if only one was
    asked.
 2. **Risk-register format, not bullet summary** (D15b). The blocker list is
@@ -112,8 +112,8 @@ Before declaring the answer done, confirm:
 - [ ] At least one chart is generated and inlined
 - [ ] Drill-in offer is included
 - [ ] Last-refreshed timestamp + Refresh affordance present
-- [ ] Audience declaration: `audience: vp` (or `director`)
-- [ ] Output passes `persona-aware-output.mdc` checks for VP density
+- [ ] Audience declaration: `audience: team-exec` (or `director`)
+- [ ] Output passes `persona-aware-output.mdc` checks for Team Executive density
 
 ## Common Mistakes to Avoid
 
@@ -121,12 +121,12 @@ Before declaring the answer done, confirm:
 - Compressing to 3 bullets when there are 8 high-impact risks
 - Guessing the release instead of asking
 - Forgetting citations on counts ("12 open bugs" without source)
-- Showing JQL inline (it's appendix-only for VP)
+- Showing JQL inline (it's appendix-only for Team Executive)
 - Sequencing the service calls instead of running them in parallel
 
 ## Cross-references
 
-- `.cursor/agents/specialists/vp-specialist.md`
+- `.cursor/agents/specialists/team-exec-specialist.md`
 - `.cursor/rules/persona-aware-output.mdc`
 - `.cursor/rules/citation-first-output.mdc`
 - `~/.cursor/context/audience.md` — `vp` audience

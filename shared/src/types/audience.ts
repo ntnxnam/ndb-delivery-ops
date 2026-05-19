@@ -12,7 +12,7 @@
  */
 
 export type AudienceId =
-  | 'vp'
+  | 'team-exec'
   | 'director'
   | 'portfolio_mgr'
   | 'tpm'
@@ -25,7 +25,7 @@ export type AudienceId =
   | 'architect';
 
 export const AUDIENCE_IDS: ReadonlyArray<AudienceId> = [
-  'vp',
+  'team-exec',
   'director',
   'portfolio_mgr',
   'tpm',
@@ -45,7 +45,7 @@ export const AUDIENCE_IDS: ReadonlyArray<AudienceId> = [
 export type AudienceDensity = 'executive' | 'manager' | 'engineer' | 'firehose';
 
 export const DENSITY_BY_AUDIENCE: Record<AudienceId, AudienceDensity> = {
-  vp: 'executive',
+  'team-exec': 'executive',
   director: 'executive',
   portfolio_mgr: 'firehose',
   tpm: 'manager',
@@ -66,7 +66,7 @@ export const DENSITY_BY_AUDIENCE: Record<AudienceId, AudienceDensity> = {
 export type CitationDensity = 'always-inline' | 'counts-only' | 'appendix' | 'optional';
 
 export const CITATION_BY_AUDIENCE: Record<AudienceId, CitationDensity> = {
-  vp: 'counts-only',
+  'team-exec': 'counts-only',
   director: 'counts-only',
   portfolio_mgr: 'optional',
   tpm: 'always-inline',

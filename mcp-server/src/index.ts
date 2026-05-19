@@ -33,7 +33,7 @@ const SERVER_INSTRUCTIONS = [
   '- Every tool that produces user-facing output takes an `audience` arg (vp | em | engineer). Pick the right one from context; default is `em` (engineering manager).',
   '- Risk classification follows red/yellow/green/not_set, derived from JIRA customfield_23560.',
   '- For "release status" / "release health" queries, prefer `get_release_status`.',
-  '- The `ndb://glossary` resource has authoritative definitions for VP, EC, CG, X-FEAT, etc. Pull it before guessing.',
+  '- The `ndb://glossary` resource has authoritative definitions for Team Executive, EC, CG, X-FEAT, etc. Pull it before guessing.',
   '',
   'Errors are returned as `isError: true` with a human-readable text body. Read them and self-correct (e.g. retry with a different version string) rather than escalating to the user immediately.',
 ].join('\n');

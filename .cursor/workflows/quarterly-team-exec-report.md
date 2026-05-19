@@ -1,6 +1,6 @@
-# Workflow: Quarterly VP report
+# Workflow: Quarterly Team Executive report
 
-Long-form VP-tier release report with predictive analytics, published to
+Long-form Team Executive-tier release report with predictive analytics, published to
 Confluence and emailed.
 
 ## Trigger
@@ -16,7 +16,7 @@ quarterly".
 | `quarter` | yes | `Q1` / `Q2` / `Q3` / `Q4`. |
 | `confluenceSpace` | yes | Target space key (e.g. `NDB`). |
 | `confluenceParentId` | yes | Parent page ID under which to publish. |
-| `recipients` | yes | VP distribution list. |
+| `recipients` | yes | Team Executive distribution list. |
 
 ## Owner agent
 
@@ -25,17 +25,17 @@ quarterly".
 ## Steps
 
 1. **Snapshot the release**
-   - Call `get_release_status` (`audience: vp`).
+   - Call `get_release_status` (`audience: team-exec`).
    - Call `say_vs_do` for the predictability headline.
    - Call `gantt_release_timeline` to capture slip data.
 
 2. **Run predictive analytics**
-   - Apply the `~/.cursor/skills/predictive-vp-analytics/` skill to the
+   - Apply the `~/.cursor/skills/predictive-team-exec-analytics/` skill to the
      combined data set. Output: forecast completion date, confidence
      interval, top three risk drivers with probability estimates.
 
 3. **Build the long-form report**
-   - Drive the `~/.cursor/skills/vp-release-report/` skill.
+   - Drive the `~/.cursor/skills/team-exec-release-report/` skill.
    - Required sections (per documentation-consistency rule):
      1. Executive Summary
      2. Release Health
@@ -45,9 +45,9 @@ quarterly".
      6. Action Items
      7. Appendix (predictive-analytics raw output)
    - File:
-     `reports/VP-Executive-NDB-<version>-<quarter>-<YYYY-MM-DD>.md`.
+     `reports/TeamExec-NDB-<version>-<quarter>-<YYYY-MM-DD>.md`.
    - HTML companion:
-     `reports/VP-Executive-NDB-<version>-<quarter>-<YYYY-MM-DD>-Email.html`.
+     `reports/TeamExec-NDB-<version>-<quarter>-<YYYY-MM-DD>-Email.html`.
 
 4. **Publish to Confluence**
    - Use `apps/tpm-confluence-tools/` to render the markdown to Confluence
@@ -55,7 +55,7 @@ quarterly".
    - Clean width constraints via the
      `~/.cursor/skills/confluence-width-cleanup/` skill.
    - Create the page under `confluenceParentId` in `confluenceSpace`.
-   - Title format: `NDB <version> — <quarter> VP Status — <YYYY-MM-DD>`.
+   - Title format: `NDB <version> — <quarter> Team Executive Status — <YYYY-MM-DD>`.
 
 5. **Email**
    - Send the HTML version to `recipients` via the
@@ -76,7 +76,7 @@ quarterly".
 | Failure | Recover |
 |---|---|
 | Predictive analytics has too little history | Skip Trending section; note in Appendix. |
-| Confluence write fails | Save Markdown + HTML; surface Confluence error; do NOT send email until resolved (VP gets one canonical link). |
+| Confluence write fails | Save Markdown + HTML; surface Confluence error; do NOT send email until resolved (Team Executive gets one canonical link). |
 | SMTP fails | Save artefacts; ask user to retry. |
 
 ## Validation checklist
@@ -85,4 +85,4 @@ quarterly".
 - [ ] One-page Executive Summary fits in one screen at 1080p.
 - [ ] Predictive-analytics output cites its training window.
 - [ ] Confluence page URL appears in the email body.
-- [ ] No JIRA links inline in the VP body (per `audience.md`).
+- [ ] No JIRA links inline in the Team Executive body (per `audience.md`).
