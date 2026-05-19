@@ -1,0 +1,138 @@
+---
+description: Report file naming + markdown frontmatter + skill file standard
+alwaysApply: true
+---
+
+# Documentation Consistency
+
+Reports, skills, and rules must be consistently structured so every artifact
+is instantly recognisable and machine-parseable.
+
+## Report File Naming
+
+Every file saved to `reports/` must follow:
+
+```
+{ReportType}-{Product}-{Release}-{YYYY-MM-DD}{-Variant}.{ext}
+```
+
+| Segment | Rules | Examples |
+|---|---|---|
+| `ReportType` | TitleCase, one of: `VP-Executive`, `Sprint`, `Detailed`, `KPI`, `Prediction`, `Weekly-Status`, `Release-Brief` | `VP-Executive` |
+| `Product` | Uppercase product key (per D1) | `NDB`, `DataLens` |
+| `Release` | Major.Minor, no dots replaced | `2.11` |
+| `YYYY-MM-DD` | ISO date, always present | `2026-05-08` |
+| `-Variant` | Optional. Only when multiple variants of the same type on the same day | `-Email`, `-LiveData` |
+| `.ext` | `.md` for markdown, `.html` for email, `.json` for raw data | `.md` |
+
+**Valid:**
+```
+VP-Executive-NDB-2.11-2026-05-08.md
+VP-Executive-NDB-2.11-2026-05-08-Email.html
+Weekly-Status-DataLens-X-2026-05-08.md
+Sprint-NDB-2.11-2026-05-08.md
+```
+
+**Invalid:**
+```
+CrystalBall-Enhanced-VP-Report-2026-04-21.md   ← missing Product+Release
+Comprehensive-VP-Report-NDB-2.11-2026-04-20    ← wrong ReportType prefix
+VP-Executive-Report-NDB-2.11-...                ← "Report" is redundant
+```
+
+## Markdown Report Frontmatter
+
+Every `.md` report must open with:
+
+```markdown
+---
+report_type: VP-Executive | Sprint | Detailed | KPI | Prediction | Weekly-Status | Release-Brief
+product: NDB
+release: "2.11"
+generated: YYYY-MM-DD
+data_source: live | skill | manual
+audience: vp | director | tpm | rm | feat | team | ic
+---
+```
+
+The `audience` field is required (per **`persona-aware-output.mdc`**) and
+drives presenter selection.
+
+## Markdown Report Section Order
+
+In this order; omit only if genuinely no data:
+
+1. `## Executive Summary` — 3–5 bullets, no prose paragraphs
+2. `## Release Health` — overall RAG with 1-line justification
+3. `## Project Status` — per-project table or bullets
+4. `## Risk Assessment` — ranked risks with owner + mitigation (per D15 risk-register shape)
+5. `## Trending` — week-over-week delta (omit only if first report)
+6. `## Action Items` — assignee + due date for each
+7. `## Appendix` — raw counts, JQL, supplemental data (optional)
+
+## HTML Email Report Requirements
+
+- Self-contained (all CSS inline, no external stylesheets / fonts)
+- Open with: `<!-- {ReportType} | {Product} | {Release} | {Date} -->`
+- Max table width: `800px`
+- No `localhost` or internal addresses in `src` / `href`
+- Plain-text fallback `<div>` for HTML-stripping clients
+
+## Skill File Standards (`.cursor/skills/*/SKILL.md`)
+
+Required sections in this order. Extra sections are fine; missing required
+ones are not.
+
+```markdown
+---
+name: skill-name-in-kebab-case
+description: One sentence. Active verb. Includes "Use when".
+audience: optional — vp | director | tpm | rm | feat | team | ic
+---
+
+## When to Use This Skill
+(2–4 bullet triggers. Specific user wording or context.)
+
+## Quick Start
+(Minimal working example — shortest path to a useful output.)
+
+## Core Rules
+(Non-negotiable constraints. Numbered list.)
+
+## Output Format
+(Exact structure of what this skill produces. Include a template.)
+
+## Quality Validation
+(Checklist the agent runs before declaring done.)
+```
+
+Description must use **active verbs** ("Generate...", "Fetch..."), not "This
+skill is for..." or "A skill that helps...".
+
+Do not introduce non-canonical section names. Fold into:
+
+| Concept | Canonical section |
+|---|---|
+| When to invoke | `## When to Use This Skill` |
+| The rules | `## Core Rules` |
+| What output looks like | `## Output Format` |
+| How to verify correctness | `## Quality Validation` |
+
+## Commit Message Convention for Docs
+
+Use the prefix `docs:` or `skill:` or `rule:`:
+
+```
+docs: add VP-Executive-NDB-2.11-2026-05-08.md live-data report
+skill: update fetch-project-tickets with bulk query optimisation
+rule: add citation-first-output for audit-trailed agent answers
+```
+
+Never use generic messages like `update`, `fix`, or `generate report`.
+
+## Grandfathering
+
+- Reports already in `reports/`: leave them. Only new files must comply.
+- Existing skill sections: rename to canonical names in the same commit
+  when you next edit a skill.
+- Existing rule files: grandfathered; new rules follow this standard.

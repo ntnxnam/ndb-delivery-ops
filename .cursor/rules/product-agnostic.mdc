@@ -1,0 +1,105 @@
+---
+description: No NDB-specific strings in code; everything is config-driven via productService
+alwaysApply: true
+---
+
+# Product-Agnostic by Design
+
+Per **D1**, this platform supports multiple products (NDB, DataLens, NCM,
+future). No code may assume NDB. Everything product-specific reads from
+`productService` config.
+
+## What must be config-driven
+
+| Item | Source of truth |
+|---|---|
+| JIRA project keys (`NDB`, `ERA`, `FEAT`) | `productService.getJiraProjects(productId)` |
+| JIRA custom field IDs (`customfield_11067` etc.) | `productService.getCustomFields(productId)` |
+| JIRA board IDs (`2888` etc.) | `productService.getBoards(productId)` |
+| Confluence space keys | `productService.getConfluenceSpace(productId)` |
+| GitHub orgs / repos | `productService.getGithubOrgs(productId)` |
+| Audience overrides (per-product VP name, per-product audience presets) | `productService.getAudienceOverrides(productId)` |
+| Release naming convention | `productService.getReleaseNamePattern(productId)` |
+| Product-specific terminology (e.g. "NDB" vs "DataLens") | `productService.getDisplayName(productId)` |
+
+## What may stay product-neutral
+
+- Generic dates, ticket-key prefixes used **as variables**, audience role
+  names (`vp`, `tpm`, `rm` — these are universal across products)
+- Default JIRA hierarchy (X-FEAT → Feature → Epic → Story) — this is a
+  Nutanix-wide convention, codified in `jira-date-hierarchy.mdc`
+- Default audience presenter templates (overridable per product)
+
+## Code patterns
+
+### Correct
+
+```typescript
+// Get JIRA project list dynamically
+const projects = await productService.getJiraProjects(productId);
+const jql = `project in (${projects.join(',')}) AND ...`;
+
+// Get custom field ID via lookup
+const ccField = await productService.getCustomFields(productId).codeCompleteDate;
+
+// Audience format for the right VP name
+const audience = await productService.getAudienceOverrides(productId, 'vp');
+const greeting = `Hi ${audience.recipientName},`;
+```
+
+### Forbidden
+
+```typescript
+// ❌ Hardcoded product key
+const jql = `project = NDB AND ...`;
+
+// ❌ Hardcoded custom field
+const ccDate = issue.fields.customfield_11067;
+
+// ❌ Hardcoded display name
+console.log('NDB release status:');
+```
+
+## File-level rules
+
+- **No string literal `"NDB"` outside `productService` config and tests.**
+  Tests use NDB as a fixture; production code uses the active product from
+  the user's session.
+- **No string literal `customfield_NNNNN` outside `productService` config
+  files.** (Per `minimal-architecture.mdc` hard line #3.)
+- **Reports and emails reference the product by display name** from
+  `productService.getDisplayName(productId)`.
+
+## Multi-product session handling
+
+- The web app's top bar has a product picker (D5). The picker writes to
+  user session: `session.activeProducts = ['ndb', 'datalens']`
+- Every Layer-3 service that reads data takes a `productIds` array — never
+  assumes a single product
+- The agent's orchestrator reads `session.activeProducts` at session start
+  and includes it in every tool call
+- "Active releases" (D13) are scoped to `session.activeProducts`
+
+## Migration responsibility
+
+When you touch a file containing hardcoded NDB strings:
+
+1. If you're already editing it, move the strings to `productService` config
+   in the same commit
+2. If it's untouched but you reference it, file a `TODO(D1)` and pick it up
+   in the next dedicated migration pass
+
+Do not let the grandfathering tail grow.
+
+## Never Do
+
+- Add a new string literal `"NDB"` / `"ndb"` / `customfield_*` to non-config code
+- Assume the active product without consulting `productService`
+- Hard-code release names like `NDB-2.11` in generic services (they belong in
+  config or are passed in as parameters)
+- Build a report that only renders correctly for NDB
+
+## Cross-references
+
+- **D1, D5** in `DECISIONS.md`
+- **`minimal-architecture.mdc`** hard line #3 — customfield IDs in one place

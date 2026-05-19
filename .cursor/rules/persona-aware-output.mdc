@@ -1,0 +1,83 @@
+---
+description: All user-facing output declares an audience and respects the corresponding presenter
+alwaysApply: true
+---
+
+# Persona-Aware Output
+
+Every artifact this project produces — a report, a chat answer, an email,
+a Confluence page — must declare an **audience** and be rendered using
+the corresponding presenter from `.cursor/context/audience.md`.
+
+Per **D6 — Role lens is a presenter, not a filter**, the same underlying
+data may be rendered for multiple audiences. Audience drives **density,
+link policy, citation density, chart-vs-prose ratio, and RAG-first vs
+detail-first ordering** — not which data is shown.
+
+## Required: declare the audience
+
+Every output artifact declares its audience in one of these ways:
+
+1. **Markdown reports**: `audience:` field in frontmatter (per
+   `documentation-consistency.mdc`)
+2. **Agent answers in chat**: the orchestrator stores the active lens
+   per-session; specialists read it via the agent's context
+3. **HTML emails**: `<!-- audience: vp -->` in the metadata comment
+4. **Confluence pages**: stored as a page label `audience-vp`
+
+If you generate an artifact without declaring its audience, you violated
+this rule.
+
+## The Seven Audiences
+
+Audiences are defined canonically in `.cursor/context/audience.md`:
+
+| Audience | When to use |
+|---|---|
+| `vp` | VP / SVP. Chart-first, RAG-first, citation-first, no JQL. (D15 protocol.) |
+| `director` | Director. Slightly more detail than VP, same density. |
+| `tpm` | TPM / program manager. Cross-team, dense, 3-tier (D17). |
+| `rm` | Release manager. Gate-centric, dates-heavy. |
+| `feat` | Feature manager. Scoped to one Feature. |
+| `team` | EM / team lead. Team-scoped, sprint-centric. |
+| `ic` | IC. Their tickets only, terse. |
+
+## Presenter rules per audience
+
+Each presenter is defined in `audience.md`. Examples of how density
+differs:
+
+- **VP audience** — never show JQL strings; never show ticket-key lists
+  (use linked counts); RAG chip in the headline; risk register format
+  (D15); 1 supporting chart per claim.
+- **TPM audience** — full ticket-key lists OK, JQL ok in appendix, dense
+  3-tier structure (release / team / FEAT) per D17.
+- **IC audience** — short, action-oriented, no charts unless asked,
+  single-table scope.
+
+## Default audience
+
+If no audience is set explicitly:
+
+- **Chat surface**: orchestrator infers from caller's auth role; falls
+  back to `tpm` (richest default for Portfolio Manager and most
+  power users)
+- **Report file**: must be explicit; warn if frontmatter is missing
+- **Email**: must be explicit; refuse to render without `audience:` declared
+
+## Never Do
+
+- Generate user-facing output without declaring an audience
+- Apply VP density (chart-first, citation-first) to IC audience or vice
+  versa
+- Inline `<JQL: ...>` strings in `vp` / `director` / `team` / `ic` output
+- Show >5-column data tables to `vp` audience (collapse to chart)
+- Mix audiences in a single artifact (split into separate sections with
+  separate audience declarations if needed)
+
+## Cross-references
+
+- **`.cursor/context/audience.md`** — canonical presenter definitions
+- **D6** in `DECISIONS.md` — Role lens is a presenter, not a filter
+- **D15** in `DECISIONS.md` — VP answer protocol (specific case)
+- **D17** in `DECISIONS.md` — TPM weekly status structure (specific case)

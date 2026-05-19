@@ -1,0 +1,135 @@
+---
+description: Keep layers honest — components render, hooks fetch, services transform
+alwaysApply: true
+---
+
+# Minimal Architecture — Keep Layers Honest
+
+This project has a recurring pattern: a component grows to own its API calls,
+its data transforms, its render logic, and its configuration all at once.
+Once a file crosses ~600 lines, every subsequent edit becomes harder and
+riskier. These rules stop that from happening again.
+
+Layer model: see `ARCHITECTURE.md`. Five layers — Connectors / Domain Models /
+Services / API+MCP / UI. **One feature, one place** (per D1, D3).
+
+## The Four Hard Lines
+
+### 1. Components render. Hooks fetch. Services transform.
+
+A file under `apps/delivery-ops/client/src/` must not contain raw `axios` or
+`fetch` calls. Data fetching belongs in a custom hook (`client/src/hooks/`)
+or via the API service.
+
+```
+❌ SprintReportPage.js calling axios.get('/api/jira/...') in the component body
+✅ useSprintReport.js (hook) fetching, SprintReportPage.js consuming { data, loading, error }
+```
+
+The test: if you delete the JSX from a component file, no network call should
+vanish with it.
+
+### 2. Route files route. Business logic lives in services.
+
+`apps/delivery-ops/server/routes/` files must not implement data
+transformation, query building, or report generation inline. They call a
+service, then respond.
+
+When adding a new endpoint:
+- Put query-building logic in `server/utils/` or `shared/connectors/jiraConnector.ts`
+- Put multi-step orchestration in `server/services/` (one service per domain)
+- Keep the route handler under 40 lines: validate → call service → respond
+
+### 3. JIRA custom field IDs live in ONE place
+
+`customfield_NNNNN` strings must not be scattered across component files,
+route files, and utils. Per D1, they're product-specific and live in:
+
+- **Server**: `productService` config (consults `teamBoardConfig.json` +
+  per-product field maps)
+- **Client**: `client/src/utils/jiraFields.js` (constants), or fetched from
+  `productService` at runtime
+- **Shared**: `shared/types/` for type-level field IDs
+
+Import the constant — never write `customfield_NNNNN` inline a second time.
+
+### 4. File size is a forcing function
+
+| Layer | Soft warn | Hard limit |
+|---|---|---|
+| React component | 300 lines | 600 lines |
+| Custom hook | 150 lines | 300 lines |
+| Server route handler | 80 lines | 150 lines |
+| Service / util | 200 lines | 500 lines |
+| MCP tool | 100 lines | 250 lines |
+| Connector | 200 lines | 500 lines |
+
+When a file approaches its hard limit, **split it before adding the next
+feature**. Splitting strategies:
+
+- **Component**: extract sub-components (`ComponentName/index.js` + `SubPart.js`)
+- **Route**: move logic to a service; split routes by resource
+  (`jira/releases.js`, `jira/sprints.js`)
+- **Hook**: extract smaller, focused hooks and compose
+- **Util**: group by domain (`dateUtils.js`, `jiraQueryUtils.js`)
+
+## Mixed-Concern Patterns to Avoid
+
+```javascript
+// ❌ Fetching + rendering in the same component
+function ReleaseVersionTab() {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    axios.get('/api/jira/releases').then(r => setData(r.data));
+  }, []);
+  return <Table data={data} />;
+}
+
+// ✅ Separated
+function ReleaseVersionTab() {
+  const { releases, loading } = useReleaseData();
+  return <Table data={releases} loading={loading} />;
+}
+```
+
+```javascript
+// ❌ Inline config arrays inside a large component
+const STATUS_COLORS = { 'On Track': 'green', 'At Risk': 'orange' };
+
+// ✅ Imported constant
+import { STATUS_COLORS } from '../constants/releaseStatus';
+```
+
+```javascript
+// ❌ Route handler doing everything
+router.get('/jira/gantt', async (req, res) => {
+  const jql = `project in (${req.query.projects}) AND ...`;
+  const raw = await axios.get(`${JIRA_URL}/search?jql=${jql}`);
+  const transformed = raw.data.issues.map(i => ({ /* 30 lines */ }));
+  res.json(transformed);
+});
+
+// ✅ Route delegates
+router.get('/jira/gantt', async (req, res) => {
+  const data = await timelineService.getGanttData(req.query);
+  res.json(data);
+});
+```
+
+## Duplication Rule
+
+Before creating a new utility function, search for an existing one. This
+project already has:
+
+- `client/src/utils/api.js` and `client/src/shared/services/apiService.js` —
+  pick one per call site
+- Shared logic should live server-side in `shared/connectors/` per D3 — the
+  client asks the server, not external systems directly
+
+## Never Do
+
+- Add `axios` / `fetch` directly inside a React component body
+- Write a new route handler longer than 150 lines
+- Hard-code `customfield_NNNNN` outside `productService` config
+- Create a new util file that overlaps in purpose with an existing one
+- Grow a file past its hard limit without splitting it first

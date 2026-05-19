@@ -1,0 +1,13 @@
+---
+description: Never push directly to Gerrit; use refs/for for code review
+alwaysApply: true
+---
+
+# Gerrit — Code Review Pushes
+
+- Do **not** run `git push` straight to a Gerrit branch (e.g.
+  `refs/heads/<branch>`) when the intent is to open or update a change request.
+- To raise or update a CR, push to the review ref: `refs/for/<branchname>`
+  (e.g. `git push <remote> HEAD:refs/for/main` or your target branch).
+- Use the project's documented remote and branch naming; the pattern is
+  always `refs/for/<target-branch>` for review, not a direct branch push.
