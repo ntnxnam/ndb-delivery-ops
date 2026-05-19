@@ -1,0 +1,20 @@
+{
+  "name": "ndb-delivery-ops",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consolidated NDB-Ops delivery tooling: web app, Streamlit TPM tools, and a custom MCP server. Workspace root.",
+  "workspaces": [
+    "apps/*",
+    "mcp-server",
+    "shared"
+  ],
+  "scripts": {
+    "mcp:build": "npm --workspace mcp-server run build",
+    "mcp:start": "npm --workspace mcp-server run start",
+    "delivery-ops:dev": "npm --workspace apps/delivery-ops run dev",
+    "delivery-ops:restart": "cd apps/delivery-ops && ./restart"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
