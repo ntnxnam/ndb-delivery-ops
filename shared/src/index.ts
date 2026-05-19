@@ -29,3 +29,15 @@ export {
   isGateDateField,
   buildAuditRow,
 } from './services/dateMoverService.js';
+export {
+  buildPayloadJql,
+  getComponentQueries,
+  getWishlistQuery,
+  getDeferredQuery,
+  PAYLOAD_BUCKET_KEYS,
+  PORTFOLIO_ROOT_TYPES,
+  PORTFOLIO_CONTAINER_TYPES,
+  WISHLIST_COMPONENT,
+  DEFERRED_COMPONENT,
+} from './services/payloadJqlService.js';
+export type { PayloadBucketKey } from './services/payloadJqlService.js';

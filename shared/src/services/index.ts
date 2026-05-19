@@ -24,3 +24,4 @@ export * from './predictabilityService.js';
 export * from './dependencyService.js';
 export * from './chartService.js';
 export * from './dateMoverService.js';
+export * from './payloadJqlService.js';

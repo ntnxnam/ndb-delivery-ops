@@ -16,7 +16,8 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 
 | # | Capability | Source | Target TS module | Status |
 |---|---|---|---|---|
-| 1 | 5-bucket release payload + canonical `releaseDataset` | `release-sprint-analysis-with-chatbot/data_layer.py + payload_jql.py` | `shared/services/releaseDatasetService.ts` + `shared/services/payloadJqlService.ts` | pending |
+| 1a | 5-bucket release payload JQL builders + sidecars | `release-sprint-analysis-with-chatbot/payload_jql.py` | `shared/services/payloadJqlService.ts` | **ported** (9/9 parity tests pass; D1 product-agnostic via `projectKey` + `labelPrefix`) |
+| 1b | Canonical `releaseDataset` (`processed_df` equivalent + cache) | `release-sprint-analysis-with-chatbot/data_layer.py` (1,508 LOC) | `shared/services/releaseDatasetService.ts` | pending |
 
 ## Capabilities that read from the trunk
 
