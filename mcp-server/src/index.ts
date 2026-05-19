@@ -17,6 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadEnv } from './config/env.js';
 import { registerGetReleaseStatus } from './tools/getReleaseStatus.js';
+import { registerMoveJiraDates } from './tools/moveJiraDates.js';
 import { registerNdbGlossary } from './resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
 
   // ── tools ──────────────────────────────────────────────────────────────
   registerGetReleaseStatus(server, env);
+  registerMoveJiraDates(server, env);
 
   // ── resources ─────────────────────────────────────────────────────────
   registerNdbGlossary(server);
