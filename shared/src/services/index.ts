@@ -27,3 +27,7 @@ export * from './dateMoverService.js';
 export * from './payloadJqlService.js';
 export * from './ticketFetchService.js';
 export * from './releaseDatasetService.js';
+export * from './releaseClassificationService.js';
+export * from './issueGroupsService.js';
+export * from './resolutionCategoriesService.js';
+export * from './sprintsService.js';

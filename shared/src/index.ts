@@ -67,8 +67,67 @@ export {
 } from './services/releaseDatasetService.js';
 export type {
   ProcessedTicket,
+  ProcessedTicketWithDerived,
   FetchReleaseResult,
   FetchReleaseOptions,
   FetchBucketResult,
   FetchBucketOptions,
+  ProcessMasterOptions,
+  LabelOptions,
+  ExtractDeferredOptions,
 } from './services/releaseDatasetService.js';
+export {
+  processMaster,
+  isDeferredLabel,
+  isWishlistLabel,
+  extractDeferredSourceReleases,
+  priorityBand,
+  PROCESSED_DATASET_COLUMNS,
+} from './services/releaseDatasetService.js';
+
+export {
+  parseVersion,
+  classifyRelease,
+  isAtLeastVersion,
+  sortKey,
+  compareSortKeys,
+  PRE_RELEASE_SUFFIXES,
+  CLASSIFICATION_COLORS,
+} from './services/releaseClassificationService.js';
+export type {
+  ReleaseType,
+  ParsedVersion,
+  ClassificationOptions,
+  SortKey,
+} from './services/releaseClassificationService.js';
+
+export {
+  groupFor,
+  workTypeFor,
+  groupFilterJql,
+  PROJECT_HIERARCHY,
+  DEV_CODE,
+  ALL_GROUPS,
+  DISPLAY_GROUPS,
+} from './services/issueGroupsService.js';
+export type { IssueGroup, WorkType } from './services/issueGroupsService.js';
+
+export {
+  categorizeResolution,
+  categoryFilterJql,
+  isDoneResolution,
+  DONE_RESOLUTIONS,
+  DUPE_RESOLUTIONS,
+  RESOLUTION_CATEGORIES,
+} from './services/resolutionCategoriesService.js';
+export type { ResolutionCategory } from './services/resolutionCategoriesService.js';
+
+export {
+  sprintFor,
+  sprintWindow,
+  currentSprint,
+  enumerateSprints,
+  sprintLabel,
+  NDB_SPRINT_CALENDAR,
+} from './services/sprintsService.js';
+export type { SprintCalendar } from './services/sprintsService.js';

@@ -54,6 +54,25 @@ import {
   getWishlistQuery,
   type PayloadBucketKey,
 } from './payloadJqlService.js';
+import {
+  groupFor,
+  workTypeFor,
+  type IssueGroup,
+  type WorkType,
+} from './issueGroupsService.js';
+import {
+  categorizeResolution,
+  isDoneResolution,
+  type ResolutionCategory,
+} from './resolutionCategoriesService.js';
+import {
+  classifyRelease,
+  type ReleaseType,
+} from './releaseClassificationService.js';
+import {
+  sprintFor,
+  type SprintCalendar,
+} from './sprintsService.js';
 
 // ── Constants (port of data_layer.py constants) ────────────────────────────
 
@@ -386,6 +405,265 @@ export async function fetchReleaseData(
     bucketCounts,
     error: firstErr,
   };
+}
+
+// ── Phase 2: label helpers + derived columns + processMaster ───────────────
+//
+// Ports `_is_deferred_label`, `_is_wishlist_label`,
+// `extract_deferred_source_releases`, `_priority_band`, and
+// `process_master` from data_layer.py. All product-agnostic via
+// explicit `labelPrefix` / `productPrefix` / `sprintCalendar` inputs.
+
+export interface LabelOptions {
+  /**
+   * Label prefix used to derive the wishlist / deferred label.
+   * The Python original baked in `'ndb'`. Required (D1).
+   */
+  labelPrefix: string;
+}
+
+function deriveReleaseSuffix(release: string, labelPrefix: string): string {
+  const lower = release.toLowerCase();
+  return lower.startsWith(`${labelPrefix.toLowerCase()}-`)
+    ? lower.slice(labelPrefix.length + 1)
+    : lower;
+}
+
+/**
+ * True iff the comma-joined `labels` string contains
+ * `<labelPrefix>-<rel>-deferred` for `release`. Mirrors Python
+ * `_is_deferred_label`.
+ */
+export function isDeferredLabel(
+  labels: string,
+  release: string,
+  options: LabelOptions
+): boolean {
+  if (!labels) return false;
+  const suffix = deriveReleaseSuffix(release, options.labelPrefix);
+  const needle = `${options.labelPrefix.toLowerCase()}-${suffix}-deferred`;
+  return labels.toLowerCase().includes(needle);
+}
+
+/**
+ * True iff the comma-joined `labels` string contains
+ * `<labelPrefix>-<rel>-wishlist` for `release`. Mirrors Python
+ * `_is_wishlist_label`.
+ */
+export function isWishlistLabel(
+  labels: string,
+  release: string,
+  options: LabelOptions
+): boolean {
+  if (!labels) return false;
+  const suffix = deriveReleaseSuffix(release, options.labelPrefix);
+  const needle = `${options.labelPrefix.toLowerCase()}-${suffix}-wishlist`;
+  return labels.toLowerCase().includes(needle);
+}
+
+/**
+ * Return every release referenced by a `<labelPrefix>-<rel>-deferred`
+ * label in the comma-joined `labels` string. Inverse of the
+ * lower/strip mapping used by `isDeferredLabel`.
+ *
+ * Mirrors Python `extract_deferred_source_releases`:
+ *
+ *   `'ndb-2.10-deferred'`    → `'NDB-2.10'`
+ *   `'ndb-2.10.3-deferred'`  → `'NDB-2.10.3'`
+ *   `'ndb-3.0-ea-deferred'`  → `'NDB-3.0-EA'`
+ *
+ * Returns first-occurrence-order, de-duplicated.
+ *
+ * D1: requires both `labelPrefix` (matches the label scheme) AND
+ * `productPrefix` (the canonical release name prefix, e.g. `'NDB-'`).
+ * Often `labelPrefix.toUpperCase() + '-' === productPrefix` but we
+ * accept them separately so weird tenant naming schemes still work.
+ */
+export interface ExtractDeferredOptions {
+  labelPrefix: string;
+  /** Canonical release name prefix used when restoring lineage. e.g. `'NDB-'`. */
+  productPrefix: string;
+}
+
+export function extractDeferredSourceReleases(
+  labels: string,
+  options: ExtractDeferredOptions
+): string[] {
+  if (!labels) return [];
+  // Build a regex on the fly so we honour the tenant's labelPrefix.
+  // Pattern matches `<prefix>-<rel>-deferred` where `<rel>` may contain
+  // digits, dots, hyphens, and lower-case letters (covers `3.0-ea`).
+  // Word boundaries on both ends prevent accidental partial matches.
+  const prefix = options.labelPrefix.toLowerCase();
+  const pattern = new RegExp(
+    `\\b${prefix}-([0-9][0-9a-z.\\-]*?)-deferred\\b`,
+    'gi'
+  );
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(labels)) !== null) {
+    const relPart = m[1]!;
+    // Restore canonical name. If a hyphen is present, split once and
+    // upper-case the suffix portion (which carries the pre-release
+    // token like `ea` → `EA`).
+    let canonical: string;
+    if (relPart.includes('-')) {
+      const dashIdx = relPart.indexOf('-');
+      const base = relPart.slice(0, dashIdx);
+      const suffix = relPart.slice(dashIdx + 1).toUpperCase();
+      canonical = `${options.productPrefix}${base}-${suffix}`;
+    } else {
+      canonical = `${options.productPrefix}${relPart}`;
+    }
+    if (!seen.has(canonical)) {
+      seen.add(canonical);
+      out.push(canonical);
+    }
+  }
+  return out;
+}
+
+/**
+ * Extract the P-band (`P0`..`P4`) from a raw JIRA priority string.
+ * Mirrors Python `_priority_band`.
+ *
+ * Returns `'Unknown'` when the priority is empty or doesn't match the
+ * canonical `Px` token. Empty band is preferred over a wrong band —
+ * closure-regime metrics filter by exact band membership and silently
+ * misclassifying would be worse than missing.
+ */
+const PRIORITY_BAND_RE = /P([0-4])\b/i;
+
+export function priorityBand(priority: string | null | undefined): string {
+  if (priority === null || priority === undefined) return 'Unknown';
+  const s = String(priority);
+  if (!s) return 'Unknown';
+  const m = PRIORITY_BAND_RE.exec(s);
+  return m ? `P${m[1]}` : 'Unknown';
+}
+
+/**
+ * The fully-derived row — extends `ProcessedTicket` with the columns
+ * `processMaster` adds. Mirrors the Python processed_df schema.
+ */
+export interface ProcessedTicketWithDerived extends ProcessedTicket {
+  'Priority Band': string;
+  'Sprint Number': number | null;
+  'Closed Sprint Number': number | null;
+  'Issue Group': IssueGroup;
+  'Work Type': WorkType;
+  'Resolution Category': ResolutionCategory;
+  'Is Done': boolean;
+  'Is Deferred': boolean;
+  'Is Wishlist': boolean;
+  'Is QA Verification': boolean;
+  'Release Type': ReleaseType;
+}
+
+/** All output column names in canonical order (matches Python). */
+export const PROCESSED_DATASET_COLUMNS = [
+  'Issue Key',
+  'Issue Type',
+  'Status',
+  'Status Category',
+  'Resolution',
+  'Fix Version',
+  'All Fix Versions',
+  'Resolved Date',
+  'Created Date',
+  'Updated Date',
+  'Closed Date',
+  'Release Name',
+  'Labels',
+  'Components',
+  'JIRA Components',
+  'Primary Component',
+  'Priority',
+  'Priority Band',
+  'Assignee',
+  'Sprint Number',
+  'Closed Sprint Number',
+  'Issue Group',
+  'Work Type',
+  'Resolution Category',
+  'Is Done',
+  'Is Deferred',
+  'Is Wishlist',
+  'Is QA Verification',
+  'Release Type',
+] as const;
+
+export interface ProcessMasterOptions {
+  /** D1: label prefix for is-deferred / is-wishlist checks. Required. */
+  labelPrefix: string;
+  /** D1: product release prefix for release-type classification. Required. */
+  productPrefix: string;
+  /**
+   * Sprint calendar for Sprint Number derivation. Defaults to
+   * NDB_SPRINT_CALENDAR; supply your own for other tenants.
+   */
+  sprintCalendar?: SprintCalendar;
+}
+
+/**
+ * Build the master processed dataset from per-release ticket lists.
+ * Mirrors Python `process_master(per_release_tickets)`.
+ *
+ * Concatenates the per-release lists in input-map insertion order
+ * (matters: `Object.entries` preserves insertion order in modern JS).
+ * Each ticket gets the derived columns described in
+ * `ProcessedTicketWithDerived`.
+ *
+ * Returns an empty array when the input is empty (matches the Python
+ * "empty DataFrame with all columns" shape — but in TS we just return
+ * `[]` and rely on `PROCESSED_DATASET_COLUMNS` for the schema).
+ */
+export function processMaster(
+  perReleaseTickets: Record<string, ProcessedTicket[]>,
+  options: ProcessMasterOptions
+): ProcessedTicketWithDerived[] {
+  if (!options?.labelPrefix) {
+    throw new Error('processMaster: options.labelPrefix is required (D1)');
+  }
+  if (!options?.productPrefix) {
+    throw new Error('processMaster: options.productPrefix is required (D1)');
+  }
+  const cal = options.sprintCalendar;
+  const out: ProcessedTicketWithDerived[] = [];
+  for (const tickets of Object.values(perReleaseTickets)) {
+    for (const t of tickets) {
+      const issueGroup = groupFor(t['Issue Type']);
+      const workType = workTypeFor(t['Issue Type']);
+      const resCat = categorizeResolution(t.Resolution);
+      const isDone = isDoneResolution(t.Resolution);
+      const isQaVerification =
+        (t['Issue Type'] === 'Bug' || t['Issue Type'] === 'Improvement') &&
+        t['Closed Date'] !== null &&
+        isDone;
+      out.push({
+        ...t,
+        'Priority Band': priorityBand(t.Priority),
+        'Sprint Number': sprintFor(t['Resolved Date'], cal),
+        'Closed Sprint Number': sprintFor(t['Closed Date'], cal),
+        'Issue Group': issueGroup,
+        'Work Type': workType,
+        'Resolution Category': resCat,
+        'Is Done': isDone,
+        'Is Deferred': isDeferredLabel(t.Labels, t['Release Name'], {
+          labelPrefix: options.labelPrefix,
+        }),
+        'Is Wishlist': isWishlistLabel(t.Labels, t['Release Name'], {
+          labelPrefix: options.labelPrefix,
+        }),
+        'Is QA Verification': isQaVerification,
+        'Release Type': classifyRelease(t['Release Name'], {
+          productPrefix: options.productPrefix,
+        }),
+      });
+    }
+  }
+  return out;
 }
 
 // ── Public re-exports for downstream consumers ─────────────────────────────
