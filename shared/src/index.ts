@@ -56,3 +56,19 @@ export type {
   TicketUrlOptions,
   FetchBreakdownOptions,
 } from './services/ticketFetchService.js';
+export {
+  fetchReleaseData,
+  fetchBucket,
+  ticketFromIssue,
+  RELEASE_DATASET_FIELDS,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_MAX_ISSUES_PER_BUCKET,
+  DEFAULT_FETCH_CONCURRENCY,
+} from './services/releaseDatasetService.js';
+export type {
+  ProcessedTicket,
+  FetchReleaseResult,
+  FetchReleaseOptions,
+  FetchBucketResult,
+  FetchBucketOptions,
+} from './services/releaseDatasetService.js';

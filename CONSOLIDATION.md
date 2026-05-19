@@ -17,7 +17,7 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 | # | Capability | Source | Target TS module | Status |
 |---|---|---|---|---|
 | 1a | 5-bucket release payload JQL builders + sidecars | `release-sprint-analysis-with-chatbot/payload_jql.py` | `shared/services/payloadJqlService.ts` | **ported** (9/9 parity tests pass; D1 product-agnostic via `projectKey` + `labelPrefix`) |
-| 1b | Canonical `releaseDataset` (`processed_df` equivalent + cache) | `release-sprint-analysis-with-chatbot/data_layer.py` (1,508 LOC) | `shared/services/releaseDatasetService.ts` | pending |
+| 1b | Canonical `releaseDataset` (`processed_df` equivalent + cache) | `release-sprint-analysis-with-chatbot/data_layer.py` (1,508 LOC) | `shared/services/releaseDatasetService.ts` | **Phase 1 ported** (43/43 synthetic tests): `ProcessedTicket` row shape field-for-field with Python `_ticket_from_issue`; `fetchBucket` + parallel `fetchReleaseData` orchestrator with within-release dedup and comma-joined `Components` tag (wishlist+deferred sidecars compose correctly with their underlying buckets); D1 product-agnostic via `projectKey` + `labelPrefix`. **Phase 2 pending**: components/priority augmentation + `processMaster` cross-release assembly + sidecar merging helpers. **Phase 3 pending**: cache + sync + Bug/Improvement changelog fetch for `Closed Date`. |
 
 ## Capabilities that read from the trunk
 

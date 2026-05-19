@@ -26,3 +26,4 @@ export * from './chartService.js';
 export * from './dateMoverService.js';
 export * from './payloadJqlService.js';
 export * from './ticketFetchService.js';
+export * from './releaseDatasetService.js';
