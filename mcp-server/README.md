@@ -96,13 +96,18 @@ Same shape as Claude Desktop; paste the JSON into the connector config UI.
 | `HTTPS_PROXY` | no | — | Corporate VPN / proxy |
 | `NDB_DEFAULT_TEAM_ID` | no | — | Used by tools that take an optional `teamId` |
 
-## Available tools (v0.1.0)
+## Available tools
 
-| Tool | What it does |
-|---|---|
-| `get_release_status` | Audience-aware release snapshot. Args: `version`, optional `audience` (vp / em / engineer). |
-
-(Phase 5 adds: `move_jira_dates`, `calculate_story_points`, `say_vs_do`, `bin_pack_projects`, `gantt_release_timeline`, `plan_capacity`, `leadership_commit_report`.)
+| Tool | What it does | Replaces |
+|---|---|---|
+| `get_release_status` | Audience-aware release snapshot (vp / em / engineer): total items, R/Y/G risk, top blockers | — |
+| `move_jira_dates` | Bulk-set one NDB date field on N issues (dryRun by default) | `ndb-date-mover` |
+| `calculate_story_points` | Walk a parent's hierarchy and sum committed + delivered SP by issue type | `ndb-story-point-calculator` |
+| `say_vs_do` | Release predictability: SP_said vs SP_did, per-issue-type | `ndb-say-vs-do` |
+| `bin_pack_projects` | First-Fit-Decreasing schedule of work items under a fixed FTE capacity | `ndb-projects-bin-packing` |
+| `gantt_release_timeline` | Per-item start/end dates for a release, honouring the NDB date hierarchy | `Release-Timelines-Visualizer` |
+| `plan_capacity` | Compute gross + net SP capacity for a team over a horizon | `ndb-capacity-planner` |
+| `leadership_commit_report` | Per-repo per-author GitHub commit counts for a date range | `GitHub-Commits` (GitHub slice) |
 
 ## Available resources
 
