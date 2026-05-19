@@ -19,6 +19,7 @@ import { loadEnv } from './config/env.js';
 import { registerGetReleaseStatus } from './tools/getReleaseStatus.js';
 import { registerMoveJiraDates } from './tools/moveJiraDates.js';
 import { registerCalculateStoryPoints } from './tools/calculateStoryPoints.js';
+import { registerSayVsDo } from './tools/sayVsDo.js';
 import { registerNdbGlossary } from './resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
   registerGetReleaseStatus(server, env);
   registerMoveJiraDates(server, env);
   registerCalculateStoryPoints(server, env);
+  registerSayVsDo(server, env);
 
   // ── resources ─────────────────────────────────────────────────────────
   registerNdbGlossary(server);
