@@ -43,7 +43,7 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 |---|---|---|---|---|
 | 9 | Capacity planner (t-shirt, bandwidth, rollup) | `ndb-capacity-planner/` (103 Py files) | `shared/services/capacityService.ts` | pending |
 | 12 | Confluence template engine + page mgmt | `Confluence-Page-Creator/` | `apps/tpm-confluence-tools/` | already in repo (Python) — needs port |
-| 17 | Fetch project tickets (8-clause JQL primitive) | `~/.cursor/skills/fetch-project-tickets/` | `shared/services/ticketFetchService.ts` | pending |
+| 17 | Fetch project tickets (8-clause JQL primitive) | `~/.cursor/skills/fetch-project-tickets/` | `shared/services/ticketFetchService.ts` | **ported** (28/28 parity tests; single+bulk forms; comprehensive+work-items views; URL builders; D1 product-agnostic via `projectKey`) |
 | 18 | Sprint Gantt chart (date-hierarchy-aware) | `~/.cursor/skills/sprint-gantt-chart/` | `apps/delivery-ops/client/src/components/SprintGantt/` | pending |
 | 19 | Confluence width cleanup | `~/.cursor/skills/confluence-width-cleanup/` | retain as skill (no code port) | retained as skill |
 | 20 | Status sender (current app) | `apps/delivery-ops/` | — | already in repo |

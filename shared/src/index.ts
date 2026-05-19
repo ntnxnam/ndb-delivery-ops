@@ -41,3 +41,18 @@ export {
   DEFERRED_COMPONENT,
 } from './services/payloadJqlService.js';
 export type { PayloadBucketKey } from './services/payloadJqlService.js';
+export {
+  TicketFetchService,
+  buildAllTicketsJql,
+  buildWorkItemsJql,
+  buildAllTicketsUrl,
+  buildWorkItemsUrl,
+  isValidProjectKey,
+  WORK_ITEMS_EXCLUDED_TYPES,
+} from './services/ticketFetchService.js';
+export type {
+  TicketBreakdown,
+  TicketJqlOptions,
+  TicketUrlOptions,
+  FetchBreakdownOptions,
+} from './services/ticketFetchService.js';
