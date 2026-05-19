@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ndb-delivery-ops": {
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp-server/dist/index.js"],
+      "env": {
+        "JIRA_BASE_URL": "https://jira.nutanix.com",
+        "JIRA_PAT": "${env:JIRA_PAT}",
+        "HTTPS_PROXY": "${env:HTTPS_PROXY}"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@ndb-delivery-ops/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Custom MCP server exposing NDB-Ops capabilities (JIRA, Confluence, TCMS, NDB internals) as tools any MCP client can call.",
+  "type": "module",
+  "bin": {
+    "ndb-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "axios": "^1.7.2",
+    "https-proxy-agent": "^7.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
