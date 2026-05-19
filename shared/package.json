@@ -1,0 +1,33 @@
+{
+  "name": "@portfolio-delivery-ops/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared connectors, services, and types for the portfolio-delivery-ops monorepo. Imported by apps/delivery-ops and mcp-server. Per D3, one connector per external system; per architecture, services own business logic.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": "./dist/types/index.js",
+    "./connectors": "./dist/connectors/index.js",
+    "./services": "./dist/services/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "https-proxy-agent": "^7.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
