@@ -1,0 +1,39 @@
+{
+  "name": "ndb-status-sender-server",
+  "version": "1.0.0",
+  "description": "Backend server for NDB Status Sender",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx nodemon index.js",
+    "start": "node index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:parent-project": "jest __tests__/routes/jira-parent-project.test.js",
+    "test:admin": "jest __tests__/routes/admin.test.js",
+    "test:new-features": "jest __tests__/routes/admin.test.js __tests__/routes/jira-parent-project.test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "body-parser": "^1.20.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.5.1",
+    "express-validator": "^7.3.1",
+    "helmet": "^7.2.0",
+    "https-proxy-agent": "^7.0.6",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.2",
+    "sqlite3": "^6.0.1",
+    "tinydb": "^0.1.0",
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  }
+}

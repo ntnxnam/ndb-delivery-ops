@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://confluence.eng.nutanix.com:8443",
+  "description": "Base Confluence URL. Users can provide full URLs or relative paths (e.g., /pages/viewpage.action?pageId=123456)"
+}
+

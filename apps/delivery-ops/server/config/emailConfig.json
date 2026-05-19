@@ -1,0 +1,12 @@
+{
+  "defaultCC": ["ndb-techleads@nutanix.com", "ndb-projects-updates@nutanix.com", "ndb-managers@nutanix.com"],
+  "defaultTo": ["ndb-projects-updates@nutanix.com"],
+  "smtp": {
+    "host": "secure-mailrelay.corp.nutanix.com",
+    "port": 587,
+    "secure": false,
+    "requireTLS": true,
+    "from": "svc.ndb.team@nutanix.com",
+    "requireAuth": true
+  }
+}

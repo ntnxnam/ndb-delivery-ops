@@ -1,0 +1,157 @@
+{
+  "teams": {
+    "ndb": [
+      {
+        "id": "kpi_mlt8xi2n_z3azrksl",
+        "name": "Top-CFI",
+        "baseQuery": "filter=142539",
+        "displayType": "count",
+        "order": 0
+      },
+      {
+        "id": "kpi_mlt8xtjw_7iu388x4",
+        "name": "Top-CFD",
+        "baseQuery": "filter=142537",
+        "displayType": "count",
+        "order": 1
+      },
+      {
+        "id": "kpi_mlt8y8o9_m7f8uo6d",
+        "name": "Non-Top-CFI",
+        "baseQuery": "filter=142543",
+        "displayType": "count",
+        "order": 2
+      },
+      {
+        "id": "kpi_mlt8ykk1_87kzd1g2",
+        "name": "Non-Top-CFD",
+        "baseQuery": "filter=142541",
+        "displayType": "count",
+        "order": 3
+      },
+      {
+        "id": "kpi_mltpmqym_g5u55h35",
+        "name": "Product Blockers",
+        "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
+        "displayType": "count",
+        "order": 4
+      },
+      {
+        "id": "kpi_mltqufvv_0eregk0s",
+        "name": "Product Criticals",
+        "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
+        "displayType": "count",
+        "order": 5
+      },
+      {
+        "id": "kpi_mltqw1zl_35j6oo0k",
+        "name": "OnCalls",
+        "baseQuery": "project=OnCall",
+        "displayType": "count",
+        "order": 6
+      },
+      {
+        "id": "kpi_mltr5912_iqnubebp",
+        "name": "System Test",
+        "baseQuery": "filter=NDB-System-Test",
+        "displayType": "count",
+        "order": 7
+      },
+      {
+        "id": "kpi_mltr5hi3_0qdmhcep",
+        "name": "Smokes",
+        "baseQuery": "filter=NDB-Smokes",
+        "displayType": "count",
+        "order": 8
+      },
+      {
+        "id": "kpi_mmaylqy1_a8nuacz5",
+        "name": "NDB PreCommits",
+        "baseQuery": "filter=NDB-PreCommits",
+        "displayType": "count",
+        "order": 9
+      },
+      {
+        "id": "kpi_mmosswaj_h8bp5a7r",
+        "name": "CVE",
+        "baseQuery": "type=CVE",
+        "displayType": "count",
+        "order": 10
+      }
+    ],
+    "datalens": [
+      {
+        "id": "kpi_datalens_all",
+        "name": "DataLens All Issues",
+        "baseQuery": "filter=176286",
+        "displayType": "count",
+        "order": 0
+      },
+      {
+        "id": "kpi_datalens_bugs",
+        "name": "DataLens Bugs",
+        "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and type=Bug",
+        "displayType": "count",
+        "order": 1
+      },
+      {
+        "id": "kpi_datalens_blockers",
+        "name": "DataLens Blockers",
+        "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and priority = \"Blocker - P0\"",
+        "displayType": "count",
+        "order": 2
+      },
+      {
+        "id": "kpi_datalens_criticals",
+        "name": "DataLens Critical",
+        "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and priority = \"Critical - P1\"",
+        "displayType": "count",
+        "order": 3
+      },
+      {
+        "id": "kpi_datalens_primary_component",
+        "name": "DataLens Primary Component",
+        "baseQuery": "\"Primary Component\" in (\"Data Lens\")",
+        "displayType": "count",
+        "order": 4
+      }
+    ],
+    "ncm": [
+      {
+        "id": "kpi_ncm_all",
+        "name": "NCM All Issues",
+        "baseQuery": "filter=175938",
+        "displayType": "count",
+        "order": 0
+      },
+      {
+        "id": "kpi_ncm_eng_bugs",
+        "name": "NCM ENG Bugs",
+        "baseQuery": "project=ENG and component in (NCM, \"Cloud Manager\") and type=Bug",
+        "displayType": "count",
+        "order": 1
+      },
+      {
+        "id": "kpi_ncm_calm_bugs",
+        "name": "NCM CALM Bugs",
+        "baseQuery": "project=CALM and type=Bug",
+        "displayType": "count",
+        "order": 2
+      },
+      {
+        "id": "kpi_ncm_blockers",
+        "name": "NCM Blockers",
+        "baseQuery": "project in (ENG, CALM) and priority = \"Blocker - P0\"",
+        "displayType": "count",
+        "order": 3
+      },
+      {
+        "id": "kpi_ncm_criticals",
+        "name": "NCM Critical",
+        "baseQuery": "project in (ENG, CALM) and priority = \"Critical - P1\"",
+        "displayType": "count",
+        "order": 4
+      }
+    ]
+  }
+}

@@ -1,0 +1,276 @@
+{
+  "checkpointDates": {
+    "codeComplete": {
+      "label": "Code Complete / Code Freeze",
+      "customField": "customfield_11067",
+      "include": true,
+      "order": 6,
+      "isCheckpoint": true
+    },
+    "commitGate": {
+      "label": "Commit Gate Ready",
+      "customField": "customfield_35863",
+      "include": true,
+      "order": 7,
+      "isCheckpoint": true
+    },
+    "promotionGate": {
+      "label": "Promotion Gate Ready",
+      "customField": "customfield_35864",
+      "include": true,
+      "order": 8,
+      "isCheckpoint": true
+    }
+  },
+  "sprintDates": [
+    "2025-11-05",
+    "2025-11-26",
+    "2025-12-17",
+    "2026-01-07",
+    "2026-01-28",
+    "2026-02-18",
+    "2026-03-11",
+    "2026-04-01",
+    "2026-04-22",
+    "2026-05-13",
+    "2026-06-03",
+    "2026-06-24"
+  ],
+  "releaseGateDates": {
+    "NDB-2.10": {
+      "ecDate": "2025-03-31",
+      "ccm1Gate": [
+        {
+          "label": "Code Complete 1",
+          "date": "2025-02-18",
+          "color": "#de350b",
+          "style": "dotted"
+        },
+        {
+          "label": "Code Complete 2",
+          "date": "2025-03-06",
+          "color": "#de350b",
+          "style": "solid"
+        }
+      ],
+      "commitGate1": {
+        "label": "Commit Gate 1",
+        "date": "2025-09-09",
+        "color": "#ff9800",
+        "style": "dotted"
+      },
+      "commitGate2": {
+        "label": "Commit Gate 2",
+        "date": "2025-09-25",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "promotionGate1": {
+        "label": "Promotion Gate 1",
+        "date": "2025-10-21",
+        "color": "#9c27b0",
+        "style": "dotted"
+      },
+      "promotionGate2": {
+        "label": "Promotion Gate 2",
+        "date": "2025-10-28",
+        "color": "#9c27b0",
+        "style": "dotted"
+      },
+      "promotionGate3": {
+        "label": "Promotion Gate 3",
+        "date": "2025-11-12",
+        "color": "#9c27b0",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "GA 1",
+        "date": "2026-01-01",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    },
+    "NDB-2.10.1": {
+      "ecDate": "2025-11-12",
+      "ccm1Gate": [
+        {
+          "label": "Code Complete 1",
+          "date": "2026-01-30",
+          "color": "#de350b",
+          "style": "solid"
+        }
+      ],
+      "commitGate1": {
+        "label": "Commit Gate 1",
+        "date": "2026-02-10",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "promotionGate1": {
+        "label": "Promotion Gate 1",
+        "date": "2026-03-03",
+        "color": "#9c27b0",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "GA 1",
+        "date": "2026-03-31",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    },
+    "NDB-2.11": {
+      "ecDate": "2025-12-09",
+      "ccm1Gate": [
+        {
+          "label": "Code Complete 1",
+          "date": "2026-01-30",
+          "color": "#de350b",
+          "style": "dotted"
+        }
+      ],
+      "ccm2Gate": [
+        {
+          "label": "Code Complete 2",
+          "date": "2026-02-27",
+          "color": "#de350b",
+          "style": "solid"
+        }
+      ],
+      "commitGate1": {
+        "label": "Commit Gate 1",
+        "date": "2026-03-15",
+        "color": "#ff9800",
+        "style": "dotted"
+      },
+      "commitGate2": {
+        "label": "Commit Gate 2",
+        "date": "2026-04-14",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "promotionGate1": {
+        "label": "Promotion Gate 1",
+        "date": "2026-04-12",
+        "color": "#9c27b0",
+        "style": "dotted"
+      },
+      "promotionGate2": {
+        "label": "Promotion Gate 2",
+        "date": "2026-05-12",
+        "color": "#9c27b0",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "General Availability 1",
+        "date": "2026-05-19",
+        "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga2": {
+        "label": "General Availability 2",
+        "date": "2026-06-15",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    },
+    "NDB-2.12": {
+      "conceptCommit1": {
+        "label": "Concept Commit 1 (CC 1)",
+        "date": "2026-03-31",
+        "color": "#6c757d",
+        "style": "dotted"
+      },
+      "conceptCommit2": {
+        "label": "Concept Commit 2 (CC 2)",
+        "date": "2026-04-22",
+        "color": "#6c757d",
+        "style": "dotted"
+      },
+      "ecDate": "2026-05-12",
+      "ccm1Gate": [
+        {
+          "label": "Code Complete 1",
+          "date": "2026-06-30",
+          "color": "#de350b",
+          "style": "solid"
+        }
+      ],
+      "commitGate1": {
+        "label": "Commit Gate 1",
+        "date": "2026-08-18",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "promotionGate1": {
+        "label": "Promotion Gate 1",
+        "date": "2026-09-29",
+        "color": "#9c27b0",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "General Availability 1",
+        "date": "2026-11-10",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    }
+  },
+  "standardColumns": {
+    "key": {
+      "label": "Key",
+      "include": true,
+      "order": 1
+    },
+    "summary": {
+      "label": "Summary",
+      "include": true,
+      "order": 2
+    },
+    "status": {
+      "label": "Status",
+      "include": true,
+      "order": 3
+    },
+    "riskIndicator": {
+      "label": "Risk Indicator",
+      "include": true,
+      "order": 4,
+      "customField": "customfield_23560"
+    },
+    "executiveSummary": {
+      "label": "Executive Summary",
+      "include": true,
+      "order": 5,
+      "sourceField": "customfield_23073"
+    }
+  },
+  "columnOrder": [
+    "key",
+    "summary",
+    "status",
+    "riskIndicator",
+    "executiveSummary",
+    "codeComplete",
+    "commitGate",
+    "promotionGate"
+  ],
+  "emailNotes": {
+    "highlights": {
+      "include": true,
+      "order": 1,
+      "label": "Highlights"
+    },
+    "lowlights": {
+      "include": true,
+      "order": 2,
+      "label": "Lowlights"
+    },
+    "callToAction": {
+      "include": true,
+      "order": 3,
+      "label": "Call to Action"
+    }
+  }
+}
+

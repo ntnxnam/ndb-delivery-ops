@@ -1,0 +1,40 @@
+{
+  "_schema_version": "2.0",
+  "_description": "Team configuration with support for both dedicated projects (like NDB->ERA) and parent projects (like DataLens->ENG)",
+  "sprintFieldId": "customfield_10360",
+  "storyPointsFieldId": "customfield_10002",
+  "completedStatusName": "Closed",
+  "pendingQAStatusName": "Resolved",
+  "teams": [
+    {
+      "id": "ndb",
+      "name": "NDB",
+      "boardId": 2888,
+      "projectKey": "ERA",
+      "projectType": "dedicated",
+      "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
+      "sprintBaseFilter": "filter=NDB-All-Base-Filter"
+    },
+    {
+      "id": "datalens",
+      "name": "DataLens",
+      "boardId": null,
+      "projectKey": "ENG",
+      "projectType": "parent",
+      "versionPatterns": ["^DataLens.*", "^DL.*"],
+      "baseFilter": "filter=DataLens-All-Base-Filter and statusCategory!=Done",
+      "sprintBaseFilter": "filter=DataLens-All-Base-Filter"
+    },
+    {
+      "id": "ncm",
+      "name": "NCM",
+      "boardId": null,
+      "projectKey": "FEAT",
+      "projectType": "parent",
+      "versionPatterns": ["^NCM.*", "^CALM.*"],
+      "baseFilter": "filter=175938 and statusCategory!=Done",
+      "sprintBaseFilter": "filter=175938"
+    }
+  ],
+  "defaultTeamId": "ndb"
+}

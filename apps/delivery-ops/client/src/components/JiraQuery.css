@@ -1,0 +1,193 @@
+.jira-query {
+  margin-bottom: 2rem;
+}
+
+.query-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  transition: border-color 0.3s;
+}
+
+.query-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn-query {
+  padding: 0.875rem 2rem;
+  background: #0052CC;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.btn-query:hover:not(:disabled) {
+  background: #0065FF;
+  transform: translateY(-2px);
+}
+
+.btn-query:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.jira-results {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.results-summary {
+  background: #f0f7ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.results-summary h3 {
+  margin-top: 0;
+  color: #0052CC;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #0052CC;
+}
+
+.results-breakdown {
+  margin-bottom: 1.5rem;
+}
+
+.results-breakdown h4 {
+  color: #333;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.results-breakdown ul {
+  list-style: none;
+  padding: 0;
+}
+
+.results-breakdown li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.epics-list {
+  margin-top: 2rem;
+}
+
+.epics-list h4 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.epic-item {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #0052CC;
+}
+
+.epic-header {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.epic-count {
+  color: #666;
+  font-weight: normal;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
+.epic-issues {
+  list-style: none;
+  padding-left: 1rem;
+  margin-top: 0.5rem;
+}
+
+.epic-issues li {
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.more-items {
+  font-style: italic;
+  color: #999;
+}
+
+.issues-list {
+  margin-top: 2rem;
+}
+
+.issues-list h4 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.issues-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.issues-list li {
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+  line-height: 1.6;
+}
+
+.issue-meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
+.issues-note {
+  background: #fff3cd;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+  border-left: 4px solid #ffc107;
+}
+
+.issues-note p {
+  margin: 0;
+  color: #856404;
+}
+

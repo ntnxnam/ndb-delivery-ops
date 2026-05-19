@@ -1,0 +1,3181 @@
+{
+  "metadata": {
+    "enabled": true,
+    "version": "1.0.0",
+    "prediction_timestamp": "2026-04-21T23:46:49.864Z",
+    "total_features_analyzed": 20,
+    "prediction_confidence": 0.6413574829201172
+  },
+  "release_prediction": {
+    "enabled": true,
+    "overall_release_probability": 0.3775579043161835,
+    "predicted_date_range": {
+      "earliest_completion": "2026-05-01T05:23:15.806Z",
+      "latest_completion": "2026-05-09T22:12:37.039Z",
+      "median_completion": "2026-05-04T22:32:53.291Z",
+      "target_date": "2026-06-05T23:46:49.158Z",
+      "features_missing_target": 0,
+      "miss_rate_percentage": 0,
+      "recommended_range": {
+        "start_date": "2026-05-03T20:50:27.158Z",
+        "end_date": "2026-05-05T01:03:02.133Z",
+        "confidence": "medium",
+        "rationale": "Based on 25th-75th percentile of feature completion predictions"
+      }
+    },
+    "risk_distribution": {
+      "high_probability": 0,
+      "medium_probability": 0,
+      "low_probability": 20,
+      "high_confidence": 0,
+      "medium_confidence": 17,
+      "low_confidence": 3,
+      "percentages": {
+        "high_probability": 0,
+        "medium_probability": 0,
+        "low_probability": 100,
+        "high_confidence": 0
+      }
+    },
+    "systemic_issues": [
+      {
+        "type": "systemic_risk",
+        "factor": "Bug convergence",
+        "affected_features": 20,
+        "percentage": 100,
+        "severity": "high"
+      }
+    ],
+    "executive_summary": {
+      "prediction_statement": "This release is likely to happen on May 3-May 4, 2026 based on AI-detected bug convergence patterns, team velocity trend analysis, critical path dependency assessment, quality gate readiness predictions, cross-feature risk correlation analysis.",
+      "ai_confidence": "50% AI prediction confidence",
+      "risk_assessment": "HIGH RISK: Significant challenges identified requiring immediate executive intervention",
+      "key_ai_insights": [
+        "100% of features affected by Bug convergence"
+      ],
+      "executive_actions_needed": [
+        {
+          "priority": "immediate",
+          "action": "Address systemic Bug convergence",
+          "description": "Affects 100% of features - requires coordinated response",
+          "impact": "high"
+        },
+        {
+          "priority": "immediate",
+          "action": "Resource reallocation to high-risk features",
+          "description": "100% of features at risk - focus resources on critical items",
+          "impact": "high"
+        }
+      ]
+    },
+    "feature_count": 20,
+    "confidence_level": 0.6413574829201172
+  },
+  "feature_predictions": [
+    {
+      "key": "NDB-2",
+      "summary": ".11",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3959080696546831,
+        "confidence_level": 0.6612490472528973,
+        "prediction_summary": "AI predicts 40% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7124463186238964,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T19:09:24.042Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:59:01.492Z",
+            "p50": "2026-05-10T18:59:01.496Z",
+            "p75": "2026-05-10T18:59:01.500Z",
+            "p90": "2026-05-10T18:59:01.502Z",
+            "p95": "2026-05-10T18:59:01.502Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:23:26.135Z",
+              "confidence": 0.9570968593914615,
+              "assumptions": {
+                "predicted_velocity": 0.9989313927476942,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.165Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.165Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33324017142638407,
+            "bug_convergence": 0.08756353425864177,
+            "critical_path": 0.25995424233034276,
+            "quality_gates": 0.1596210259923157,
+            "historical_pattern": 0.1596210259923157
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:59:01.492Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:59:01.496Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:59:01.500Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:59:01.502Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:59:01.502Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "NDB-2",
+      "summary": ".11 Release Status",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3959080696546831,
+        "confidence_level": 0.6612490472528973,
+        "prediction_summary": "AI predicts 40% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7124463186238964,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T19:09:24.042Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:59:01.492Z",
+            "p50": "2026-05-10T18:59:01.496Z",
+            "p75": "2026-05-10T18:59:01.500Z",
+            "p90": "2026-05-10T18:59:01.502Z",
+            "p95": "2026-05-10T18:59:01.502Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:23:26.135Z",
+              "confidence": 0.9570968593914615,
+              "assumptions": {
+                "predicted_velocity": 0.9989313927476942,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.165Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.165Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33324017142638407,
+            "bug_convergence": 0.08756353425864177,
+            "critical_path": 0.25995424233034276,
+            "quality_gates": 0.1596210259923157,
+            "historical_pattern": 0.1596210259923157
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:59:01.492Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:59:01.496Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:59:01.500Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:59:01.502Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:59:01.502Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "NDB-2",
+      "summary": ".11 shows MODERATE RISK with 5 Red projects (20%) including 2 P0 Blockers and resource constraints at 94% QA utilization. Release trending 3-day delay risk with 67% on-time delivery probability.",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3959080696546831,
+        "confidence_level": 0.6612490472528973,
+        "prediction_summary": "AI predicts 40% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7124463186238964,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T19:09:24.042Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:59:01.492Z",
+            "p50": "2026-05-10T18:59:01.496Z",
+            "p75": "2026-05-10T18:59:01.500Z",
+            "p90": "2026-05-10T18:59:01.502Z",
+            "p95": "2026-05-10T18:59:01.502Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:23:26.135Z",
+              "confidence": 0.9570968593914615,
+              "assumptions": {
+                "predicted_velocity": 0.9989313927476942,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.165Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.165Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.165Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33324017142638407,
+            "bug_convergence": 0.08756353425864177,
+            "critical_path": 0.25995424233034276,
+            "quality_gates": 0.1596210259923157,
+            "historical_pattern": 0.1596210259923157
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:59:01.492Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:59:01.496Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:59:01.500Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:59:01.502Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:59:01.502Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-61458",
+      "summary": ", ERA-50833)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3887861407028291,
+        "confidence_level": 0.6433169116995504,
+        "prediction_summary": "AI predicts 39% probability of landing by Jun 5, 2026 (64% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6822070324419289,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T01:39:21.897Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:07:48.680Z",
+            "p50": "2026-05-10T19:07:48.684Z",
+            "p75": "2026-05-10T19:07:48.688Z",
+            "p90": "2026-05-10T19:07:48.690Z",
+            "p95": "2026-05-10T19:07:48.690Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:49:47.607Z",
+              "confidence": 0.8552097255656269,
+              "assumptions": {
+                "predicted_velocity": 0.9552662101224704,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.211Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.211Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.211Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.211Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.31900047530207476,
+            "bug_convergence": 0.08943359011080823,
+            "critical_path": 0.265505970641462,
+            "quality_gates": 0.1630299819728275,
+            "historical_pattern": 0.1630299819728275
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:07:48.680Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:07:48.684Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:07:48.688Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:07:48.690Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:07:48.688Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-18216",
+      "summary": ") - P2 Major - Nilesh Vaishnav - Rachit Kukreti - Enhanced audit functionality for compliance - Code Complete: 16/Feb (slipped 2 times from 29/Jan) - CG: 13/Apr (slipped from 09/Apr) - PG: 11/May (set) - QI: 100% execution - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.36815291633075975,
+        "confidence_level": 0.6334005749676611,
+        "prediction_summary": "AI predicts 37% probability of landing by Jun 5, 2026 (63% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.5691887727399365,
+          "dependency_risks": 0.25
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T01:36:01.675Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T21:53:50.597Z",
+            "p50": "2026-05-10T21:53:50.601Z",
+            "p75": "2026-05-10T21:53:50.606Z",
+            "p90": "2026-05-10T21:53:50.608Z",
+            "p95": "2026-05-10T21:53:50.609Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T18:07:53.326Z",
+              "confidence": 0.8988669032253465,
+              "assumptions": {
+                "predicted_velocity": 0.523128295024592,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.226Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.226Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.226Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.226Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3251757782569904,
+            "bug_convergence": 0.08862260641221467,
+            "critical_path": 0.2630983627862623,
+            "quality_gates": 0.1615516262722663,
+            "historical_pattern": 0.1615516262722663
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T21:53:50.597Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T21:53:50.601Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T21:53:50.606Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T21:53:50.608Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T21:53:50.606Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17939",
+      "summary": ") - P2 Major - Pulkit Gahlawat - Neetu Meena - KMS key rotation using old active keys - Code Complete: 29/Jan (on-track) - CG: 20/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 92% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.43028301818022485,
+        "confidence_level": 0.5891904208619998,
+        "prediction_summary": "AI predicts 43% probability of landing by Jun 5, 2026 (59% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.9981918181685405,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T23:01:51.621Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:12:00.842Z",
+            "p50": "2026-05-10T18:12:00.848Z",
+            "p75": "2026-05-10T18:12:00.853Z",
+            "p90": "2026-05-10T18:12:00.856Z",
+            "p95": "2026-05-10T18:12:00.857Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T07:02:23.788Z",
+              "confidence": 0.8824401303874989,
+              "assumptions": {
+                "predicted_velocity": 1.322393501856435,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.359Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.359Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.359Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.359Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32286540014878856,
+            "bug_convergence": 0.08892602132108933,
+            "critical_path": 0.263999125796984,
+            "quality_gates": 0.16210472636656909,
+            "historical_pattern": 0.16210472636656909
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:12:00.842Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:12:00.848Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:12:00.853Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:12:00.856Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:12:00.856Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17622",
+      "summary": ") - P2 Major - Chetan Hanumantha - Srikanth CG - Native DB Engine DR with UI support - Code Complete: 05/Feb (on-track) - CG: 29/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 88% execution - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.42931473996861275,
+        "confidence_level": 0.5934234258074358,
+        "prediction_summary": "AI predicts 43% probability of landing by Jun 5, 2026 (59% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.9901228330717733,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T21:34:57.056Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:25:23.831Z",
+            "p50": "2026-05-10T18:25:23.841Z",
+            "p75": "2026-05-10T18:25:23.850Z",
+            "p90": "2026-05-10T18:25:23.855Z",
+            "p95": "2026-05-10T18:25:23.857Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T07:42:32.710Z",
+              "confidence": 0.9088964112964737,
+              "assumptions": {
+                "predicted_velocity": 1.2107908060359267,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.382Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.382Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.382Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.382Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32657866401998825,
+            "bug_convergence": 0.08843836970462533,
+            "critical_path": 0.2625514100606065,
+            "quality_gates": 0.16121577810738993,
+            "historical_pattern": 0.16121577810738993
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:25:23.831Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:25:23.841Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:25:23.850Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:25:23.855Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:25:23.855Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16150",
+      "summary": ") - P2 Major - Sneha Tripathi - N/A - Database security feature enhancement - Code Complete: 26/Feb (on-track) - CG: 13/Apr (slipped from 09/Apr) - PG: 11/May (set) - QI: 87% execution - Status: Fresh (18/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3874292062605705,
+        "confidence_level": 0.6464921336519469,
+        "prediction_summary": "AI predicts 39% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6981178629465585,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-09T22:12:37.039Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T22:20:30.487Z",
+            "p50": "2026-05-10T22:20:30.495Z",
+            "p75": "2026-05-10T22:20:30.500Z",
+            "p90": "2026-05-10T22:20:30.506Z",
+            "p95": "2026-05-10T22:20:30.508Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T19:27:52.592Z",
+              "confidence": 0.8732507593860617,
+              "assumptions": {
+                "predicted_velocity": 0.9144382838372933,
+                "remaining_work": 0.75,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.418Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.418Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.418Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-29T14:10:49.418Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "high",
+                "complexity_multiplier": 1.4,
+                "adjusted_days": 69
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32156602810349877,
+            "bug_convergence": 0.08909666388791261,
+            "critical_path": 0.26450572091724056,
+            "quality_gates": 0.162415793545674,
+            "historical_pattern": 0.162415793545674
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T22:20:30.487Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T22:20:30.495Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T22:20:30.500Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T22:20:30.506Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T22:20:30.500Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-56129",
+      "summary": ") - P1 Critical - Manzil Ahmad - N/A - Performance and reliability improvements - Code Complete: 22/Jan (on-track) - CG: 29/Apr (on-track) - PG: 14/May (set) - QI: 73% completed - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3202285108214792,
+        "confidence_level": 0.6433596822332157,
+        "prediction_summary": "AI predicts 32% probability of landing by Jun 5, 2026 (64% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.49276068393084105,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-02T09:14:11.386Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T02:14:19.923Z",
+            "p50": "2026-05-11T02:14:19.927Z",
+            "p75": "2026-05-11T02:14:19.931Z",
+            "p90": "2026-05-11T02:14:19.934Z",
+            "p95": "2026-05-11T02:14:19.934Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:09:20.856Z",
+              "confidence": 0.8554527399614527,
+              "assumptions": {
+                "predicted_velocity": 0.3824653593722284,
+                "remaining_work": 0.5,
+                "days_to_complete": 2
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.451Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.451Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.451Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-12T23:46:49.451Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "medium",
+                "complexity_multiplier": 1,
+                "adjusted_days": 21
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3190351624536791,
+            "bug_convergence": 0.08942903475300522,
+            "critical_path": 0.26549244692298424,
+            "quality_gates": 0.16302167793516575,
+            "historical_pattern": 0.16302167793516575
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T02:14:19.923Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T02:14:19.927Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T02:14:19.931Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T02:14:19.934Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T02:14:19.934Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-58183",
+      "summary": ") - P2 Major - Aditya Vakkalanka - N/A - Control plane upgrade preparation - Code Complete: 29/Jan (on-track) - CG: 13/Apr (on-track) - PG: 11/May (set) - QI: 85% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3826334001908259,
+        "confidence_level": 0.6499252134396502,
+        "prediction_summary": "AI predicts 38% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7605331749003016,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T00:06:58.896Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:59:10.078Z",
+            "p50": "2026-05-10T19:59:10.082Z",
+            "p75": "2026-05-10T19:59:10.086Z",
+            "p90": "2026-05-10T19:59:10.088Z",
+            "p95": "2026-05-10T19:59:10.089Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T12:23:51.290Z",
+              "confidence": 0.8927568945434659,
+              "assumptions": {
+                "predicted_velocity": 0.7608677400348719,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.467Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.467Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.467Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.467Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32431826704148936,
+            "bug_convergence": 0.08873522074420932,
+            "critical_path": 0.26343268658437147,
+            "quality_gates": 0.1617569128149649,
+            "historical_pattern": 0.1617569128149649
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:59:10.078Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:59:10.082Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:59:10.086Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:59:10.088Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:59:10.086Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-47385",
+      "summary": ") - P2 Major - Adarsh Mulik - Nikeshsingh Baghel - Database provisioning improvements - Code Complete: 12/Feb (slipped 2 times from 29/Jan) - CG: 30/Apr (slipped from 13/Apr) - PG: 13/May (slipped from 11/May) - QI: 78% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3957970866979213,
+        "confidence_level": 0.6607097210817489,
+        "prediction_summary": "AI predicts 40% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7108090558160108,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-06T09:16:02.235Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:20:27.733Z",
+            "p50": "2026-05-10T19:20:27.738Z",
+            "p75": "2026-05-10T19:20:27.743Z",
+            "p90": "2026-05-10T19:20:27.746Z",
+            "p95": "2026-05-10T19:20:27.747Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T10:27:44.011Z",
+              "confidence": 0.9540325061462994,
+              "assumptions": {
+                "predicted_velocity": 1.123407742580192,
+                "remaining_work": 0.5,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.585Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.585Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.585Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-09T23:46:49.585Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "medium",
+                "complexity_multiplier": 1,
+                "adjusted_days": 49
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33282059021775934,
+            "bug_convergence": 0.08761863657878947,
+            "critical_path": 0.26011782734328126,
+            "quality_gates": 0.15972147293008496,
+            "historical_pattern": 0.15972147293008496
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:20:27.733Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:20:27.738Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:20:27.743Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:20:27.746Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:20:27.743Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-44932",
+      "summary": ") - P1 Critical - Tejal Karnavat - N/A - Backup compatibility enhancements - Code Complete: 16/Feb (slipped 3 times) - CG: 06/Apr (slipped 4 times) - PG: 11/May (slipped 2 times from 19/Apr) - QI: 92% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.39265680529467534,
+        "confidence_level": 0.6536801642089313,
+        "prediction_summary": "AI predicts 39% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7062905310150354,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-01T07:20:02.260Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:05:16.288Z",
+            "p50": "2026-05-10T19:05:16.292Z",
+            "p75": "2026-05-10T19:05:16.296Z",
+            "p90": "2026-05-10T19:05:16.299Z",
+            "p95": "2026-05-10T19:05:16.300Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:42:09.640Z",
+              "confidence": 0.9140918420962,
+              "assumptions": {
+                "predicted_velocity": 0.9675242696608883,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.606Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.606Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.606Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-08T18:58:49.606Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3273030883230636,
+            "bug_convergence": 0.08834323327084254,
+            "critical_path": 0.26226897377281383,
+            "quality_gates": 0.16104235231664002,
+            "historical_pattern": 0.16104235231664002
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:05:16.288Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:05:16.292Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:05:16.296Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:05:16.299Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:05:16.299Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-18271",
+      "summary": ") - P2 Major - Chetan Hanumantha - Krishnaraj Velayutham - Accessibility compliance alignment - Code Complete: 22/Mar (on-track) - CG: 29/Apr (set) - PG: 11/May (set) - QI: 0% execution - Status: Stale (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3708973760304634,
+        "confidence_level": 0.6357016367391338,
+        "prediction_summary": "AI predicts 37% probability of landing by Jun 5, 2026 (64% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.43786317530449814,
+          "dependency_risks": 0.17500000000000002
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T23:37:10.003Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T20:41:37.398Z",
+            "p50": "2026-05-10T20:41:37.403Z",
+            "p75": "2026-05-10T20:41:37.408Z",
+            "p90": "2026-05-10T20:41:37.410Z",
+            "p95": "2026-05-10T20:41:37.411Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T14:31:12.935Z",
+              "confidence": 0.9119411178359874,
+              "assumptions": {
+                "predicted_velocity": 0.6512974374240452,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.622Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.622Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.622Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.622Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3270033914686487,
+            "bug_convergence": 0.08838259154447295,
+            "critical_path": 0.2623858186476541,
+            "quality_gates": 0.16111409916961214,
+            "historical_pattern": 0.16111409916961214
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T20:41:37.398Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T20:41:37.403Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T20:41:37.408Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T20:41:37.410Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T20:41:37.410Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-18162",
+      "summary": ") - P1 Critical - Akhil Tiwari - Santhosh S - Platform compatibility foundation - Code Complete: 09/Feb (slipped from 29/Jan) - CG: 14/May (slipped from 13/Apr) - PG: 28/May (slipped from 11/May) - QI: 80% scope expanded - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.393776312088267,
+        "confidence_level": 0.661601552240585,
+        "prediction_summary": "AI predicts 39% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7206901671349284,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-01T05:23:15.806Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:06:50.661Z",
+            "p50": "2026-05-10T19:06:50.665Z",
+            "p75": "2026-05-10T19:06:50.669Z",
+            "p90": "2026-05-10T19:06:50.671Z",
+            "p95": "2026-05-10T19:06:50.672Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T09:46:52.691Z",
+              "confidence": 0.9590997286396873,
+              "assumptions": {
+                "predicted_velocity": 0.9599186504009453,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.641Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.641Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.641Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-08T18:58:49.641Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33351412572237954,
+            "bug_convergence": 0.08752755667667793,
+            "critical_path": 0.2598474338838876,
+            "quality_gates": 0.15955544185852746,
+            "historical_pattern": 0.15955544185852746
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:06:50.661Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:06:50.665Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:06:50.669Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:06:50.671Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:06:50.671Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17702",
+      "summary": ") - P0 Blocker - Mazin Shaaeldin - Amrapali Srivastava - Critical database security feature - Code Complete: 15/Mar (slipped from 26/Feb) - CG: 05/May (slipped 2 times from 27/Apr) - PG: 11/May (set) - QI: 40% execution - Status: Stale (14/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3180668770660319,
+        "confidence_level": 0.6457873161134855,
+        "prediction_summary": "AI predicts 32% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.44510927429311054,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-03T20:50:27.158Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T05:50:04.377Z",
+            "p50": "2026-05-11T05:50:04.381Z",
+            "p75": "2026-05-11T05:50:04.385Z",
+            "p90": "2026-05-11T05:50:04.388Z",
+            "p95": "2026-05-11T05:50:04.388Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T17:56:33.805Z",
+              "confidence": 0.8692461142811675,
+              "assumptions": {
+                "predicted_velocity": 0.42692205188573235,
+                "remaining_work": 0.75,
+                "days_to_complete": 2
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.657Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.657Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.657Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-21T09:22:49.657Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "high",
+                "complexity_multiplier": 1.4,
+                "adjusted_days": 30
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32099821203252626,
+            "bug_convergence": 0.08917123344032486,
+            "critical_path": 0.26472709927596444,
+            "quality_gates": 0.16255172762559217,
+            "historical_pattern": 0.16255172762559217
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T05:50:04.377Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T05:50:04.381Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T05:50:04.385Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T05:50:04.388Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T05:50:04.388Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17289",
+      "summary": ") - P2 Major - Anjali Mishra - N/A - Data archival with UI enhancement - Code Complete: 26/Feb (slipped from 29/Jan) - CG: 27/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 65% execution - Status: Stale (09/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3502797628731642,
+        "confidence_level": 0.6546509580345269,
+        "prediction_summary": "AI predicts 35% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.5736208951173284,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T23:15:30.161Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T20:48:19.789Z",
+            "p50": "2026-05-10T20:48:19.795Z",
+            "p75": "2026-05-10T20:48:19.801Z",
+            "p90": "2026-05-10T20:48:19.804Z",
+            "p95": "2026-05-10T20:48:19.805Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T14:51:19.796Z",
+              "confidence": 0.9196077161052654,
+              "assumptions": {
+                "predicted_velocity": 0.6368156932385598,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.777Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.777Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.777Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.777Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3280704897948701,
+            "bug_convergence": 0.08824245277659709,
+            "critical_path": 0.26196978168052265,
+            "quality_gates": 0.1608586378740051,
+            "historical_pattern": 0.1608586378740051
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T20:48:19.789Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T20:48:19.795Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T20:48:19.801Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T20:48:19.804Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T20:48:19.804Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16821",
+      "summary": ") - P2 Major - Sasa Velickovic - N/A - Node management capability - Code Complete: 26/Feb (slipped 4 times from 18/Dec) - CG: 29/Apr (set) - PG: 11/May (set) - QI: 66% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3851356066571049,
+        "confidence_level": 0.6575599594701488,
+        "prediction_summary": "AI predicts 39% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7090745623513317,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T20:54:59.723Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:27:41.340Z",
+            "p50": "2026-05-10T19:27:41.344Z",
+            "p75": "2026-05-10T19:27:41.348Z",
+            "p90": "2026-05-10T19:27:41.351Z",
+            "p95": "2026-05-10T19:27:41.351Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T10:49:24.405Z",
+              "confidence": 0.9361361333531177,
+              "assumptions": {
+                "predicted_velocity": 0.8693332396868134,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.800Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.800Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.800Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.800Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33035957410152633,
+            "bug_convergence": 0.0879418343177202,
+            "critical_path": 0.26107732063073186,
+            "quality_gates": 0.16031063547501076,
+            "historical_pattern": 0.16031063547501076
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:27:41.340Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:27:41.344Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:27:41.348Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:27:41.351Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:27:41.351Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16820",
+      "summary": ") - P2 Major - Sasa Velickovic - N/A - Node management capability - Code Complete: 26/Feb (slipped 2 times from 29/Jan) - CG: 29/Apr (set) - PG: 11/May (set) - QI: Run 85% - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.4432811018864503,
+        "confidence_level": 0.5841620658873169,
+        "prediction_summary": "AI predicts 44% probability of landing by Jun 5, 2026 (58% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 1.1065091823870858,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T01:03:02.133Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T18:12:58.462Z",
+            "p50": "2026-05-10T18:12:58.466Z",
+            "p75": "2026-05-10T18:12:58.470Z",
+            "p90": "2026-05-10T18:12:58.472Z",
+            "p95": "2026-05-10T18:12:58.473Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T07:05:15.740Z",
+              "confidence": 0.85101291179573,
+              "assumptions": {
+                "predicted_velocity": 1.3137725414553296,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.817Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.817Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.817Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.817Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3184008766175868,
+            "bug_convergence": 0.08951233357689693,
+            "critical_path": 0.2657397403064128,
+            "quality_gates": 0.16317352474955168,
+            "historical_pattern": 0.16317352474955168
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T18:12:58.462Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T18:12:58.466Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T18:12:58.470Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T18:12:58.472Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T18:12:58.470Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16809",
+      "summary": ") - P2 Major - Filip Mandic - N/A - Enhanced diagnostics capability - Code Complete: 12/Mar (slipped 2 times from 26/Feb) - CG: 20/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 92% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.37703212854431417,
+        "confidence_level": 0.6577711433349787,
+        "prediction_summary": "AI predicts 38% probability of landing by Jun 5, 2026 (66% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6505823432647104,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T20:54:02.546Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T19:31:11.269Z",
+            "p50": "2026-05-10T19:31:11.273Z",
+            "p75": "2026-05-10T19:31:11.277Z",
+            "p90": "2026-05-10T19:31:11.279Z",
+            "p95": "2026-05-10T19:31:11.280Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T10:59:54.133Z",
+              "confidence": 0.9373360416760144,
+              "assumptions": {
+                "predicted_velocity": 0.8557780919068613,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.833Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.833Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.833Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-31T04:34:49.833Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3305251469572732,
+            "bug_convergence": 0.0879200901396741,
+            "critical_path": 0.2610127676021575,
+            "quality_gates": 0.16027099765044756,
+            "historical_pattern": 0.16027099765044756
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T19:31:11.269Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T19:31:11.273Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T19:31:11.277Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T19:31:11.279Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T19:31:11.279Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16363",
+      "summary": ") - P1 Critical - Shristy Agarwal - Deepthi Bollempalli - Scalability capability enhancement - Code Complete: 27/Feb (slipped 4 times) - CG: 27/Apr (slipped 2 times from 21/Oct) - PG: 11/May (slipped from 20/Nov) - QI: 67% execution - Status: Fresh (15/Apr)",
+      "prediction": {
+        "enabled": true,
+        "landing_probability": 0.3364180874510368,
+        "confidence_level": 0.654842327141921,
+        "prediction_summary": "AI predicts 34% probability of landing by Jun 5, 2026 (65% confidence, LOW likelihood)",
+        "likelihood_level": "LOW",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.4888325245122206,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-01T09:07:10.682Z",
+          "confidence_intervals": {
+            "p25": "2026-05-10T21:11:51.234Z",
+            "p50": "2026-05-10T21:11:51.238Z",
+            "p75": "2026-05-10T21:11:51.242Z",
+            "p90": "2026-05-10T21:11:51.244Z",
+            "p95": "2026-05-10T21:11:51.245Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-22T16:01:53.998Z",
+              "confidence": 0.9206950405790963,
+              "assumptions": {
+                "predicted_velocity": 0.5907273063696291,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-26T23:46:49.847Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-21T23:46:49.847Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-12T23:46:49.847Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-08T18:58:49.847Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3282215583523429,
+            "bug_convergence": 0.08822261340379627,
+            "critical_path": 0.2619108835425202,
+            "quality_gates": 0.16082247235067026,
+            "historical_pattern": 0.16082247235067026
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-10T21:11:51.234Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-10T21:11:51.238Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-10T21:11:51.242Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-10T21:11:51.244Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-10T21:11:51.244Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "Allocate additional QA resources to accelerate bug closure",
+        "risk_factors": [
+          {
+            "factor": "Bug convergence",
+            "risk_level": "high",
+            "impact": 0.25,
+            "description": "Bug creation rate not converging toward zero"
+          }
+        ],
+        "success_factors": []
+      }
+    }
+  ],
+  "generation_info": {
+    "timestamp": "2026-04-21T23:46:49.866Z",
+    "version": "1.0.0",
+    "system": "CrystalBall Enhanced VP Report Generator"
+  }
+}

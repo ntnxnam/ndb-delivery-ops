@@ -1,0 +1,63 @@
+{
+  "name": "ndb-status-sender-client",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "autoprefixer": "^10.4.27",
+    "axios": "^1.6.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-quill": "^2.0.0",
+    "react-router-dom": "^7.12.0",
+    "react-scripts": "5.0.1",
+    "recharts": "^3.7.0",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "start": "PORT=6100 BROWSER=none react-scripts start",
+    "build": "react-scripts build",
+    "build:local": "CI= react-scripts build",
+    "build:email-only": "REACT_APP_ENABLE_RELEASE_VERSIONS=false react-scripts build",
+    "build:full": "REACT_APP_ENABLE_RELEASE_VERSIONS=true react-scripts build",
+    "test": "react-scripts test --coverage --watchAll=false",
+    "test:watch": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test:crystalball": "react-scripts test --testPathPattern=useCrystalBall --watchAll=false",
+    "test:admin": "react-scripts test --testPathPattern=AdminPanel --watchAll=false",
+    "test:new-features": "react-scripts test --testPathPattern='(useCrystalBall|AdminPanel)' --watchAll=false",
+    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ],
+    "rules": {
+      "no-unused-vars": [
+        "warn",
+        {
+          "varsIgnorePattern": "^_",
+          "argsIgnorePattern": "^_"
+        }
+      ],
+      "react-hooks/exhaustive-deps": "error",
+      "react-hooks/rules-of-hooks": "error"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:6001"
+}

@@ -1,0 +1,223 @@
+{
+  "defaultReleaseVersion": "NDB-2.11",
+  "releaseBaseFilters": {
+    "NDB-2.11": "filter=NDB-2.11-All",
+    "NDB-2.10": "filter=NDB-2.10-All",
+    "NDB-2.12": "filter=NDB-2.12-All",
+    "NDB-2.10.1": "filter=NDB-2.10.1-All"
+  },
+  "statusesWithTick": [
+    "CODE COMPLETE MET",
+    "COMMIT GATE MET",
+    "PROMOTION GATE MET",
+    "CLOSED"
+  ],
+  "columns": {
+    "key": {
+      "label": "Key",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 1,
+      "width": "5%"
+    },
+    "summary": {
+      "label": "Summary",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 2,
+      "width": "12%"
+    },
+    "status": {
+      "label": "Status",
+      "includeInUI": false,
+      "includeInEmail": true,
+      "order": 3,
+      "width": "7%"
+    },
+    "priority": {
+      "label": "Priority",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 4,
+      "width": "6%",
+      "hidden": true
+    },
+    "fixVersion": {
+      "label": "Fix Version",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 5,
+      "width": "8%"
+    },
+    "assignee": {
+      "label": "Assignee",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 6,
+      "width": "8%"
+    },
+    "uxOwner": {
+      "label": "UX Owner",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 7,
+      "width": "8%",
+      "customField": "customfield_15968"
+    },
+    "qaContact": {
+      "label": "QA Contact",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 8,
+      "width": "8%",
+      "customField": "customfield_10860"
+    },
+    "teamContacts": {
+      "label": "Team Contacts",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 6.5,
+      "width": "15%",
+      "contactFields": {
+        "assignee": {
+          "label": "Assignee",
+          "field": "assignee"
+        },
+        "qaContact": {
+          "label": "QA Contact",
+          "customField": "customfield_10860"
+        },
+        "pmOwner": {
+          "label": "PM Owner",
+          "customField": "customfield_11260"
+        },
+        "programMgr": {
+          "label": "Program Mgr",
+          "customField": "customfield_27764"
+        }
+      }
+    },
+    "guiLead": {
+      "label": "GUI Lead",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 9,
+      "width": "8%",
+      "customField": "customfield_11861"
+    },
+    "tpmOwner": {
+      "label": "TPM Owner",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 10,
+      "width": "8%",
+      "customField": "customfield_27764"
+    },
+    "teamMembers": {
+      "label": "Team Members",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 11,
+      "width": "10%",
+      "customField": "customfield_51460"
+    },
+    "checkpointDates": {
+      "label": "Checkpoint Dates",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 12,
+      "width": "18%",
+      "checkpointFields": {
+        "fsdsDone": {
+          "label": "FS/DS Done Date",
+          "customField": "customfield_13861",
+          "showHistory": true
+        },
+        "testPlan": {
+          "label": "Test Plan Date",
+          "customField": "customfield_11068",
+          "showHistory": true
+        },
+        "codeComplete": {
+          "label": "Code Complete Date",
+          "customField": "customfield_11067",
+          "showHistory": true
+        },
+        "commitGate": {
+          "label": "Commit Gate Ready Estimation Date",
+          "customField": "customfield_35863",
+          "showHistory": true
+        },
+        "promotionGate": {
+          "label": "Promotion Gate Ready Estimation Date",
+          "customField": "customfield_35864",
+          "showHistory": true
+        }
+      }
+    },
+    "statusUpdate": {
+      "label": "Status Update",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 14,
+      "width": "18%",
+      "sourceField": "customfield_23073",
+      "formatType": "full",
+      "customField": "customfield_23073"
+    },
+    "riskIndicator": {
+      "label": "Risk Indicator",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 13,
+      "width": "8%",
+      "customField": "customfield_23560",
+      "align": "center"
+    },
+    "executiveSummary": {
+      "label": "Executive Summary",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 16,
+      "width": "18%",
+      "mode": "generated",
+      "description": "Mode: 'generated' = app-generated summary, 'jira' = from JIRA customfield_38460, 'both' = show both side by side"
+    },
+    "executiveUpdate": {
+      "label": "Executive Update",
+      "includeInUI": false,
+      "includeInEmail": false,
+      "order": 16,
+      "width": "25%",
+      "customField": "customfield_38460",
+      "formatType": "full",
+      "description": "Shows JIRA customfield_38460 (Executive Update from JIRA)"
+    },
+    "taskBreakdown": {
+      "label": "Task Breakdown",
+      "includeInUI": true,
+      "includeInEmail": false,
+      "order": 16.5,
+      "width": "20%",
+      "description": "Shows breakdown of sub-tasks, bugs, and stories by status"
+    },
+    "statusUpdateDate": {
+      "label": "Status Update Date",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 17,
+      "width": "8%",
+      "customField": "customfield_45660"
+    }
+  },
+  "columnOrder": [
+    "key",
+    "summary",
+    "teamContacts",
+    "checkpointDates",
+    "riskIndicator",
+    "statusUpdate",
+    "taskBreakdown",
+    "statusUpdateDate"
+  ]
+}

@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "description": "JIRA Custom Field Configuration - Single source of truth for all JIRA field mappings",
+  "fields": {
+    "checkpointDates": {
+      "codeComplete": {
+        "id": "customfield_11067",
+        "label": "Code Complete Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when code is marked as complete",
+        "usedIn": ["gantt", "table", "history", "email"]
+      },
+      "testPlan": {
+        "id": "customfield_11068",
+        "label": "Test Plan Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when test plan is ready",
+        "usedIn": ["table", "history", "email"]
+      },
+      "fsdsDone": {
+        "id": "customfield_13861",
+        "label": "FS/DS Done Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when FS/DS is done",
+        "usedIn": ["table", "history", "email"]
+      },
+      "commitGate": {
+        "id": "customfield_35863",
+        "label": "Commit Gate Ready Estimation Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Estimated date for commit gate",
+        "usedIn": ["gantt", "table", "history", "email"]
+      },
+      "promotionGate": {
+        "id": "customfield_35864",
+        "label": "Promotion Gate Ready Estimation Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Estimated date for promotion gate",
+        "usedIn": ["gantt", "table", "history", "email"]
+      },
+      "statusUpdateDate": {
+        "id": "customfield_45660",
+        "label": "Status Update Last Updated Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when status update was last updated",
+        "usedIn": ["table", "email"]
+      }
+    },
+    "people": {
+      "uxOwner": {
+        "id": "customfield_15968",
+        "label": "UX Owner",
+        "type": "user",
+        "category": "people",
+        "description": "UX Owner for the ticket",
+        "usedIn": ["table", "email"]
+      },
+      "qaContact": {
+        "id": "customfield_10860",
+        "label": "QA Contact",
+        "type": "user",
+        "category": "people",
+        "description": "QA Contact for the ticket",
+        "usedIn": ["table", "email"]
+      },
+      "testLead": {
+        "id": "customfield_11065",
+        "label": "Test Lead",
+        "type": "user",
+        "category": "people",
+        "description": "Test Lead for the ticket",
+        "usedIn": ["table", "email"]
+      },
+      "guiLead": {
+        "id": "customfield_11861",
+        "label": "GUI Lead",
+        "type": "user",
+        "category": "people",
+        "description": "GUI Lead for the ticket",
+        "usedIn": ["table", "email"]
+      },
+      "tpmOwner": {
+        "id": "customfield_27764",
+        "label": "TPM Owner",
+        "type": "user",
+        "category": "people",
+        "description": "Technical Program Manager owner",
+        "usedIn": ["table", "email"]
+      },
+      "teamMembers": {
+        "id": "customfield_51460",
+        "label": "Team Members",
+        "type": "user",
+        "category": "people",
+        "description": "List of team members",
+        "isArray": true,
+        "usedIn": ["table", "email"]
+      },
+      "pmOwner": {
+        "id": "customfield_11260",
+        "label": "PM Owner",
+        "type": "user",
+        "category": "people",
+        "description": "Product Manager owner",
+        "usedIn": ["email"]
+      },
+      "participants": {
+        "id": "customfield_11960",
+        "label": "Participants",
+        "type": "user",
+        "category": "people",
+        "description": "Additional participants",
+        "usedIn": ["email"]
+      }
+    },
+    "content": {
+      "statusUpdate": {
+        "id": "customfield_23073",
+        "label": "Status Update",
+        "type": "text",
+        "category": "content",
+        "description": "Status update text field",
+        "usedIn": ["table", "email"]
+      },
+      "executiveStatusUpdate": {
+        "id": "customfield_38460",
+        "label": "Executive Status Update",
+        "type": "text",
+        "category": "content",
+        "description": "Executive-level status update",
+        "usedIn": ["table", "email"]
+      }
+    },
+    "links": {
+      "requirementsLink": {
+        "id": "customfield_14463",
+        "label": "Link to Requirements",
+        "type": "link",
+        "category": "links",
+        "description": "Link to requirements document",
+        "usedIn": ["email"]
+      },
+      "tcmsLink": {
+        "id": "customfield_31460",
+        "label": "TCMS Link",
+        "type": "link",
+        "category": "links",
+        "description": "Link to TCMS",
+        "usedIn": ["email"]
+      },
+      "designDocLink": {
+        "id": "customfield_14464",
+        "label": "Link to Design Doc",
+        "type": "link",
+        "category": "links",
+        "description": "Link to design document",
+        "usedIn": ["email"]
+      },
+      "testPlanLink": {
+        "id": "customfield_14465",
+        "label": "Link to Test Plan",
+        "type": "link",
+        "category": "links",
+        "description": "Link to test plan document",
+        "usedIn": ["email"]
+      }
+    },
+    "indicators": {
+      "riskIndicator": {
+        "id": "customfield_23560",
+        "label": "Risk Indicator",
+        "type": "select",
+        "category": "indicators",
+        "description": "Risk level indicator (e.g., Green - On Track)",
+        "usedIn": ["table", "email"],
+        "hasColor": true
+      }
+    },
+    "relationships": {
+      "parentLink": {
+        "id": "customfield_20363",
+        "label": "Parent Link",
+        "type": "link",
+        "category": "relationships",
+        "description": "Link to parent ticket (for Epics)",
+        "usedIn": ["fetch"]
+      }
+    },
+    "agile": {
+      "sprint": {
+        "id": "customfield_10020",
+        "label": "Sprint",
+        "type": "sprint",
+        "category": "agile",
+        "description": "Jira Software board sprint",
+        "usedIn": ["table", "email"]
+      },
+      "sprints": {
+        "id": "customfield_10021",
+        "label": "Sprints",
+        "type": "array",
+        "category": "agile",
+        "description": "All sprints (multi-sprint boards)",
+        "usedIn": ["table", "email"]
+      }
+    }
+  },
+  "fieldNameMappings": {
+    "code complete date": "codeComplete",
+    "code complete": "codeComplete",
+    "test plan date": "testPlan",
+    "test plan": "testPlan",
+    "fs/ds done date": "fsdsDone",
+    "fs/ds done": "fsdsDone",
+    "fsds done date": "fsdsDone",
+    "fsds done": "fsdsDone",
+    "commit gate ready estimation date": "commitGate",
+    "commit gate": "commitGate",
+    "promotion gate ready estimation date": "promotionGate",
+    "promotion gate": "promotionGate",
+    "status update date": "statusUpdateDate",
+    "status update last updated date": "statusUpdateDate"
+  },
+  "fieldCategories": {
+    "checkpoint": "Checkpoint dates for tracking project milestones",
+    "people": "User/people fields for contacts and owners",
+    "content": "Text content fields for status updates",
+    "links": "Link fields to external documents",
+    "indicators": "Status and risk indicator fields",
+    "relationships": "Fields that link tickets together",
+    "agile": "Sprint and board fields (Jira Software)"
+  }
+}
+

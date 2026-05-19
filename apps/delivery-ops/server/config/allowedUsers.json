@@ -1,0 +1,61 @@
+{
+  "superAdminUsers": ["namratha.singh"],
+  "adminUsers": ["sneha.kulkarni"],
+  "allowedUsers": [
+    "namratha.singh",
+    "sakthivel.subburaja",
+    "sneha.kulkarni",
+    "bharath",
+    "bharat",
+    "ahmad.elayat",
+    "ashish.kumar",
+    "nkumar",
+    "anil.madan",
+    "jovan.cukalovic",
+    "alexander.minic",
+    "srikanth.cg",
+    "saurabh.srvastava",
+    "aleksandar.minic",
+    "shyam",
+    "tanya.smirnov",
+    "sharat.janga",
+    "bharathi.maganti"
+  ],
+  "releaseVersionsEmailSenders": [
+    "namratha.singh",
+    "sneha.kulkarni"
+  ],
+  "emailHistoryAllowedUsers": [
+    "namratha.singh",
+    "sneha.kulkarni",
+    "bharath",
+    "ashish.kumar",
+    "shyam"
+  ],
+  "kpiTabAllowedUsers": [
+    "namratha.singh",
+    "sneha.kulkarni",
+    "bharath",
+    "ashish.kumar",
+    "shyam"
+  ],
+  "genericEmailerAllowedUsers": [
+    "namratha.singh"
+  ],
+  "releaseSetupAllowedUsers": [
+    "namratha.singh"
+  ],
+  "releaseConfigAllowedUsers": [
+    "namratha.singh"
+  ],
+  "sprintReportAllowedUsers": [
+    "namratha.singh",
+    "sneha.kulkarni",
+    "bharath",
+    "ashish.kumar",
+    "shyam"
+  ],
+  "kpiAdminUsers": {
+    "ndb": ["namratha.singh"]
+  }
+}

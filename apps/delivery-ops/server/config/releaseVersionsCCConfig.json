@@ -1,0 +1,15 @@
+{
+  "defaultCC": [
+    "ndb-exec-updates@nutanix.com",
+    "bharath@nutanix.com",
+    "ahmad.elayat@nutanix.com",
+    "ashish.kumar@nutanix.com"
+  ],
+  "versionDRIs": {
+    "NDB-2.11": [
+      "srikanth.cg@nutanix.com",
+      "aleksandar.minic@nutanix.com"
+    ]
+  }
+}
+

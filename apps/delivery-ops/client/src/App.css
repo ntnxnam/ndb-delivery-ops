@@ -1,0 +1,131 @@
+.App {
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.App-header {
+  background: #1a1a1a;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+  border-bottom: 1px solid #333333;
+}
+
+.App-header nav {
+  margin-top: 4px;
+}
+
+.App-header h1 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+
+.App-main {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.user-info {
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 400;
+  margin: 0 10px;
+}
+
+.user-info strong {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.btn-logout {
+  padding: 0.4rem 0.8rem;
+  background: #dc3545;
+  color: #ffffff;
+  border: 1px solid #dc3545;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.btn-logout:hover {
+  background: #c82333;
+  border-color: #c82333;
+}
+
+.btn-logout:active {
+  background: #bd2130;
+}
+
+.tab-container {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 0;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: #666666;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  transition: color 0.15s ease;
+  margin-bottom: -2px;
+}
+
+.tab-button:hover {
+  color: #1a1a1a;
+}
+
+.tab-button.active {
+  color: #1a1a1a;
+  font-weight: 500;
+  border-bottom-color: #1a1a1a;
+}
+
+@media (max-width: 768px) {
+  .App-header {
+    padding: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .App-header h1 {
+    font-size: 1rem;
+  }
+  
+  .user-info {
+    position: static;
+    transform: none;
+    margin-top: 0.25rem;
+    width: 100%;
+    font-size: 0.75rem;
+  }
+  
+  .App-main {
+    padding: 0.5rem;
+  }
+  
+  .tab-container {
+    flex-wrap: wrap;
+  }
+}

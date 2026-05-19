@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://jira.nutanix.com",
+  "description": "Base JIRA URL for API requests"
+}
+

@@ -1,0 +1,106 @@
+{
+  "NDB": {
+    "teamName": "NDB Team",
+    "productArea": "Database Services", 
+    "strategicWorkLabel": "FEAT Projects",
+    "operationalWorkLabel": "Non-FEAT Work",
+    "projectTypes": ["Release", "Initiative"],
+    "communicationStyle": "DISC-optimized (concise for D-types, detailed for C-types)",
+    "gateTypes": ["Code Complete", "Commit Gate", "Promotion Gate"],
+    "jqlFilters": {
+      "strategicWork": "filter = GetNDB-{version}ChildIssues OR filter = GetNDB{versionNoHyphen}ChildIssues",
+      "allWork": "filter = \"{version}\"",
+      "nonStrategicWork": "filter = {version} AND NOT filter = GetNDB-{version}ChildIssues"
+    },
+    "qualityThresholds": {
+      "excellent": 90,
+      "good": 75,
+      "acceptable": 60,
+      "needsImprovement": 0
+    },
+    "gateReadinessWeights": {
+      "developmentReadiness": 0.3,
+      "timelineReadiness": 0.25,
+      "documentationReadiness": 0.2,
+      "qualityReadiness": 0.25
+    }
+  },
+  "AOS": {
+    "teamName": "AOS Team",
+    "productArea": "Hyperconverged Infrastructure",
+    "strategicWorkLabel": "Feature Projects", 
+    "operationalWorkLabel": "Operational Work",
+    "projectTypes": ["Release", "Update"],
+    "communicationStyle": "Technical executive briefing with architectural focus",
+    "gateTypes": ["Feature Complete", "Integration Gate", "Release Gate"],
+    "jqlFilters": {
+      "strategicWork": "filter = GetAOS-{version}Features OR filter = GetAOS{versionNoHyphen}Features",
+      "allWork": "filter = \"{version}\"",
+      "nonStrategicWork": "filter = {version} AND NOT filter = GetAOS-{version}Features"
+    },
+    "qualityThresholds": {
+      "excellent": 95,
+      "good": 80,
+      "acceptable": 65,
+      "needsImprovement": 0
+    },
+    "gateReadinessWeights": {
+      "developmentReadiness": 0.35,
+      "timelineReadiness": 0.3,
+      "documentationReadiness": 0.15,
+      "qualityReadiness": 0.2
+    }
+  },
+  "Files": {
+    "teamName": "Files Team",
+    "productArea": "File Services",
+    "strategicWorkLabel": "Core Features",
+    "operationalWorkLabel": "Support Items", 
+    "projectTypes": ["Release", "Service Pack"],
+    "communicationStyle": "Service-oriented executive summary with customer impact focus",
+    "gateTypes": ["Development Complete", "Service Gate", "Deployment Gate"],
+    "jqlFilters": {
+      "strategicWork": "filter = GetFiles-{version}Core OR filter = GetFiles{versionNoHyphen}Core",
+      "allWork": "filter = \"{version}\"",
+      "nonStrategicWork": "filter = {version} AND NOT filter = GetFiles-{version}Core"
+    },
+    "qualityThresholds": {
+      "excellent": 92,
+      "good": 78,
+      "acceptable": 62,
+      "needsImprovement": 0
+    },
+    "gateReadinessWeights": {
+      "developmentReadiness": 0.25,
+      "timelineReadiness": 0.25,
+      "documentationReadiness": 0.25,
+      "qualityReadiness": 0.25
+    }
+  },
+  "Objects": {
+    "teamName": "Objects Team", 
+    "productArea": "Object Storage Services",
+    "strategicWorkLabel": "Platform Features",
+    "operationalWorkLabel": "Maintenance Work",
+    "projectTypes": ["Release", "Platform Update"],
+    "communicationStyle": "Platform-focused executive briefing with scalability metrics",
+    "gateTypes": ["Platform Ready", "Scale Gate", "Production Gate"],
+    "jqlFilters": {
+      "strategicWork": "filter = GetObjects-{version}Platform OR filter = GetObjects{versionNoHyphen}Platform",
+      "allWork": "filter = \"{version}\"",
+      "nonStrategicWork": "filter = {version} AND NOT filter = GetObjects-{version}Platform"
+    },
+    "qualityThresholds": {
+      "excellent": 88,
+      "good": 73,
+      "acceptable": 58,
+      "needsImprovement": 0
+    },
+    "gateReadinessWeights": {
+      "developmentReadiness": 0.3,
+      "timelineReadiness": 0.2,
+      "documentationReadiness": 0.2,
+      "qualityReadiness": 0.3
+    }
+  }
+}

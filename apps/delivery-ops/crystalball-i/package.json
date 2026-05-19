@@ -1,0 +1,53 @@
+{
+  "name": "crystalball-i",
+  "version": "1.0.0",
+  "description": "Intelligent Release Prediction Engine with Conversational Interface and NDB Context Intelligence",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
+    "init": "node cli.js init",
+    "chat": "node cli.js chat",
+    "status": "node cli.js status",
+    "predict": "node cli.js predict"
+  },
+  "keywords": [
+    "ai",
+    "prediction",
+    "release-management", 
+    "jira",
+    "conversational-ai",
+    "ndb",
+    "crystal-ball",
+    "machine-learning"
+  ],
+  "author": "Namratha Singh",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.52.0",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/namratha-singh/ndb-status-sender"
+  },
+  "homepage": "https://github.com/namratha-singh/ndb-status-sender#readme",
+  "bugs": {
+    "url": "https://github.com/namratha-singh/ndb-status-sender/issues"
+  }
+}

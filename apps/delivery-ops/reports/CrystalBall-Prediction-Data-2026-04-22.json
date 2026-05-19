@@ -1,0 +1,3410 @@
+{
+  "metadata": {
+    "enabled": true,
+    "version": "1.0.0",
+    "prediction_timestamp": "2026-04-22T20:52:48.051Z",
+    "total_features_analyzed": 20,
+    "prediction_confidence": 0.5
+  },
+  "release_prediction": {
+    "enabled": true,
+    "overall_release_probability": null,
+    "predicted_date_range": {
+      "no_predictions": true,
+      "message": "No date predictions available"
+    },
+    "risk_distribution": {
+      "high_probability": 0,
+      "medium_probability": 0,
+      "low_probability": 20,
+      "high_confidence": 0,
+      "medium_confidence": 0,
+      "low_confidence": 20,
+      "percentages": {
+        "high_probability": 0,
+        "medium_probability": 0,
+        "low_probability": 100,
+        "high_confidence": 0
+      }
+    },
+    "systemic_issues": [],
+    "executive_summary": {
+      "prediction_statement": "**Major Concerns**: The current trajectory makes the Jun 6, 2026 target highly unlikely without major changes. Timeline prediction requires more complete feature data for reliable estimates.",
+      "confidence_narrative": "AI analysis shows systemic issues requiring fundamental changes to delivery approach.",
+      "portfolio_health": "Portfolio shows concerning patterns with many features at risk of delays.",
+      "systemic_patterns": "No significant systematic patterns detected across the feature portfolio.",
+      "key_insights": [
+        "**Portfolio risk concentration**: Many features need immediate intervention to stay on track"
+      ],
+      "executive_actions_needed": [
+        {
+          "priority": "strategic",
+          "action": "Consider scope or timeline adjustment",
+          "description": "With significant features at risk, evaluate whether current commitments are realistic",
+          "impact": "medium"
+        }
+      ]
+    },
+    "feature_count": 20,
+    "confidence_level": 0.5
+  },
+  "feature_predictions": [
+    {
+      "key": "NDB-2",
+      "summary": ".11",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3913948037582324,
+        "confidence_level": 0.6447628915096867,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7591889999365193,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T22:32:19.895Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:32:52.272Z",
+            "p50": "2026-05-11T16:32:52.276Z",
+            "p75": "2026-05-11T16:32:52.280Z",
+            "p90": "2026-05-11T16:32:52.283Z",
+            "p95": "2026-05-11T16:32:52.290Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:53:02.124Z",
+              "confidence": 0.8634255199414006,
+              "assumptions": {
+                "predicted_velocity": 0.8724015470731256,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.340Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.340Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3201712169259754,
+            "bug_convergence": 0.08927984018482402,
+            "critical_path": 0.2650495255486963,
+            "quality_gates": 0.1627497086702521,
+            "historical_pattern": 0.1627497086702521
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:32:52.272Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:32:52.276Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:32:52.280Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:32:52.283Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:32:52.280Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "NDB-2",
+      "summary": ".11 Release Status",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3913948037582324,
+        "confidence_level": 0.6447628915096867,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7591889999365193,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T22:32:19.895Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:32:52.272Z",
+            "p50": "2026-05-11T16:32:52.276Z",
+            "p75": "2026-05-11T16:32:52.280Z",
+            "p90": "2026-05-11T16:32:52.283Z",
+            "p95": "2026-05-11T16:32:52.290Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:53:02.124Z",
+              "confidence": 0.8634255199414006,
+              "assumptions": {
+                "predicted_velocity": 0.8724015470731256,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.340Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.340Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3201712169259754,
+            "bug_convergence": 0.08927984018482402,
+            "critical_path": 0.2650495255486963,
+            "quality_gates": 0.1627497086702521,
+            "historical_pattern": 0.1627497086702521
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:32:52.272Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:32:52.276Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:32:52.280Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:32:52.283Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:32:52.280Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "NDB-2",
+      "summary": ".11 shows MODERATE RISK with 5 Red projects (20%) including 2 P0 Blockers and resource constraints at 94% QA utilization. Release trending 3-day delay risk with 67% on-time delivery probability.",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3913948037582324,
+        "confidence_level": 0.6447628915096867,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7591889999365193,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T22:32:19.895Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:32:52.272Z",
+            "p50": "2026-05-11T16:32:52.276Z",
+            "p75": "2026-05-11T16:32:52.280Z",
+            "p90": "2026-05-11T16:32:52.283Z",
+            "p95": "2026-05-11T16:32:52.290Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:53:02.124Z",
+              "confidence": 0.8634255199414006,
+              "assumptions": {
+                "predicted_velocity": 0.8724015470731256,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.340Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.340Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.340Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3201712169259754,
+            "bug_convergence": 0.08927984018482402,
+            "critical_path": 0.2650495255486963,
+            "quality_gates": 0.1627497086702521,
+            "historical_pattern": 0.1627497086702521
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:32:52.272Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:32:52.276Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:32:52.280Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:32:52.283Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:32:52.280Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-61458",
+      "summary": ", ERA-50833)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "Limited data available - treat this as an early indicator only",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is delivering at a strong pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "At Risk",
+          "confidence_level": "Low Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": [
+            "Team velocity is above expectations"
+          ]
+        },
+        "landing_probability": 0.4221157366522,
+        "confidence_level": 0.5907215891361828,
+        "prediction_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "At Risk",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.9301311387683335,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T19:25:37.512Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:11:55.200Z",
+            "p50": "2026-05-11T15:11:55.207Z",
+            "p75": "2026-05-11T15:11:55.211Z",
+            "p90": "2026-05-11T15:11:55.213Z",
+            "p95": "2026-05-11T15:11:55.214Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T03:50:10.721Z",
+              "confidence": 0.8920099321011425,
+              "assumptions": {
+                "predicted_velocity": 1.3800101537213514,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.428Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.428Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.428Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.428Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3242132848256922,
+            "bug_convergence": 0.08874900773834957,
+            "critical_path": 0.26347361672322533,
+            "quality_gates": 0.1617820453563664,
+            "historical_pattern": 0.1617820453563664
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:11:55.200Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:11:55.207Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:11:55.211Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:11:55.213Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:11:55.213Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": [
+          "Team velocity is above expectations"
+        ]
+      }
+    },
+    {
+      "key": "FEAT-18216",
+      "summary": ") - P2 Major - Nilesh Vaishnav - Rachit Kukreti - Enhanced audit functionality for compliance - Code Complete: 16/Feb (slipped 2 times from 29/Jan) - CG: 13/Apr (slipped from 09/Apr) - PG: 11/May (set) - QI: 100% execution - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "Limited data available - treat this as an early indicator only",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is delivering at a strong pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "At Risk",
+          "confidence_level": "Low Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": [
+            "Team velocity is above expectations"
+          ]
+        },
+        "landing_probability": 0.45815150993288367,
+        "confidence_level": 0.5889637194361236,
+        "prediction_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "At Risk",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 1.00126258277403,
+          "dependency_risks": 0.25
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T14:15:56.225Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:33:09.769Z",
+            "p50": "2026-05-11T15:33:09.774Z",
+            "p75": "2026-05-11T15:33:09.778Z",
+            "p90": "2026-05-11T15:33:09.781Z",
+            "p95": "2026-05-11T15:33:09.781Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T04:53:54.393Z",
+              "confidence": 0.9810232464757721,
+              "assumptions": {
+                "predicted_velocity": 1.1972171941550604,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.451Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.451Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.451Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.451Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.33649819185160473,
+            "bug_convergence": 0.08713566837516544,
+            "critical_path": 0.2586840154887724,
+            "quality_gates": 0.15884106214222865,
+            "historical_pattern": 0.15884106214222865
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:33:09.769Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:33:09.774Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:33:09.778Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:33:09.781Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:33:09.781Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": [
+          "Team velocity is above expectations"
+        ]
+      }
+    },
+    {
+      "key": "FEAT-17939",
+      "summary": ") - P2 Major - Pulkit Gahlawat - Neetu Meena - KMS key rotation using old active keys - Code Complete: 29/Jan (on-track) - CG: 20/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 92% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.37889555711624817,
+        "confidence_level": 0.6572934492530068,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6554379728515956,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T18:05:55.597Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:33:01.818Z",
+            "p50": "2026-05-11T16:33:01.823Z",
+            "p75": "2026-05-11T16:33:01.828Z",
+            "p90": "2026-05-11T16:33:01.831Z",
+            "p95": "2026-05-11T16:33:01.832Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:53:30.270Z",
+              "confidence": 0.9346218707557202,
+              "assumptions": {
+                "predicted_velocity": 0.8717875046757091,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.583Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.583Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.583Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.583Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3301505072238607,
+            "bug_convergence": 0.08796929043298136,
+            "critical_path": 0.2611588309729134,
+            "quality_gates": 0.16036068568512227,
+            "historical_pattern": 0.16036068568512227
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:33:01.818Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:33:01.823Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:33:01.828Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:33:01.831Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:33:01.831Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17622",
+      "summary": ") - P2 Major - Chetan Hanumantha - Srikanth CG - Native DB Engine DR with UI support - Code Complete: 05/Feb (on-track) - CG: 29/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 88% execution - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, team capacity may need support, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Team velocity below typical levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.34719971969177443,
+        "confidence_level": 0.6509621565531897,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.48369768791570317,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T21:00:13.852Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T17:14:39.557Z",
+            "p50": "2026-05-11T17:14:39.561Z",
+            "p75": "2026-05-11T17:14:39.566Z",
+            "p90": "2026-05-11T17:14:39.568Z",
+            "p95": "2026-05-11T17:14:39.569Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T09:58:23.449Z",
+              "confidence": 0.8986486167794868,
+              "assumptions": {
+                "predicted_velocity": 0.7331999642736257,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.604Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.604Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.604Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.604Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3251451802649503,
+            "bug_convergence": 0.08862662475316657,
+            "critical_path": 0.2631102922359633,
+            "quality_gates": 0.16155895137295986,
+            "historical_pattern": 0.16155895137295986
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T17:14:39.557Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T17:14:39.561Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T17:14:39.566Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T17:14:39.568Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T17:14:39.566Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Team velocity below typical levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16150",
+      "summary": ") - P2 Major - Sneha Tripathi - N/A - Database security feature enhancement - Code Complete: 26/Feb (on-track) - CG: 13/Apr (slipped from 09/Apr) - PG: 11/May (set) - QI: 87% execution - Status: Fresh (18/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 10. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3858654263847971,
+        "confidence_level": 0.6566809407016908,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6280452198733094,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-10T13:23:26.777Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T18:25:01.709Z",
+            "p50": "2026-05-11T18:25:01.714Z",
+            "p75": "2026-05-11T18:25:01.718Z",
+            "p90": "2026-05-11T18:25:01.720Z",
+            "p95": "2026-05-11T18:25:01.721Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T13:29:29.872Z",
+              "confidence": 0.9311417085323331,
+              "assumptions": {
+                "predicted_velocity": 1.0835712686802705,
+                "remaining_work": 0.75,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.622Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.622Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.622Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-30T11:16:47.622Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "high",
+                "complexity_multiplier": 1.4,
+                "adjusted_days": 69
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32966952300448565,
+            "bug_convergence": 0.08803245662321393,
+            "critical_path": 0.2613463556001664,
+            "quality_gates": 0.16047583238606705,
+            "historical_pattern": 0.16047583238606705
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T18:25:01.709Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T18:25:01.714Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T18:25:01.718Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T18:25:01.720Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T18:25:01.718Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-56129",
+      "summary": ") - P1 Critical - Manzil Ahmad - N/A - Performance and reliability improvements - Code Complete: 22/Jan (on-track) - CG: 29/Apr (on-track) - PG: 14/May (set) - QI: 73% completed - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 2. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.37217757119426176,
+        "confidence_level": 0.6537875348359818,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.5139797599521813,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-02T21:14:08.663Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:47:47.270Z",
+            "p50": "2026-05-11T16:47:47.274Z",
+            "p75": "2026-05-11T16:47:47.278Z",
+            "p90": "2026-05-11T16:47:47.280Z",
+            "p95": "2026-05-11T16:47:47.281Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T08:37:46.521Z",
+              "confidence": 0.9147019024771694,
+              "assumptions": {
+                "predicted_velocity": 1.0213035783581907,
+                "remaining_work": 0.5,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.639Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.639Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.639Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-13T20:52:47.639Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "medium",
+                "complexity_multiplier": 1,
+                "adjusted_days": 21
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32738804978480346,
+            "bug_convergence": 0.088332075541257,
+            "critical_path": 0.2622358492631067,
+            "quality_gates": 0.16102201270541638,
+            "historical_pattern": 0.16102201270541638
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:47:47.270Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:47:47.274Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:47:47.278Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:47:47.280Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:47:47.280Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-58183",
+      "summary": ") - P2 Major - Aditya Vakkalanka - N/A - Control plane upgrade preparation - Code Complete: 29/Jan (on-track) - CG: 13/Apr (on-track) - PG: 11/May (set) - QI: 85% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3781554143407957,
+        "confidence_level": 0.644835915371749,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7237464937393097,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T23:02:00.422Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T17:05:24.099Z",
+            "p50": "2026-05-11T17:05:24.103Z",
+            "p75": "2026-05-11T17:05:24.107Z",
+            "p90": "2026-05-11T17:05:24.109Z",
+            "p95": "2026-05-11T17:05:24.110Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T09:30:36.975Z",
+              "confidence": 0.8638404282485729,
+              "assumptions": {
+                "predicted_velocity": 0.7600729386509817,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.655Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.655Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.655Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.655Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32023023413453233,
+            "bug_convergence": 0.08927208963486305,
+            "critical_path": 0.2650265161034997,
+            "quality_gates": 0.16273558006355243,
+            "historical_pattern": 0.16273558006355243
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T17:05:24.099Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T17:05:24.103Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T17:05:24.107Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T17:05:24.109Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T17:05:24.107Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "ERA-47385",
+      "summary": ") - P2 Major - Adarsh Mulik - Nikeshsingh Baghel - Database provisioning improvements - Code Complete: 12/Feb (slipped 2 times from 29/Jan) - CG: 30/Apr (slipped from 13/Apr) - PG: 13/May (slipped from 11/May) - QI: 78% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "Limited data available - treat this as an early indicator only",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 7. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is delivering at a strong pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "At Risk",
+          "confidence_level": "Low Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": [
+            "Team velocity is above expectations"
+          ]
+        },
+        "landing_probability": 0.42516418387438043,
+        "confidence_level": 0.5817833470880105,
+        "prediction_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "At Risk",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.9555348656198371,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-07T13:47:14.152Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:30:24.928Z",
+            "p50": "2026-05-11T15:30:24.933Z",
+            "p75": "2026-05-11T15:30:24.938Z",
+            "p90": "2026-05-11T15:30:24.941Z",
+            "p95": "2026-05-11T15:30:24.942Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T04:45:39.220Z",
+              "confidence": 0.8361459193000651,
+              "assumptions": {
+                "predicted_velocity": 1.5226576378097691,
+                "remaining_work": 0.5,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.774Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.774Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.774Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-10T20:52:47.774Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "medium",
+                "complexity_multiplier": 1,
+                "adjusted_days": 49
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.31626830808271567,
+            "bug_convergence": 0.08979239729693475,
+            "critical_path": 0.26657117947527503,
+            "quality_gates": 0.1636840575725373,
+            "historical_pattern": 0.1636840575725373
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:30:24.928Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:30:24.933Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:30:24.938Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:30:24.941Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:30:24.938Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": [
+          "Team velocity is above expectations"
+        ]
+      }
+    },
+    {
+      "key": "ERA-44932",
+      "summary": ") - P1 Critical - Tejal Karnavat - N/A - Backup compatibility enhancements - Code Complete: 16/Feb (slipped 3 times) - CG: 06/Apr (slipped 4 times) - PG: 11/May (slipped 2 times from 19/Apr) - QI: 92% execution - Status: Fresh (16/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 2. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, team capacity may need support, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Team velocity below typical levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.34178832189506986,
+        "confidence_level": 0.6471721321963257,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.4620412140027089,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-02T07:18:56.060Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T17:27:51.099Z",
+            "p50": "2026-05-11T17:27:51.104Z",
+            "p75": "2026-05-11T17:27:51.108Z",
+            "p90": "2026-05-11T17:27:51.111Z",
+            "p95": "2026-05-11T17:27:51.112Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T10:37:57.695Z",
+              "confidence": 0.877114387479123,
+              "assumptions": {
+                "predicted_velocity": 0.69804220268431,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.795Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.795Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.795Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-09T16:04:47.795Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3221129500873328,
+            "bug_convergence": 0.08902483829222442,
+            "critical_path": 0.26429248868004124,
+            "quality_gates": 0.16228486147020074,
+            "historical_pattern": 0.16228486147020074
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T17:27:51.099Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T17:27:51.104Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T17:27:51.108Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T17:27:51.111Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T17:27:51.111Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Team velocity below typical levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-18271",
+      "summary": ") - P2 Major - Chetan Hanumantha - Krishnaraj Velayutham - Accessibility compliance alignment - Code Complete: 22/Mar (on-track) - CG: 29/Apr (set) - PG: 11/May (set) - QI: 0% execution - Status: Stale (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "Limited data available - treat this as an early indicator only",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "At Risk",
+          "confidence_level": "Low Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.4179119756343058,
+        "confidence_level": 0.578295901393909,
+        "prediction_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "At Risk",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6575387616603527,
+          "dependency_risks": 0.17500000000000002
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T19:12:04.185Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:23:54.582Z",
+            "p50": "2026-05-11T16:23:54.586Z",
+            "p75": "2026-05-11T16:23:54.591Z",
+            "p90": "2026-05-11T16:23:54.593Z",
+            "p95": "2026-05-11T16:23:54.594Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T07:26:08.110Z",
+              "confidence": 0.914349383711931,
+              "assumptions": {
+                "predicted_velocity": 0.9094665529382935,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.813Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.813Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.813Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.813Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32733895806619695,
+            "bug_convergence": 0.08833852260690161,
+            "critical_path": 0.2622549889892392,
+            "quality_gates": 0.16103376516883106,
+            "historical_pattern": 0.16103376516883106
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:23:54.582Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:23:54.586Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:23:54.591Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:23:54.593Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:23:54.593Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-18162",
+      "summary": ") - P1 Critical - Akhil Tiwari - Santhosh S - Platform compatibility foundation - Code Complete: 09/Feb (slipped from 29/Jan) - CG: 14/May (slipped from 13/Apr) - PG: 28/May (slipped from 11/May) - QI: 80% scope expanded - Status: Fresh (13/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 1. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, team capacity may need support, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Team velocity below typical levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.32828926926978375,
+        "confidence_level": 0.6532641944717931,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.4012324447450474,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-02T06:21:08.470Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T18:02:12.992Z",
+            "p50": "2026-05-11T18:02:12.996Z",
+            "p75": "2026-05-11T18:02:13.000Z",
+            "p90": "2026-05-11T18:02:13.002Z",
+            "p95": "2026-05-11T18:02:13.003Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T12:21:03.304Z",
+              "confidence": 0.9117283776806424,
+              "assumptions": {
+                "predicted_velocity": 0.6205171987547259,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.830Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.830Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.830Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-09T16:04:47.830Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3269737322637985,
+            "bug_convergence": 0.08838648659736709,
+            "critical_path": 0.26239738208593355,
+            "quality_gates": 0.1611211995264504,
+            "historical_pattern": 0.1611211995264504
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T18:02:12.992Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T18:02:12.996Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T18:02:13.000Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T18:02:13.002Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T18:02:13.002Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Team velocity below typical levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17702",
+      "summary": ") - P0 Blocker - Mazin Shaaeldin - Amrapali Srivastava - Critical database security feature - Code Complete: 15/Mar (slipped from 26/Feb) - CG: 05/May (slipped 2 times from 27/Apr) - PG: 11/May (set) - QI: 40% execution - Status: Stale (14/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 4. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, team capacity may need support, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Team velocity below typical levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.3167046434768003,
+        "confidence_level": 0.6504031657635096,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.3795932423906542,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-04T14:25:38.950Z",
+          "confidence_intervals": {
+            "p25": "2026-05-12T00:41:13.463Z",
+            "p50": "2026-05-12T00:41:13.466Z",
+            "p75": "2026-05-12T00:41:13.470Z",
+            "p90": "2026-05-12T00:41:13.473Z",
+            "p95": "2026-05-12T00:41:13.474Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-24T08:18:04.685Z",
+              "confidence": 0.8954725327472132,
+              "assumptions": {
+                "predicted_velocity": 0.5081681798740223,
+                "remaining_work": 0.75,
+                "days_to_complete": 2
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.846Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.846Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.846Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-22T06:28:47.846Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "high",
+                "complexity_multiplier": 1.4,
+                "adjusted_days": 30
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32469966309528864,
+            "bug_convergence": 0.0886851331639566,
+            "critical_path": 0.26328398908049616,
+            "quality_gates": 0.16166560733012922,
+            "historical_pattern": 0.16166560733012922
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-12T00:41:13.463Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-12T00:41:13.466Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-12T00:41:13.470Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-12T00:41:13.473Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-12T00:41:13.473Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Team velocity below typical levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-17289",
+      "summary": ") - P2 Major - Anjali Mishra - N/A - Data archival with UI enhancement - Code Complete: 26/Feb (slipped from 29/Jan) - CG: 27/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 65% execution - Status: Stale (09/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.36776829977505715,
+        "confidence_level": 0.6446765327094325,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.5024947575350335,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T22:14:30.010Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T16:12:21.633Z",
+            "p50": "2026-05-11T16:12:21.638Z",
+            "p75": "2026-05-11T16:12:21.643Z",
+            "p90": "2026-05-11T16:12:21.646Z",
+            "p95": "2026-05-11T16:12:21.647Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T06:51:28.953Z",
+              "confidence": 0.8629348449399568,
+              "assumptions": {
+                "predicted_velocity": 0.9621116108856639,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.965Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.965Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.965Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.965Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32010140931705316,
+            "bug_convergence": 0.08928900780514759,
+            "critical_path": 0.2650767419215319,
+            "quality_gates": 0.1627664204781336,
+            "historical_pattern": 0.1627664204781336
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T16:12:21.633Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T16:12:21.638Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T16:12:21.643Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T16:12:21.646Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T16:12:21.643Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16821",
+      "summary": ") - P2 Major - Sasa Velickovic - N/A - Node management capability - Code Complete: 26/Feb (slipped 4 times from 18/Dec) - CG: 29/Apr (set) - PG: 11/May (set) - QI: 66% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.38931146313055864,
+        "confidence_level": 0.6507689431203384,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6567621927546553,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T19:25:13.695Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:33:01.235Z",
+            "p50": "2026-05-11T15:33:01.239Z",
+            "p75": "2026-05-11T15:33:01.243Z",
+            "p90": "2026-05-11T15:33:01.246Z",
+            "p95": "2026-05-11T15:33:01.247Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T04:53:27.720Z",
+              "confidence": 0.8975508131837402,
+              "assumptions": {
+                "predicted_velocity": 1.1983466965174294,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:47.986Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:47.986Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:47.986Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:47.986Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32499125512992244,
+            "bug_convergence": 0.08864683927158339,
+            "critical_path": 0.2631703040875132,
+            "quality_gates": 0.16159580075549052,
+            "historical_pattern": 0.16159580075549052
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:33:01.235Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:33:01.239Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:33:01.243Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:33:01.246Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:33:01.246Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16820",
+      "summary": ") - P2 Major - Sasa Velickovic - N/A - Node management capability - Code Complete: 26/Feb (slipped 2 times from 29/Jan) - CG: 29/Apr (set) - PG: 11/May (set) - QI: Run 85% - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.39944946017015875,
+        "confidence_level": 0.6588863936890472,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7412455014179897,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T16:25:14.119Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:25:16.323Z",
+            "p50": "2026-05-11T15:25:16.326Z",
+            "p75": "2026-05-11T15:25:16.330Z",
+            "p90": "2026-05-11T15:25:16.333Z",
+            "p95": "2026-05-11T15:25:16.333Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T04:30:12.951Z",
+              "confidence": 0.9436726914150404,
+              "assumptions": {
+                "predicted_velocity": 1.259248166932893,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:48.004Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:48.004Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:48.004Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:48.004Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3313981719392675,
+            "bug_convergence": 0.08780543843205242,
+            "critical_path": 0.2606723953451556,
+            "quality_gates": 0.16006199714176222,
+            "historical_pattern": 0.16006199714176222
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:25:16.323Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:25:16.326Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:25:16.330Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:25:16.333Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:25:16.333Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16809",
+      "summary": ") - P2 Major - Filip Mandic - N/A - Enhanced diagnostics capability - Code Complete: 12/Mar (slipped 2 times from 26/Feb) - CG: 20/Apr (slipped from 13/Apr) - PG: 11/May (set) - QI: 92% execution - Status: Fresh (20/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 5. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "Needs Intervention",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.34969583321093883,
+        "confidence_level": 0.6519768018459012,
+        "prediction_summary": "🔴 **Needs Intervention**: This feature is requiring significant changes to meet the timeline. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "Needs Intervention",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.6302613152736284,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-05T22:07:29.064Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T18:45:22.874Z",
+            "p50": "2026-05-11T18:45:22.878Z",
+            "p75": "2026-05-11T18:45:22.882Z",
+            "p90": "2026-05-11T18:45:22.884Z",
+            "p95": "2026-05-11T18:45:22.885Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T14:30:32.572Z",
+              "confidence": 0.9044136468517112,
+              "assumptions": {
+                "predicted_velocity": 0.544555942226293,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:48.019Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:48.019Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:48.019Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-06-01T01:40:48.019Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P2",
+                "base_days": 49,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 40
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.32595235520046967,
+            "bug_convergence": 0.08852062093126527,
+            "critical_path": 0.26279559338969377,
+            "quality_gates": 0.1613657152392856,
+            "historical_pattern": 0.1613657152392856
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T18:45:22.874Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T18:45:22.878Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T18:45:22.882Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T18:45:22.884Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T18:45:22.882Z",
+            "confidence_level": "medium",
+            "rationale": "Conservative estimate provides buffer for typical project risks"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    },
+    {
+      "key": "FEAT-16363",
+      "summary": ") - P1 Critical - Shristy Agarwal - Deepthi Bollempalli - Scalability capability enhancement - Code Complete: 27/Feb (slipped 4 times) - CG: 27/Apr (slipped 2 times from 21/Oct) - PG: 11/May (slipped from 20/Nov) - QI: 67% execution - Status: Fresh (15/Apr)",
+      "prediction": {
+        "enabled": true,
+        "executive_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "confidence_explanation": "The analysis is reasonable but some factors have limited data",
+        "timeline_assessment": "May run a bit later than Jun 6, 2026 - estimated around May 1. Worth watching closely.",
+        "key_factors_narrative": "Looking at the main factors: work breakdown needs attention, quality issues need more focus, the team is maintaining reasonable pace, testing and quality need more attention.",
+        "recommendation_narrative": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "simplified_metrics": {
+          "delivery_outlook": "At Risk",
+          "confidence_level": "Moderate Confidence",
+          "primary_concerns": [
+            "Many planned items still not started or completed",
+            "Bug resolution not keeping pace with discovery",
+            "Quality metrics below target levels"
+          ],
+          "strength_areas": []
+        },
+        "landing_probability": 0.4047087241552612,
+        "confidence_level": 0.6426474277029602,
+        "prediction_summary": "🟠 **At Risk**: This feature is facing challenges that need immediate attention. Key observations: work breakdown needs attention, and quality issues need more focus.",
+        "likelihood_level": "At Risk",
+        "factor_breakdown": {
+          "hierarchy_completion": 0,
+          "bug_convergence": 0.2,
+          "team_velocity": 0.7850727012938437,
+          "dependency_risks": 0
+        },
+        "date_prediction": {
+          "predicted_completion_date": "2026-05-02T06:37:05.657Z",
+          "confidence_intervals": {
+            "p25": "2026-05-11T15:32:01.273Z",
+            "p50": "2026-05-11T15:32:01.277Z",
+            "p75": "2026-05-11T15:32:01.281Z",
+            "p90": "2026-05-11T15:32:01.283Z",
+            "p95": "2026-05-11T15:32:01.284Z"
+          },
+          "prediction_methods": {
+            "velocity_based": {
+              "method": "velocity_based",
+              "completion_date": "2026-04-23T04:50:27.741Z",
+              "confidence": 0.8514058392213645,
+              "assumptions": {
+                "predicted_velocity": 1.2058741776840074,
+                "remaining_work": 0.4,
+                "days_to_complete": 1
+              },
+              "reliability": "high"
+            },
+            "bug_convergence": {
+              "method": "bug_convergence",
+              "completion_date": "2026-05-27T20:52:48.035Z",
+              "confidence": 0.4,
+              "assumptions": {
+                "estimated_convergence_days": 35,
+                "post_convergence_buffer": 7
+              },
+              "reliability": "low"
+            },
+            "critical_path": {
+              "method": "critical_path",
+              "completion_date": "2026-04-22T20:52:48.035Z",
+              "confidence": 0.6,
+              "assumptions": {
+                "critical_path_days": 0,
+                "buffer_multiplier": 0.15,
+                "total_days": 0
+              },
+              "reliability": "high"
+            },
+            "quality_gates": {
+              "method": "quality_gates",
+              "completion_date": "2026-05-13T20:52:48.035Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "base_testing_days": 14,
+                "adjustment_factor": 1.5,
+                "gate_risk_days": 0,
+                "total_days": 21
+              },
+              "reliability": "medium"
+            },
+            "historical_pattern": {
+              "method": "historical_pattern",
+              "completion_date": "2026-05-09T16:04:48.035Z",
+              "confidence": 0.5,
+              "assumptions": {
+                "priority": "P0",
+                "base_days": 21,
+                "complexity": "low",
+                "complexity_multiplier": 0.8,
+                "adjusted_days": 17
+              },
+              "reliability": "medium"
+            }
+          },
+          "ensemble_weights": {
+            "velocity_based": 0.3184570589456331,
+            "bug_convergence": 0.0895049553231453,
+            "critical_path": 0.26571783611558764,
+            "quality_gates": 0.16316007480781694,
+            "historical_pattern": 0.16316007480781694
+          },
+          "scenario_analysis": {
+            "optimistic": {
+              "completion_date": "2026-05-11T15:32:01.273Z",
+              "probability": 0.75,
+              "assumptions": "Best case: no major blockers, team velocity maintained",
+              "risks": "Low dependency delays, minimal scope creep"
+            },
+            "realistic": {
+              "completion_date": "2026-05-11T15:32:01.277Z",
+              "probability": 0.5,
+              "assumptions": "Expected case: normal development challenges",
+              "risks": "Some minor delays, typical bug resolution time"
+            },
+            "conservative": {
+              "completion_date": "2026-05-11T15:32:01.281Z",
+              "probability": 0.25,
+              "assumptions": "Conservative case: some significant challenges",
+              "risks": "Dependency delays, quality issues requiring rework"
+            },
+            "pessimistic": {
+              "completion_date": "2026-05-11T15:32:01.283Z",
+              "probability": 0.1,
+              "assumptions": "Worst case: major blockers and significant delays",
+              "risks": "Critical dependency failures, major scope changes"
+            }
+          },
+          "probability_on_target": null,
+          "recommendation": {
+            "recommended_target_date": "2026-05-11T15:32:01.283Z",
+            "confidence_level": "low",
+            "rationale": "Very tight timeline requires pessimistic planning and risk mitigation"
+          }
+        },
+        "ai_insights": {
+          "primary_risk_factors": [
+            {
+              "factor": "Bug convergence",
+              "risk_level": "high",
+              "impact": 0.25,
+              "description": "Bug creation rate not converging toward zero"
+            }
+          ],
+          "opportunity_factors": [],
+          "recommendations": [
+            {
+              "priority": "immediate",
+              "action": "Increase bug resolution capacity",
+              "description": "Allocate additional QA resources to accelerate bug closure",
+              "impact": "high"
+            }
+          ],
+          "confidence_drivers": []
+        },
+        "recommendation_summary": "**Immediate focus needed**: Allocate additional QA resources to accelerate bug closure.",
+        "risk_factors": [
+          "Many planned items still not started or completed",
+          "Bug resolution not keeping pace with discovery",
+          "Quality metrics below target levels"
+        ],
+        "success_factors": []
+      }
+    }
+  ],
+  "generation_info": {
+    "timestamp": "2026-04-22T20:52:48.052Z",
+    "version": "1.0.0",
+    "system": "CrystalBall Enhanced VP Report Generator"
+  }
+}

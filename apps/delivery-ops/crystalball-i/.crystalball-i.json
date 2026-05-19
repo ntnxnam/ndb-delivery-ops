@@ -1,0 +1,8 @@
+{
+  "team": "NDB",
+  "enabled": true,
+  "learningEnabled": true,
+  "logLevel": "info",
+  "initializedAt": "2026-05-07T17:24:00.000Z",
+  "version": "1.0.0"
+}

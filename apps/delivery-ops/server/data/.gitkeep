@@ -1,0 +1,4 @@
+# This directory contains email history data
+# DO NOT add this directory to .gitignore
+# The emailHistory.json file should be preserved across deployments
+

@@ -1,0 +1,35 @@
+{
+  "name": "ndb-status-sender",
+  "version": "1.1.0",
+  "description": "NDB Status Update Sender - Extract Confluence content and send status emails",
+  "main": "server/index.js",
+  "scripts": {
+    "check:no-localhost": "node scripts/check-no-localhost.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && HOST=0.0.0.0 PORT=6100 npm start",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=__tests__",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:e2e": "jest --testPathPattern=e2e"
+  },
+  "keywords": [
+    "confluence",
+    "email",
+    "status-update"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "dependencies": {
+    "jsdom": "^29.0.2",
+    "officegen": "^0.6.5"
+  }
+}
