@@ -131,3 +131,20 @@ export {
   NDB_SPRINT_CALENDAR,
 } from './services/sprintsService.js';
 export type { SprintCalendar } from './services/sprintsService.js';
+
+export {
+  computePayloadMetrics,
+  computeLabelAnchoredMetrics,
+  computeReleaseInsights,
+  filterVisiblePayload,
+  filterFullRelease,
+  VISIBLE_COMPONENTS,
+} from './services/releaseInsightsService.js';
+export type {
+  PayloadMetrics,
+  PayloadMetricsContext,
+  LabelAnchoredMetrics,
+  LabelAnchoredOptions,
+  ReleaseInsights,
+  ReleaseInsightsOptions,
+} from './services/releaseInsightsService.js';

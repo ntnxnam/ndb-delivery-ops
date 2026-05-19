@@ -31,3 +31,4 @@ export * from './releaseClassificationService.js';
 export * from './issueGroupsService.js';
 export * from './resolutionCategoriesService.js';
 export * from './sprintsService.js';
+export * from './releaseInsightsService.js';
