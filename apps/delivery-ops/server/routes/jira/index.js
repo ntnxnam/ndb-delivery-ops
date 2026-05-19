@@ -29,6 +29,16 @@ const {
   buildOptimizedProjectTicketsJQL,
   buildSprintReportJql,
 } = require('../../utils/jiraQueryUtils');
+
+// Dynamic ESM import of the shared workspace package (CommonJS server +
+// ESM shared interop, mirrors the pattern in routes/dateMover.js).
+let _sharedPromise = null;
+function getShared() {
+  if (!_sharedPromise) {
+    _sharedPromise = import('@portfolio-delivery-ops/shared');
+  }
+  return _sharedPromise;
+}
 const { getAllFields } = require('../../utils/jiraFieldsConfig');
 const { processAllMilestones } = require('../../utils/milestoneProcessor');
 const jiraFieldsConfig = require('../../config/jiraFieldsConfig.json');
@@ -1062,12 +1072,15 @@ router.post('/issue-breakdown', validateJiraTokenMiddleware, async (req, res) =>
     if (projectKeys.length === 0) {
       return res.status(400).json({ error: 'jiraKey or jiraKeys is required' });
     }
-    
-    // Validate project keys format
-    const invalidKeys = projectKeys.filter(key => !/^[A-Z]+-\d+$/.test(key));
+
+    // Per-key format validation delegated to shared service below
+    // (isValidProjectKey from @portfolio-delivery-ops/shared) — keep the
+    // legacy explicit-error response shape for the client.
+    const shared = await getShared();
+    const invalidKeys = projectKeys.filter(key => !shared.isValidProjectKey(key));
     if (invalidKeys.length > 0) {
-      return res.status(400).json({ 
-        error: `Invalid project key format: ${invalidKeys.join(', ')}. Expected format: LETTERS-NUMBERS (e.g., FEAT-1001)` 
+      return res.status(400).json({
+        error: `Invalid project key format: ${invalidKeys.join(', ')}. Expected format: LETTERS-NUMBERS (e.g., FEAT-1001)`
       });
     }
 
@@ -1075,9 +1088,15 @@ router.post('/issue-breakdown', validateJiraTokenMiddleware, async (req, res) =>
     const cleanToken = req.jiraToken;
     const baseUrl = JIRA_API_V2.BASE_URL;
     const httpsAgent = createHttpsAgent();
-    
-    // Build optimized JQL query based on request type
-    const jqlQuery = buildOptimizedProjectTicketsJQL(projectKeys);
+
+    // Build comprehensive-view JQL via the shared service (CONSOLIDATION
+    // #17). Matches legacy behaviour by enabling the 9th linkedIssuesOf
+    // clause that the dashboards rely on. `projectKey` intentionally
+    // omitted: production legacy did NOT prepend `project = X`, and the
+    // FEAT keys already carry their project namespace.
+    const jqlQuery = shared.buildAllTicketsJql(projectKeys, {
+      includeLinkedIssues: true,
+    });
     const searchUrl = JIRA_API_V2.SEARCH;
     
     logger.jira.fetch(
@@ -1211,11 +1230,15 @@ router.post('/issue-breakdown', validateJiraTokenMiddleware, async (req, res) =>
             completionRate: totalFiltered > 0 ? (((totalDone + totalToBeVerified) / totalFiltered) * 100).toFixed(1) : '0.0'
           };
           
-          // Generate JIRA search URL for this project key
-          const projectJQL = buildTaskBreakdownJQL(projectKey);
-          const jiraBaseUrl = 'https://jira.nutanix.com';
-          const encodedProjectJql = encodeURIComponent(projectJQL);
-          const projectJiraSearchUrl = `${jiraBaseUrl}/issues/?jql=${encodedProjectJql}`;
+          // Use shared service URL builder (CONSOLIDATION #17). Honours
+          // configured jiraBaseUrl from config/api.js — drops the hard-
+          // coded 'https://jira.nutanix.com' that the rule
+          // no-localhost.mdc / D1 product-agnostic both call out.
+          const projectJiraSearchUrl = shared.buildWorkItemsUrl(projectKey, {
+            jiraBaseUrl: JIRA_API_V2.BASE_URL,
+            openOnly: true,
+            includeLinkedIssues: true,
+          });
           
           bulkResults[projectKey] = {
             success: true,
@@ -1246,15 +1269,21 @@ router.post('/issue-breakdown', validateJiraTokenMiddleware, async (req, res) =>
         
         logger.jira.issueBreakdown(projectKeys[0], issues.length, 'Raw tickets returned for client processing');
         
-        // Generate JIRA search URL for all tickets (no status exclusion)
-        const jiraBaseUrl = 'https://jira.nutanix.com';
-        const encodedJql = encodeURIComponent(jqlQuery);
-        const jiraSearchUrl = `${jiraBaseUrl}/issues/?jql=${encodedJql}`;
-        
-        // Generate URL for outstanding tickets only (with status exclusion)
-        const outstandingJQL = buildTaskBreakdownJQL(projectKeys[0]);
-        const encodedOutstandingJql = encodeURIComponent(outstandingJQL);
-        const outstandingUrl = `${jiraBaseUrl}/issues/?jql=${encodedOutstandingJql}`;
+        // URLs via shared service (CONSOLIDATION #17). Removes the
+        // hardcoded jira.nutanix.com host (rule: no-localhost.mdc / D1
+        // product-agnostic) — base URL now flows from config/api.js so
+        // other tenants pointing at a different JIRA instance work
+        // without code changes.
+        const jiraSearchUrl = shared.buildAllTicketsUrl(projectKeys[0], {
+          jiraBaseUrl: JIRA_API_V2.BASE_URL,
+          openOnly: false,
+          includeLinkedIssues: true,
+        });
+        const outstandingUrl = shared.buildWorkItemsUrl(projectKeys[0], {
+          jiraBaseUrl: JIRA_API_V2.BASE_URL,
+          openOnly: true,
+          includeLinkedIssues: true,
+        });
         
         res.json({
           success: true,

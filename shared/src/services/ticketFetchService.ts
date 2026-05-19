@@ -73,8 +73,8 @@ function validateKeys(keys: string[]): void {
 export const WORK_ITEMS_EXCLUDED_TYPES =
   '(Feature, Initiative, X-FEAT, Capability, Epic)';
 
-function singleKeyUnion(key: string): string {
-  return [
+function singleKeyUnion(key: string, includeLinkedIssues: boolean): string {
+  const clauses = [
     `key = ${key}`,
     `("Parent Link" = ${key})`,
     `("FEAT ID" ~ ${key})`,
@@ -83,12 +83,16 @@ function singleKeyUnion(key: string): string {
     `(issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key=${key}')"))`,
     `(issueFunction in subtasksOf("key=${key}"))`,
     `issueFunction in subtasksOf("issueFunction in issuesInEpics(\\"issueFunction in portfolioChildrenOf('key=${key}') \\")")`,
-  ].join(' OR ');
+  ];
+  if (includeLinkedIssues) {
+    clauses.push(`issueFunction in linkedIssuesOf("key=${key}")`);
+  }
+  return clauses.join(' OR ');
 }
 
-function bulkKeyUnion(keys: string[]): string {
+function bulkKeyUnion(keys: string[], includeLinkedIssues: boolean): string {
   const list = keys.join(', ');
-  return [
+  const clauses = [
     `key IN (${list})`,
     `("Parent Link" IN (${list}))`,
     `("FEAT ID" IN (${list}))`,
@@ -97,14 +101,39 @@ function bulkKeyUnion(keys: string[]): string {
     `(issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key IN (${list})')"))`,
     `(issueFunction in subtasksOf("key IN (${list})"))`,
     `issueFunction in subtasksOf("issueFunction in issuesInEpics(\\"issueFunction in portfolioChildrenOf('key IN (${list})') \\")")`,
-  ].join(' OR ');
+  ];
+  if (includeLinkedIssues) {
+    // The legacy server builder emits a per-key OR-joined linkedIssuesOf
+    // when bulk, since JIRA's linkedIssuesOf doesn't accept a `key IN (...)`
+    // sub-expression in production. Match that shape.
+    const perKey = keys
+      .map((k) => `issueFunction in linkedIssuesOf("key=${k}")`)
+      .join(' OR ');
+    clauses.push(`(${perKey})`);
+  }
+  return clauses.join(' OR ');
 }
 
 export interface TicketJqlOptions {
-  /** JIRA project key the FEAT lives in (e.g. 'ERA' for NDB). Required (D1). */
-  projectKey: string;
+  /**
+   * JIRA project key the FEAT lives in (e.g. 'ERA' for NDB). Optional
+   * by design: the FEAT keys themselves carry their project scope, so
+   * production callers (existing /api/jira/issue-breakdown route) don't
+   * prepend `project = X`. When provided, the JQL is wrapped as
+   * `project = X AND (UNION)` to take advantage of JIRA's project-index
+   * optimisation. Per D1, no default — caller must opt in via
+   * `productService.getJiraProjectKey()` if they want the scope clause.
+   */
+  projectKey?: string;
   /** When true, append `AND status not in (Done, Closed, Cancelled)`. */
   openOnly?: boolean;
+  /**
+   * When true, add a 9th clause `issueFunction in linkedIssuesOf("key=X")`
+   * (or per-key OR-join in bulk mode). Matches the legacy server-side
+   * `buildOptimizedProjectTicketsJQL` behaviour used by the dashboards.
+   * Default: false (the skill-spec form is the 8-clause union).
+   */
+  includeLinkedIssues?: boolean;
 }
 
 /**
@@ -113,14 +142,17 @@ export interface TicketJqlOptions {
  */
 export function buildAllTicketsJql(
   keys: string[],
-  options: TicketJqlOptions
+  options: TicketJqlOptions = {}
 ): string {
   validateKeys(keys);
-  if (!options.projectKey) {
-    throw new Error('buildAllTicketsJql: options.projectKey is required (D1)');
-  }
-  const union = keys.length === 1 ? singleKeyUnion(keys[0]!) : bulkKeyUnion(keys);
-  let jql = `project = ${options.projectKey} AND (${union})`;
+  const includeLinkedIssues = options.includeLinkedIssues ?? false;
+  const union =
+    keys.length === 1
+      ? singleKeyUnion(keys[0]!, includeLinkedIssues)
+      : bulkKeyUnion(keys, includeLinkedIssues);
+  let jql = options.projectKey
+    ? `project = ${options.projectKey} AND (${union})`
+    : `(${union})`;
   if (options.openOnly) {
     jql += ' AND status not in (Done, Closed, Cancelled)';
   }
@@ -133,13 +165,9 @@ export function buildAllTicketsJql(
  */
 export function buildWorkItemsJql(
   keys: string[],
-  options: TicketJqlOptions
+  options: TicketJqlOptions = {}
 ): string {
   const baseJql = buildAllTicketsJql(keys, { ...options, openOnly: false });
-  // Insert the issuetype-exclusion before the project-scoped union so it
-  // composes correctly with the optional openOnly clause appended after.
-  // The baseJql shape is: `project = X AND (UNION)` — we wrap with the
-  // exclusion and re-append openOnly.
   let jql = `${baseJql} AND issuetype not in ${WORK_ITEMS_EXCLUDED_TYPES}`;
   if (options.openOnly) {
     jql += ' AND status not in (Done, Closed, Cancelled)';
@@ -150,15 +178,17 @@ export function buildWorkItemsJql(
 // ── JIRA hyperlink URL builders (for "X of Y done" clickable counts) ───────
 
 export interface TicketUrlOptions {
-  /** JIRA base URL, e.g. `'https://jira.nutanix.com'` (no trailing slash). */
+  /** JIRA base URL, e.g. `'https://jira.nutanix.com'`. Trailing slashes stripped. */
   jiraBaseUrl: string;
-  /** Project key for the FEAT (D1). */
-  projectKey: string;
+  /** Project key for the FEAT (optional — see TicketJqlOptions.projectKey). */
+  projectKey?: string;
   /**
    * Open-only by default (we want users to land on outstanding work).
    * Caller can override to include Done/Closed when needed.
    */
   openOnly?: boolean;
+  /** Pass through to JQL builder. */
+  includeLinkedIssues?: boolean;
 }
 
 /**
@@ -170,9 +200,13 @@ export function buildAllTicketsUrl(
   key: string,
   options: TicketUrlOptions
 ): string {
+  if (!options.jiraBaseUrl) {
+    throw new Error('buildAllTicketsUrl: options.jiraBaseUrl is required');
+  }
   const jql = buildAllTicketsJql([key], {
     projectKey: options.projectKey,
     openOnly: options.openOnly ?? true,
+    includeLinkedIssues: options.includeLinkedIssues,
   });
   return `${options.jiraBaseUrl.replace(/\/+$/, '')}/issues/?jql=${encodeURIComponent(jql)}`;
 }
@@ -185,9 +219,13 @@ export function buildWorkItemsUrl(
   key: string,
   options: TicketUrlOptions
 ): string {
+  if (!options.jiraBaseUrl) {
+    throw new Error('buildWorkItemsUrl: options.jiraBaseUrl is required');
+  }
   const jql = buildWorkItemsJql([key], {
     projectKey: options.projectKey,
     openOnly: options.openOnly ?? true,
+    includeLinkedIssues: options.includeLinkedIssues,
   });
   return `${options.jiraBaseUrl.replace(/\/+$/, '')}/issues/?jql=${encodeURIComponent(jql)}`;
 }
