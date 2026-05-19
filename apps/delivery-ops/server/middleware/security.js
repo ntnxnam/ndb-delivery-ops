@@ -1,6 +1,11 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
+// Shared rule: don't count CORS preflight OPTIONS requests against any limiter.
+// They're protocol overhead the browser fires automatically; counting them
+// punishes normal users for protocol mechanics.
+const skipOptions = (req) => req.method === 'OPTIONS';
+
 // Security headers middleware
 const securityHeaders = helmet({
   contentSecurityPolicy: {
@@ -47,7 +52,7 @@ const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health' || req.method === 'OPTIONS',
+  skip: (req) => req.path === '/api/health' || skipOptions(req),
 });
 
 // Strict rate limiter for authentication endpoints
@@ -71,33 +76,43 @@ const emailLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// JIRA/Confluence API rate limiter - 50 requests per 5 minutes per IP (higher in dev)
+// JIRA/Confluence API rate limiter
+//   prod: 50 / 5min  dev: 1000 / 5min  (dev was 200 — too tight once CORS preflights
+//                                       and React 18 strict-mode double-mount are factored in)
 const apiLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: process.env.NODE_ENV === 'production' ? 50 : 200,
+  windowMs: 5 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 50 : 1000,
   message: 'Too many API requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipOptions,
 });
 
-// More lenient rate limiter for checkpoint history (batch operations)
+// Checkpoint history (batch operations)
+//   prod/dev: 100 -> 500 dev. Production unchanged.
 const checkpointHistoryLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 100, // More lenient for batch operations
+  windowMs: 5 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 500,
   message: 'Too many checkpoint history requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  skip: skipOptions,
 });
 
-// More lenient rate limiter for release versions/items (these make multiple JIRA calls)
+// Release-version family (sprint reports, release items, exec summary, etc.)
+// Many UI surfaces hit this family on mount (sometimes 3-4 in parallel), so the
+// dev budget needs real headroom. Production stays strict — those endpoints make
+// expensive JIRA calls.
+//   prod: 10 / 5min   dev: 800 / 5min
 const releaseVersionsLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: process.env.NODE_ENV === 'production' ? 10 : 80, // More lenient in development (page load triggers many routes)
+  windowMs: 5 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 800,
   message: 'Too many release version requests from this IP. Please wait 60-90 seconds before trying again. Each request makes multiple JIRA API calls, so rate limits are reached quickly.',
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  skip: skipOptions,
 });
 
 module.exports = {
