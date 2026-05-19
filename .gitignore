@@ -49,3 +49,8 @@ Thumbs.db
 # Cursor
 .cursor/cache/
 .cursor/local/
+
+# TypeScript build artifacts
+**/dist/
+**/tsconfig.tsbuildinfo
+**/*.tsbuildinfo
