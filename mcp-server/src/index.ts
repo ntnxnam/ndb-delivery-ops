@@ -20,6 +20,7 @@ import { registerGetReleaseStatus } from './tools/getReleaseStatus.js';
 import { registerMoveJiraDates } from './tools/moveJiraDates.js';
 import { registerCalculateStoryPoints } from './tools/calculateStoryPoints.js';
 import { registerSayVsDo } from './tools/sayVsDo.js';
+import { registerBinPackProjects } from './tools/binPackProjects.js';
 import { registerNdbGlossary } from './resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
   registerMoveJiraDates(server, env);
   registerCalculateStoryPoints(server, env);
   registerSayVsDo(server, env);
+  registerBinPackProjects(server);
 
   // ── resources ─────────────────────────────────────────────────────────
   registerNdbGlossary(server);
