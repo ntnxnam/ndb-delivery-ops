@@ -23,6 +23,7 @@ import { registerSayVsDo } from './tools/sayVsDo.js';
 import { registerBinPackProjects } from './tools/binPackProjects.js';
 import { registerGanttReleaseTimeline } from './tools/ganttReleaseTimeline.js';
 import { registerPlanCapacity } from './tools/planCapacity.js';
+import { registerLeadershipCommitReport } from './tools/leadershipCommitReport.js';
 import { registerNdbGlossary } from './resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -53,6 +54,7 @@ async function main(): Promise<void> {
   registerBinPackProjects(server);
   registerGanttReleaseTimeline(server, env);
   registerPlanCapacity(server);
+  registerLeadershipCommitReport(server);
 
   // ── resources ─────────────────────────────────────────────────────────
   registerNdbGlossary(server);
