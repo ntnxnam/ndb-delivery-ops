@@ -106,18 +106,50 @@ boundaries until a non-NDB organisation actually signs up.
 - Data is filtered by product list at the service layer
 - Agents and reports respect the active product set
 
-### D6 — Role lens is a presenter, not a filter
+### D6 — Tab visibility, default landing, and role lens (revised 2026-05-19)
 
-**Statement.** The "switch role" affordance does **not** hide pages from
-the user. It re-renders the same data using a different audience preset
-(VP / TPM / RM / FEAT / EM / IC). Same data, different presenter.
+**Statement.** Three distinct concepts; the original D6 conflated them.
+
+**(a) Tab visibility — admin-only filter, nothing else.**
+- Admin tabs (user mgmt, team config, system settings) are gated by admin role.
+- Every other tab is visible to every user, regardless of specialist role.
+- A VP can navigate to Date Mover if they want; they just won't by default.
+
+**(b) Default landing page — per-role UX default (not a filter).**
+- VP / Director → Ops Assistant chat (D4: VP is agent-first)
+- Portfolio Manager / Admin → Ops Assistant chat + Release Versions
+- TPM → Release Versions
+- RM → Sync Hub (Phase E rebuild) / Release Versions
+- FEAT Manager → Release Versions filtered to their FEAT
+- EM / Team Manager → My Team Profile
+- IC → My Tickets
+- QA Lead → Sprint Insights
+- Architect → Release Timeline
+- This is a UX default. The user can navigate anywhere else freely.
+
+**(c) Role lens (preview-as-X) — universal, available to every user.**
+- Every page that emits audience-sensitive output has a lens dropdown in the header.
+- A user clicks "preview as VP" to re-render the current page in `vp` density
+  (chart-first, RAG-first, citation-first, no JQL inline per `audience.md`).
+- Useful for: VPs spot-checking what their report will look like; the
+  Portfolio Manager drafting an EM-facing artefact; TPMs previewing their
+  weekly status as the VP will read it.
+- Default lens = the user's primary role.
 
 **Implications.**
-- Backed by `audience.md` style definitions (per-persona density, link policy,
-  RAG-first vs detail-first)
-- Available on any page that produces audience-sensitive output
-- Default lens = the user's primary role (for the Portfolio Manager, "all")
-- A "preview as VP" / "preview as EM" toggle is the main use case
+- The existing `client/src/auth/constants/permissions.js` `TAB_PERMISSIONS`
+  mechanism only filters admin tabs — non-admin tabs need no permission check.
+- The `Sidebar.js` `visibleItems` filter applies the admin gate only.
+- Default-landing is a user-preference value (per-role default, overridable).
+- The role lens dropdown is a header-level component on every audience-sensitive page.
+- Mutating actions (cascade rename, bulk date move) are gated by separate
+  **action-level authorization**, NOT tab visibility — see open D26.
+
+**What this is NOT.**
+- It is NOT role-based nav filtering for specialist roles. Everyone sees
+  every (non-admin) tab.
+- It is NOT a security boundary. Tab visibility is a UX convenience; data
+  access is enforced by the JIRA PAT's permissions at the connector layer.
 
 ### D7 — Agent surface = web chat embedded in delivery-ops
 
@@ -489,14 +521,36 @@ Phase A is the **AI layer rebuild** — all markdown, no React code. Touches:
 - New MCP-backed pages: Capacity Planner, Bin-Packing, Story Points page, Date Mover, Say vs Do (Phase G)
 - Gap features (Sprint Planner, Status Page Auto-Publisher, etc.) (Phase H)
 
-## Round 6 — Pending decisions (open)
+## Round 7 — Tab visibility revision + action authorization (2026-05-19)
+
+D6 was revised this round (see updated text above).
+
+### D25 — Default-landing-page is a user preference (not hard-coded)
+
+**Statement.** Each role has a sensible default landing page (per D6(b)),
+but the **specific value is stored as a user preference**, overridable per
+user. A new VP can change theirs from "Ops Assistant chat" to "VP Exec
+Dashboard" if they prefer.
+
+**Implications.**
+- Add `defaultLandingPage` field to user prefs (stored alongside
+  notification prefs from D14).
+- Auth context loads user's `defaultLandingPage`; redirects from `/` to it
+  on first navigation per session.
+- Per-role *fallback* (used if user has no explicit preference) comes from
+  a `ROLE_DEFAULT_LANDING` constant on the client.
+
+---
+
+## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
 |---|---|---|
 | D24 | "Pending-response" detection mechanism — JIRA comments? Labels? Custom fields? | Build-time question for `pending-response-chase` skill |
-| D25 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
-| D26 | First gap to build (post-Phase-A) | Phase H planning |
-| D27 | Next role to deep-dive after Phase A ships (RM / Director / EM) | After Phase A complete |
+| D26 | **Action-level authorization** — which actions require which roles? (e.g. cascade rename = RM only? bulk triage = TPM+? admin actions = admin only?) | Chat input, can be settled when Phase F or G touches mutating actions |
+| D27 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
+| D28 | First gap to build (post-Phase-A) | Phase H planning |
+| D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |
 
 ---
 

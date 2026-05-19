@@ -240,9 +240,14 @@ These pairs/triples did the same thing:
 
 ## Persona → feature access matrix
 
-Per D6, the role lens **does not hide pages from any user**. Every user can
-reach every capability. This matrix shows the **default landing surface** and
-**primary interaction mode** by persona.
+Per **D6 (revised)**:
+- **Tab visibility**: admin-only filter; every non-admin tab is visible to every user.
+- **Default landing surface**: per-role UX default (this matrix), overridable per-user via D25.
+- **Role lens (preview-as-X)**: universal — every user can preview the current page in any audience.
+
+Every user can reach every capability. This matrix shows the **default
+landing surface** and **primary interaction mode** by persona — not a
+visibility filter.
 
 
 | Persona                       | Domains they live in                              | Default landing surface                 | Primary interaction mode                |

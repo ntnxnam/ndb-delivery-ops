@@ -9,10 +9,11 @@ Every artifact this project produces — a report, a chat answer, an email,
 a Confluence page — must declare an **audience** and be rendered using
 the corresponding presenter from `.cursor/context/audience.md`.
 
-Per **D6 — Role lens is a presenter, not a filter**, the same underlying
-data may be rendered for multiple audiences. Audience drives **density,
-link policy, citation density, chart-vs-prose ratio, and RAG-first vs
-detail-first ordering** — not which data is shown.
+Per **D6 (revised)**, audience drives **density, link policy, citation
+density, chart-vs-prose ratio, and RAG-first vs detail-first ordering** —
+not which data is shown. Tab visibility is admin-only filtered; every
+non-admin tab is visible to every user. The role lens (preview-as-X) is
+universal — any user can re-render the current page in any audience's style.
 
 ## Required: declare the audience
 
