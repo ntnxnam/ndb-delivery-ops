@@ -27,17 +27,27 @@ const securityHeaders = helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 });
 
-// General API rate limiter - 100 requests per 15 minutes per IP (higher in dev)
+// General API rate limiter
+//   prod: 100 req / 15 min  (lots of headroom for real users; tight enough to stop scrapers)
+//   dev:  5000 req / 15 min (covers normal browsing — see below)
+//
+// Why 5000 in dev:
+//   Every authenticated POST in the browser becomes 2 wire requests (CORS preflight + actual call).
+//   React 18 strict mode double-mounts effects, so each useEffect-driven call doubles again.
+//   A normal page visit can therefore generate 8-10 limiter hits even though the user did one thing.
+//   At 500/15min that limit was hit after only ~25 page interactions in dev — visible to the user
+//   as "Request failed with status code 429" on a perfectly normal click.
+//
+// Skip rules:
+//   - /api/health        : load balancer / monitoring polling shouldn't burn user quota
+//   - OPTIONS preflights : protocol overhead the browser fires automatically; not a user action
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 500,
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 5000,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === '/api/health';
-  }
+  skip: (req) => req.path === '/api/health' || req.method === 'OPTIONS',
 });
 
 // Strict rate limiter for authentication endpoints
