@@ -1,0 +1,63 @@
+{
+  "jira_url": "https://jira.nutanix.com",
+  "confluence_url": "https://confluence.eng.nutanix.com:8443",
+  "teams": {
+    "NDB": {
+      "display_name": "NDB (Database)",
+      "primary_project": "ERA",
+      "fix_version_prefix": "NDB-",
+      "confluence_space": "ED",
+      "parent_page_title_pattern": "{team} Project Updates - {fix_version}",
+      "page_title_pattern": "{team} Project Update - {version} - {jira_key} - {summary}",
+      "jira_server_id": "7a063259-3954-3005-9df8-21c0f279a704",
+      "jql_template": "fixVersion = \"{fix_version}\" AND issuetype in (Feature, Initiative) AND status != Cancelled and (labels not in (ndb-not-por) or labels is EMPTY)",
+      "phase_folders": {
+        "templates": "00-{fix_version}-CG/PG Templates",
+        "planning": "01-{fix_version}-Planning (Concept Commit)",
+        "commitment": "02-{fix_version}-Commitment (Execute Commit)",
+        "execution": "03-{fix_version}-Execution",
+        "release_readiness": "04-{fix_version}-Release-Readiness"
+      },
+      "compliance_checklist": [
+        "Legal review",
+        "SDL Review",
+        "SDL | Pentest",
+        "SDL | Tools (Ticket created)",
+        "Serviceability"
+      ],
+      "tcms_field": "customfield_31460"
+    },
+    "NCI": {
+      "display_name": "NCI (Cloud Infrastructure)",
+      "primary_project": "NCI",
+      "fix_version_prefix": "NCI-",
+      "confluence_space": "",
+      "parent_page_title_pattern": "{team} Project Updates - {version}",
+      "page_title_pattern": "{team} Project Update - {version} - {jira_key} - {summary}",
+      "jira_server_id": "7a063259-3954-3005-9df8-21c0f279a704",
+      "jql_template": "project = {project} AND fixVersion = \"{fix_version}\" AND issuetype in (Feature, Initiative) AND status != Cancelled",
+      "phase_folders": {
+        "planning": "{team}-{version}-Planning (Concept Commit)",
+        "commitment": "{team}-{version}-Commitment (Execute Commit)",
+        "execution": "{team}-{version}-Execution"
+      },
+      "tcms_field": "customfield_31460"
+    },
+    "NCM": {
+      "display_name": "NCM (Cloud Management)",
+      "primary_project": "NCM",
+      "fix_version_prefix": "NCM-",
+      "confluence_space": "",
+      "parent_page_title_pattern": "{team} Project Updates - {version}",
+      "page_title_pattern": "{team} Project Update - {version} - {jira_key} - {summary}",
+      "jira_server_id": "7a063259-3954-3005-9df8-21c0f279a704",
+      "jql_template": "project = {project} AND fixVersion = \"{fix_version}\" AND issuetype in (Feature, Initiative) AND status != Cancelled",
+      "phase_folders": {
+        "planning": "{team}-{version}-Planning (Concept Commit)",
+        "commitment": "{team}-{version}-Commitment (Execute Commit)",
+        "execution": "{team}-{version}-Execution"
+      },
+      "tcms_field": "customfield_31460"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "team_select": "NDB",
+  "primary_project_input": "ERA",
+  "confluence_space_input": "ED",
+  "parent_page_input": "NDB Project Updates - NDB-2.11",
+  "parent_page_id": "417927296",
+  "parent_page_title": "NDB Project Updates - NDB-2.11",
+  "fix_version_select": "NDB-2.11",
+  "jql_input": "fixVersion = \"NDB-2.11\" AND issuetype in (Feature, Initiative) AND status != Cancelled and (labels not in (ndb-not-por) or labels is EMPTY)"
+}

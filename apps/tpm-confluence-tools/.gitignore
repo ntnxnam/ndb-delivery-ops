@@ -1,0 +1,10 @@
+.credentials.json
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Restart script generated files
+logs/
+backups/
+.streamlit_pid

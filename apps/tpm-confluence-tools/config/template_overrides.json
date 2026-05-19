@@ -1,0 +1,738 @@
+{
+  "ccm": {
+    "template_name": "Code Complete",
+    "gate_type": "ccm",
+    "ready": true,
+    "template_description": "Code Complete (CCM) soft gate \u2014 confirms development is 100% done and handed off to QA",
+    "sections": [
+      {
+        "id": "legend",
+        "title": "Legend",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "team_table",
+        "title": "Gate Tracking",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "summary",
+        "title": "Summary",
+        "enabled": true,
+        "editable": true,
+        "date_columns": [
+          {
+            "field_id": "customfield_11067",
+            "display": "Code Complete Date"
+          },
+          {
+            "field_id": "customfield_14367",
+            "display": "GA Date"
+          }
+        ]
+      },
+      {
+        "id": "checklist",
+        "title": "Code Complete Checklist",
+        "enabled": true,
+        "editable": true,
+        "groups": [
+          {
+            "id": "dev_readiness",
+            "title": "Development Readiness (Entry Criteria for QA)",
+            "color": "#4c9aff",
+            "items": [
+              {
+                "id": "D1",
+                "label": "Code Complete & Merged (All PRs merged to Release Branch master)",
+                "approver": "Dev",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Commit Hash:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "D2",
+                "label": "Unit Tests Passing (CI Pipeline Green, >= 85% Coverage)",
+                "approver": "Dev",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and statusCategory!=Done and type =\"Unit Test\""
+                },
+                "enabled": true
+              },
+              {
+                "id": "D3",
+                "label": "No P0 Blockers (Build is stable enough for QA)",
+                "approver": "Dev",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and statusCategory!=Done and type = Bug and priority = \"Blocker - P0\""
+                },
+                "enabled": true
+              },
+              {
+                "id": "D4",
+                "label": "Dev Sanity Demo (Basic happy path verified)",
+                "approver": "Dev",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Recording Link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "D5",
+                "label": "Feature Flag Implemented (GFlag to enable/disable feature)",
+                "approver": "Dev",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Flag Name:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "D6",
+                "label": "API Spec",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "1",
+                "label": "NDB-K8s-Operator Support Confirmed and Enabled",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "D7",
+                "label": "Performance Benchmarking Numbers",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "D8",
+                "label": "Dependency in release level features for integration established and informed",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "qa_readiness",
+            "title": "QA Readiness",
+            "color": "#2684ff",
+            "items": [
+              {
+                "id": "Q1",
+                "label": "Test Plan Signed Off (MANDATORY Pre-requisite)",
+                "approver": "QA",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Test Plan Link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "Q2",
+                "label": "Test Cases Ready (Created in TCMS)",
+                "approver": "QA",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "TCMS Link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "Q3",
+                "label": "Testbed / Infra Ready (Hardware/VMs configured)",
+                "approver": "QA",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Setup IP:"
+                },
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "gate_prep",
+            "title": "Gate Prep & Compliance Initiation",
+            "color": "#00875a",
+            "items": [
+              {
+                "id": "G1",
+                "label": "Serviceability Review Created (Jira/Page created & assigned to SRE)",
+                "approver": "FEAT Mgr",
+                "evidence_type": "sdl",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "G2",
+                "label": "SDL (Security) Tickets Created (Scans triggered, Design Review logged)",
+                "approver": "Sec Team",
+                "evidence_type": "shared",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "G3",
+                "label": "Legal Review Ticket Created (Intake form submitted)",
+                "approver": "Legal",
+                "evidence_type": "shared",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "G4",
+                "label": "Release Channel Notification (Posted in #ndb-release-gate-preps)",
+                "approver": "FEAT Mgr",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Slack Thread Link:"
+                },
+                "enabled": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cg": {
+    "template_name": "CG Checklist",
+    "gate_type": "cg",
+    "ready": true,
+    "template_description": "Commit Gate Checklist for feature tracking",
+    "sections": [
+      {
+        "id": "legend",
+        "title": "Legend",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "summary",
+        "title": "CG Summary",
+        "enabled": true,
+        "editable": true,
+        "date_columns": [
+          {
+            "field_id": "customfield_11067",
+            "display": "Code Complete Date"
+          },
+          {
+            "field_id": "customfield_35863",
+            "display": "Commit Gate Ready Estimation Date"
+          },
+          {
+            "field_id": "customfield_35864",
+            "display": "Promotion Gate Ready Estimation Date"
+          },
+          {
+            "field_id": "customfield_14367",
+            "display": "GA Date"
+          }
+        ]
+      },
+      {
+        "id": "gate_commitments",
+        "title": "Gate Commitments",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "checklist",
+        "title": "Checklist Details",
+        "enabled": true,
+        "editable": true,
+        "groups": [
+          {
+            "id": "pre",
+            "title": null,
+            "color": null,
+            "items": [
+              {
+                "id": "0",
+                "label": "PRD, Design Doc, Test Plan links in Jira - EC Met Criteria",
+                "approver": "Dev",
+                "evidence_type": "jql_table",
+                "evidence_config": {
+                  "jql": "key={{JIRA_KEY}}",
+                  "columns": "Link to Requirements,Link to Design Doc,Link to Test Plan",
+                  "column_ids": "customfield_14463,customfield_14464,customfield_14465"
+                },
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "code_ut",
+            "title": "Code and Unit Test Complete",
+            "color": "#4c9aff",
+            "items": [
+              {
+                "id": "1",
+                "label": "Any impact on the Backup and Recovery of NDB CP - new addition starting with 2.10.1",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "2",
+                "label": "Task",
+                "approver": "Dev",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and statusCategory!=Done and type = Task"
+                },
+                "enabled": true
+              },
+              {
+                "id": "3",
+                "label": "UT Complete",
+                "approver": "Dev",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and statusCategory!=Done and type =\"Unit Test\""
+                },
+                "enabled": true
+              },
+              {
+                "id": "4",
+                "label": "All other Dev open tasks associated with the FEAT Closed",
+                "approver": "Dev",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and statusCategory!=Done and type not in (Task, Bug, Improvement, Test, Epic, Initiative, Feature) and statusCategory!=Done"
+                },
+                "enabled": true
+              },
+              {
+                "id": "5",
+                "label": "Failure Mode & Effect Analysis (FMEA)",
+                "approver": "Dev",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "FMEA Link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "6",
+                "label": "RBAC Functionality Confirmed and Enabled",
+                "approver": "Dev",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "dbe_pm_ux",
+            "title": "DBE, PM and UX Acceptance",
+            "color": "#2684ff",
+            "items": [
+              {
+                "id": "7",
+                "label": "Demo(< 5 mins)",
+                "approver": "Feat Lead",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Demo Link:<br/>Password:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "8",
+                "label": "DBE Review",
+                "approver": "DBE",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Requested review from "
+                },
+                "enabled": true
+              },
+              {
+                "id": "9",
+                "label": "UX FnF review completed",
+                "approver": "Feat Lead",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "manual_testing",
+            "title": "Manual Testing",
+            "color": "#2684ff",
+            "items": [
+              {
+                "id": "10",
+                "label": "Functional Testing: 3 runs, QI >90% - Includes Use case testing and API testing",
+                "approver": "Test Lead",
+                "evidence_type": "test_summary",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "security_legal",
+            "title": "Security, Legal and Serviceability",
+            "color": "#2684ff",
+            "items": [
+              {
+                "id": "11",
+                "label": "SDL (Security Development Lifecycle) - Release level impact",
+                "approver": "",
+                "evidence_type": "sdl",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "12",
+                "label": "Security and Legal checklists completed",
+                "approver": "SDL and LEG tickets should be reviewed and approved",
+                "evidence_type": "shared",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "13",
+                "label": "NDB: Supportability CG Checklist",
+                "approver": "",
+                "evidence_type": "shared",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "supportability_text",
+        "title": "Supportability Instructions",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "supportability_checklist",
+        "title": "Supportability Checklist",
+        "enabled": true,
+        "editable": true,
+        "items": [
+          {
+            "id": "1",
+            "label": "Feature On/Off Switch",
+            "enabled": true,
+            "details": [
+              "Can the feature be turned on/off using a NDB Config flag?"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "2",
+            "label": "Telemetry/Pulse - Has the Minimum set of metrics to determine usage/adoption been added?",
+            "enabled": true,
+            "details": [
+              "Feature version, Config settings, Cluster UUID identification",
+              "Usage/adoption/effectiveness/Failures metrics",
+              "Data catalog, tables and attributes in pulse",
+              "External cluster communication pulse data",
+              "Pending telemetry tasks",
+              "Serviceability review of data collection"
+            ],
+            "sub_rows": 5
+          },
+          {
+            "id": "3",
+            "label": "Holistic Review of Design integration and dependency with other components",
+            "enabled": true,
+            "details": [
+              "Technical Architect review, component teams involved, affected components"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "4",
+            "label": "NDB Specific - Scenario dependency",
+            "enabled": true,
+            "details": [
+              "Dependency with various scenarios, other scenario teams involved"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "5",
+            "label": "AOS Dependency and Version Compatibility",
+            "enabled": true,
+            "details": [
+              "AOS/PC Version dependency, code changes in AOS/PE, qualified versions"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "6",
+            "label": "NDB specific - DB Compatibility",
+            "enabled": true,
+            "details": [
+              "DB type/version dependency, supported DB types/versions, unsupported workflows"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "7",
+            "label": "Log and Audit Information",
+            "enabled": true,
+            "details": [
+              "New logs/services, log paths, log bundle capture, log rollover, audit information"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "8",
+            "label": "Guardrails, prechecks, health checks, alerts, Discoveries/pulse data",
+            "enabled": true,
+            "details": [
+              "New alerts/guardrails",
+              "Consolidated list with doc",
+              "KBs for critical alerts, serviceability review"
+            ],
+            "sub_rows": 2
+          },
+          {
+            "id": "9",
+            "label": "Upgrades Impact",
+            "enabled": true,
+            "details": [
+              "Impact on upgrade workflow"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "10",
+            "label": "UI/UX",
+            "enabled": true,
+            "details": [
+              "UI/UX changes",
+              "UI/UX Lead",
+              "Serviceability review of UI/UX",
+              "Pending AIs on UI/UX"
+            ],
+            "sub_rows": 3
+          },
+          {
+            "id": "11",
+            "label": "Supported and Unsupported Configurations and workflows",
+            "enabled": true,
+            "details": [
+              "Complete FEAT delivery, hypervisor support, unsupported workflows"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "12",
+            "label": "Impacting on Existing Tools",
+            "enabled": true,
+            "details": [
+              "Impact on X-Ray, Foundation, Sizer, Panacea etc."
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "13",
+            "label": "Tech Preview/Early Access",
+            "enabled": true,
+            "details": [
+              "TP/EA guidelines met, banner in UI, Internal Discovery"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "14",
+            "label": "Limited Feature Availability",
+            "enabled": true,
+            "details": [
+              "Limited availability criteria, KB article, internal documentation, engineering support"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "15",
+            "label": "TOI Readiness",
+            "enabled": true,
+            "details": [
+              "TOI must be ready before PG Gate. Template and recording links required."
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "16",
+            "label": "Knowledge Base updates (Serviceability)",
+            "enabled": true,
+            "details": [
+              "KBs to be updated/archived/created in relation to this FEAT"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "17",
+            "label": "NDB Specific - Supportability Review",
+            "enabled": true,
+            "details": [
+              "Open concerns and feedback from supportability team"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "18",
+            "label": "Serviceability Review",
+            "enabled": true,
+            "details": [
+              "Serviceability Engineer review name and link"
+            ],
+            "sub_rows": 0
+          },
+          {
+            "id": "19",
+            "label": "Serviceability Approval",
+            "enabled": true,
+            "details": [
+              "Serviceability Engineer approval (YES/NO)"
+            ],
+            "sub_rows": 0
+          }
+        ]
+      }
+    ],
+    "compliance_checklist_items": [
+      "Legal review",
+      "SDL Review",
+      "SDL | Pentest",
+      "SDL | Tools (Ticket created)",
+      "Serviceability"
+    ]
+  },
+  "pg": {
+    "template_name": "PG Checklist",
+    "gate_type": "pg",
+    "ready": false,
+    "template_description": "Promotion Gate Checklist \u2014 template to be customized",
+    "sections": [
+      {
+        "id": "legend",
+        "title": "Legend",
+        "enabled": true,
+        "editable": false
+      },
+      {
+        "id": "summary",
+        "title": "Summary",
+        "enabled": true,
+        "editable": true,
+        "date_columns": [
+          {
+            "field_id": "customfield_35864",
+            "display": "Promotion Gate Ready Estimation Date"
+          },
+          {
+            "field_id": "customfield_14367",
+            "display": "GA Date"
+          }
+        ]
+      },
+      {
+        "id": "checklist",
+        "title": "PG Checklist",
+        "enabled": true,
+        "editable": true,
+        "groups": [
+          {
+            "id": "test_readiness",
+            "title": "Test Readiness",
+            "color": "#4c9aff",
+            "items": [
+              {
+                "id": "1",
+                "label": "System test completed with QI > 95%",
+                "approver": "Test Lead",
+                "evidence_type": "test_summary",
+                "evidence_config": {},
+                "enabled": true
+              },
+              {
+                "id": "2",
+                "label": "No open P0/P1 bugs",
+                "approver": "Test Lead",
+                "evidence_type": "jql_count",
+                "evidence_config": {
+                  "jql_suffix": "and type = Bug and statusCategory!=Done and priority in (\"Blocker - P0\", \"Critical - P1\")"
+                },
+                "enabled": true
+              },
+              {
+                "id": "3",
+                "label": "Regression test pass",
+                "approver": "Test Lead",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Regression results link:"
+                },
+                "enabled": true
+              }
+            ]
+          },
+          {
+            "id": "release_readiness",
+            "title": "Release Readiness",
+            "color": "#2684ff",
+            "items": [
+              {
+                "id": "4",
+                "label": "Release notes finalized",
+                "approver": "PM",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "Release notes link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "5",
+                "label": "TOI completed",
+                "approver": "Dev Lead",
+                "evidence_type": "text",
+                "evidence_config": {
+                  "text": "TOI recording link:"
+                },
+                "enabled": true
+              },
+              {
+                "id": "6",
+                "label": "Supportability sign-off",
+                "approver": "Serviceability",
+                "evidence_type": "none",
+                "evidence_config": {},
+                "enabled": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
