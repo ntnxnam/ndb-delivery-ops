@@ -207,6 +207,51 @@ export class ProductService {
   }
 
   /**
+   * Lowercase label-prefix used to anchor product payload in JIRA labels
+   * (e.g. `ndb-2.11-must-have`). Consumed by `payloadJqlService` and
+   * `releaseDatasetService` wishlist/deferred sidecars.
+   *
+   * Defaults to the product `id` when not explicitly configured — safe
+   * because `id` is already lowercase and stable.
+   */
+  getLabelPrefix(productId: string): string {
+    const p = this.getProduct(productId);
+    return p.labelPrefix ?? p.id;
+  }
+
+  /**
+   * Release-name prefix used by `releaseClassificationService` to strip
+   * the product token off a version string (e.g. `'NDB-'` stripped from
+   * `'NDB-2.11'` leaves `'2.11'`). MUST include the trailing separator
+   * if one is used in the version-naming convention.
+   *
+   * Defaults to `${name}-` (e.g. NDB → `'NDB-'`, DataLens → `'DataLens-'`).
+   */
+  getReleasePrefix(productId: string): string {
+    const p = this.getProduct(productId);
+    return p.releasePrefix ?? `${p.name}-`;
+  }
+
+  /**
+   * Sprint calendar (S1 anchor + sprint length). Required by
+   * `sprintsService` and `releaseDatasetService` derived columns.
+   *
+   * No default: throws if not configured. Sprint cadence varies per
+   * team and there is no safe fallback — silently using NDB's calendar
+   * for another product would corrupt every sprint-derived metric.
+   */
+  getSprintCalendar(productId: string): { s1StartIso: string; sprintDays: number } {
+    const p = this.getProduct(productId);
+    if (!p.sprintCalendar) {
+      throw new Error(
+        `ProductService: product '${productId}' has no sprintCalendar configured. ` +
+          `Add { sprintCalendar: { s1StartIso, sprintDays } } to teamBoardConfig.json.`
+      );
+    }
+    return p.sprintCalendar;
+  }
+
+  /**
    * Given a JIRA fixVersion name (e.g. "NDB-2.11", "DataLens-X"), resolve
    * the owning product id. Useful when the caller only has a release
    * name but needs the product context.

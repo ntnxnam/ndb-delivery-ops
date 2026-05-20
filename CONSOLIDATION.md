@@ -30,10 +30,10 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 | 6 | NAI chatbot (one-tool function-calling) | `chatbot_tools.py + chatbot_router.py + chatbot_context.py + nai_client.py` | `shared/services/chatbot/{tools,router,context,naiClient}.ts` | pending |
 | 7 | Team Executive release report generator | `~/.cursor/skills/team-exec-release-report/` | `shared/services/vpReportService.ts` + retain skill | pending |
 | 8 | Predictive Team Executive analytics (Monte Carlo, completion prob, QI forecast) | `~/.cursor/skills/predictive-team-exec-analytics/` | `shared/services/predictiveAnalyticsService.ts` | pending |
-| 10 | Date mover — gate-date move with **mandatory reason + Confluence audit** (D30) | `ndb-date-mover/` + new Confluence audit writer | `shared/services/dateMoverService.ts` + depends on `shared/connectors/confluenceConnector.ts` | pending |
+| 10 | Date mover — gate-date move with **mandatory reason + Confluence audit** (D30) | `ndb-date-mover/` + new Confluence audit writer | `shared/services/dateMoverService.ts` + `shared/connectors/confluenceConnector.ts` | **ported (route-wired)**: `dateMoverService` requires reason, updates JIRA via `jiraConnector`, audits to Confluence via `confluenceConnector.appendStructuredRow`. JIRA rollback on Confluence audit failure (best-effort transactional). Express route at `/api/date-mover/{gate-date-fields,move-gate-date}`, RM+TPM authorized via `authService.dateMover` feature gate. Skill `move-gate-date` dispatches from `rm-specialist`. **Not yet UI-wired** — no React form; client_form_optional deferred. |
 | 11 | Outstanding-work pulse (realistic timeline) | `NDB-Outstanding-Work-Realistic-Timelines/shipwatch + jira-fetcher` | `shared/services/outstandingWorkService.ts` | pending |
 | 13 | Release timeline visualizer (date overrides, holiday cal) | `Release-Timelines-Visualizer/` | `apps/delivery-ops/client/src/components/ReleaseTimelineVisualizer/` | pending |
-| 14 | Bin packing / resource Gantt | `ndb-projects-bin-packing/` | `shared/services/binPackingService.ts` | pending |
+| 14 | Bin packing / resource Gantt | `ndb-projects-bin-packing/` | `apps/bin-packing/` (static mount) + future `shared/services/binPackingService.ts` | **wired (static, D37)**: 7,000-LOC vanilla-JS app copied as-is to `apps/bin-packing/`; served by delivery-ops Express at `/bin-packing/*` (same-origin, single runtime, no auth — matches legacy). Sidebar entry **opens in a new tab** because the bin-packing UI has its own chrome/nav and embedding it inside delivery-ops created port-asymmetry pain in dev (React `:8888` vs Express `:6001`). URL helper in `Sidebar.js` reads `window.location` to pick the right backend port (`REACT_APP_BACKEND_PORT || 6001`) in dev and a relative `/bin-packing/` in prod — no hardcoded localhost. **Algorithm extraction deferred**: current MCP tool `bin_pack_projects` is a simplified FFD that doesn't yet match the real 800-LOC algorithm (resource pools, dev-blocker deps, gap-fill, 3-tier display). Future: port algorithm core to `shared/services/binPackingService.ts`, keep CSV parser flow. |
 | 15 | Say-vs-do tracking | `ndb-say-vs-do/` | `shared/services/sayVsDoService.ts` | pending |
 | 16 | Story point calculator (JIRA + Confluence) | `ndb-story-point-calculator/` | `shared/services/storyPointService.ts` | pending |
 
@@ -52,7 +52,7 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 
 | Capability | Why surfaced | Target | Status |
 |---|---|---|---|
-| Confluence connector (read + structured-row append) | Required by #10 (D30) and #12; previously assumed deferrable | `shared/connectors/confluenceConnector.ts` | pending — must land before or with #10 |
+| Confluence connector (read + structured-row append) | Required by #10 (D30) and #12; previously assumed deferrable | `shared/connectors/confluenceConnector.ts` | **ported** alongside D30: PAT auth, `getPage`, `updatePage`, `appendStructuredRow` (insert `<tr>` after a named anchor, version-conflict retries, XML escaping). Only consumer today is `dateMoverService`; #12 (Confluence template engine) port will reuse it. |
 
 ## Skip (no usable code)
 
@@ -72,6 +72,39 @@ These were written in Phase D1 before the inventory was done. Each is replaced b
 - `shared/services/predictabilityService.ts` (predictLanding + sayVsDo stubs) → replaced by #4 + #15
 - `shared/services/dependencyService.ts` (graph stubs) → leave for now, port later
 - `shared/services/chartService.ts` (placeholder SVG) → replaced by #5
+
+## Open D1 wiring gap (see DECISIONS.md D34/D35/D36)
+
+`productService` now exposes `getLabelPrefix`, `getReleasePrefix`, and
+`getSprintCalendar` (D34). Every new TypeScript service that takes a D1
+input is wired through these getters in `shared/scripts/smoke-product-service-d1.mjs`.
+Wiring at production call sites is intentionally lazy — done at the moment
+a route actually needs the service — to avoid touching working code for
+no functional gain.
+
+Per D36, "payload" splits into two named concepts: **Engineering Payload**
+(project-scoped, legacy) and **Release Payload** (cross-project, new).
+Most fetch / insights services today compute Engineering Payload only;
+Release Payload variants will be added when the first cross-team consumer
+lands.
+
+Current state of each new D1 consumer:
+
+| Service | Requires | Payload concept | Production caller | Resolved via productService? |
+|---|---|---|---|---|
+| `payloadJqlService.buildEngineeringPayloadJql` | projectKey | Engineering | none yet | n/a until a sprint-burndown / dev-velocity route lands |
+| `payloadJqlService.buildReleasePayloadJql` | — (release only) | Release | none yet | n/a — new concept, no consumer yet |
+| `ticketFetchService.buildAllTicketsJql` | projectKey (optional) | n/a (FEAT-walk, cross-project by design) | `/api/jira/issue-breakdown` | **no** — passes only the FEAT keys, matching legacy. Wire when scoping is needed. |
+| `releaseDatasetService.fetchReleaseData` | projectKey + labelPrefix | Engineering (per D36) | none yet | n/a until Phase 3 of #1b lands a route |
+| `releaseDatasetService.processMaster` | labelPrefix + productPrefix | n/a (derivation, payload-agnostic) | none yet | n/a (same as above) |
+| `releaseClassificationService.classifyRelease` | productPrefix | n/a | none yet | n/a |
+| `sprintsService.enumerateSprints` | sprintCalendar | n/a | none yet | n/a |
+| `releaseInsightsService.*` | labelPrefix + productPrefix | Engineering (operates on processed dataset) | none yet | n/a |
+
+The contract is honest: when any of these get a production route, the
+route MUST resolve through `productService`. The smoke test proves the
+chain works for NDB end-to-end today for both Engineering Payload and
+Release Payload JQL.
 
 ## Port pattern (the contract every row follows)
 

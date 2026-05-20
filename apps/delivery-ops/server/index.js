@@ -132,6 +132,24 @@ app.use('/api/admin', adminRoutes); // Admin team management routes
 app.use('/api/date-mover', dateMoverRoutes); // D30: gate-date moves w/ Confluence audit
 // app.use('/api/crystalball', crystalballRoutes); // Disabled - consolidated to NAI API
 
+// Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
+// /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,
+// ESM modules + data/projects.json fetch work out of the box. Future React
+// port tracked separately.
+const binPackingRoot = path.join(__dirname, '..', '..', 'bin-packing');
+app.use(
+  '/bin-packing',
+  express.static(binPackingRoot, {
+    extensions: ['html'],
+    setHeaders: (res, filePath) => {
+      // Ensure browser ESM <script type="module"> loads correctly.
+      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      }
+    },
+  })
+);
+
 // CrystalBallI Integration - Conversational AI
 let crystalBallI = null;
 try {

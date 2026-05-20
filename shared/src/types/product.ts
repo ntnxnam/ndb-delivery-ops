@@ -87,6 +87,29 @@ export interface ProductConfig {
   /** GitHub org/repo names for the githubConnector (Phase D2+) */
   githubOrgs?: string[];
   githubRepos?: string[];
+  /**
+   * Lowercase label-prefix used in JIRA labels to anchor product payload
+   * (e.g. `ndb-2.11-must-have`, `datalens-x-wishlist`). Consumed by
+   * `payloadJqlService` and `releaseDatasetService` wishlist/deferred
+   * sidecars. Defaults to `id` when absent.
+   */
+  labelPrefix?: string;
+  /**
+   * Uppercase release-name prefix used by `releaseClassificationService`
+   * to parse `NDB-2.11`, `DataLens-X`, etc. Defaults to `name` when
+   * absent (NDB → "NDB", DataLens → "DataLens").
+   */
+  releasePrefix?: string;
+  /**
+   * Sprint calendar (S1 anchor + sprint length in days). Required by
+   * `sprintsService` and `releaseDatasetService` derived columns. No
+   * default — must be explicitly configured per product because cadence
+   * varies and there's no safe fallback.
+   */
+  sprintCalendar?: {
+    s1StartIso: string;
+    sprintDays: number;
+  };
 }
 
 /**

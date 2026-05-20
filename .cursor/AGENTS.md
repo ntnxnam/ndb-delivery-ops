@@ -37,6 +37,7 @@ The orchestrator:
 | `.cursor/skills/stale-ticket-sweep/` | `triage-specialist` | Periodic backlog hygiene |
 | `.cursor/skills/pending-response-chase/` | `triage-specialist` | Chase un-answered dependency / deferral asks |
 | `.cursor/skills/dependency-walk/` | `dependency-tracker-specialist` | "What blocks my feature?" |
+| `.cursor/skills/move-gate-date/` | `rm-specialist` | RM/TPM wants to move a gate date (CC / CG / PG) — enforces mandatory reason + Confluence audit (D30) |
 | `.cursor/skills/confluence-width-cleanup/` | `confluence-publisher-specialist` | Cleaning Confluence storage XML |
 
 ## Project workflows

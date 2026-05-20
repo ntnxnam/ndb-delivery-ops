@@ -1,0 +1,8 @@
+{
+  "name": "@portfolio-delivery-ops/bin-packing",
+  "private": true,
+  "description": "Static bin-packing Gantt app (NDB Projects). Served by the delivery-ops Express server at /bin-packing in dev/prod; also runnable standalone via `npm start` on port 3847.",
+  "scripts": {
+    "start": "npx serve . -l 3847"
+  }
+}

@@ -13,7 +13,10 @@
       "projectKey": "ERA",
       "projectType": "dedicated",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
-      "sprintBaseFilter": "filter=NDB-All-Base-Filter"
+      "sprintBaseFilter": "filter=NDB-All-Base-Filter",
+      "labelPrefix": "ndb",
+      "releasePrefix": "NDB-",
+      "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }
     },
     {
       "id": "datalens",

@@ -663,6 +663,150 @@ exactly the workflow product this platform is building toward.
 
 ---
 
+### D34 — productService is the only source of `projectKey`, `labelPrefix`, `releasePrefix`, `sprintCalendar`
+
+**Decision:** Every D1-shaped input the new TypeScript services demand
+(`projectKey`, `labelPrefix`, `productPrefix` / `releasePrefix`,
+`sprintCalendar`) is resolved exclusively through `productService` reading
+`teamBoardConfig.json`. No service may accept these as untyped strings from
+a route handler that hardcodes them; the route must resolve via
+`getProductService().getXxx(productId)` and pass the result through.
+
+**Defaults (when a product config omits a field):**
+- `labelPrefix` → `product.id` (lowercase, e.g. `ndb`)
+- `releasePrefix` → `${product.name}-` (e.g. `NDB-`, `DataLens-`)
+- `sprintCalendar` → **no default; throws.** Sprint cadence varies per
+  team and a silent fallback would corrupt every sprint-derived metric.
+
+**Why this came up:** I built a clean D1-shaped pipeline (`payloadJqlService`,
+`releaseDatasetService`, `releaseClassificationService`, `sprintsService`,
+`releaseInsightsService`) where every service requires these inputs, but no
+production caller was supplying them. The contract existed on paper, not in
+code. This decision closes the API+config side of that gap. Wiring at every
+call site remains an open follow-up (see D35).
+
+**Verified by** `shared/scripts/smoke-product-service-d1.mjs` — productService
+supplies all four knobs for NDB end-to-end through `buildEngineeringPayloadJql`,
+`buildReleasePayloadJql`, `getWishlistQuery`, `buildAllTicketsJql`,
+`classifyRelease`, `enumerateSprints`.
+
+---
+
+### D36 — "Payload" splits into Engineering Payload and Release Payload
+
+**Decision:** There are two distinct payload concepts. They are first-class,
+named separately, and queried by separate functions. Neither replaces the
+other.
+
+**Engineering Payload** — the 5-bucket union scoped to a single
+engineering JIRA project (e.g. `project = ERA AND (5 buckets)` for NDB).
+This is what the legacy chatbot computed and what current completion-%
+numbers everyone trusts are derived from. Audience: EM, IC, sprint
+burndown, dev velocity. Function: `buildEngineeringPayloadJql`.
+
+**Release Payload** — the 5-bucket union with **no project filter**.
+Captures every ticket carrying the release fixVersion regardless of which
+contributing team's project it lives in (ERA dev work + TECHPUBS docs +
+FEAT capability + PM intake + anything else). Audience: TPM, RM, Team
+Exec, "are we actually shipping?" dashboards. Function:
+`buildReleasePayloadJql`. **NEW concept — did not exist in legacy.**
+
+**Why the split exists:** NDB is a product / portfolio (D5), not a single
+team. The NDB engineering team uses ERA; tech pubs use TECHPUBS; PM uses
+PM; feature intake uses FEAT. All those teams routinely set
+`fixVersion = NDB-2.11` on their own tickets when contributing to the
+release. The legacy code's `project = ERA AND ...` wrapper silently
+dropped non-ERA contributors from the count. That was fine for an
+"engineering view" but wrong as "the release payload."
+
+**Pollution guard:** None today. We trust `fixVersion`. If an unrelated
+project mis-tags `NDB-2.11`, that's surfaced as a JIRA hygiene issue at
+the data-quality layer, not silently filtered out by the query. Revisit
+if pollution becomes a real problem.
+
+**Migration impact:**
+- `buildPayloadJql` renamed to `buildEngineeringPayloadJql`. The only
+  callers were `shared/scripts/smoke-product-service-d1.mjs` and the
+  re-export in `shared/src/index.ts`; both updated atomically.
+- `releaseDatasetService.fetchReleaseData` continues to compute
+  Engineering Payload only (preserves legacy numbers). Docstring updated
+  to be explicit about this. A `fetchReleasePayloadData` will be added
+  when the first cross-team consumer lands.
+- All existing reports and routes continue to show the same numbers they
+  did before. Release Payload surfaces as new UI explicitly labeled.
+
+**Verified by** the smoke test's new assertions: `buildEngineeringPayloadJql`
+starts with `project = ERA AND`; `buildReleasePayloadJql` does NOT contain
+`project = ` but does anchor by `fixVersion = NDB-2.11`.
+
+---
+
+### D37 — Bin-packing app ships as a static mount, not a React port
+
+**Decision:** The legacy `ndb-projects-bin-packing/` standalone JS app
+(7,000 LOC across HTML/JS/CSS, including an 800-LOC bin-packing algorithm
+with resource pools, dev-blocker dependencies, and 3-tier display) is
+brought into the monorepo as a static asset folder at
+`apps/bin-packing/`, served by the existing delivery-ops Express server
+at the URL prefix `/bin-packing/*`. A sidebar entry in the delivery-ops
+React client provides same-tab navigation plus a `↗` new-tab
+affordance.
+
+**What this is NOT:** A React rewrite. The algorithm core was not
+extracted to `shared/services/binPackingService.ts`. The HTML pages
+(`index.html`, `upload.html`, `dependencies.html`, `bottom-up.html`,
+`allocation.html`) are still vanilla DOM + ES modules in the browser.
+The existing MCP tool `bin_pack_projects` remains a simplified
+First-Fit-Decreasing algorithm and does NOT yet match the legacy app's
+behavior (no resource pools, no dependency awareness).
+
+**Why this shape:** User asked for "urgent + port" with "running today"
++ "CSV upload only" (no JIRA wiring). The legacy app is mature, the
+algorithm has years of tuning, the CSV-driven flow is the actual
+workflow. A React port is days of work that produces no functional
+improvement; the static mount delivers exactly what the user uses today
+inside the new monorepo, with one navigation click instead of a separate
+deployment.
+
+**Trade-offs accepted:**
+- Two visual styles — bin-packing app has its own design language,
+  delivery-ops has another. The sidebar entry **opens the app in a new
+  browser tab** (target=_blank) so the two UIs never have to share a
+  viewport. Tried in-place navigation first; user-tested poorly because
+  in dev the React server (8888) and backend (6001) are different ports
+  and CRA's string-proxy doesn't forward HTML requests. New tab sidesteps
+  the dev/prod port asymmetry entirely.
+- The sidebar link's URL is computed dynamically: in dev (port 8888 React
+  server) it points at `${hostname}:${REACT_APP_BACKEND_PORT || 6001}/bin-packing/`;
+  in prod (same origin) it's a relative `/bin-packing/`. Helper
+  `getBinPackingUrl()` in `Sidebar.js`. No hardcoded localhost per
+  `no-localhost.mdc` — hostname read from `window.location`.
+- No auth on `/bin-packing/*` — matches legacy behavior (was on internal
+  port 3847, no auth). Revisit when delivery-ops gets exposed beyond
+  internal network.
+- MCP tool drift — `bin_pack_projects` does NOT call the real algorithm;
+  it's a simpler FFD. Anyone using MCP for capacity planning gets
+  different (worse) output than the web app. Acceptable for now because
+  the web app is the canonical surface.
+
+**Migration path when a real port is needed:**
+1. Extract `js/bin-packing.js` + `js/ranking.js` + `js/sizing.js` +
+   `js/resource-groups.js` (~1,500 LOC) into
+   `shared/services/binPackingService.ts` with full types and tests.
+2. Rewrite the MCP tool to call the real service.
+3. Build a React surface in `apps/delivery-ops/client/src/components/BinPacking/`.
+4. Keep the static mount available behind a feature flag during
+   migration; cut over when the React surface reaches parity.
+5. Decommission `apps/bin-packing/` once the React surface is the only
+   consumer.
+
+**Verified by:** server route mount at `apps/delivery-ops/server/index.js`
+serving from `path.join(__dirname, '..', '..', 'bin-packing')`; sidebar
+entry in `Sidebar.js` rendering a native `<a>` (not react-router `<Link>`)
+because the target is outside the React app boundary.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
@@ -674,6 +818,7 @@ exactly the workflow product this platform is building toward.
 | D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |
 | D31 | Exact Confluence target for date-change audit log (per-release page / section on status page / per-product shared log) | Build-time of #10, when PM points at the actual execution page format |
 | D32 | Whether date moves made outside our app (directly in JIRA) should also be audited to Confluence (via webhook or scheduled diff) | After #10 ships first cut |
+| D35 | Wiring every D1 consumer through `productService` — today `/api/jira/issue-breakdown` omits `projectKey` to match legacy behavior, and `releaseDatasetService` has no production caller yet. Will be addressed call-site by call-site as new consumers land. Tracked in `CONSOLIDATION.md`. | Resolve as each new consumer is added (Phase 3 of #1b, then #2 forward) |
 
 ---
 

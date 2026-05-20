@@ -7,6 +7,24 @@ import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
 import { TAB_PERMISSIONS } from '../../auth/constants/permissions';
 
+/**
+ * URL for the bin-packing app. The app is static-served by the backend
+ * (Express on 6001 in dev, same-origin in prod) under `/bin-packing/`.
+ * In dev the React dev server runs on 8888, so we must point absolutely
+ * at the backend's port; otherwise the link would land on the React app
+ * and 404. In prod everything is one origin, so a relative path works.
+ *
+ * No hardcoded `localhost` — host is read from `window.location`.
+ */
+function getBinPackingUrl() {
+  if (typeof window === 'undefined') return '/bin-packing/';
+  const isDevReactServer = window.location.port === '8888';
+  if (!isDevReactServer) return '/bin-packing/';
+  const backendPort =
+    process.env.REACT_APP_BACKEND_PORT || '6001';
+  return `${window.location.protocol}//${window.location.hostname}:${backendPort}/bin-packing/`;
+}
+
 export const Sidebar = () => {
   const location = useLocation();
   const { user, testConnectionAndRefreshPermissions } = useAuth();
@@ -94,6 +112,14 @@ export const Sidebar = () => {
       label: 'KPIs',
       icon: '📊',
       description: 'Key performance indicators'
+    },
+    {
+      path: getBinPackingUrl(),
+      label: 'Bin Packing',
+      icon: '📦',
+      description: 'NDB project bin-packing Gantt (opens in new tab)',
+      external: true,
+      newTab: true
     },
     {
       path: '/admin',
@@ -299,15 +325,34 @@ export const Sidebar = () => {
         {/* Navigation */}
         <nav className="sidebar-nav">
           {visibleItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-              title={isCollapsed ? `${item.description}` : item.description}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {!isCollapsed && <span className="nav-label">{item.label}</span>}
-            </Link>
+            item.external ? (
+              <a
+                key={item.path}
+                href={item.path}
+                target={item.newTab ? '_blank' : undefined}
+                rel={item.newTab ? 'noopener noreferrer' : undefined}
+                className="nav-item nav-item-external"
+                title={isCollapsed ? `${item.description}` : item.description}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {!isCollapsed && (
+                  <>
+                    <span className="nav-label">{item.label}</span>
+                    {item.newTab && <span className="nav-newtab-indicator">↗</span>}
+                  </>
+                )}
+              </a>
+            ) : (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                title={isCollapsed ? `${item.description}` : item.description}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {!isCollapsed && <span className="nav-label">{item.label}</span>}
+              </Link>
+            )
           ))}
         </nav>
 
@@ -590,6 +635,18 @@ export const Sidebar = () => {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+
+        .nav-newtab-indicator {
+          margin-left: auto;
+          font-size: 12px;
+          color: #6c757d;
+          opacity: 0.7;
+        }
+
+        .nav-item-external:hover .nav-newtab-indicator {
+          color: #f8f9fa;
+          opacity: 1;
         }
 
         .sidebar-footer {

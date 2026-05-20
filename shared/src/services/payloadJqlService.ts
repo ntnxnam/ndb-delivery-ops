@@ -134,11 +134,11 @@ export function getComponentQueries(
   };
 }
 
-export interface BuildJqlOptions {
+export interface EngineeringPayloadOptions {
   /**
-   * JIRA project key the release lives in. e.g. `'ERA'` for NDB,
-   * `'DATALENS'` for DataLens. Supply from productService — never
-   * hardcode in callers (D1).
+   * JIRA project key the engineering team's work lives in. e.g. `'ERA'`
+   * for NDB, `'DATALENS'` for DataLens. Supply from
+   * `productService.getJiraProjects(productId)[0]` — never hardcode (D1).
    */
   projectKey: string;
   /**
@@ -149,24 +149,76 @@ export interface BuildJqlOptions {
   extras?: string[];
 }
 
+export interface ReleasePayloadOptions {
+  /**
+   * Extra AND-clauses to compose onto the union. Each is wrapped in
+   * `(...)` before joining so callers can pass OR-containing clauses
+   * without breaking JQL precedence.
+   */
+  extras?: string[];
+}
+
 /**
- * Compose the project-scoped 5-bucket union plus any number of
- * AND-extra clauses. Equivalent to `payload_jql.build_jql(release,
- * extras=...)` in the Python source.
+ * Engineering Payload (D36): the 5-bucket union **scoped to a single
+ * engineering project** (e.g. ERA for NDB). This is the legacy chatbot's
+ * behaviour and what current "completion %" numbers everyone trusts are
+ * computed from.
+ *
+ * Equivalent to `payload_jql.build_jql(release, extras=...)` in the
+ * Python source.
+ *
+ * Use this for: dev burndown, sprint reports, EM/IC views, anything
+ * answering "what is the engineering team working on for this release".
+ *
+ * For the cross-team release scope (TPM/RM/Team-Exec lens that includes
+ * TECHPUBS / FEAT / PM work carrying the same fixVersion), see
+ * `buildReleasePayloadJql`.
  */
-export function buildPayloadJql(
+export function buildEngineeringPayloadJql(
   release: string,
-  options: BuildJqlOptions
+  options: EngineeringPayloadOptions
 ): string {
-  if (!release) throw new Error('buildPayloadJql: release is required');
+  if (!release) throw new Error('buildEngineeringPayloadJql: release is required');
   if (!options?.projectKey) {
     throw new Error(
-      'buildPayloadJql: options.projectKey is required (D1: no hardcoded "ERA")'
+      'buildEngineeringPayloadJql: options.projectKey is required (D1: no hardcoded "ERA")'
     );
   }
   const queries = getComponentQueries(release);
   const union = PAYLOAD_BUCKET_KEYS.map((k) => `(${queries[k]})`).join(' OR ');
   let out = `project = ${options.projectKey} AND (${union})`;
+  for (const e of options.extras ?? []) {
+    out += ` AND (${e})`;
+  }
+  return out;
+}
+
+/**
+ * Release Payload (D36): the 5-bucket union with **no project filter**.
+ * Captures every ticket carrying the release fixVersion regardless of
+ * which contributing team's JIRA project it lives in (ERA, FEAT,
+ * TECHPUBS, PM, …).
+ *
+ * NEW concept — not present in the legacy chatbot. Surfaces should label
+ * the resulting number as "Release Payload" (not "Payload") so it isn't
+ * confused with the engineering-only number people are used to seeing.
+ *
+ * No pollution guard (D36 decision): trust fixVersion. If an unrelated
+ * project mis-tags a release, that's a JIRA hygiene issue surfaced at
+ * the data-quality layer, not silently filtered here.
+ *
+ * Use this for: release readiness, "are we shipping?" dashboards,
+ * cross-team Team-Exec rollups, any view that should include docs +
+ * features + dev together.
+ */
+export function buildReleasePayloadJql(
+  release: string,
+  options: ReleasePayloadOptions = {}
+): string {
+  if (!release) throw new Error('buildReleasePayloadJql: release is required');
+  const queries = getComponentQueries(release);
+  const union = PAYLOAD_BUCKET_KEYS.map((k) => `(${queries[k]})`).join(' OR ');
+  let out = `(${union})`;
   for (const e of options.extras ?? []) {
     out += ` AND (${e})`;
   }

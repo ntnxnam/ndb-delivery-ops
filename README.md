@@ -8,9 +8,10 @@ MCP surface.
 | Path | Stack | Run command |
 |---|---|---|
 | [`apps/delivery-ops/`](apps/delivery-ops/) | Node/Express + React | `./restart` (from inside the workspace) |
+| [`apps/bin-packing/`](apps/bin-packing/) | Vanilla JS / ESM | Served statically by `delivery-ops` server at `/bin-packing/`. Standalone: `npm start` (port 3847). |
 | [`apps/tpm-confluence-tools/`](apps/tpm-confluence-tools/) | Python / Streamlit | `streamlit run app.py` (inside its own venv) |
 | [`mcp-server/`](mcp-server/) | TypeScript, MCP SDK | `npm run mcp:start` (from repo root) |
-| [`shared/`](shared/) | TypeScript / JS | Library only, no entry point |
+| [`shared/`](shared/) | TypeScript (ESM) | Library only — connectors + services + types consumed by everything above |
 
 ## Architecture — Anthropic's five pillars
 
@@ -34,17 +35,25 @@ MCP surface.
 | Pillar | Where |
 |---|---|
 | 1. MCP server | `mcp-server/src/index.ts` |
-| 2. Connectors | `mcp-server/src/connectors/` |
+| 2. Connectors | `shared/connectors/*.ts` (JIRA, Confluence today; GitHub / Slack / Email / AI pending) |
 | 3. Rules / system instructions | `~/.cursor/rules/` (inherited) + `.cursor/rules/` |
 | 4. Skills | `~/.cursor/skills/` (inherited) + `.cursor/skills/` |
 | 5. Workflows | `.cursor/workflows/` |
 
-## Sub-agents
+## Agents (orchestrator-workers, D16)
 
-| Agent | Trigger words | Owns |
+One user-facing agent dispatches to internal specialists. Users never invoke
+specialists directly.
+
+| Layer | Name | Role |
 |---|---|---|
-| `tpm-assistant` | "tpm-assistant", "help me create a confluence page", "triage tickets" | Confluence creation, sprint planning, ticket triage, status emails |
-| `rm-assistant` | "rm-assistant", "prep release status", "rename release" | Release timelines, version cascade, exec summary, risk reporting |
+| Orchestrator | `ops-assistant` | Single entry point. Reads session context, picks specialist + skill, renders audience-appropriate output. Invoke with `@ops-assistant`. |
+| Specialist | `team-exec-specialist` | Team Executive / Director release status answers |
+| Specialist | `tpm-specialist` | Weekly status emails, sprint planning, cross-team coordination |
+| Specialist | `rm-specialist` | Release timelines, gate-date moves (D30), version cascade |
+| Specialist | `triage-specialist` | Bug / crisis / stale-ticket / pending-response triage flavours |
+| Specialist | `dependency-tracker-specialist` | "What blocks my feature?" cross-team dep walks |
+| Specialist | `confluence-publisher-specialist` | Confluence cleanup + publish operations |
 
 ## Quick start
 

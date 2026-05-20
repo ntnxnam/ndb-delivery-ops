@@ -42,6 +42,20 @@
  *   - `labelPrefix` is required for the wishlist + deferred sidecars
  *     (the Python hardcoded `ndb-`). Caller supplies — same pattern as
  *     payloadJqlService.
+ *
+ * Payload scope (D36):
+ *
+ *   This service computes the **Engineering Payload** — every bucket
+ *   query is scoped to `project = ${projectKey}` (see `fetchBucket`).
+ *   That matches the legacy Python `data_layer.py` exactly and preserves
+ *   the completion-% numbers people are used to seeing.
+ *
+ *   It does NOT yet compute the cross-team **Release Payload** (which
+ *   would include TECHPUBS / FEAT / PM tickets carrying the same
+ *   fixVersion). When the first cross-team consumer lands, add a
+ *   `fetchReleasePayloadData` variant that omits the project scope and
+ *   re-runs `processMaster` on the result. The bucket queries themselves
+ *   are already project-agnostic — see `buildReleasePayloadJql`.
  */
 
 import type { JiraConnector, JiraIssue } from '../connectors/jiraConnector.js';

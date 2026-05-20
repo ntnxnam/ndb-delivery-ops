@@ -30,7 +30,8 @@ export {
   buildAuditRow,
 } from './services/dateMoverService.js';
 export {
-  buildPayloadJql,
+  buildEngineeringPayloadJql,
+  buildReleasePayloadJql,
   getComponentQueries,
   getWishlistQuery,
   getDeferredQuery,
@@ -39,6 +40,10 @@ export {
   PORTFOLIO_CONTAINER_TYPES,
   WISHLIST_COMPONENT,
   DEFERRED_COMPONENT,
+} from './services/payloadJqlService.js';
+export type {
+  EngineeringPayloadOptions,
+  ReleasePayloadOptions,
 } from './services/payloadJqlService.js';
 export type { PayloadBucketKey } from './services/payloadJqlService.js';
 export {
