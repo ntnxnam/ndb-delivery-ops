@@ -622,25 +622,17 @@ router.get('/project-breakdown', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
     
-    // Get configured field IDs - only use what's available
+    // Get configured field IDs
     const epicLinkField = getFieldId('epicLink');
     const parentLinkField = getFieldId('parentLink');
     
-    // Build arrays of field IDs to fetch (only include valid fields)
+    // Build arrays of field IDs to fetch - always fetch both if configured
     const epicLinkFields = epicLinkField ? [epicLinkField] : [];
     const parentLinkFields = parentLinkField ? [parentLinkField] : [];
     
-    // Bail if we don't have the required fields
-    if (epicLinkFields.length === 0 || parentLinkFields.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required JIRA field configuration: epicLink or parentLink not configured in jiraFieldsConfig.json'
-      });
-    }
-    
     const searchOpts = { perPageTimeoutMs: 30000 };
     
-    // Build field list for API calls - only include fields that exist
+    // Build field list for API calls - always include both custom fields
     let fieldsList = `key,issuetype,summary,parent,status`;
     if (parentLinkFields.length > 0) {
       fieldsList += `,${parentLinkFields.join(',')}`;
