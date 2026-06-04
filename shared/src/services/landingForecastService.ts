@@ -131,6 +131,15 @@ export interface LandingForecastResult {
   /** Method used (matches Streamlit field name). MVP only emits `'fallback_running'`. */
   forecastMethod: 'fallback_running' | 'curve_based' | 'curve_with_inflow';
 
+  /** Average net inflow (discovered - closed) per sprint of Bug/Improvement items. */
+  netInflowPerSprint: number;
+  /** Effective velocity accounting for net inflow (velocity - inflow). */
+  effectiveVelocity: number;
+  /** Days remaining in today's sprint. */
+  daysRemainingToday: number;
+  /** Available work capacity in today's remaining days. */
+  todayCapacityItems: number;
+
   /** TODO(parity) — populated when baseline/curve port lands. */
   baselineVelocity: number;
   velocityVsBaselinePct: number | null;
@@ -289,6 +298,71 @@ function coefficientOfVariation(xs: number[]): number | null {
   return Math.sqrt(variance) / Math.abs(mean);
 }
 
+/**
+ * Calculate remaining days in the sprint containing `now`.
+ * Returns days from `now` (inclusive) through end of sprint (inclusive).
+ * 
+ * Example: if today is Wed (day 1 of 21-day sprint), returns 21 days.
+ * If today is Tue (last day of sprint), returns 1 day.
+ */
+function daysRemainingInCurrentSprint(
+  calendar: SprintCalendar,
+  now: Date
+): number {
+  const todaySprint = currentSprintNumber(calendar, now);
+  const { endIso } = sprintWindow(todaySprint, calendar);
+  
+  // Parse dates at UTC midnight for consistent day-counting
+  const endDate = new Date(endIso + 'T00:00:00Z');
+  const nowDate = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+  
+  const MS_PER_DAY = 86_400_000;
+  const daysUntilEnd = Math.floor((endDate.getTime() - nowDate.getTime()) / MS_PER_DAY);
+  
+  // +1 because both start and end dates are inclusive
+  return Math.max(1, daysUntilEnd + 1);
+}
+
+/**
+ * Calculate the average net inflow (discovered - closed) of Bug + Improvement
+ * items over a set of sprints. Used to project how many new bugs will arrive
+ * by the forecast date.
+ * 
+ * Returns: items per sprint (positive = growing backlog, negative = shrinking)
+ */
+async function calculateNetInflowTrend(
+  jira: JiraConnector,
+  projectKey: string,
+  release: string,
+  calendar: SprintCalendar,
+  sprintNumbers: number[]
+): Promise<number> {
+  if (sprintNumbers.length === 0) return 0;
+
+  const discovered: number[] = [];
+  const closed: number[] = [];
+
+  for (const sprintNum of sprintNumbers) {
+    const { startIso, endIso } = sprintWindow(sprintNum, calendar);
+
+    // Bugs discovered (created) during the sprint
+    const jqlDiscovered = `project = ${projectKey} AND issuetype in (Bug, Improvement) AND created >= "${startIso}" AND created <= "${endIso}"`;
+    const countDiscovered = await jira.searchCount(jqlDiscovered).catch(() => 0);
+    discovered.push(countDiscovered);
+
+    // Bugs closed (moved to Closed) during the sprint
+    const jqlClosed = `project = ${projectKey} AND issuetype in (Bug, Improvement) AND status changed to "Closed" during ("${startIso}", "${endIso}")`;
+    const countClosed = await jira.searchCount(jqlClosed).catch(() => 0);
+    closed.push(countClosed);
+  }
+
+  const totalDiscovered = discovered.reduce((a, b) => a + b, 0);
+  const totalClosed = closed.reduce((a, b) => a + b, 0);
+  const netPerSprint = (totalDiscovered - totalClosed) / sprintNumbers.length;
+
+  return netPerSprint;
+}
+
 // ── Public entrypoint ────────────────────────────────────────────────────
 
 /**
@@ -389,16 +463,60 @@ export async function computeLandingForecast(
   let forecastGaDate: string | null = null;
   let gapSprints: number | null = null;
 
-  // MVP fallback forecast: today + ceil(unresolved / recent_velocity).
-  if (unresolved > 0 && recentVelocity > 0) {
-    const sprintsToFinish = Math.ceil(unresolved / recentVelocity);
-    forecastGaSprint = todaySprint + sprintsToFinish;
+  // ─────────────────────────────────────────────────────────────────────────
+  // IMPROVED FORECAST: Account for today's remaining capacity + bug inflow trend
+  // ─────────────────────────────────────────────────────────────────────────
+  
+  let netInflowPerSprint = 0;
+  try {
+    // Calculate the sprint numbers to sample for inflow trend
+    const sprintsToAnalyze = recentSprints
+      .map((_, i) => todaySprint - window + i)
+      .filter((s) => s >= 1);
+    
+    if (sprintsToAnalyze.length > 0) {
+      netInflowPerSprint = await calculateNetInflowTrend(
+        opts.jira,
+        opts.projectKey,
+        rel,
+        calendar,
+        sprintsToAnalyze
+      );
+    }
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'inflow calculation failed';
+    errors.push(`inflow: ${message}`);
+    netInflowPerSprint = 0;
+  }
+
+  // Effective velocity = actual velocity minus net inflow.
+  // If net inflow exceeds velocity, the backlog is growing and we can't finish.
+  const effectiveVelocity = Math.max(0.1, recentVelocity - netInflowPerSprint);
+  
+  // Calculate remaining days in today's sprint and today's available capacity.
+  const daysRemaining = daysRemainingInCurrentSprint(calendar, now);
+  const DAYS_PER_SPRINT = calendar.sprintDays;
+  const dailyVelocity = recentVelocity / DAYS_PER_SPRINT;
+  const todayCapacity = dailyVelocity * daysRemaining;
+
+  // Determine forecast sprint by allocating work: today first, then future sprints.
+  if (unresolved > 0 && effectiveVelocity > 0) {
+    if (unresolved <= todayCapacity) {
+      // All work fits in today's remaining capacity
+      forecastGaSprint = todaySprint;
+    } else {
+      // Work spills into future sprints
+      const workOverflow = unresolved - todayCapacity;
+      const sprintsToFinish = Math.ceil(workOverflow / effectiveVelocity);
+      forecastGaSprint = todaySprint + sprintsToFinish;
+    }
     const { endIso } = sprintWindow(forecastGaSprint, calendar);
     forecastGaDate = endIso;
     if (plannedGaSprint !== null) {
       gapSprints = forecastGaSprint - plannedGaSprint;
     }
   } else if (unresolved === 0) {
+    // No unresolved work; we're done today
     forecastGaSprint = todaySprint;
     const { endIso } = sprintWindow(todaySprint, calendar);
     forecastGaDate = endIso;
@@ -439,6 +557,10 @@ export async function computeLandingForecast(
     jqlUnresolved,
     jqlPendingVerification,
     forecastMethod: 'fallback_running',
+    netInflowPerSprint: Math.round(netInflowPerSprint * 100) / 100,
+    effectiveVelocity: Math.round(effectiveVelocity * 100) / 100,
+    daysRemainingToday: daysRemaining,
+    todayCapacityItems: Math.round(todayCapacity * 100) / 100,
     baselineVelocity: 0,
     velocityVsBaselinePct: null,
     payloadTotal,

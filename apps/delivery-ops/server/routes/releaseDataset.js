@@ -706,7 +706,9 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // Batch: find all epics with a parent link to any top-level project
     const topLevelKeys = topLevelProjects.map(p => p.key).join(',');
     if (topLevelKeys.length > 0) {
-      const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys})${parentLinkFields.length > 0 ? ` OR "${parentLinkFields[0]}" in (${topLevelKeys})` : ''})`;
+      // Only use parent link in JQL if it's actually configured AND we can access it
+      let parentEpicsJql = `issuetype = Epic AND parent in (${topLevelKeys})`;
+      // Note: We avoid adding parentLink to JQL to prevent permission errors
       const childEpics = await jira.searchAll(
         parentEpicsJql,
         fieldsList,
@@ -757,8 +759,8 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 4: Fetch STANDALONE EPICS (no parent link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
-    const parentLinkEmptyCondition = parentLinkFields.length > 0 ? ` AND "${parentLinkFields[0]}" is EMPTY` : '';
-    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY${parentLinkEmptyCondition} AND status not in (Cancelled, Backlog)`;
+    // Use only the built-in parent field, avoid custom parentLink field in JQL
+    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY AND status not in (Cancelled, Backlog)`;
     const standaloneEpics = await jira.searchAll(
       standaloneEpicsJql,
       `key,summary`,
@@ -798,13 +800,20 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // =========================================================================
     console.log('[project-breakdown] STAGE 6: Fetching standalone tickets...');
     const epicLinkEmptyCondition = epicLinkFields.length > 0 ? ` AND "${epicLinkFields[0]}" is EMPTY` : '';
-    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)${epicLinkEmptyCondition} AND status not in (Cancelled, Backlog)`;
+    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
     const standaloneTickets = await jira.searchAll(
       standaloneTicketsJql,
-      `key,issuetype,status`,
+      `key,issuetype,status,${epicLinkFields.join(',')}`,
       searchOpts
     ) || [];
     console.log(`[project-breakdown] STAGE 6: Found ${standaloneTickets.length} standalone tickets`);
+    
+    // Filter STAGE 6 results to only include tickets without an epic link
+    const standaloneTicketsFiltered = standaloneTickets.filter(ticket => {
+      const epicKey = readLinkKey(ticket.fields, epicLinkFields);
+      return !epicKey; // Only keep if no epic link
+    });
+    console.log(`[project-breakdown] STAGE 6: After filtering, ${standaloneTicketsFiltered.length} standalone tickets (no epic link)`);
 
     // =========================================================================
     // AGGREGATE: Build three-tier response
@@ -857,7 +866,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
 
     // TIER 3: Standalone Tickets (direct counts)
     const standaloneTicketGroups = {};
-    for (const ticket of standaloneTickets) {
+    for (const ticket of standaloneTicketsFiltered) {
       const groupKey = classifyGroupKey(ticket.fields?.issuetype?.name || 'Unknown');
       const bucket = ensureGroupBucket(standaloneTicketGroups, groupKey);
       const status = ticket.fields?.status?.name || 'Unknown';
@@ -873,7 +882,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
       '[project-breakdown] COMPLETE:',
       projects.length, 'projects |',
       standaloneEpicsList.length, 'standalone epics |',
-      standaloneTickets.length, 'standalone tickets'
+      standaloneTicketsFiltered.length, 'standalone tickets'
     );
 
     return res

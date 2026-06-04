@@ -54,3 +54,5 @@ Thumbs.db
 **/dist/
 **/tsconfig.tsbuildinfo
 **/*.tsbuildinfo
+test-project-breakdown.js
+FORECAST_LANDING_FIX_NOTES.md
