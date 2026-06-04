@@ -8,7 +8,7 @@ const { createHttpsAgent, retryJiraCall } = require('../services/jiraService');
 const jiraFieldsConfig = require('../config/jiraFieldsConfig.json');
 const { getAllFields } = require('./jiraFieldsConfig');
 
-const STANDARD_FIELD_NAMES = 'summary,status,assignee,reporter,issuetype,priority,fixVersions,labels,duedate,watchers,resolution,created,updated,description,parent';
+const STANDARD_FIELD_NAMES = 'summary,status,assignee,reporter,issuetype,priority,fixVersions,versions,labels,duedate,watchers,resolution,created,updated,description,parent';
 const MAX_JQL_RESULTS = 500;
 
 /**

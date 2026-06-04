@@ -22,6 +22,7 @@ const fs = require('fs');
 const router = express.Router();
 const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware, extractToken } = require('../middleware/auth/jira');
+const { getFieldId } = require('../utils/jiraFieldsConfig');
 
 // Path to the human-curated release-gate config. Owned by RM/TPMs and
 // updated via /release-config in-app — the same file the legacy
@@ -159,20 +160,14 @@ router.get('/synopsis', auth, async (req, res) => {
     // capturing tickets from any contributing project (ERA, FEAT, TECHPUBS, etc.)
     const releasePayloadJql = buildReleasePayloadJql(release);
 
-    // For each bucket, prepend project scope so the count is restricted
-    // to the engineering project (matches D36 "Engineering Payload"
-    // semantics — TPM/PM/TECHPUBS tickets carrying the same fixVersion
-    // are NOT in the count here).
-    const scoped = (jql) => `project = ${projectKey} AND (${jql})`;
-
     // Run all counts in parallel — they're independent maxResults=0 calls.
     const componentEntries = PAYLOAD_BUCKET_KEYS.map((key) => ({
       key,
       label: COMPONENT_LABELS[key] || key,
-      jql: scoped(bucketJql[key]),
+      jql: bucketJql[key],
     }));
     const sidecarEntries = [
-      { key: 'deferred', label: SIDECAR_LABELS.deferred, jql: scoped(deferredJql) },
+      { key: 'deferred', label: SIDECAR_LABELS.deferred, jql: deferredJql },
     ];
     
     // Issue type group breakdown — 6 groups per issue-type-grouping.mdc
@@ -575,6 +570,318 @@ router.get('/outstanding', auth, async (req, res) => {
     return res.status(status).json({
       success: false,
       error: e?.response?.data?.errorMessages?.[0] || e?.message || 'Outstanding computation failed',
+    });
+  }
+});
+
+/**
+ * /project-breakdown — Staged per-fixVersion traversal for three-tier grouping:
+ * 1) TIER 1: Top-level Projects (Feature/Initiative/X-FEAT/Capability) with fixVersion
+ * 2) For each project: TIER 2 Epics (child epics via Parent Link)
+ * 3) For each epic: Count work items (non-portfolio, non-epic, not Feature/Initiative)
+ * 4) THEN: Standalone Epics (no Parent Link) and their work items
+ * 5) THEN: Standalone Tickets (no Epic Link)
+ *
+ * Per staged traversal plan from user guidance.
+ * Used for the Project Breakdown Matrix component.
+ */
+router.get('/project-breakdown', auth, async (req, res) => {
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+  try {
+    const productId = (req.query.productId || 'ndb').toString();
+    const release = (req.query.release || '').toString().trim();
+    console.log('[project-breakdown] Request: productId=', productId, 'release=', release);
+    
+    if (!release) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'release query parameter is required' });
+    }
+
+    const userJiraPat = extractToken(req);
+    if (!userJiraPat) {
+      return res
+        .status(401)
+        .json({ success: false, error: 'JIRA Bearer token required in Authorization header' });
+    }
+
+    const shared = await getShared();
+    const { JiraConnector, getProductService, loadEnv } = shared;
+
+    const productService = getProductService(PRODUCT_CONFIG_PATH);
+    let product;
+    try {
+      product = productService.getProduct(productId);
+    } catch (e) {
+      return res
+        .status(400)
+        .json({ success: false, error: `Unknown productId '${productId}': ${e.message}` });
+    }
+
+    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
+    const jira = new JiraConnector(env);
+    const epicLinkField = getFieldId('epicLink') || 'customfield_10361';
+    const parentLinkField = getFieldId('parentLink') || 'customfield_20363';
+    const epicLinkFields = Array.from(new Set([epicLinkField, 'customfield_10361']));
+    const parentLinkFields = Array.from(new Set([parentLinkField, 'customfield_20363']));
+    
+    const searchOpts = { perPageTimeoutMs: 30000 };
+
+    // Constants
+    const PROJECT_TYPES = ['Feature', 'Initiative', 'X-FEAT', 'Capability'];
+    const DONE_STATUSES = ['Fixed', 'Done', 'Resolved', 'Complete', 'Closed'];
+    const TO_VERIFY_STATUSES = ['In Review', 'Testing', 'Ready for Testing'];
+    
+    const classifyGroupKey = (issueType) => {
+      if (['Feature', 'Initiative', 'Epic', 'X-FEAT', 'Capability'].includes(issueType)) return 'Project Hierarchy';
+      if (issueType === 'Bug') return 'Bug';
+      if (issueType === 'Improvement') return 'Improvement';
+      if (['Task', 'Unit Test'].includes(issueType)) return 'Dev Code';
+      if (issueType === 'Test') return 'Test';
+      return 'Everything Else';
+    };
+
+    const ensureGroupBucket = (groupMap, groupKey) => {
+      if (!groupMap[groupKey]) {
+        groupMap[groupKey] = { label: groupKey, outstanding: 0, toVerify: 0, closed: 0, total: 0 };
+      }
+      return groupMap[groupKey];
+    };
+
+    const countIssue = (bucket, status) => {
+      bucket.total++;
+      if (DONE_STATUSES.includes(status)) bucket.closed++;
+      else if (TO_VERIFY_STATUSES.includes(status)) bucket.toVerify++;
+      else bucket.outstanding++;
+    };
+
+    const readLinkKey = (fields, candidateFields) => {
+      for (const field of candidateFields) {
+        const raw = fields?.[field];
+        if (!raw) continue;
+        if (typeof raw === 'string' && raw.trim()) return raw.trim();
+        if (raw?.key) return raw.key;
+      }
+      return null;
+    };
+
+    // =========================================================================
+    // STAGE 1: Fetch TOP-LEVEL PROJECTS (Features/Initiatives/X-FEAT/Capability)
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 1: Fetching top-level projects...');
+    const topLevelJql = `fixVersion = ${release} AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
+    const topLevelProjects = await jira.searchAll(
+      topLevelJql,
+      `key,issuetype,summary,parent,${parentLinkFields.join(',')}`,
+      searchOpts
+    ) || [];
+    console.log(`[project-breakdown] STAGE 1: Found ${topLevelProjects.length} top-level projects`);
+
+    // Index by key
+    const topLevelByKey = new Map(topLevelProjects.map(p => [p.key, p]));
+
+    // =========================================================================
+    // STAGE 2: For each project, fetch CHILD EPICS (via Parent Link)
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 2: Fetching child epics for each project...');
+    const epicsByProjectKey = {};
+    for (const project of topLevelProjects) {
+      epicsByProjectKey[project.key] = [];
+    }
+
+    // Batch: find all epics with a parent link to any top-level project
+    const topLevelKeys = topLevelProjects.map(p => p.key).join(',');
+    if (topLevelKeys.length > 0) {
+      const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys}) OR ${parentLinkFields.map(f => `"${f}" in (${topLevelKeys})`).join(' OR ')})`;
+      const childEpics = await jira.searchAll(
+        parentEpicsJql,
+        `key,summary,parent,${parentLinkFields.join(',')}`,
+        searchOpts
+      ) || [];
+      console.log(`[project-breakdown] STAGE 2: Found ${childEpics.length} child epics`);
+
+      // Map epics to their parent projects
+      for (const epic of childEpics) {
+        const parentKey = epic.fields?.parent?.key || readLinkKey(epic.fields, parentLinkFields);
+        if (parentKey && epicsByProjectKey[parentKey]) {
+          epicsByProjectKey[parentKey].push(epic);
+        }
+      }
+    }
+
+    // =========================================================================
+    // STAGE 3: For each epic, fetch WORK ITEMS (non-portfolio, non-epic)
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 3: Fetching work items under each epic...');
+    const workItemsByEpicKey = {};
+    const allEpics = Object.values(epicsByProjectKey).flat();
+    for (const epic of allEpics) {
+      workItemsByEpicKey[epic.key] = [];
+    }
+
+    // Batch: find all work items with epic link to any child epic
+    const epicKeys = allEpics.map(e => e.key).join(',');
+    if (epicKeys.length > 0) {
+      const workItemsJql = `(${epicLinkFields.map(f => `"${f}" in (${epicKeys})`).join(' OR ')}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
+      const workItems = await jira.searchAll(
+        workItemsJql,
+        `key,issuetype,status,${epicLinkFields.join(',')}`,
+        searchOpts
+      ) || [];
+      console.log(`[project-breakdown] STAGE 3: Found ${workItems.length} work items under epics`);
+
+      // Map work items to their epics
+      for (const item of workItems) {
+        const epicKey = readLinkKey(item.fields, epicLinkFields);
+        if (epicKey && workItemsByEpicKey[epicKey]) {
+          workItemsByEpicKey[epicKey].push(item);
+        }
+      }
+    }
+
+    // =========================================================================
+    // STAGE 4: Fetch STANDALONE EPICS (no parent link)
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
+    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = ${release} AND parent is EMPTY AND ${parentLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const standaloneEpics = await jira.searchAll(
+      standaloneEpicsJql,
+      `key,summary`,
+      searchOpts
+    ) || [];
+    console.log(`[project-breakdown] STAGE 4: Found ${standaloneEpics.length} standalone epics`);
+
+    const workItemsByStandaloneEpicKey = {};
+    for (const epic of standaloneEpics) {
+      workItemsByStandaloneEpicKey[epic.key] = [];
+    }
+
+    // =========================================================================
+    // STAGE 5: For each standalone epic, fetch WORK ITEMS
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 5: Fetching work items under standalone epics...');
+    const standaloneEpicKeys = standaloneEpics.map(e => e.key).join(',');
+    if (standaloneEpicKeys.length > 0) {
+      const standaloneWorkItemsJql = `(${epicLinkFields.map(f => `"${f}" in (${standaloneEpicKeys})`).join(' OR ')}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
+      const standaloneWorkItems = await jira.searchAll(
+        standaloneWorkItemsJql,
+        `key,issuetype,status,${epicLinkFields.join(',')}`,
+        searchOpts
+      ) || [];
+      console.log(`[project-breakdown] STAGE 5: Found ${standaloneWorkItems.length} work items under standalone epics`);
+
+      for (const item of standaloneWorkItems) {
+        const epicKey = readLinkKey(item.fields, epicLinkFields);
+        if (epicKey && workItemsByStandaloneEpicKey[epicKey]) {
+          workItemsByStandaloneEpicKey[epicKey].push(item);
+        }
+      }
+    }
+
+    // =========================================================================
+    // STAGE 6: Fetch STANDALONE TICKETS (no epic link)
+    // =========================================================================
+    console.log('[project-breakdown] STAGE 6: Fetching standalone tickets...');
+    const standaloneTicketsJql = `fixVersion = ${release} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${epicLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const standaloneTickets = await jira.searchAll(
+      standaloneTicketsJql,
+      `key,issuetype,status`,
+      searchOpts
+    ) || [];
+    console.log(`[project-breakdown] STAGE 6: Found ${standaloneTickets.length} standalone tickets`);
+
+    // =========================================================================
+    // AGGREGATE: Build three-tier response
+    // =========================================================================
+    console.log('[project-breakdown] AGGREGATE: Building response structures...');
+
+    // TIER 1: Projects with aggregated work items
+    const projects = [];
+    for (const project of topLevelProjects) {
+      const projectGroups = {};
+      
+      // Aggregate work items from all child epics
+      const childEpicList = epicsByProjectKey[project.key] || [];
+      for (const epic of childEpicList) {
+        const workItems = workItemsByEpicKey[epic.key] || [];
+        for (const item of workItems) {
+          const groupKey = classifyGroupKey(item.fields?.issuetype?.name || 'Unknown');
+          const bucket = ensureGroupBucket(projectGroups, groupKey);
+          const status = item.fields?.status?.name || 'Unknown';
+          countIssue(bucket, status);
+        }
+      }
+
+      projects.push({
+        projectKey: project.key,
+        projectName: project.fields?.summary || project.key,
+        issueTypeGroups: Object.values(projectGroups),
+      });
+    }
+
+    // TIER 2: Standalone Epics with aggregated work items
+    const standaloneEpicsList = [];
+    for (const epic of standaloneEpics) {
+      const epicGroups = {};
+      const workItems = workItemsByStandaloneEpicKey[epic.key] || [];
+      
+      for (const item of workItems) {
+        const groupKey = classifyGroupKey(item.fields?.issuetype?.name || 'Unknown');
+        const bucket = ensureGroupBucket(epicGroups, groupKey);
+        const status = item.fields?.status?.name || 'Unknown';
+        countIssue(bucket, status);
+      }
+
+      standaloneEpicsList.push({
+        projectKey: epic.key,
+        projectName: epic.fields?.summary || epic.key,
+        issueTypeGroups: Object.values(epicGroups),
+      });
+    }
+
+    // TIER 3: Standalone Tickets (direct counts)
+    const standaloneTicketGroups = {};
+    for (const ticket of standaloneTickets) {
+      const groupKey = classifyGroupKey(ticket.fields?.issuetype?.name || 'Unknown');
+      const bucket = ensureGroupBucket(standaloneTicketGroups, groupKey);
+      const status = ticket.fields?.status?.name || 'Unknown';
+      countIssue(bucket, status);
+    }
+    const standaloneTicketsResult = {
+      projectKey: 'standalone-tickets',
+      projectName: 'Standalone Tickets (no epic)',
+      issueTypeGroups: Object.values(standaloneTicketGroups),
+    };
+
+    console.log(
+      '[project-breakdown] COMPLETE:',
+      projects.length, 'projects |',
+      standaloneEpicsList.length, 'standalone epics |',
+      standaloneTickets.length, 'standalone tickets'
+    );
+
+    return res
+      .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      .set('Pragma', 'no-cache')
+      .set('Expires', '0')
+      .set('ETag', '')
+      .json({
+        success: true,
+        data: {
+          productId,
+          release,
+          projects,
+          standaloneEpics: standaloneEpicsList,
+          standaloneTickets: standaloneTicketsResult,
+        },
+      });
+  } catch (e) {
+    console.error('[release-dataset] /project-breakdown error:', e?.response?.data || e?.message || e);
+    const status = e?.response?.status || 500;
+    return res.status(status).json({
+      success: false,
+      error: e?.response?.data?.errorMessages?.[0] || e?.message || 'Project breakdown failed',
     });
   }
 });

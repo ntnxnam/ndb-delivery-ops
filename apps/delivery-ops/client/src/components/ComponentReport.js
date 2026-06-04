@@ -144,149 +144,224 @@ const PriorityWidget = ({ title, widgetClass, issues }) => {
 };
 
 // ── Widget 4 — Project Level Info ───────────────────────────────────────────
-const WORK_TYPE_COLS = ['Bug', 'Improvement', 'Task', 'Test', 'Other'];
+// Grouped by fixVersion. All row types (features, epics, direct tickets) use
+// the same unified table. Counts only — "show count, not details".
+// Bug cell shows inline assignees (top 3, first name). Each cell shows its own done count.
 
-const ProjectBreakdownRow = ({ project }) => {
-  const [expanded, setExpanded] = useState(false);
-  const { counts, topBugAssignees } = project.breakdown || { counts: {}, topBugAssignees: [] };
+const W4_COLS = [
+  { key: 'Bug',         label: 'Bugs' },
+  { key: 'TaskUnit',    label: 'Tasks+UnitTests' },
+  { key: 'Improvement', label: 'Improvements' },
+  { key: 'Test',        label: 'Tests' },
+  { key: 'Other',       label: 'Others' },
+];
 
+const W4Cell = ({ colKey, counts, topBugAssignees }) => {
+  const c = counts[colKey] || { outstanding: 0, done: 0, p0: 0, p1: 0 };
+  if (c.outstanding === 0 && c.done === 0) {
+    return <td className="cr-count-cell cr-count-cell--empty"><span className="cr-zero">—</span></td>;
+  }
+  const tooltip = [
+    c.outstanding > 0 ? `${c.outstanding} open` : null,
+    c.p0 > 0 ? `${c.p0} P0` : null,
+    c.p1 > 0 ? `${c.p1} P1` : null,
+    c.done > 0 ? `${c.done} done` : null,
+  ].filter(Boolean).join(' · ');
   return (
-    <>
-      <tr
-        className={`cr-proj-row${expanded ? ' expanded' : ''}`}
-        onClick={() => setExpanded(e => !e)}
-      >
-        <td><JiraLink jiraKey={project.key} /></td>
-        <td className="cr-summary-cell" title={project.summary}>{project.summary}</td>
-        <td><span className="cr-type-badge">{project.issuetype}</span></td>
-        <td><span className="cr-status-badge">{project.status}</span></td>
-        <td><HealthDot health={project.health} /></td>
-        {WORK_TYPE_COLS.map(t => {
-          const c = counts[t] || { outstanding: 0, done: 0, p0: 0, p1: 0 };
-          return (
-            <td key={t} className="cr-count-cell">
-              {c.outstanding > 0 ? (
-                <span>
-                  <strong>{c.outstanding}</strong>
-                  {(c.p0 > 0 || c.p1 > 0) && (
-                    <span className="cr-prio-sub">
-                      {c.p0 > 0 && <span className="cr-p0-sub">P0:{c.p0}</span>}
-                      {c.p1 > 0 && <span className="cr-p1-sub">P1:{c.p1}</span>}
-                    </span>
-                  )}
+    <td className="cr-count-cell" title={tooltip}>
+      {c.outstanding > 0 && (
+        <div className="cr-cell-out">
+          <strong>{c.outstanding} open</strong>
+          {(c.p0 > 0 || c.p1 > 0) && (
+            <span className="cr-prio-sub">
+              {c.p0 > 0 && <span className="cr-p0-sub">🔴 {c.p0} P0</span>}
+              {c.p1 > 0 && <span className="cr-p1-sub">⚠ {c.p1} P1</span>}
+            </span>
+          )}
+          {colKey === 'Bug' && topBugAssignees && topBugAssignees.length > 0 && (
+            <div className="cr-assignees-inline">
+              {topBugAssignees.slice(0, 3).map(a => (
+                <span key={a.name} className="cr-assignee-chip" title={a.name}>
+                  {a.name.split(' ')[0]} ({a.count})
                 </span>
-              ) : <span className="cr-zero">—</span>}
-            </td>
-          );
-        })}
-        <td className="cr-done-cell">
-          {WORK_TYPE_COLS.reduce((s, t) => s + (counts[t]?.done || 0), 0)}
-        </td>
-        <td className="cr-expand-btn">{expanded ? '▲' : '▼'}</td>
-      </tr>
-      {expanded && (
-        <tr className="cr-expand-row">
-          <td colSpan={WORK_TYPE_COLS.length + 6}>
-            <div className="cr-expand-content">
-              {topBugAssignees && topBugAssignees.length > 0 && (
-                <div className="cr-assignee-breakdown">
-                  <strong>Top bug owners:</strong>{' '}
-                  {topBugAssignees.map(a => (
-                    <span key={a.name} className="cr-assignee-tag">
-                      {a.name}: {a.count}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="cr-type-breakdown">
-                {WORK_TYPE_COLS.map(t => {
-                  const c = counts[t] || { outstanding: 0, done: 0 };
-                  if (c.outstanding + c.done === 0) return null;
-                  return (
-                    <span key={t} className="cr-type-summary">
-                      {t}: <strong>{c.outstanding}</strong> outstanding / {c.done} done
-                    </span>
-                  );
-                })}
-              </div>
+              ))}
             </div>
-          </td>
-        </tr>
+          )}
+        </div>
       )}
-    </>
+      {c.done > 0 && <div className="cr-done-sub">✓ {c.done} done</div>}
+    </td>
   );
 };
 
-const ProjectsWidget = ({ title, features, epics, directTickets }) => {
-  const hasData = features.length > 0 || epics.length > 0 || directTickets.length > 0;
+const W4Row = ({ row }) => {
+  const { counts, topBugAssignees } = row.breakdown || { counts: {}, topBugAssignees: [] };
+  const rowTypeLabel = row.rowType === 'feature' ? 'Feature' : row.rowType === 'epic' ? 'Epic' : 'Direct';
+  return (
+    <tr className={`cr-proj-row cr-row-${row.rowType}${row.mismatch ? ' cr-row-mismatch' : ''}${row.affectedVersionAnomaly ? ' cr-row-av-anomaly' : ''}`}>
+      <td>
+        <JiraLink jiraKey={row.key} />
+        {row.mismatch && (
+          <span className="cr-mismatch-flag" title="Child tickets have a different fixVersion">*</span>
+        )}
+      </td>
+      <td className="cr-summary-cell" title={row.summary}>{row.summary}</td>
+      <td><span className={`cr-type-badge cr-type-${rowTypeLabel.toLowerCase()}`}>{rowTypeLabel}</span></td>
+      <td><span className="cr-status-badge">{row.status}</span></td>
+      <td><HealthDot health={row.health} /></td>
+      {W4_COLS.map(col => (
+        <W4Cell key={col.key} colKey={col.key} counts={counts} topBugAssignees={topBugAssignees} />
+      ))}
+    </tr>
+  );
+};
 
-  const ProjectTable = ({ rows, label }) => {
-    if (!rows || rows.length === 0) return null;
-    return (
-      <div className="cr-proj-section">
-        <h4 className="cr-proj-section-heading">{label} ({rows.length})</h4>
-        <div className="cr-table-scroll">
-          <table className="cr-proj-table">
-            <thead>
-              <tr>
-                <th>Key</th>
-                <th>Summary</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Health</th>
-                {WORK_TYPE_COLS.map(t => <th key={t}>{t}s ↑</th>)}
-                <th>Done ✓</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(p => <ProjectBreakdownRow key={p.key} project={p} />)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
+const W4ReleaseTable = ({ rows }) => {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div className="cr-table-scroll">
+      <table className="cr-proj-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Summary</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Health</th>
+            {W4_COLS.map(c => <th key={c.key}>{c.label} ↑</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => <W4Row key={row.key} row={row} />)}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
-  const DirectTable = ({ rows }) => {
-    if (!rows || rows.length === 0) return null;
-    return (
-      <div className="cr-proj-section">
-        <h4 className="cr-proj-section-heading">Direct Tickets — No Epic ({rows.length})</h4>
-        <div className="cr-table-scroll">
-          <table className="cr-issue-table">
-            <thead>
-              <tr>
-                <th>Key</th><th>Summary</th><th>Type</th><th>Priority</th>
-                <th>Assignee</th><th>Age</th><th>Status</th><th>Fix Version</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.sort((a, b) => a.priorityOrder - b.priorityOrder).map(i => (
-                <tr key={i.key}>
-                  <td><JiraLink jiraKey={i.key} /></td>
-                  <td className="cr-summary-cell" title={i.summary}>{i.summary}</td>
-                  <td><span className="cr-type-badge">{i.issuetype}</span></td>
-                  <td><PriorityChip priority={i.priority} /></td>
-                  <td>{i.assignee}</td>
-                  <td><AgeBadge age={i.age} /></td>
-                  <td><span className="cr-status-badge">{i.status}</span></td>
-                  <td className="cr-fixver-cell">{i.fixVersions || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
+// Consolidate direct tickets into a summary row
+const DirectTicketsSummaryRow = ({ directTickets }) => {
+  if (!directTickets || directTickets.length === 0) return null;
+
+  const totalCounts = { Bug: { outstanding: 0, done: 0, p0: 0, p1: 0 }, 'Tasks+UnitTests': { outstanding: 0, done: 0, p0: 0, p1: 0 }, Improvement: { outstanding: 0, done: 0, p0: 0, p1: 0 }, Test: { outstanding: 0, done: 0, p0: 0, p1: 0 }, Others: { outstanding: 0, done: 0, p0: 0, p1: 0 } };
+
+  directTickets.forEach(ticket => {
+    const breakdown = ticket.breakdown?.counts || {};
+    Object.entries(breakdown).forEach(([key, val]) => {
+      if (totalCounts[key]) {
+        totalCounts[key].outstanding += val.outstanding || 0;
+        totalCounts[key].done += val.done || 0;
+        totalCounts[key].p0 += val.p0 || 0;
+        totalCounts[key].p1 += val.p1 || 0;
+      }
+    });
+  });
+
+  const summaryRow = {
+    key: `direct-summary-${directTickets.length}`,
+    rowType: 'direct-summary',
+    summary: `${directTickets.length} Direct Tickets (No Epic)`,
+    status: 'Mixed',
+    health: 'mixed',
+    breakdown: { counts: totalCounts, topBugAssignees: [] }
   };
 
   return (
+    <tr className="cr-proj-row cr-row-direct-summary">
+      <td colSpan="5" style={{ fontWeight: 'bold', padding: '8px' }}>{summaryRow.summary}</td>
+      {W4_COLS.map(col => (
+        <W4Cell key={col.key} colKey={col.key} counts={totalCounts} topBugAssignees={[]} />
+      ))}
+    </tr>
+  );
+};
+
+const W4ReleaseGroup = ({ fixVersion, group, defaultOpen }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const features = group.features || [];
+  const epics = group.epics || [];
+  const directTickets = group.directTickets || [];
+  
+  
+  const allForCount = [...features, ...epics, ...directTickets];
+  const totalOut = allForCount.reduce((s, r) =>
+    s + Object.values(r.breakdown?.counts || {}).reduce((ss, c) => ss + (c.outstanding || 0), 0), 0);
+  const hasMismatch = allForCount.some(r => r.mismatch);
+  const hasAnomaly = allForCount.some(r => r.affectedVersionAnomaly);
+
+  return (
+    <div className={`cr-w4-group cr-accordion${open ? ' cr-accordion--open' : ''}`}>
+      <button className="cr-accordion-header cr-w4-group-header" onClick={() => setOpen(o => !o)}>
+        <span className="cr-w4-fv-label">{fixVersion}</span>
+        <span className="cr-widget-count">
+          {features.length} proj · {epics.length} epic · {directTickets.length} direct · {totalOut} outstanding
+          {hasMismatch && <span className="cr-mismatch-flag" title="Some items have fixVersion mismatches"> *</span>}
+          {hasAnomaly && <span className="cr-anomaly-flag" title="affectedVersion anomaly detected"> ⚠</span>}
+        </span>
+        <span className="cr-accordion-chevron">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="cr-accordion-body">
+          {features.length > 0 && (
+            <>
+              <h4 className="cr-w4-subtype-heading">Projects — Features / Initiatives ({features.length})</h4>
+              <W4ReleaseTable rows={features} />
+            </>
+          )}
+          {epics.length > 0 && (
+            <>
+              <h4 className="cr-w4-subtype-heading">Standalone Epics ({epics.length})</h4>
+              <W4ReleaseTable rows={epics} />
+            </>
+          )}
+          {directTickets.length > 0 && (
+            <>
+              <h4 className="cr-w4-subtype-heading">Direct Tickets — No Epic</h4>
+              <div className="cr-table-scroll">
+                <table className="cr-proj-table">
+                  <thead>
+                    <tr>
+                      <th colSpan="5">Summary</th>
+                      {W4_COLS.map(c => <th key={c.key}>{c.label} ↑</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <DirectTicketsSummaryRow directTickets={directTickets} />
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProjectsWidget = ({ projectBreakdown }) => {
+  const { byRelease, releaseOrder } = projectBreakdown || { byRelease: {}, releaseOrder: [] };
+  if (!releaseOrder || releaseOrder.length === 0) {
+    return <p className="cr-empty-inline">No project data available.</p>;
+  }
+
+  // Open the first release that has outstanding work; fall back to the first release
+  const firstWithWork = releaseOrder.find(fv => {
+    const g = byRelease[fv] || {};
+    const all = [...(g.features || []), ...(g.epics || []), ...(g.directTickets || [])];
+    return all.some(r => Object.values(r.breakdown?.counts || {}).some(c => (c.outstanding || 0) > 0));
+  });
+  const defaultOpenRelease = firstWithWork || releaseOrder[0];
+
+  return (
     <div className="cr-widget-inner cr-widget-projects">
-      {!hasData && <p className="cr-empty-inline">No projects found for this filter.</p>}
-      <ProjectTable rows={features} label="Features / Initiatives" />
-      <ProjectTable rows={epics} label="Standalone Epics" />
-      <DirectTable rows={directTickets} />
+      {releaseOrder.map((fv) => (
+        <W4ReleaseGroup
+          key={fv}
+          fixVersion={fv}
+          group={byRelease[fv]}
+          defaultOpen={fv === defaultOpenRelease}
+        />
+      ))}
     </div>
   );
 };
@@ -307,22 +382,76 @@ const DeferralsWidget = () => (
   </p>
 );
 
-// ── Cleanup section (standalone accordion, no data yet) ─────────────────────
-const CleanupSection = () => {
+// ── Cleanup section — stale projects with orphaned open children ─────────────
+// A "stale" row = Feature/Initiative/Epic in Done status but has ≥1 outstanding descendant.
+// Director lens: this is garbage that teams haven't cleaned up — it inflates counts and
+// hides real work. Show it so someone can act.
+const CleanupSection = ({ staleProjects }) => {
   const [open, setOpen] = useState(false);
+  const count = staleProjects.length;
+
   return (
     <section className={`cr-section cr-section-accordion${open ? ' cr-section-accordion--open' : ''}`}>
       <button className="cr-section-header cr-section-toggle" onClick={() => setOpen(o => !o)}>
-        <h2 className="cr-section-title">Stale Projects — Cleanup</h2>
-        <span className="cr-section-badge cr-badge-soon">Coming soon</span>
+        <h2 className="cr-section-title">Stale Projects — Cleanup Needed</h2>
+        <span className={`cr-section-badge${count > 0 ? ' cr-badge-warn' : ''}`}>
+          {count > 0 ? `${count} closed with open children` : 'None — clean ✓'}
+        </span>
         <span className="cr-section-chevron">{open ? '▲' : '▼'}</span>
       </button>
+
       {open && (
         <div className="cr-section-body">
-          <p className="cr-placeholder-text">
-            Will show: closed/cancelled projects with open children, unassigned P0s,
-            chronic deferrals (3+ kicks), fixVersion anomalies.
-          </p>
+          {count === 0 ? (
+            <p className="cr-placeholder-text">
+              No closed/cancelled projects with open work found — data hygiene looks good.
+            </p>
+          ) : (
+            <>
+              <p className="cr-cleanup-intro">
+                The following <strong>{count}</strong> project(s)/epic(s) are <strong>closed or cancelled</strong> in JIRA
+                but still have <strong>outstanding open work items</strong> underneath them.
+                These inflate component metrics and hide real risk. Each item needs an owner decision:
+                reopen the project, close/defer the children, or move children to an active project.
+              </p>
+              <div className="cr-table-scroll">
+                <table className="cr-proj-table cr-cleanup-table">
+                  <thead>
+                    <tr>
+                      <th>Key</th>
+                      <th>Summary</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Fix Version</th>
+                      <th>Open Children ↑</th>
+                      <th>Health</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staleProjects
+                      .sort((a, b) => b.openChildCount - a.openChildCount)
+                      .map(row => (
+                        <tr key={row.key} className="cr-cleanup-row">
+                          <td><JiraLink jiraKey={row.key} /></td>
+                          <td className="cr-summary-cell" title={row.summary}>{row.summary}</td>
+                          <td>
+                            <span className={`cr-type-badge cr-type-${row.rowType}`}>
+                              {row.rowType === 'feature' ? 'Feature' : 'Epic'}
+                            </span>
+                          </td>
+                          <td><span className="cr-status-badge cr-status-stale">{row.status}</span></td>
+                          <td className="cr-fixver-cell">{row.fixVersions || '—'}</td>
+                          <td className="cr-count-cell">
+                            <strong className="cr-cleanup-open-count">{row.openChildCount}</strong>
+                          </td>
+                          <td><HealthDot health={row.health} /></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
     </section>
@@ -361,17 +490,21 @@ const ReportSection = ({ title, badge, outstanding, projectBreakdown, isSelected
   const p1 = filtered.filter(i => i.priorityOrder === 1);
   const other = filtered.filter(i => i.priorityOrder >= 2);
 
-  const filterProject = (rows) =>
-    rows.filter(p => isSelectedSection
-      ? isInSelected(p.fixVersions, selectedReleases)
-      : !isInSelected(p.fixVersions, selectedReleases)
-    );
+  // Filter the projectBreakdown byRelease groups to only those matching the section filter
+  const { byRelease = {}, releaseOrder = [] } = projectBreakdown || {};
+  const filteredReleaseOrder = releaseOrder.filter(fv =>
+    isSelectedSection ? selectedReleases.has(fv) : !selectedReleases.has(fv)
+  );
+  const filteredByRelease = {};
+  filteredReleaseOrder.forEach(fv => { filteredByRelease[fv] = byRelease[fv]; });
+  const filteredProjectBreakdown = { byRelease: filteredByRelease, releaseOrder: filteredReleaseOrder };
 
-  const features = filterProject(projectBreakdown?.features || []);
-  const epics = filterProject(projectBreakdown?.epics || []);
-  const directTickets = filterProject(projectBreakdown?.directTickets || []);
+  const totalProjectRows = filteredReleaseOrder.reduce((s, fv) => {
+    const g = byRelease[fv] || {};
+    return s + (g.features?.length || 0) + (g.epics?.length || 0) + (g.directTickets?.length || 0);
+  }, 0);
 
-  const isEmpty = filtered.length === 0 && features.length === 0 && epics.length === 0;
+  const isEmpty = filtered.length === 0 && totalProjectRows === 0;
 
   return (
     <section className={`cr-section cr-section-accordion${open ? ' cr-section-accordion--open' : ''}`}>
@@ -414,14 +547,10 @@ const ReportSection = ({ title, badge, outstanding, projectBreakdown, isSelected
 
             <AccordionWidget
               title="Project Level Info"
-              badge={`${features.length + epics.length} projects · ${directTickets.length} direct`}
+              badge={`${totalProjectRows} items across ${filteredReleaseOrder.length} releases`}
               defaultOpen={true}
             >
-              <ProjectsWidget
-                features={features}
-                epics={epics}
-                directTickets={directTickets}
-              />
+              <ProjectsWidget projectBreakdown={filteredProjectBreakdown} />
             </AccordionWidget>
 
             {isSelectedSection && (
@@ -460,6 +589,7 @@ export const ComponentReport = () => {
   const [tabData, setTabData] = useState(null);
   const [tabDataLoading, setTabDataLoading] = useState(false);
   const [tabDataError, setTabDataError] = useState(null);
+  const [fetchedAt, setFetchedAt] = useState(null);
 
   // ── Fetch component list ──────────────────────────────────────────────────
   const fetchComponents = async (forceRefresh = false) => {
@@ -493,6 +623,7 @@ export const ComponentReport = () => {
     setTabData(null);
     setHealthData(null);
     setActionItems([]);
+    setFetchedAt(null);
 
     Promise.all([
       authenticatedGet(`${API_BASE}/api/component/health?component=${encodeURIComponent(selectedComponent)}`),
@@ -502,6 +633,7 @@ export const ComponentReport = () => {
         setHealthData(healthRes.data?.health || null);
         setActionItems(healthRes.data?.actions || []);
         setTabData(dataRes.data || null);
+        setFetchedAt(new Date());
 
         // Populate release multi-select; default = NDB-* versions + master
         const releases = dataRes.data?.availableReleases || [];
@@ -524,7 +656,8 @@ export const ComponentReport = () => {
   };
 
   const outstanding = tabData?.outstanding || [];
-  const projectBreakdown = tabData?.projectBreakdown || { features: [], epics: [], directTickets: [] };
+  const projectBreakdown = tabData?.projectBreakdown || { byRelease: {}, releaseOrder: [] };
+  const staleProjects = tabData?.staleProjects || [];
 
   return (
     <div className="component-report">
@@ -596,14 +729,21 @@ export const ComponentReport = () => {
           </div>
         )}
 
-        <button
-          className="cr-btn-fetch"
-          onClick={fetchReportData}
-          disabled={!selectedComponent || tabDataLoading}
-          title={!selectedComponent ? 'Select a component first' : 'Fetch report data'}
-        >
-          {tabDataLoading ? '⏳ Fetching…' : '↓ Fetch'}
-        </button>
+        <div className="cr-fetch-group">
+          <button
+            className={tabData ? 'cr-btn-refetch' : 'cr-btn-fetch'}
+            onClick={fetchReportData}
+            disabled={!selectedComponent || tabDataLoading}
+            title={!selectedComponent ? 'Select a component first' : tabData ? 'Re-fetch data for this component' : 'Fetch report data'}
+          >
+            {tabDataLoading ? '⏳ Fetching…' : tabData ? '↺ Refresh' : '↓ Fetch'}
+          </button>
+          {fetchedAt && !tabDataLoading && (
+            <span className="cr-fetched-at">
+              data as of {fetchedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Health card ───────────────────────────────────────────────────── */}
@@ -670,8 +810,8 @@ export const ComponentReport = () => {
             selectedReleases={selectedReleases}
           />
 
-          {/* Section C: Stale / Cleanup placeholder */}
-          <CleanupSection />
+          {/* Section C: Stale projects with open children */}
+          <CleanupSection staleProjects={staleProjects} />
         </>
       )}
     </div>

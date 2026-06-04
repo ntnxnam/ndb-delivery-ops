@@ -160,19 +160,59 @@ const PRIORITY_ORDER = {
   'Trivial - P4': 4,
 };
 
-const WORK_TYPES = ['Bug', 'Improvement', 'Task', 'Test', 'Other'];
+// W4 work-type columns: Task covers "Task" and "Unit Test" combined
+const WORK_TYPES = ['Bug', 'TaskUnit', 'Improvement', 'Test', 'Other'];
 
 function classifyIssueType(issuetype) {
   const t = (issuetype || '').toLowerCase();
   if (t === 'bug') return 'Bug';
   if (t === 'improvement') return 'Improvement';
-  if (t === 'task' || t === 'unit test') return 'Task';
+  if (t === 'task' || t === 'unit test') return 'TaskUnit';
   if (t === 'test') return 'Test';
   return 'Other';
 }
 
+// Extract primary fixVersion name from an issue (first NDB-* or master, else first)
+function primaryFixVersion(issue) {
+  const fvs = Array.isArray(issue.fixVersions)
+    ? issue.fixVersions.map(v => v.name)
+    : (issue.fixVersions ? String(issue.fixVersions).split(',').map(s => s.trim()) : []);
+  const preferred = fvs.find(v => /^NDB-\d/.test(v) || v.toLowerCase() === 'master');
+  return preferred || fvs[0] || 'Unknown';
+}
+
+// Check if any descendant has a fixVersion that differs from the parent's primary fixVersion
+function hasMismatch(parentFV, descendants) {
+  if (!parentFV || parentFV === 'Unknown') return false;
+  return descendants.some(d => {
+    const dfvs = Array.isArray(d.fixVersions)
+      ? d.fixVersions.map(v => v.name)
+      : (d.fixVersions ? String(d.fixVersions).split(',').map(s => s.trim()) : []);
+    return dfvs.length > 0 && !dfvs.includes(parentFV);
+  });
+}
+
+// Check if affectedVersion contains ERA Future or Triage
+function hasAffectedVersionAnomaly(issue) {
+  const avs = Array.isArray(issue.versions)
+    ? issue.versions.map(v => (v.name || '').toLowerCase())
+    : [];
+  return avs.some(v => v.includes('era future') || v === 'triage');
+}
+
 function isDone(issue) {
   return issue.status?.statusCategory?.key === 'done';
+}
+
+// A project/epic is "active" if it is not in a terminal done state
+function isActiveRow(issue) {
+  return !isDone(issue);
+}
+
+// A project/epic is "stale" if it IS done but has outstanding (non-done) descendants
+function isStaleWithOpenWork(issue, descendants) {
+  if (!isDone(issue)) return false;
+  return descendants.some(d => !isDone(d));
 }
 
 function normaliseIssue(issue) {
@@ -224,24 +264,50 @@ function buildOutstandingList(payload) {
 }
 
 /**
- * Build per-project breakdown for Widget 4.
- * Uses parent field (now fetched by STANDARD_FIELD_NAMES) for 2-hop traversal.
+ * Build Widget 4 project breakdown.
+ *
+ * Returns:
+ *   { byRelease, releaseOrder }  — active rows grouped by fixVersion (for Section A/B)
+ *   staleProjects                — closed/cancelled rows that have outstanding children (for Cleanup section)
+ *
+ * Active = row is not in a done state (statusCategory != done)
+ * Stale  = row IS done but has ≥1 outstanding descendant → orphaned open work
+ *
+ * directTickets: outstanding-only (JQL already filters statusCategory != Done).
+ * Each direct ticket counts itself in its work-type column.
  */
 function buildProjectBreakdown(payload) {
-  // Map: parentKey → [child issues]
+  // ── Parent→children map (all children, no status filter at this layer) ─────
+  // Parent key resolution depends on JIRA hierarchy level:
+  //   portfolioChildren (Epics under Features)  → customfield_20363 (Parent Link)
+  //   epicChildren / standaloneEpicChildren      → customfield_10017 (Epic Link)
+  //   sub-tasks                                  → issue.parent.key (standard field)
   const childrenOf = {};
-  const addChildren = (issues) => {
-    issues.forEach(issue => {
-      const pk = issue.parent?.key;
-      if (pk) {
-        if (!childrenOf[pk]) childrenOf[pk] = [];
-        childrenOf[pk].push(issue);
-      }
-    });
+  const addChild = (issue, parentKey) => {
+    if (!parentKey) return;
+    if (!childrenOf[parentKey]) childrenOf[parentKey] = [];
+    childrenOf[parentKey].push(issue);
   };
-  addChildren(payload.portfolioChildren);     // epics → Feature
-  addChildren(payload.epicChildren);           // work items → epic
-  addChildren(payload.standaloneEpicChildren); // work items → standalone epic
+
+  payload.portfolioChildren.forEach(issue => {
+    // customfield_20363 (Parent Link) is a string "ERA-XXXX" for epics under features
+    const parentLink = issue.customfield_20363;
+    const pk = (typeof parentLink === 'string' ? parentLink : parentLink?.key) || issue.parent?.key;
+    addChild(issue, pk);
+  });
+
+  payload.epicChildren.forEach(issue => {
+    // customfield_10361 (Epic Link) is the correct field ID for this JIRA instance
+    const epicLink = issue.customfield_10361;
+    const pk = (typeof epicLink === 'string' ? epicLink : epicLink?.key) || issue.parent?.key;
+    addChild(issue, pk);
+  });
+
+  payload.standaloneEpicChildren.forEach(issue => {
+    const epicLink = issue.customfield_10361;
+    const pk = (typeof epicLink === 'string' ? epicLink : epicLink?.key) || issue.parent?.key;
+    addChild(issue, pk);
+  });
 
   function collectDescendants(key, visited = new Set()) {
     if (visited.has(key)) return [];
@@ -251,11 +317,10 @@ function buildProjectBreakdown(payload) {
     return [...direct, ...deeper];
   }
 
+  // ── Compute work-type breakdown (outstanding + done counts) ───────────────
   function computeBreakdown(issues) {
     const counts = {};
-    WORK_TYPES.forEach(t => {
-      counts[t] = { outstanding: 0, done: 0, p0: 0, p1: 0 };
-    });
+    WORK_TYPES.forEach(t => { counts[t] = { outstanding: 0, done: 0, p0: 0, p1: 0 }; });
     counts.Bug.assignees = {};
 
     issues.forEach(issue => {
@@ -275,65 +340,136 @@ function buildProjectBreakdown(payload) {
       }
     });
 
-    const topAssignees = Object.entries(counts.Bug.assignees || {})
+    const topBugAssignees = Object.entries(counts.Bug.assignees || {})
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(([n, c]) => ({ name: n, count: c }));
+      .map(([name, count]) => ({ name, count }));
 
-    return { counts, topBugAssignees: topAssignees };
+    return { counts, topBugAssignees };
   }
 
-  const mapProject = (project, descendants) => {
+  function totalOutstanding(breakdown) {
+    return WORK_TYPES.reduce((s, t) => s + (breakdown.counts[t]?.outstanding || 0), 0);
+  }
+
+  // ── Map a project/epic row ─────────────────────────────────────────────────
+  function mapRow(issue, descendants, rowType) {
+    const fv = primaryFixVersion(issue);
     const breakdown = computeBreakdown(descendants);
-    const p0Bugs = breakdown.counts.Bug.p0;
-    const p1Bugs = breakdown.counts.Bug.p1;
     const p0Total = WORK_TYPES.reduce((s, t) => s + breakdown.counts[t].p0, 0);
+    const p0Bugs = breakdown.counts.Bug?.p0 || 0;
+    const p1Bugs = breakdown.counts.Bug?.p1 || 0;
     let health = 'green';
     if (p0Bugs > 3 || p0Total > 5) health = 'red';
     else if (p0Bugs > 0 || p1Bugs > 5) health = 'yellow';
 
     return {
-      key: project.key,
-      summary: project.summary || '',
-      issuetype: project.issuetype?.name || project.issuetype || '',
-      status: project.status?.name || project.status || '',
-      statusCategory: project.status?.statusCategory?.key || project.statusCategory || '',
-      fixVersions: Array.isArray(project.fixVersions)
-        ? project.fixVersions.map(v => v.name).join(', ')
-        : (project.fixVersions || ''),
-      assignee: project.assignee?.displayName || project.assignee || 'Unassigned',
+      key: issue.key,
+      summary: issue.summary || '',
+      issuetype: issue.issuetype?.name || issue.issuetype || '',
+      status: issue.status?.name || issue.status || '',
+      statusCategory: issue.status?.statusCategory?.key || '',
+      fixVersion: fv,
+      fixVersions: Array.isArray(issue.fixVersions)
+        ? issue.fixVersions.map(v => v.name).join(', ')
+        : (issue.fixVersions || ''),
       health,
+      rowType,
+      mismatch: hasMismatch(fv, descendants),
+      affectedVersionAnomaly: hasAffectedVersionAnomaly(issue),
       breakdown,
+      openChildCount: totalOutstanding(breakdown),
     };
+  }
+
+  // ── Map a direct ticket (counts itself) ───────────────────────────────────
+  // directTickets are already filtered to outstanding-only by JQL
+  function mapDirectRow(issue) {
+    const fv = primaryFixVersion(issue);
+    // Only show direct tickets with a meaningful fixVersion (NDB-* or master)
+    // Tickets with ancient/ambiguous versions (Era 1.0 etc.) are noise
+    const isRelevantFV = /^NDB-\d/.test(fv) || fv.toLowerCase() === 'master';
+    if (!isRelevantFV) return null;
+
+    const t = classifyIssueType(issue.issuetype?.name || issue.issuetype || '');
+    const prio = issue.priority?.name || '';
+    const counts = {};
+    WORK_TYPES.forEach(wt => { counts[wt] = { outstanding: 0, done: 0, p0: 0, p1: 0 }; });
+    counts.Bug.assignees = {};
+    counts[t].outstanding++;
+    if (prio === 'Blocker - P0') counts[t].p0++;
+    else if (prio === 'Critical - P1') counts[t].p1++;
+    if (t === 'Bug') {
+      const name = issue.assignee?.displayName || 'Unassigned';
+      counts.Bug.assignees[name] = 1;
+    }
+    const topBugAssignees = t === 'Bug'
+      ? [{ name: issue.assignee?.displayName || 'Unassigned', count: 1 }]
+      : [];
+
+    return {
+      key: issue.key,
+      summary: issue.summary || '',
+      issuetype: issue.issuetype?.name || issue.issuetype || '',
+      status: issue.status?.name || issue.status || '',
+      statusCategory: issue.status?.statusCategory?.key || '',
+      fixVersion: fv,
+      fixVersions: Array.isArray(issue.fixVersions)
+        ? issue.fixVersions.map(v => v.name).join(', ')
+        : (issue.fixVersions || ''),
+      health: counts[t]?.p0 > 0 ? 'red' : 'green',
+      rowType: 'direct',
+      mismatch: false,
+      affectedVersionAnomaly: hasAffectedVersionAnomaly(issue),
+      breakdown: { counts, topBugAssignees },
+      openChildCount: 1,
+    };
+  }
+
+  // ── Build active rows (features + standalone epics + outstanding direct tickets) ─
+  const activeRows = [
+    ...payload.topLevelProjects.map(f => mapRow(f, collectDescendants(f.key), 'feature')),
+    ...payload.standaloneEpics.map(e => mapRow(e, collectDescendants(e.key), 'epic')),
+    ...payload.directTickets.map(d => mapDirectRow(d)).filter(Boolean),
+  ];
+  
+
+  // ── Build stale rows (closed/cancelled with open children) ────────────────
+  const staleRows = [
+    ...( payload.staleTopLevel || []).map(f => {
+      const desc = collectDescendants(f.key);
+      return mapRow(f, desc, 'feature');
+    }).filter(r => r.openChildCount > 0),
+    ...( payload.staleEpics || []).map(e => {
+      const desc = collectDescendants(e.key);
+      return mapRow(e, desc, 'epic');
+    }).filter(r => r.openChildCount > 0),
+  ];
+
+  // ── Group active rows by fixVersion ───────────────────────────────────────
+  const sortFV = (a, b) => {
+    const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
+    const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
+    if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
+    if (ndbA) return -1;
+    if (ndbB) return 1;
+    if (a.toLowerCase() === 'master') return -1;
+    if (b.toLowerCase() === 'master') return 1;
+    return a.localeCompare(b);
   };
 
-  const features = payload.topLevelProjects.map(feature => {
-    const descendants = collectDescendants(feature.key);
-    return mapProject(feature, descendants);
+  const byRelease = {};
+  activeRows.forEach(row => {
+    const fv = row.fixVersion;
+    if (!byRelease[fv]) byRelease[fv] = { features: [], epics: [], directTickets: [] };
+    if (row.rowType === 'feature') byRelease[fv].features.push(row);
+    else if (row.rowType === 'epic') byRelease[fv].epics.push(row);
+    else byRelease[fv].directTickets.push(row);
   });
 
-  const epics = payload.standaloneEpics.map(epic => {
-    const descendants = collectDescendants(epic.key);
-    return mapProject(epic, descendants);
-  });
+  const releaseOrder = Object.keys(byRelease).sort(sortFV);
 
-  // Direct tickets (no epic, no project) — group as a flat list
-  const directTickets = payload.directTickets.map(issue => ({
-    key: issue.key,
-    summary: issue.summary || '',
-    issuetype: issue.issuetype?.name || issue.issuetype || '',
-    status: issue.status?.name || issue.status || '',
-    statusCategory: issue.status?.statusCategory?.key || issue.statusCategory || '',
-    priority: issue.priority?.name || 'Unprioritised',
-    priorityOrder: PRIORITY_ORDER[issue.priority?.name] ?? 5,
-    fixVersions: Array.isArray(issue.fixVersions)
-      ? issue.fixVersions.map(v => v.name).join(', ')
-      : (issue.fixVersions || ''),
-    assignee: issue.assignee?.displayName || issue.assignee || 'Unassigned',
-    age: ageInDays(issue.created),
-  }));
-
-  return { features, epics, directTickets };
+  return { byRelease, releaseOrder, staleProjects: staleRows };
 }
 
 /**
@@ -357,10 +493,12 @@ router.get('/data', auth, async (req, res) => {
     const payload = await fetchComponentPayload(component, jiraToken);
 
     const outstanding = buildOutstandingList(payload);
-    const projectBreakdown = buildProjectBreakdown(payload);
+    const { byRelease, releaseOrder, staleProjects } = buildProjectBreakdown(payload);
+    const projectBreakdown = { byRelease, releaseOrder };
 
-    // Collect all unique fixVersion names across the entire payload
-    const allIssuesForVersions = [
+    // availableReleases: only NDB-X.Y and master — no ancient ERA versions or Triage/Future
+    // Source: active issues only (outstanding list) to avoid pulling in historical versions from stale items
+    const activeIssues = [
       ...payload.topLevelProjects,
       ...payload.portfolioChildren,
       ...payload.epicChildren,
@@ -369,22 +507,22 @@ router.get('/data', auth, async (req, res) => {
       ...payload.directTickets,
     ];
     const versionSet = new Set();
-    allIssuesForVersions.forEach(issue => {
+    activeIssues.forEach(issue => {
       const fvs = issue.fixVersions;
-      if (Array.isArray(fvs)) {
-        fvs.forEach(v => { if (v?.name) versionSet.add(v.name); });
-      } else if (typeof fvs === 'string' && fvs) {
-        fvs.split(',').forEach(v => { const t = v.trim(); if (t) versionSet.add(t); });
-      }
+      const names = Array.isArray(fvs) ? fvs.map(v => v.name) : (fvs ? String(fvs).split(',').map(s => s.trim()) : []);
+      names.forEach(n => {
+        if (!n) return;
+        // Only include NDB-X.Y (committed releases) and master (active funded work)
+        if (/^NDB-\d/.test(n) || n.toLowerCase() === 'master') {
+          versionSet.add(n);
+        }
+      });
     });
-    // Sort: NDB-X.Y versions numerically desc, then master, then others
+
     const availableReleases = [...versionSet].sort((a, b) => {
       const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
       const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
-      if (ndbA && ndbB) {
-        const diff = parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
-        return diff;
-      }
+      if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
       if (ndbA) return -1;
       if (ndbB) return 1;
       if (a.toLowerCase() === 'master') return -1;
@@ -392,7 +530,11 @@ router.get('/data', auth, async (req, res) => {
       return a.localeCompare(b);
     });
 
-    res.json({ outstanding, projectBreakdown, availableReleases });
+    console.log('[component route] Active releases found:', availableReleases.join(', ') || '(none)');
+    console.log('[component route] Active rows:', releaseOrder.map(fv => `${fv}:${(byRelease[fv]?.features?.length||0)+(byRelease[fv]?.epics?.length||0)+(byRelease[fv]?.directTickets?.length||0)}`).join(', '));
+    console.log('[component route] Stale projects with open children:', staleProjects.length);
+
+    res.json({ outstanding, projectBreakdown, staleProjects, availableReleases });
   } catch (err) {
     console.error('[component route] Error fetching data:', err.message);
     res.status(500).json({ error: err.message });

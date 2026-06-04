@@ -40,7 +40,7 @@ import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { useReleaseBrief } from './hooks/useReleaseBrief';
 import { jiraSearchUrl } from './services/releaseBriefService';
-import { IssueTypeBreakdownTable } from './components/IssueTypeBreakdownTable';
+import { ProjectBreakdownMatrix } from './components/ProjectBreakdownMatrix';
 import './ReleaseBriefPage.css';
 
 export default function ReleaseBriefPage() {
@@ -61,6 +61,7 @@ export default function ReleaseBriefPage() {
     loadingForecast,
     loadingGates,
     loadingOutstanding,
+    loadingProjectBreakdown,
     error,
     versions,
     kpis,
@@ -70,6 +71,7 @@ export default function ReleaseBriefPage() {
     forecast,
     gateTimeline,
     outstanding,
+    projectBreakdown,
     selectedRelease,
     setSelectedRelease,
     refresh,
@@ -154,10 +156,10 @@ export default function ReleaseBriefPage() {
           )}
 
           {ready && (
-            <IssueTypeBreakdownTable
-              synopsis={synopsis}
-              jiraBaseUrl={jiraBaseUrl}
+            <ProjectBreakdownMatrix
+              projectBreakdown={projectBreakdown}
               selectedRelease={selectedRelease}
+              loading={loadingProjectBreakdown}
             />
           )}
 
@@ -292,9 +294,9 @@ function KpiGrid({ kpis, results, loading, jiraBaseUrl }) {
     <div className="ds-grid-kpis">
       {kpis.map((kpi, idx) => (
         <KpiTile
-          key={kpi.key || idx}
+          key={kpi.id || kpi.key || idx}
           kpi={kpi}
-          result={results[kpi.key]}
+          result={results[kpi.id || kpi.key]}
           jiraBaseUrl={jiraBaseUrl}
         />
       ))}

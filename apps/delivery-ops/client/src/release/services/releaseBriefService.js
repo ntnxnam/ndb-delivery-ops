@@ -266,6 +266,56 @@ export async function fetchOutstanding({
 }
 
 /**
+ * Fetch the three-tier release project breakdown:
+ * - projects (Feature/Initiative rows)
+ * - standaloneEpics
+ * - standaloneTickets (aggregate row)
+ *
+ * @returns {Promise<{
+ *   breakdown: {
+ *     projects: Array<{projectKey: string, projectName: string, issueTypeGroups: Array}>,
+ *     standaloneEpics: Array<{projectKey: string, projectName: string, issueTypeGroups: Array}>,
+ *     standaloneTickets: {projectKey: string, projectName: string, issueTypeGroups: Array} | null
+ *   }
+ * }>}
+ */
+export async function fetchProjectBreakdown({
+  productId = 'ndb',
+  release,
+  jiraToken,
+  username,
+}) {
+  if (!release) {
+    return {
+      breakdown: {
+        projects: [],
+        standaloneEpics: [],
+        standaloneTickets: null,
+      },
+    };
+  }
+  const res = await authenticatedGet(
+    `${API_BASE}/api/release-dataset/project-breakdown`,
+    { productId, release },
+    { jiraToken, username }
+  );
+  const body = res?.data;
+  if (!body?.success) {
+    const err = body?.error || 'Failed to fetch project breakdown';
+    const e = new Error(err);
+    e.response = { data: body };
+    throw e;
+  }
+  return {
+    breakdown: {
+      projects: body.data?.projects || [],
+      standaloneEpics: body.data?.standaloneEpics || [],
+      standaloneTickets: body.data?.standaloneTickets || null,
+    },
+  };
+}
+
+/**
  * Turn a JQL string + a JIRA base URL into a clickable filter URL.
  *
  * Per jira-authenticity-links.mdc — every count on the page links to JIRA

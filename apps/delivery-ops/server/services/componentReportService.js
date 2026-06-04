@@ -78,38 +78,46 @@ async function fetchComponentsFromERA(jiraToken) {
 function buildComponentPayloadJQL(componentName) {
   const projectKey = getProjectKey();
 
-  // For outer JQL context — e.g.  component = "CommonLayer"
-  const compOuter = `component = "${componentName.replace(/"/g, '\\"')}"`;
+  const esc = componentName.replace(/"/g, '\\"');
+  const escInner = componentName.replace(/"/g, '\\\\"');
 
-  // For nested JQL inside function args — quotes must be escaped again
-  // portfolioChildrenOf("... component = \"CommonLayer\" ...")
-  const compInner = `component = \\"${componentName.replace(/"/g, '\\\\"')}\\"`; 
+  // Match component via standard field OR "Primary Component" custom field.
+  // No project constraint on Feature/Initiative queries — Features live in both ERA and FEAT projects.
+  const compOuter = `(component = "${esc}" OR "Primary Component" = "${esc}")`;
+  const compInner = `(component = \\"${escInner}\\" OR \\"Primary Component\\" = \\"${escInner}\\")`;
 
   return {
-    // Direct component membership on projects/initiatives
+    // Active Features/Initiatives — no project constraint so FEAT-* tickets are included
     topLevelProjects:
-      `project = ${projectKey} AND issuetype in (Feature, Initiative) AND ${compOuter} AND status not in (Closed, Cancelled)`,
+      `issuetype in (Feature, Initiative) AND ${compOuter} AND status not in (Closed, Cancelled, Done, Resolved)`,
 
-    // Children of those projects — portfolioChildrenOf needs escaped inner quotes
+    // Children of those active projects — outer project = ERA because children live in ERA
     portfolioChildren:
-      `project = ${projectKey} AND issuefunction in portfolioChildrenOf("project = ${projectKey} AND issuetype in (Feature, Initiative) AND ${compInner} AND status not in (Closed, Cancelled)")`,
+      `project = ${projectKey} AND issuefunction in portfolioChildrenOf("issuetype in (Feature, Initiative) AND ${compInner} AND status not in (Closed, Cancelled, Done, Resolved)")`,
 
-    // Implementation tickets (non-portfolio) with component, linked to an epic —
-    // avoids triple-nested JQL quoting issues; semantically equivalent for the component view.
+    // Work items (non-portfolio) with component and an epic link (outstanding only)
     epicChildren:
-      `project = ${projectKey} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${compOuter} AND "Epic link" is not EMPTY AND status not in (Closed, Cancelled)`,
+      `project = ${projectKey} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${compOuter} AND "Epic link" is not EMPTY AND statusCategory != Done`,
 
-    // Standalone epics with no parent link
+    // Active standalone epics — no parent link (not closed/cancelled)
     standaloneEpics:
-      `project = ${projectKey} AND issuetype = Epic AND ${compOuter} AND "Parent Link" is EMPTY AND status not in (Closed, Cancelled)`,
+      `project = ${projectKey} AND issuetype = Epic AND ${compOuter} AND "Parent Link" is EMPTY AND status not in (Closed, Cancelled, Done, Resolved)`,
 
-    // Children of standalone epics — same simple approach as epicChildren above
+    // Children of standalone epics
     standaloneEpicChildren:
-      `project = ${projectKey} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${compOuter} AND "Epic link" is not EMPTY AND status not in (Closed, Cancelled)`,
+      `project = ${projectKey} AND issueFunction in issuesInEpics("project = ${projectKey} AND issuetype = Epic AND ${compInner} AND \\"Parent Link\\" is EMPTY AND status not in (Closed, Cancelled, Done, Resolved)") AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND statusCategory != Done`,
 
-    // Loose tickets with no epic link that carry the component
+    // Outstanding loose tickets with component, no epic link
     directTickets:
-      `project = ${projectKey} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${compOuter} AND "Epic link" is EMPTY AND status not in (Closed, Cancelled)`,
+      `project = ${projectKey} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${compOuter} AND "Epic link" is EMPTY AND statusCategory != Done`,
+
+    // Stale Features/Initiatives (done/cancelled) — no project constraint, same as topLevelProjects
+    staleTopLevel:
+      `issuetype in (Feature, Initiative) AND ${compOuter} AND statusCategory = Done`,
+
+    // Stale standalone Epics (done/cancelled)
+    staleEpics:
+      `project = ${projectKey} AND issuetype = Epic AND ${compOuter} AND "Parent Link" is EMPTY AND statusCategory = Done`,
   };
 }
 
@@ -126,20 +134,22 @@ async function safeJqlSearch(jiraToken, jql, maxResults, label) {
 }
 
 /**
- * Fetch 6-part component payload in parallel.
+ * Fetch component payload in parallel — active issues + stale items for Cleanup section.
  * runSearchByJql signature: (token, jql, maxResults)
  */
 async function fetchComponentPayload(componentName, jiraToken) {
   const q = buildComponentPayloadJQL(componentName);
   console.log('[componentReportService] Fetching payload for component:', componentName);
 
-  const [r0, r1, r2, r3, r4, r5] = await Promise.all([
-    safeJqlSearch(jiraToken, q.topLevelProjects, 100, 'topLevelProjects'),
-    safeJqlSearch(jiraToken, q.portfolioChildren, 100, 'portfolioChildren'),
-    safeJqlSearch(jiraToken, q.epicChildren, 500, 'epicChildren'),
-    safeJqlSearch(jiraToken, q.standaloneEpics, 100, 'standaloneEpics'),
+  const [r0, r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
+    safeJqlSearch(jiraToken, q.topLevelProjects,      100, 'topLevelProjects'),
+    safeJqlSearch(jiraToken, q.portfolioChildren,     200, 'portfolioChildren'),
+    safeJqlSearch(jiraToken, q.epicChildren,          500, 'epicChildren'),
+    safeJqlSearch(jiraToken, q.standaloneEpics,       100, 'standaloneEpics'),
     safeJqlSearch(jiraToken, q.standaloneEpicChildren, 500, 'standaloneEpicChildren'),
-    safeJqlSearch(jiraToken, q.directTickets, 500, 'directTickets'),
+    safeJqlSearch(jiraToken, q.directTickets,         200, 'directTickets'),
+    safeJqlSearch(jiraToken, q.staleTopLevel,         100, 'staleTopLevel'),
+    safeJqlSearch(jiraToken, q.staleEpics,            100, 'staleEpics'),
   ]);
 
   return {
@@ -149,6 +159,8 @@ async function fetchComponentPayload(componentName, jiraToken) {
     standaloneEpics:        r3?.issues || [],
     standaloneEpicChildren: r4?.issues || [],
     directTickets:          r5?.issues || [],
+    staleTopLevel:          r6?.issues || [],
+    staleEpics:             r7?.issues || [],
   };
 }
 

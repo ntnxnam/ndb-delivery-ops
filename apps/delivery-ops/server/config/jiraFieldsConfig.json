@@ -188,7 +188,15 @@
         "label": "Parent Link",
         "type": "link",
         "category": "relationships",
-        "description": "Link to parent ticket (for Epics)",
+        "description": "Link to parent ticket (for Epics in portfolio hierarchy)",
+        "usedIn": ["fetch"]
+      },
+      "epicLink": {
+        "id": "customfield_10361",
+        "label": "Epic Link",
+        "type": "link",
+        "category": "relationships",
+        "description": "Link to parent Epic (for Stories, Tasks, Bugs under an Epic)",
         "usedIn": ["fetch"]
       }
     },

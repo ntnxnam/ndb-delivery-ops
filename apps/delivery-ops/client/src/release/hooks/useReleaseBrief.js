@@ -16,11 +16,12 @@
  * All `useCallback`/`useMemo` guarded per react-useeffect-infinite-loop-prevention.mdc.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchGateTimeline,
   fetchLandingForecast,
   fetchOutstanding,
+  fetchProjectBreakdown,
   fetchReleaseKpiBatch,
   fetchReleasePayloadSynopsis,
   fetchSprintVelocity,
@@ -46,6 +47,7 @@ export function useReleaseBrief({
   const [forecast, setForecast] = useState(null);
   const [gateTimeline, setGateTimeline] = useState(null);
   const [outstanding, setOutstanding] = useState(null);
+  const [projectBreakdown, setProjectBreakdown] = useState(null);
   const [selectedRelease, setSelectedRelease] = useState(() => {
     return (
       localStorage.getItem('releaseBriefSelectedRelease') ||
@@ -60,7 +62,14 @@ export function useReleaseBrief({
   const [loadingForecast, setLoadingForecast] = useState(false);
   const [loadingGates, setLoadingGates] = useState(false);
   const [loadingOutstanding, setLoadingOutstanding] = useState(false);
+  const [loadingProjectBreakdown, setLoadingProjectBreakdown] = useState(false);
   const [error, setError] = useState('');
+  
+  // Debounce ref for project-breakdown to prevent duplicate concurrent requests.
+  // If loadProjectBreakdown is called again within 500ms of a successful response,
+  // it will be ignored, preventing the second request from timing out and
+  // overwriting the good data.
+  const projectBreakdownTimeoutRef = useRef(null);
 
   const ready = !!teamId && !!jiraToken;
 
@@ -290,6 +299,44 @@ export function useReleaseBrief({
     }
   }, [productId, selectedRelease, jiraToken, username, results, gateTimeline]);
 
+  // 9. Project breakdown — per-project issue type group counts by status.
+  // Independent of other data loads.
+  // Includes debounce to prevent duplicate requests: after a successful load,
+  // any new call within 500ms is skipped to prevent the second request from
+  // timing out and overwriting the good data.
+  // CRITICAL: On error, we do NOT clear the data — keep showing the previous
+  // successful fetch instead of displaying "No data available". This ensures
+  // the user always sees the latest good state, not a blank page on transient errors.
+  const loadProjectBreakdown = useCallback(async () => {
+    if (!jiraToken || !selectedRelease) {
+      setProjectBreakdown(null);
+      return;
+    }
+    setLoadingProjectBreakdown(true);
+    try {
+      const { breakdown } = await fetchProjectBreakdown({
+        productId,
+        release: selectedRelease,
+        jiraToken,
+        username,
+      });
+      setProjectBreakdown(breakdown);
+      // Set debounce: prevent re-fetching for 500ms after success
+      if (projectBreakdownTimeoutRef.current) {
+        clearTimeout(projectBreakdownTimeoutRef.current);
+      }
+      projectBreakdownTimeoutRef.current = setTimeout(() => {
+        projectBreakdownTimeoutRef.current = null;
+      }, 500);
+    } catch (e) {
+      // Log error but do NOT clear projectBreakdown — keep showing the previous good data
+      setError(e.response?.data?.error || e.message || 'Failed to load project breakdown');
+      // setProjectBreakdown(null); — REMOVED: keep the previous successful data
+    } finally {
+      setLoadingProjectBreakdown(false);
+    }
+  }, [productId, selectedRelease, jiraToken, username]);
+
   useEffect(() => {
     loadVersions();
     loadKpis();
@@ -301,7 +348,12 @@ export function useReleaseBrief({
     loadVelocity();
     loadGates();
     loadOutstanding();
-  }, [loadResults, loadSynopsis, loadVelocity, loadGates, loadOutstanding]);
+    // Debounce project breakdown: only call it if ref is not set
+    // (i.e., we haven't called it in the last 500ms)
+    if (!projectBreakdownTimeoutRef.current) {
+      loadProjectBreakdown();
+    }
+  }, [loadResults, loadSynopsis, loadVelocity, loadGates, loadOutstanding, loadProjectBreakdown]);
 
   // Forecast load runs after `results` and `gateTimeline` change so the
   // planned-GA hint can come from the gate config first, KPI results
@@ -316,6 +368,7 @@ export function useReleaseBrief({
     loadVelocity();
     loadGates();
     loadOutstanding();
+    loadProjectBreakdown();
     loadForecast();
   }, [
     loadResults,
@@ -323,6 +376,7 @@ export function useReleaseBrief({
     loadVelocity,
     loadGates,
     loadOutstanding,
+    loadProjectBreakdown,
     loadForecast,
   ]);
 
@@ -339,7 +393,8 @@ export function useReleaseBrief({
     loadingVelocity ||
     loadingForecast ||
     loadingGates ||
-    loadingOutstanding;
+    loadingOutstanding ||
+    loadingProjectBreakdown;
 
   return useMemo(
     () => ({
@@ -353,6 +408,7 @@ export function useReleaseBrief({
       loadingForecast,
       loadingGates,
       loadingOutstanding,
+      loadingProjectBreakdown,
       error,
       versions,
       kpis,
@@ -362,6 +418,7 @@ export function useReleaseBrief({
       forecast,
       gateTimeline,
       outstanding,
+      projectBreakdown,
       jiraBaseUrl,
       selectedRelease,
       setSelectedRelease: onSelectRelease,
@@ -378,6 +435,7 @@ export function useReleaseBrief({
       loadingForecast,
       loadingGates,
       loadingOutstanding,
+      loadingProjectBreakdown,
       error,
       versions,
       kpis,
@@ -387,6 +445,7 @@ export function useReleaseBrief({
       forecast,
       gateTimeline,
       outstanding,
+      projectBreakdown,
       jiraBaseUrl,
       selectedRelease,
       onSelectRelease,
