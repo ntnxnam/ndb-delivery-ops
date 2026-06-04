@@ -670,7 +670,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 1: Fetch TOP-LEVEL PROJECTS (Features/Initiatives/X-FEAT/Capability)
     // =========================================================================
     console.log('[project-breakdown] STAGE 1: Fetching top-level projects...');
-    const topLevelJql = `fixVersion = ${release} AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
+    const topLevelJql = `fixVersion = "${release}" AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
     const topLevelProjects = await jira.searchAll(
       topLevelJql,
       `key,issuetype,summary,parent,${parentLinkFields.join(',')}`,
@@ -744,7 +744,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 4: Fetch STANDALONE EPICS (no parent link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
-    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = ${release} AND parent is EMPTY AND ${parentLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY AND ${parentLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
     const standaloneEpics = await jira.searchAll(
       standaloneEpicsJql,
       `key,summary`,
@@ -783,7 +783,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 6: Fetch STANDALONE TICKETS (no epic link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 6: Fetching standalone tickets...');
-    const standaloneTicketsJql = `fixVersion = ${release} AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${epicLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${epicLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
     const standaloneTickets = await jira.searchAll(
       standaloneTicketsJql,
       `key,issuetype,status`,
