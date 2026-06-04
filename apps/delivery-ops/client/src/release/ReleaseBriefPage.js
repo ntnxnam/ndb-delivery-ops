@@ -424,6 +424,14 @@ function LandingForecastPanel({ forecast, loading }) {
               rag={forecast.unresolved === 0 ? 'green' : 'amber'}
             />
           )}
+          {typeof forecast.pendingVerification === 'number' && (
+            <KPICard
+              label="Pending Verification"
+              value={forecast.pendingVerification.toLocaleString()}
+              caption="Bug & Improvement in Resolved status"
+              rag={forecast.pendingVerification === 0 ? 'green' : 'amber'}
+            />
+          )}
         </div>
       )}
     </SectionPanel>

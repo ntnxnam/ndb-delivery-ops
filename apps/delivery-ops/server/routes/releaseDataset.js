@@ -621,12 +621,33 @@ router.get('/project-breakdown', auth, async (req, res) => {
 
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
-    const epicLinkField = getFieldId('epicLink') || 'customfield_10361';
-    const parentLinkField = getFieldId('parentLink') || 'customfield_20363';
-    const epicLinkFields = Array.from(new Set([epicLinkField, 'customfield_10361']));
-    const parentLinkFields = Array.from(new Set([parentLinkField, 'customfield_20363']));
+    
+    // Get configured field IDs - only use what's available
+    const epicLinkField = getFieldId('epicLink');
+    const parentLinkField = getFieldId('parentLink');
+    
+    // Build arrays of field IDs to fetch (only include valid fields)
+    const epicLinkFields = epicLinkField ? [epicLinkField] : [];
+    const parentLinkFields = parentLinkField ? [parentLinkField] : [];
+    
+    // Bail if we don't have the required fields
+    if (epicLinkFields.length === 0 || parentLinkFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required JIRA field configuration: epicLink or parentLink not configured in jiraFieldsConfig.json'
+      });
+    }
     
     const searchOpts = { perPageTimeoutMs: 30000 };
+    
+    // Build field list for API calls - only include fields that exist
+    let fieldsList = `key,issuetype,summary,parent,status`;
+    if (parentLinkFields.length > 0) {
+      fieldsList += `,${parentLinkFields.join(',')}`;
+    }
+    if (epicLinkFields.length > 0) {
+      fieldsList += `,${epicLinkFields.join(',')}`;
+    }
 
     // Constants
     const PROJECT_TYPES = ['Feature', 'Initiative', 'X-FEAT', 'Capability'];
@@ -673,7 +694,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     const topLevelJql = `fixVersion = "${release}" AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
     const topLevelProjects = await jira.searchAll(
       topLevelJql,
-      `key,issuetype,summary,parent,${parentLinkFields.join(',')}`,
+      fieldsList,
       searchOpts
     ) || [];
     console.log(`[project-breakdown] STAGE 1: Found ${topLevelProjects.length} top-level projects`);
@@ -693,10 +714,10 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // Batch: find all epics with a parent link to any top-level project
     const topLevelKeys = topLevelProjects.map(p => p.key).join(',');
     if (topLevelKeys.length > 0) {
-      const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys}) OR ${parentLinkFields.map(f => `"${f}" in (${topLevelKeys})`).join(' OR ')})`;
+      const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys})${parentLinkFields.length > 0 ? ` OR "${parentLinkFields[0]}" in (${topLevelKeys})` : ''})`;
       const childEpics = await jira.searchAll(
         parentEpicsJql,
-        `key,summary,parent,${parentLinkFields.join(',')}`,
+        fieldsList,
         searchOpts
       ) || [];
       console.log(`[project-breakdown] STAGE 2: Found ${childEpics.length} child epics`);
@@ -722,8 +743,8 @@ router.get('/project-breakdown', auth, async (req, res) => {
 
     // Batch: find all work items with epic link to any child epic
     const epicKeys = allEpics.map(e => e.key).join(',');
-    if (epicKeys.length > 0) {
-      const workItemsJql = `(${epicLinkFields.map(f => `"${f}" in (${epicKeys})`).join(' OR ')}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
+    if (epicKeys.length > 0 && epicLinkFields.length > 0) {
+      const workItemsJql = `"${epicLinkFields[0]}" in (${epicKeys}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
       const workItems = await jira.searchAll(
         workItemsJql,
         `key,issuetype,status,${epicLinkFields.join(',')}`,
@@ -744,7 +765,8 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 4: Fetch STANDALONE EPICS (no parent link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
-    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY AND ${parentLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const parentLinkEmptyCondition = parentLinkFields.length > 0 ? ` AND "${parentLinkFields[0]}" is EMPTY` : '';
+    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY${parentLinkEmptyCondition} AND status not in (Cancelled, Backlog)`;
     const standaloneEpics = await jira.searchAll(
       standaloneEpicsJql,
       `key,summary`,
@@ -762,8 +784,8 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // =========================================================================
     console.log('[project-breakdown] STAGE 5: Fetching work items under standalone epics...');
     const standaloneEpicKeys = standaloneEpics.map(e => e.key).join(',');
-    if (standaloneEpicKeys.length > 0) {
-      const standaloneWorkItemsJql = `(${epicLinkFields.map(f => `"${f}" in (${standaloneEpicKeys})`).join(' OR ')}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
+    if (standaloneEpicKeys.length > 0 && epicLinkFields.length > 0) {
+      const standaloneWorkItemsJql = `"${epicLinkFields[0]}" in (${standaloneEpicKeys}) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
       const standaloneWorkItems = await jira.searchAll(
         standaloneWorkItemsJql,
         `key,issuetype,status,${epicLinkFields.join(',')}`,
@@ -783,7 +805,8 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 6: Fetch STANDALONE TICKETS (no epic link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 6: Fetching standalone tickets...');
-    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND ${epicLinkFields.map(f => `"${f}" is EMPTY`).join(' AND ')} AND status not in (Cancelled, Backlog)`;
+    const epicLinkEmptyCondition = epicLinkFields.length > 0 ? ` AND "${epicLinkFields[0]}" is EMPTY` : '';
+    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)${epicLinkEmptyCondition} AND status not in (Cancelled, Backlog)`;
     const standaloneTickets = await jira.searchAll(
       standaloneTicketsJql,
       `key,issuetype,status`,

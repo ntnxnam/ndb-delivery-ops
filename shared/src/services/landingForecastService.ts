@@ -114,6 +114,7 @@ export interface LandingForecastResult {
   gapWeeks: number | null;
 
   unresolved: number;
+  pendingVerification: number;
   recentVelocity: number;
   elapsedSprints: number;
   velocityCv: number | null;
@@ -125,6 +126,8 @@ export interface LandingForecastResult {
 
   /** JQL that produced the `unresolved` count, so the UI can link it. */
   jqlUnresolved: string;
+  /** JQL that produced the `pendingVerification` count. */
+  jqlPendingVerification: string;
   /** Method used (matches Streamlit field name). MVP only emits `'fallback_running'`. */
   forecastMethod: 'fallback_running' | 'curve_based' | 'curve_with_inflow';
 
@@ -324,6 +327,16 @@ export async function computeLandingForecast(
     projectKey: opts.projectKey,
   });
 
+  // Pending verification: Bug + Improvement issues with status "Resolved"
+  // (waiting for QA sign-off before moving to Closed).
+  const jqlPendingVerification = buildEngineeringPayloadJql(rel, {
+    projectKey: opts.projectKey,
+    extras: [
+      'issuetype in (Bug, Improvement)',
+      'status = Resolved',
+    ],
+  });
+
   const errors: string[] = [];
   const safeCount = async (jql: string, label: string): Promise<number> => {
     try {
@@ -352,8 +365,9 @@ export async function computeLandingForecast(
     }
   };
 
-  const [unresolved, payloadTotal, recentSprints] = await Promise.all([
+  const [unresolved, pendingVerification, payloadTotal, recentSprints] = await Promise.all([
     safeCount(jqlUnresolved, 'unresolved'),
+    safeCount(jqlPendingVerification, 'pendingVerification'),
     safeCount(jqlPayloadTotal, 'payloadTotal'),
     safeVelocity(),
   ]);
@@ -414,6 +428,7 @@ export async function computeLandingForecast(
     gapSprints,
     gapWeeks: gapSprints !== null ? gapSprints * 3 : null,
     unresolved,
+    pendingVerification,
     recentVelocity: Math.round(recentVelocity * 100) / 100,
     elapsedSprints,
     velocityCv: velocityCv !== null ? Math.round(velocityCv * 1000) / 1000 : null,
@@ -422,6 +437,7 @@ export async function computeLandingForecast(
     oneLiner: '',
     recommendedAction: '',
     jqlUnresolved,
+    jqlPendingVerification,
     forecastMethod: 'fallback_running',
     baselineVelocity: 0,
     velocityVsBaselinePct: null,
