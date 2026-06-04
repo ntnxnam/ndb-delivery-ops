@@ -131,12 +131,34 @@ export class JiraConnector {
 
   /**
    * Single-issue fetch.
+   *
+   * Backwards compatible: `getIssue(key)` and `getIssue(key, ['field1', ...])`
+   * both still work. New callers can pass an options object to also request
+   * `expand` (e.g. `'changelog'`) — required for the Phase-3 targeted
+   * Closed-Date enrichment in `releaseDatasetService` / `releaseDatasetSync`
+   * (see CONSOLIDATION.md #1b).
    */
-  async getIssue(key: string, fields?: string[]): Promise<JiraIssue> {
-    const params = fields?.length ? { fields: fields.join(',') } : undefined;
-    const res = await this.get<JiraIssue>(`/rest/api/2/issue/${encodeURIComponent(key)}`, {
-      params,
-    });
+  async getIssue(
+    key: string,
+    fieldsOrOptions?: string[] | { fields?: string[]; expand?: string | string[] }
+  ): Promise<JiraIssue> {
+    let fields: string[] | undefined;
+    let expand: string | string[] | undefined;
+    if (Array.isArray(fieldsOrOptions)) {
+      fields = fieldsOrOptions;
+    } else if (fieldsOrOptions) {
+      fields = fieldsOrOptions.fields;
+      expand = fieldsOrOptions.expand;
+    }
+    const params: Record<string, string> = {};
+    if (fields?.length) params.fields = fields.join(',');
+    if (expand) {
+      params.expand = Array.isArray(expand) ? expand.join(',') : expand;
+    }
+    const res = await this.get<JiraIssue>(
+      `/rest/api/2/issue/${encodeURIComponent(key)}`,
+      Object.keys(params).length ? { params } : undefined
+    );
     return res.data;
   }
 
@@ -264,10 +286,57 @@ export class JiraConnector {
 
   /**
    * Sprints for a board (Agile API).
+   *
+   * Per-process cache with a 10-minute TTL and request-coalescing so that
+   * concurrent callers (e.g. `/velocity` + `/forecast` both rendering on
+   * the Release Brief page) share a single round-trip rather than each
+   * paginating the same hundreds of historical sprints separately.
+   *
+   * State defaults to `'active,closed'` — `future` sprints have no
+   * completed work so they're irrelevant for velocity windows, and
+   * including them on NDB-scale boards adds ~50 extra rows per page that
+   * blow the request budget for no value. Callers needing future sprints
+   * can pass an explicit `state` arg to bypass the default + cache.
    */
   async getSprintsForBoard(boardId: number, state?: SprintState): Promise<Sprint[]> {
+    // Bypass cache + bypass default state when an explicit state is set,
+    // so callers asking for a specific slice get exactly that.
+    if (state) {
+      return this.fetchSprintsForBoardPaginated(boardId, { state });
+    }
+    const key = String(boardId);
+    const cached = JiraConnector.SPRINTS_CACHE.get(key);
+    if (cached && Date.now() - cached.fetchedAt < JiraConnector.SPRINTS_CACHE_TTL_MS) {
+      return cached.sprints;
+    }
+    let inflight = JiraConnector.SPRINTS_INFLIGHT.get(key);
+    if (!inflight) {
+      inflight = (async () => {
+        try {
+          // 'active,closed' (no 'future') — see JSDoc above for why.
+          const sprints = await this.fetchSprintsForBoardPaginated(boardId, {
+            state: 'active,closed' as unknown as SprintState,
+          });
+          JiraConnector.SPRINTS_CACHE.set(key, {
+            sprints,
+            fetchedAt: Date.now(),
+          });
+          return sprints;
+        } finally {
+          JiraConnector.SPRINTS_INFLIGHT.delete(key);
+        }
+      })();
+      JiraConnector.SPRINTS_INFLIGHT.set(key, inflight);
+    }
+    return inflight;
+  }
+
+  private async fetchSprintsForBoardPaginated(
+    boardId: number,
+    options: { state?: SprintState }
+  ): Promise<Sprint[]> {
     const params: Record<string, unknown> = { maxResults: 50 };
-    if (state) params.state = state;
+    if (options.state) params.state = options.state;
     const out: Sprint[] = [];
     let startAt = 0;
     let hasMore = true;
@@ -283,6 +352,14 @@ export class JiraConnector {
     }
     return out;
   }
+
+  // Per-process caches — see getSprintsForBoard JSDoc for usage.
+  private static readonly SPRINTS_CACHE_TTL_MS = 10 * 60 * 1000;
+  private static readonly SPRINTS_CACHE: Map<
+    string,
+    { sprints: Sprint[]; fetchedAt: number }
+  > = new Map();
+  private static readonly SPRINTS_INFLIGHT: Map<string, Promise<Sprint[]>> = new Map();
 
   /**
    * Versions for a JIRA project (releases live here).

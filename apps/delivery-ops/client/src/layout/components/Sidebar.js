@@ -66,28 +66,34 @@ export const Sidebar = () => {
       description: 'Send status update emails'
     },
     {
-      path: '/all-status',
-      label: 'Release Versions',
+      path: '/project-status',
+      label: 'Project Status',
       icon: '🚀',
-      description: 'View and manage release versions'
-    },
-    {
-      path: '/release-trends',
-      label: 'Release Trends',
-      icon: '📈',
-      description: 'Analyze release trends and metrics'
-    },
-    {
-      path: '/release-setup',
-      label: 'Release Setup',
-      icon: '⚙️',
-      description: 'Configure release settings'
+      description: 'Release picker, payload table, Gantt'
     },
     {
       path: '/release-config',
       label: 'Release Config',
       icon: '📅',
-      description: 'Manage release dates and milestones'
+      description: 'Move gate dates, view date history'
+    },
+    {
+      path: '/release-setup',
+      label: 'Release Setup',
+      icon: '⚙️',
+      description: 'Create / rename releases, cleanup filters'
+    },
+    {
+      path: '/release/brief',
+      label: 'Release Brief (new)',
+      icon: '✨',
+      description: 'Live KPI / payload / velocity snapshot (in progress)'
+    },
+    {
+      path: '/feature-dashboard',
+      label: 'Feature Dashboard',
+      icon: '🧭',
+      description: 'Feature payload, gates, reconciliation, and burn'
     },
     {
       path: '/generic-emailer',
@@ -108,10 +114,10 @@ export const Sidebar = () => {
       description: 'Sprint reporting and metrics'
     },
     {
-      path: '/kpis',
-      label: 'KPIs',
+      path: '/component-report',
+      label: 'Component Report',
       icon: '📊',
-      description: 'Key performance indicators'
+      description: 'Component health, actionable metrics, deferral trends'
     },
     {
       path: getBinPackingUrl(),
@@ -425,6 +431,14 @@ export const Sidebar = () => {
           overflow: hidden;
           min-width: 200px;
           max-width: 400px;
+        }
+
+        /* When collapsed, the resize range no longer applies; the inline
+           width is 60px and min/max-width must not fight it, otherwise the
+           sidebar renders wider than the 60px margin reserved by Layout. */
+        .sidebar.collapsed {
+          min-width: 60px;
+          max-width: 60px;
         }
 
         .sidebar:not(.resizing) {

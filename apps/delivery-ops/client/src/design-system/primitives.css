@@ -1,0 +1,507 @@
+/*
+ * design-system/primitives.css — shared CSS for the React primitives in
+ * this folder. Every selector is namespaced with `ds-` so it never
+ * collides with the legacy Atlassian-light surface.
+ *
+ * One file because the rules are short and tightly related. If a single
+ * primitive ever grows enough rules to deserve its own stylesheet,
+ * extract.
+ */
+
+/* ── Card ───────────────────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-4);
+  box-shadow: var(--ds-shadow-card);
+}
+
+.ds-card--quiet {
+  background: transparent;
+  box-shadow: none;
+}
+
+.ds-card--raised {
+  background: var(--ds-surface-raised);
+  border-color: var(--ds-border-strong);
+}
+
+.ds-card--clickable {
+  cursor: pointer;
+  transition: border-color var(--ds-transition), transform var(--ds-transition);
+}
+
+.ds-card--clickable:hover {
+  border-color: var(--ds-accent-border);
+}
+
+.ds-card--clickable:active {
+  transform: translateY(1px);
+}
+
+/* ── KPICard ────────────────────────────────────────────────────────── */
+.ds-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+
+.ds-kpi__label {
+  font-size: var(--ds-fs-muted);
+  color: var(--ds-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  font-weight: var(--ds-fw-semi);
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+}
+
+.ds-kpi__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+}
+
+.ds-kpi__number {
+  font-size: var(--ds-fs-kpi-number);
+  font-weight: var(--ds-fw-semi);
+  line-height: var(--ds-lh-tight);
+  color: var(--ds-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-kpi__unit {
+  font-size: var(--ds-fs-body);
+  color: var(--ds-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-kpi__delta {
+  font-size: var(--ds-fs-small);
+  color: var(--ds-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-kpi__delta--up { color: var(--ds-success); }
+.ds-kpi__delta--down { color: var(--ds-danger); }
+.ds-kpi__delta--flat { color: var(--ds-muted-soft); }
+
+.ds-kpi__caption {
+  font-size: var(--ds-fs-small);
+  color: var(--ds-muted);
+}
+
+.ds-kpi__rag {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ds-kpi__rag--green { background: var(--ds-rag-green); box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.18); }
+.ds-kpi__rag--amber { background: var(--ds-rag-amber); box-shadow: 0 0 0 2px rgba(210, 153, 34, 0.18); }
+.ds-kpi__rag--red   { background: var(--ds-rag-red);   box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.18); }
+.ds-kpi__rag--grey  { background: var(--ds-rag-grey);  box-shadow: 0 0 0 2px rgba(110, 118, 129, 0.18); }
+
+/* ── SectionPanel ───────────────────────────────────────────────────── */
+.ds-section {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  margin-bottom: var(--ds-space-5);
+  overflow: hidden;
+}
+
+.ds-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-section__title {
+  font-size: var(--ds-fs-section);
+  font-weight: var(--ds-fw-semi);
+  color: var(--ds-text-strong);
+  margin: 0;
+}
+
+.ds-section__caption {
+  font-size: var(--ds-fs-small);
+  color: var(--ds-muted);
+  flex: 1;
+  margin: 0;
+}
+
+.ds-section__actions {
+  display: flex;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+.ds-section__body {
+  padding: var(--ds-space-4);
+}
+
+.ds-section__body--flush {
+  padding: 0;
+}
+
+/* ── MutedLabel ─────────────────────────────────────────────────────── */
+.ds-muted-label {
+  font-size: var(--ds-fs-muted);
+  color: var(--ds-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  font-weight: var(--ds-fw-semi);
+  display: inline-block;
+}
+
+.ds-muted-label--strong {
+  color: var(--ds-text);
+}
+
+/* ── tiny utilities used by the demo ─────────────────────────────────── */
+.ds-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-4);
+}
+
+.ds-grid-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.ds-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  font-size: var(--ds-fs-small);
+  font-weight: var(--ds-fw-medium);
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid transparent;
+  line-height: 1.5;
+}
+
+.ds-pill--accent  { background: var(--ds-accent-soft);  color: var(--ds-accent); border-color: var(--ds-accent-border); }
+.ds-pill--success { background: var(--ds-success-soft); color: var(--ds-success); }
+.ds-pill--warning { background: var(--ds-warning-soft); color: var(--ds-warning); }
+.ds-pill--danger  { background: var(--ds-danger-soft);  color: var(--ds-danger); }
+.ds-pill--muted   { background: transparent; color: var(--ds-muted); border-color: var(--ds-border); }
+
+/* ── GateChipStrip ───────────────────────────────────────────────────── */
+/* Horizontal strip of release-gate chips. Each chip carries its gate's
+ * canonical colour via the --ds-gate-color custom property set inline by
+ * the component, so the same CSS handles every kind (EC/CC/CG/PG/GA). */
+.ds-gate-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+
+.ds-gate-chip {
+  --ds-gate-color: var(--ds-accent);
+  appearance: none;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 0.2rem 0.55rem 0.2rem 0.35rem;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-pill);
+  color: var(--ds-text);
+  font-size: var(--ds-fs-small);
+  line-height: 1.4;
+  transition: border-color var(--ds-transition), transform var(--ds-transition), opacity var(--ds-transition);
+  max-width: 100%;
+}
+
+.ds-gate-chip__tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-gate-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-gate-color) 24%, transparent);
+  flex-shrink: 0;
+}
+
+.ds-gate-chip__kind {
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-gate-color);
+}
+
+.ds-gate-chip__label {
+  color: var(--ds-text);
+  font-weight: var(--ds-fw-medium);
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-gate-chip__date {
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* planned / superseded — visual strike to convey "not the current date" */
+.ds-gate-chip--planned .ds-gate-chip__label,
+.ds-gate-chip--planned .ds-gate-chip__date {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.85;
+}
+
+.ds-gate-chip--past {
+  opacity: 0.55;
+}
+
+.ds-gate-chip--highlight {
+  border-color: var(--ds-gate-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-gate-color) 20%, transparent);
+}
+
+.ds-gate-chip--clickable {
+  cursor: pointer;
+}
+
+.ds-gate-chip--clickable:hover {
+  border-color: var(--ds-gate-color);
+  transform: translateY(-1px);
+}
+
+.ds-gate-chip--clickable:active {
+  transform: translateY(0);
+}
+
+/* ── GateTimeline ────────────────────────────────────────────────────── */
+/* Proportional horizontal timeline of release gates. Same kind-colour
+ * vocabulary as GateChipStrip; each marker carries --ds-gate-color
+ * inline. Two label tracks (above/below the axis) so adjacent gates
+ * never collide. */
+
+.ds-gate-timeline {
+  --ds-gate-timeline-height: 132px;
+  --ds-gate-timeline-axis-y: 50%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.ds-gate-timeline__lane {
+  position: relative;
+  height: var(--ds-gate-timeline-height);
+  /* Side padding inside the lane so chips near 0% / 100% don't clip. */
+  padding: 0 var(--ds-space-4);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ds-surface-raised) 30%, transparent) 50%,
+    transparent 100%
+  );
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-gate-timeline__axis {
+  position: absolute;
+  top: var(--ds-gate-timeline-axis-y);
+  left: var(--ds-space-4);
+  right: var(--ds-space-4);
+  height: 2px;
+  background: color-mix(in srgb, var(--ds-border) 80%, transparent);
+  transform: translateY(-50%);
+  border-radius: 1px;
+}
+
+.ds-gate-timeline__drift {
+  position: absolute;
+  top: var(--ds-gate-timeline-axis-y);
+  height: 2px;
+  /* Adjust for the lane's horizontal padding so percentages line up
+   * with the markers (which share the same padding origin). */
+  margin-left: var(--ds-space-4);
+  transform: translateY(8px);
+  background-image: linear-gradient(
+    90deg,
+    var(--ds-gate-color) 0 4px,
+    transparent 4px 8px
+  );
+  background-size: 8px 2px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ds-gate-timeline__today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin-left: var(--ds-space-4);
+  transform: translateX(-50%);
+  width: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ds-gate-timeline__today-line {
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 0;
+  width: 2px;
+  background: var(--ds-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ds-accent) 40%, transparent);
+  border-radius: 1px;
+}
+
+.ds-gate-timeline__today-label {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-accent);
+  text-transform: uppercase;
+  background: var(--ds-surface);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.ds-gate-timeline__marker {
+  --ds-gate-color: var(--ds-accent);
+  position: absolute;
+  top: var(--ds-gate-timeline-axis-y);
+  /* margin-left equals the lane's horizontal padding, matching the
+   * axis line's start. left:<pct>% is then proportional to the inner
+   * axis width. */
+  margin-left: var(--ds-space-4);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  transition: transform var(--ds-transition), opacity var(--ds-transition);
+  z-index: 2;
+}
+
+.ds-gate-timeline__marker--above {
+  flex-direction: column-reverse;
+}
+
+.ds-gate-timeline__marker--below {
+  flex-direction: column;
+}
+
+.ds-gate-timeline__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ds-gate-color);
+  border: 2px solid var(--ds-surface);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-gate-color) 40%, transparent);
+  flex-shrink: 0;
+}
+
+.ds-gate-timeline__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 6px;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  font-size: var(--ds-fs-small);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ds-gate-timeline__marker--above .ds-gate-timeline__label {
+  margin-bottom: 10px;
+}
+
+.ds-gate-timeline__marker--below .ds-gate-timeline__label {
+  margin-top: 10px;
+}
+
+.ds-gate-timeline__kind {
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-gate-color);
+}
+
+.ds-gate-timeline__date {
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-muted);
+}
+
+/* planned / superseded — strike through to convey "not the current date" */
+.ds-gate-timeline__marker--planned .ds-gate-timeline__date {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.85;
+}
+
+.ds-gate-timeline__marker--planned .ds-gate-timeline__dot {
+  background: var(--ds-surface);
+  border-color: var(--ds-gate-color);
+  box-shadow: none;
+}
+
+.ds-gate-timeline__marker--past {
+  opacity: 0.55;
+}
+
+.ds-gate-timeline__marker--highlight .ds-gate-timeline__label {
+  border-color: var(--ds-gate-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-gate-color) 22%, transparent);
+}
+
+.ds-gate-timeline__marker--clickable {
+  cursor: pointer;
+}
+
+.ds-gate-timeline__marker--clickable:hover {
+  transform: translate(-50%, -50%) scale(1.04);
+}
+
+.ds-gate-timeline__marker--clickable:active {
+  transform: translate(-50%, -50%) scale(0.98);
+}
+
+.ds-gate-timeline__scale {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--ds-space-4);
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-muted);
+}
+
+.ds-gate-timeline__scale-end {
+  font-variant-numeric: tabular-nums;
+}

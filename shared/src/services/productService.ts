@@ -18,7 +18,8 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type {
   ProductConfig,
   ProductCustomFields,
@@ -302,12 +303,32 @@ function escapeJqlString(s: string): string {
 }
 
 function defaultConfigPath(): string {
-  // From `shared/dist/services/productService.js` at runtime, walk up to
-  // the monorepo root then into apps/delivery-ops/server/config.
-  // The path is computed lazily so callers can override via constructor.
-  const monorepoRoot = resolve(process.cwd());
-  return join(
+  // Walk up from this compiled file's own location to find the monorepo
+  // root, then descend into apps/delivery-ops/server/config. This is
+  // robust regardless of which directory the caller's process is started
+  // from — using process.cwd() doubled the path when callers invoked
+  // from inside apps/delivery-ops/server (the most common server cwd).
+  //
+  // At runtime this file is at:
+  //   <monorepo>/shared/dist/services/productService.js
+  // so three dirname() calls give us <monorepo>/shared, and one more
+  // gives us the monorepo root.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const sharedRoot = resolve(here, '..', '..'); // shared/dist/services → shared
+  const monorepoRoot = resolve(sharedRoot, '..'); // shared → monorepo
+  const fromHere = join(
     monorepoRoot,
+    'apps',
+    'delivery-ops',
+    'server',
+    'config',
+    'teamBoardConfig.json'
+  );
+  if (existsSync(fromHere)) return fromHere;
+  // Fallback: if the file system layout changes, also try cwd resolution
+  // so explicit non-monorepo deployments still work.
+  return join(
+    resolve(process.cwd()),
     'apps',
     'delivery-ops',
     'server',

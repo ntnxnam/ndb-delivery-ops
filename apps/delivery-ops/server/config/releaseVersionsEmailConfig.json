@@ -171,6 +171,12 @@
         "label": "General Availability 2",
         "date": "2026-06-15",
         "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga3": {
+        "label": "General Availability 3",
+        "date": "2026-07-14",
+        "color": "#28a745",
         "style": "solid"
       }
     },

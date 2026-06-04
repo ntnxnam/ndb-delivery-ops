@@ -23,7 +23,13 @@ function ReleaseVersionGantt({
   sortItems,
   sprintDates = [],
   allVersionsConfig = null,
-  statusesWithTick = []
+  statusesWithTick = [],
+  // When true, render ONLY the small proportional gate timeline (the
+  // band labelled "Timeline" — EC, CCM, CG, PG, GA dots on a single axis
+  // with a Today marker). The full title, gate dates configuration
+  // table, legend, and project-row Gantt chart are skipped. Used by the
+  // Release Brief page so both surfaces share one canonical timeline.
+  timelineOnly = false
 }) {
   // JIRA configuration
   const { jiraBaseUrl } = useJiraConfig();
@@ -685,19 +691,24 @@ function ReleaseVersionGantt({
     );
   };
 
-  // Generate gate dates table from config
-  const renderGateDatesTable = () => {
-    if (!ganttConfig) return null;
+  // Build the gate-date row collection used by both the configuration
+  // table and the proportional timeline. Extracted so `timelineOnly`
+  // mode (Release Brief) and full mode (Project Status) share one
+  // computation — no risk of the two surfaces drifting apart.
+  const buildGateDateRows = () => {
+    if (!ganttConfig) return [];
 
     const gateDateRows = [];
 
-    // EC Date
+    // EC Date — always a single binding date, no family to compete with.
     if (ganttConfig.ecDate) {
       gateDateRows.push({
         type: 'EC Date',
+        family: 'EC',
         fieldName: 'ecDate',
         date: ganttConfig.ecDate,
         color: '#0066cc',
+        style: 'solid',
         description: 'Early Commitment (Release Start)'
       });
     }
@@ -716,9 +727,11 @@ function ReleaseVersionGantt({
           const gateNumber = key.replace('ga', '');
           gateDateRows.push({
             type: `GA${gateNumber}`,
+            family: 'GA',
             fieldName: key,
             date: gaData.date,
             color: gaData.color || '#28a745',
+            style: (gaData.style || 'solid').toLowerCase(),
             description: `General Availability ${gateNumber}`
           });
         }
@@ -742,9 +755,11 @@ function ReleaseVersionGantt({
               const suffix = ccmGates.length > 1 ? ` (${idx + 1})` : '';
               gateDateRows.push({
                 type: `CCM${gateNumber}${suffix}`,
+                family: 'CCM',
                 fieldName: `${key}${suffix}`,
                 date: ccmGate.date,
                 color: ccmGate.color || '#de350b',
+                style: (ccmGate.style || 'solid').toLowerCase(),
                 description: `Code Complete Milestone ${gateNumber}${suffix}`
               });
             }
@@ -766,9 +781,11 @@ function ReleaseVersionGantt({
           const gateNumber = key.replace('commitGate', '');
           gateDateRows.push({
             type: `CG${gateNumber}`,
+            family: 'CG',
             fieldName: key,
             date: gate.date,
             color: gate.color || '#ffc400',
+            style: (gate.style || 'solid').toLowerCase(),
             description: `Commit Gate ${gateNumber}`
           });
         }
@@ -788,14 +805,41 @@ function ReleaseVersionGantt({
           const gateNumber = key.replace('promotionGate', '');
           gateDateRows.push({
             type: `PG${gateNumber}`,
+            family: 'PG',
             fieldName: key,
             date: gate.date,
             color: gate.color || '#ffd700',
+            style: (gate.style || 'solid').toLowerCase(),
             description: `Promotion Gate ${gateNumber}`
           });
         }
       });
 
+    if (gateDateRows.length === 0) return [];
+
+    // Mark the BINDING gate per family. Convention: style='solid' is the
+    // final/binding gate; earlier dotted ones are soft checkpoints that
+    // visually fade so the eye lands on the date that actually matters.
+    // Fallback: if no solid entry exists in a family, the latest by date wins.
+    const familyGroups = gateDateRows.reduce((acc, row) => {
+      (acc[row.family] = acc[row.family] || []).push(row);
+      return acc;
+    }, {});
+    Object.values(familyGroups).forEach(rows => {
+      const solids = rows.filter(r => r.style === 'solid');
+      const pool = solids.length > 0 ? solids : rows;
+      const binding = pool.reduce((latest, cur) =>
+        new Date(cur.date).getTime() > new Date(latest.date).getTime() ? cur : latest
+      );
+      rows.forEach(r => { r.isBinding = (r === binding); });
+    });
+
+    return gateDateRows;
+  };
+
+  // Generate gate dates table from config
+  const renderGateDatesTable = () => {
+    const gateDateRows = buildGateDateRows();
     if (gateDateRows.length === 0) return null;
 
     return (
@@ -847,55 +891,239 @@ function ReleaseVersionGantt({
             </tr>
           </thead>
           <tbody>
-            {gateDateRows.map((row, idx) => (
-              <tr key={idx} style={{ 
-                borderBottom: '1px solid #dee2e6',
-                backgroundColor: idx % 2 === 0 ? '#fff' : '#f8f9fa'
-              }}>
-                <td style={{ 
-                  padding: '8px 12px',
-                  verticalAlign: 'middle'
+            {gateDateRows.map((row, idx) => {
+              // Soft (non-binding) gates fade hard so the binding date in
+              // each family is the one the eye lands on first.
+              const isSoft = row.isBinding === false;
+              const rowOpacity = isSoft ? 0.45 : 1;
+              return (
+                <tr key={idx} style={{
+                  borderBottom: '1px solid #dee2e6',
+                  backgroundColor: idx % 2 === 0 ? '#fff' : '#f8f9fa',
+                  opacity: rowOpacity
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ 
-                      display: 'inline-block',
-                      width: '12px',
-                      height: '12px',
-                      backgroundColor: row.color,
-                      marginRight: '8px',
-                      borderRadius: '2px'
-                    }}></span>
-                    <strong style={{ color: row.color }}>{row.type}</strong>
-                  </div>
-                </td>
-                <td style={{ 
-                  padding: '8px 12px',
-                  verticalAlign: 'middle',
-                  fontFamily: 'monospace',
-                  fontWeight: 600
-                }}>
-                  {formatDateLabel(new Date(row.date))}
-                </td>
-                <td style={{ 
-                  padding: '8px 12px',
-                  verticalAlign: 'middle',
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  color: '#6c757d'
-                }}>
-                  {row.fieldName}
-                </td>
-                <td style={{ 
-                  padding: '8px 12px',
-                  verticalAlign: 'middle',
-                  color: '#6c757d'
-                }}>
-                  {row.description}
-                </td>
-              </tr>
-            ))}
+                  <td style={{
+                    padding: '8px 12px',
+                    verticalAlign: 'middle'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: '12px',
+                        height: '12px',
+                        marginRight: '8px',
+                        borderRadius: '2px',
+                        // Filled swatch for binding gates; hollow + dashed
+                        // border for soft checkpoints so the distinction
+                        // reads even at a glance.
+                        backgroundColor: isSoft ? 'transparent' : row.color,
+                        border: isSoft ? `1px dashed ${row.color}` : 'none'
+                      }}></span>
+                      <strong style={{
+                        color: row.color,
+                        fontWeight: isSoft ? 500 : 700
+                      }}>
+                        {row.type}
+                      </strong>
+                      {isSoft && (
+                        <span style={{
+                          marginLeft: '8px',
+                          fontSize: '10px',
+                          fontWeight: 500,
+                          color: '#6c757d',
+                          fontStyle: 'italic'
+                        }}>
+                          soft checkpoint
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{
+                    padding: '8px 12px',
+                    verticalAlign: 'middle',
+                    fontFamily: 'monospace',
+                    fontWeight: isSoft ? 400 : 600
+                  }}>
+                    {formatDateLabel(new Date(row.date))}
+                  </td>
+                  <td style={{
+                    padding: '8px 12px',
+                    verticalAlign: 'middle',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    color: '#6c757d'
+                  }}>
+                    {row.fieldName}
+                  </td>
+                  <td style={{
+                    padding: '8px 12px',
+                    verticalAlign: 'middle',
+                    color: '#6c757d'
+                  }}>
+                    {row.description}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+        {renderGateDatesTimeline(gateDateRows)}
+      </div>
+    );
+  };
+
+  // Simple horizontal timeline of the gate dates shown in the table above.
+  // Positions each gate proportionally between the earliest and latest date,
+  // adds a "Today" marker, and stacks labels above/below to avoid overlap.
+  const renderGateDatesTimeline = (gateDateRows) => {
+    if (!gateDateRows || gateDateRows.length === 0) return null;
+
+    const points = gateDateRows
+      .map(row => ({ ...row, time: new Date(row.date).getTime() }))
+      .filter(p => !isNaN(p.time))
+      .sort((a, b) => a.time - b.time);
+
+    if (points.length === 0) return null;
+
+    const minTime = points[0].time;
+    const maxTime = points[points.length - 1].time;
+    const span = Math.max(maxTime - minTime, 1);
+    const pct = t => ((t - minTime) / span) * 100;
+
+    const today = Date.now();
+    const todayInRange = today >= minTime && today <= maxTime;
+    const todayPct = todayInRange ? pct(today) : null;
+
+    // Alternate labels above/below to reduce collisions when dates are close.
+    const labelPositions = points.map((_, idx) => (idx % 2 === 0 ? 'above' : 'below'));
+
+    return (
+      <div style={{
+        marginTop: '16px',
+        paddingTop: '12px',
+        borderTop: '1px dashed #dee2e6'
+      }}>
+        <div style={{
+          fontSize: '12px',
+          fontWeight: 600,
+          color: '#495057',
+          marginBottom: '8px'
+        }}>
+          Timeline
+        </div>
+        <div style={{
+          position: 'relative',
+          height: '110px',
+          padding: '0 24px',
+          boxSizing: 'border-box'
+        }}>
+          {/* Baseline */}
+          <div style={{
+            position: 'absolute',
+            left: '24px',
+            right: '24px',
+            top: '55px',
+            height: '2px',
+            backgroundColor: '#cfd4da',
+            borderRadius: '1px'
+          }} />
+
+          {/* Today marker */}
+          {todayInRange && (
+            <div
+              title={`Today: ${formatDateLabel(new Date(today))}`}
+              style={{
+                position: 'absolute',
+                left: `calc(24px + (100% - 48px) * ${todayPct / 100})`,
+                top: '20px',
+                bottom: '20px',
+                width: '2px',
+                backgroundColor: '#212529',
+                transform: 'translateX(-1px)'
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '-14px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: '10px',
+                fontWeight: 700,
+                color: '#212529',
+                whiteSpace: 'nowrap'
+              }}>
+                Today
+              </div>
+            </div>
+          )}
+
+          {/* Gate points — binding gates are bold + filled; soft checkpoints
+              are smaller, hollow, and rendered at low opacity so the binding
+              cutoff in each family is the one the eye locks onto. */}
+          {points.map((p, idx) => {
+            const leftCalc = `calc(24px + (100% - 48px) * ${pct(p.time) / 100})`;
+            const labelAbove = labelPositions[idx] === 'above';
+            const isSoft = p.isBinding === false;
+            const dotSize = isSoft ? 9 : 14;
+            const dotOpacity = isSoft ? 0.45 : 1;
+            return (
+              <React.Fragment key={`${p.fieldName}-${idx}`}>
+                {/* Dot */}
+                <div
+                  title={`${p.type}: ${formatDateLabel(new Date(p.date))}${isSoft ? ' (soft checkpoint)' : ''}`}
+                  style={{
+                    position: 'absolute',
+                    left: leftCalc,
+                    top: `${49 + (14 - dotSize) / 2}px`,
+                    width: `${dotSize}px`,
+                    height: `${dotSize}px`,
+                    backgroundColor: isSoft ? '#fff' : p.color,
+                    border: `2px ${isSoft ? 'dashed' : 'solid'} ${isSoft ? p.color : '#fff'}`,
+                    borderRadius: '50%',
+                    boxShadow: isSoft ? 'none' : '0 0 0 1px rgba(0,0,0,0.2)',
+                    transform: `translateX(-${dotSize / 2}px)`,
+                    opacity: dotOpacity,
+                    zIndex: isSoft ? 0 : 1
+                  }}
+                />
+                {/* Connector */}
+                <div style={{
+                  position: 'absolute',
+                  left: leftCalc,
+                  top: labelAbove ? '30px' : '63px',
+                  height: '20px',
+                  width: '1px',
+                  backgroundColor: p.color,
+                  opacity: isSoft ? 0.2 : 0.5,
+                  transform: 'translateX(-0.5px)'
+                }} />
+                {/* Label */}
+                <div style={{
+                  position: 'absolute',
+                  left: leftCalc,
+                  top: labelAbove ? '4px' : '83px',
+                  transform: 'translateX(-50%)',
+                  textAlign: 'center',
+                  fontSize: isSoft ? '9px' : '10px',
+                  lineHeight: '1.2',
+                  whiteSpace: 'nowrap',
+                  opacity: isSoft ? 0.5 : 1
+                }}>
+                  <div style={{
+                    color: p.color,
+                    fontWeight: isSoft ? 400 : 700,
+                    fontStyle: isSoft ? 'italic' : 'normal'
+                  }}>
+                    {p.type}
+                  </div>
+                  <div style={{ color: '#6c757d', fontFamily: 'monospace', fontSize: '9px' }}>
+                    {formatDateLabel(new Date(p.date))}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -1000,6 +1228,26 @@ function ReleaseVersionGantt({
       </div>
     </div>
   );
+
+  // Slim mode (Release Brief): render ONLY the proportional gate timeline
+  // — no h3 title, no gate dates configuration table, no legend, no
+  // project-row Gantt chart. Same visual as the "Timeline" block at the
+  // top of the full chart on Project Status, sourced from the same data.
+  if (timelineOnly) {
+    const gateDateRows = buildGateDateRows();
+    if (gateDateRows.length === 0) return null;
+    return (
+      <div style={{
+        padding: '0.75rem',
+        backgroundColor: '#fff',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        boxSizing: 'border-box'
+      }}>
+        {renderGateDatesTimeline(gateDateRows)}
+      </div>
+    );
+  }
 
   return (
     <div style={{ 

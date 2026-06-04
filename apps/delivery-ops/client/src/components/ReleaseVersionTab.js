@@ -28,6 +28,8 @@ import ReleaseVersionFilterBar, { applyFilters } from './ReleaseVersionFilterBar
 import { downloadGantt, downloadExcel, downloadHTML, downloadPDF, downloadBoth } from '../utils/downloadUtils';
 import { generateReleaseHighlights } from '../utils/generateReleaseHighlights';
 import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
+import { useGateTimeline } from '../release/hooks/useGateTimeline';
+import { GateChipStrip } from '../design-system';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
@@ -128,6 +130,11 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
 
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+  const { gates: gateTimelineGates, loading: gatesLoading } = useGateTimeline({
+    release: selectedVersion,
+    jiraToken,
+    username,
+  });
   const normalizedUsername = (username || '').trim().toLowerCase().replace(/@nutanix\.com$/i, '');
   // REACT_APP_RELEASE_VERSIONS_EMAIL_ACCESS controls who sees the email compose section:
   //   'allowlist' (default) → only releaseVersionsEmailSenders from allowedUsers.json
@@ -1495,6 +1502,12 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           />
 
           {/* Gantt Chart — uses filtered items so chart reflects active filters */}
+          {selectedVersion && (gateTimelineGates.length > 0 || gatesLoading) && (
+            <div className="ds-scope" style={{ marginBottom: '0.5rem' }}>
+              <GateChipStrip gates={gateTimelineGates} />
+            </div>
+          )}
+
           {ganttConfig && (
             <div ref={ganttChartRef}>
               <ReleaseVersionGantt

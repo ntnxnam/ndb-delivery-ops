@@ -70,7 +70,7 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   EMAIL_SENDER: '/',
-  RELEASE_VERSIONS: '/all-status',
+  RELEASE_VERSIONS: '/project-status',
   RELEASE_TRENDS: '/release-trends',
   RELEASE_SETUP: '/release-setup',
   GENERIC_EMAILER: '/generic-emailer',

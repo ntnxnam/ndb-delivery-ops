@@ -24,31 +24,31 @@ export const routeConfig = {
       icon: '📧'
     },
     {
-      path: '/all-status',
+      path: '/project-status',
       exact: true,
       component: 'ReleaseVersionTab',
-      title: 'Release Versions',
-      description: 'View and manage release versions',
+      title: 'Project Status',
+      description: 'Release picker, payload table, Gantt',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
       icon: '🚀'
     },
     {
-      path: '/release-trends',
+      path: '/feature-dashboard',
       exact: true,
-      component: 'ReleaseTrendsPage',
-      title: 'Release Trends',
-      description: 'Analyze release trends and metrics',
-      permissions: [PERMISSIONS.RELEASE_TRENDS_VIEW],
+      component: 'FeatureDashboardPage',
+      title: 'Feature Dashboard',
+      description: 'Feature payload, gates, and reconciliation',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '📈'
+      icon: '🧭'
     },
     {
       path: '/release-setup',
       exact: true,
       component: 'ReleaseSetup',
       title: 'Release Setup',
-      description: 'Configure release settings',
+      description: 'Create / rename releases, cleanup filters',
       permissions: [PERMISSIONS.RELEASE_SETUP_MANAGE],
       showInNav: true,
       icon: '⚙️'
@@ -84,12 +84,12 @@ export const routeConfig = {
       icon: '🏃'
     },
     {
-      path: '/kpis',
+      path: '/component-report',
       exact: true,
-      component: 'KPIPage',
-      title: 'KPIs',
-      description: 'Key performance indicators',
-      permissions: [PERMISSIONS.KPI_VIEW],
+      component: 'ComponentReport',
+      title: 'Component Report',
+      description: 'Component health, actionable metrics, deferral trends',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
       icon: '📊'
     },

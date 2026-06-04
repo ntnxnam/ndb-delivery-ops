@@ -16,28 +16,28 @@ export const NavigationBar = () => {
       description: 'Send status update emails'
     },
     {
-      path: '/all-status',
-      label: 'Release Versions',
+      path: '/project-status',
+      label: 'Project Status',
       icon: '🚀',
-      description: 'View and manage release versions'
-    },
-    {
-      path: '/release-trends',
-      label: 'Release Trends',
-      icon: '📈',
-      description: 'Analyze release trends and metrics'
-    },
-    {
-      path: '/release-setup',
-      label: 'Release Setup',
-      icon: '⚙️',
-      description: 'Configure release settings'
+      description: 'Release picker, payload table, Gantt'
     },
     {
       path: '/release-config',
       label: 'Release Config',
       icon: '📅',
-      description: 'Manage release dates and milestones'
+      description: 'Move gate dates, view date history'
+    },
+    {
+      path: '/release-setup',
+      label: 'Release Setup',
+      icon: '⚙️',
+      description: 'Create / rename releases, cleanup filters'
+    },
+    {
+      path: '/release/brief',
+      label: 'Release Brief (new)',
+      icon: '✨',
+      description: 'Live KPI snapshot (in progress)'
     },
     {
       path: '/generic-emailer',
@@ -56,12 +56,6 @@ export const NavigationBar = () => {
       label: 'Sprint Report',
       icon: '🏃',
       description: 'Sprint reporting and metrics'
-    },
-    {
-      path: '/kpis',
-      label: 'KPIs',
-      icon: '📊',
-      description: 'Key performance indicators'
     },
     {
       path: '/admin',

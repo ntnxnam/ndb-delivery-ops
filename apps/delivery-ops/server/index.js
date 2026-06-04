@@ -19,8 +19,9 @@ const { extractApiError, getJiraErrorMessage, formatErrorResponse } = require('.
 const { formatDateWithHistoryHTML, formatAllCheckpointDatesHTML } = require('./utils/dateFormatter');
 const { formatContentForEmail, formatJiraWikiMarkupForEmail } = require('./utils/emailFormatter');
 
-// CrystalBallI Integration
-const { integrateWithVooDoo } = require('../crystalball-i');
+// (removed) CrystalBallI Integration — package killed per ARCHITECTURE_TARGET.md v2 (2026-05-20).
+// Future conversational/AI surface will live behind /api/team-exec, talking to shared/services
+// directly rather than a separate npm sub-package.
 
 const app = express();
 const PORT = process.env.PORT || 6001;
@@ -111,7 +112,9 @@ const emailRoutes = require('./routes/email');
 const statusSnapshotsRoutes = require('./routes/statusSnapshots');
 const adminRoutes = require('./routes/admin');
 const dateMoverRoutes = require('./routes/dateMover');
-// const crystalballRoutes = require('./routes/crystalball'); // Disabled - consolidated to NAI API
+const releaseDatasetRoutes = require('./routes/releaseDataset');
+const aiRoutes = require('./routes/ai');
+const featureRoutes = require('./routes/feature');
 
 // CORS preflight: ensure OPTIONS for /api/* always succeeds (avoid 404 for preflight)
 app.options('/api/*', (req, res) => {
@@ -130,7 +133,11 @@ app.use('/api/email', emailRoutes); // Email routes at /api/email/*
 app.use('/api/status-snapshots', statusSnapshotsRoutes); // Snapshots & trends
 app.use('/api/admin', adminRoutes); // Admin team management routes
 app.use('/api/date-mover', dateMoverRoutes); // D30: gate-date moves w/ Confluence audit
-// app.use('/api/crystalball', crystalballRoutes); // Disabled - consolidated to NAI API
+app.use('/api/release-dataset', releaseDatasetRoutes); // Phase 3: shared releaseDataset surface
+app.use('/api/ai', aiRoutes); // AI routes: exec summary generation + JIRA push
+app.use('/api/feature', featureRoutes); // Feature-level dashboard endpoints
+const componentRoutes = require('./routes/component');
+app.use('/api/component', componentRoutes); // Component report endpoints
 
 // Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
 // /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,
@@ -149,20 +156,6 @@ app.use(
     },
   })
 );
-
-// CrystalBallI Integration - Conversational AI
-let crystalBallI = null;
-try {
-  crystalBallI = integrateWithVooDoo(app, null, {
-    team: 'NDB',
-    enabled: true,
-    learningEnabled: true,
-    logLevel: NODE_ENV === 'production' ? 'info' : 'debug'
-  });
-  console.log('🔮 CrystalBallI integrated successfully');
-} catch (error) {
-  console.warn('⚠️ CrystalBallI integration failed:', error.message);
-}
 
 // Routes are now in separate modules:
 // - routes/config.js: Config endpoints

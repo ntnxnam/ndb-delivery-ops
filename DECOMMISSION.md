@@ -1,123 +1,68 @@
-# Decommission plan
+# Decommission record
 
-Run this **only after** the new `apps/delivery-ops/` boots cleanly,
-`mcp-server/` is reachable from your client, and you've spot-checked the
-TPM Streamlit app. Until then, every original folder under `~/` stays put
-so you can fall back without re-cloning anything.
+Forward-looking plan turned out, by 2026-05-20, to be largely a history. This
+file is the recovery map.
 
-## Step 1 — Smoke the new structure
+## What's already gone
 
-```bash
-cd ~/NDB-Ops-Tools/ndb-delivery-ops
+The original legacy folders under `~/` have been deleted and tarballed.
+`~/NDB-Ops-Tools/_archive/` holds 17 tarballs (~173 MB compressed). Recovery
+takes seconds.
 
-# Web app (delivery-ops)
-cd apps/delivery-ops
-./restart
-# open http://localhost:6100 and click through release-versions, sprint report, KPI
+| Original folder | Tarball | Imported / ported into |
+|---|---|---|
+| `~/ndb-status-sender/` | `ndb-status-sender.tar.gz` | `apps/delivery-ops/` |
+| `~/Confluence-Page-Creator/` | `Confluence-Page-Creator.tar.gz` | `apps/tpm-confluence-tools/` |
+| `~/ndb-date-mover/` | `ndb-date-mover.tar.gz` | `mcp-server/` + `shared/services/dateMoverService.ts` |
+| `~/ndb-story-point-calculator/` | `ndb-story-point-calculator.tar.gz` | folded into shared velocity service |
+| `~/ndb-say-vs-do/` | `ndb-say-vs-do.tar.gz` | folded into shared insights (delivery-vs-plan) |
+| `~/ndb-projects-bin-packing/` | `ndb-projects-bin-packing.tar.gz` | `apps/bin-packing/` (static mount) |
+| `~/Release-Timelines-Visualizer/` | `Release-Timelines-Visualizer.tar.gz` | folded into `ReleaseVersionGantt` (now `/release/:name/gantt`) |
+| `~/ndb-capacity-planner/` | `ndb-capacity-planner.tar.gz` | folded into bin-packing |
+| `~/GitHub-Commits/` | `GitHub-Commits.tar.gz` | not yet ported (low value) |
+| 8× Tier-D experiments | various | archived only, not ported |
 
-# MCP server
-cd ../..
-npm run mcp:build
-JIRA_PAT=<your PAT> node mcp-server/dist/index.js   # Ctrl+C after "connected over stdio"
+## What's been removed *inside* the monorepo
 
-# TPM Streamlit
-cd apps/tpm-confluence-tools
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
-```
+The architecture pivot on 2026-05-20 (see `ARCHITECTURE_TARGET.md` v2) deleted
+substantial overhead that was carried in from the imports but never reached
+production usefulness:
 
-If all three boot, you're cleared to run steps 2-4.
+| Removed | Size | Reason |
+|---|---|---|
+| `apps/delivery-ops/crystalball-i/` | 57 MB + ~2k LOC | "Self-learning AI release prediction" — aspirational, never wired to real data; the chat shell was the only live touch and it's gone too |
+| `apps/delivery-ops/server/routes/crystalball.js` | 285 LOC | Routes for the above |
+| `client/src/components/ReleaseTrendsPage.js` | 1,609 LOC | Chart bloat + chat shell; trends will return as a small tab on `/release/:name/trends` |
+| `client/src/components/CrystalBallIChat.{js,css}` | 565 LOC | Bound to deleted backend |
+| `client/src/components/ReleaseVersionTrends.js` | 365 LOC | Dead — never imported |
+| `client/src/components/JiraAuth.{js,css}` | 165 LOC | Superseded by `AuthContext` |
+| 6 dead AI/utility components (Insights, DatePrediction, RiskForecast, ExecutiveSummaryEditor, ConfluenceExtractor, JiraQuery) + 2 orphan services + CSS | ~1,250 LOC | Zero imports anywhere |
+| DataLens + NCM entries in `teamBoardConfig.json` | 2 config blocks | NDB-only (see D1 revision in `DECISIONS.md`) |
+| KPIs sidebar tile (route remains; UI moves to `/admin/kpis` in Wave 2) | nav cleanup | KPI counts already on `/release/:name/brief` |
 
-## Step 2 — Set the new git remote and push
+Server boot log is now ~3 lines instead of the previous ~12. No more
+CrystalBallI / VooDoo / Agent-registered spam.
 
-```bash
-cd ~/NDB-Ops-Tools/ndb-delivery-ops
-git remote add origin <your-new-remote-URL>
-git push -u origin main
-```
+## Recovery
 
-If the remote is Gerrit (per the `DPRO-Gerrit-Push-For-Review` rule), use
-`refs/for/main` instead:
-
-```bash
-git push origin HEAD:refs/for/main
-```
-
-## Step 3 — Unlink the old `ndb-status-sender` remote
-
-This makes the old repo orphan-local. Per your explicit instruction
-("unlink github remote") — kept manual so it's never accidental.
-
-```bash
-cd ~/ndb-status-sender
-git remote -v                    # confirm the remote name (usually "origin")
-git remote remove origin
-git remote -v                    # should now print nothing
-```
-
-## Step 4 — Archive Tier D + imported originals
-
-Each project is tarballed (source + git history, **excluding** node_modules,
-venv, dist, build, __pycache__, *.log) so it's recoverable in seconds if
-needed but doesn't keep eating ~5 GB of disk.
-
-Run the helper script:
+If anything in the kill list above needs to come back:
 
 ```bash
 cd ~/NDB-Ops-Tools/ndb-delivery-ops
-./scripts/archive-decommissioned-projects.sh
+git log --oneline --all -- <path>          # find the deletion commit
+git show <sha>:<path>                      # see the deleted content
+git checkout <parent-sha> -- <path>        # restore if needed
 ```
 
-The script:
-- Creates one `.tar.gz` per project in `~/NDB-Ops-Tools/_archive/`.
-- Excludes the big binary dirs.
-- Prints the resulting file size next to each project.
-- **Does not delete** the originals — you do that manually after spot-checking
-  the tarballs.
-
-## Step 5 — Delete the originals
-
-Only after you've spot-checked the tarballs and the new repo passed step 1:
-
-```bash
-# Imported into apps/delivery-ops and apps/tpm-confluence-tools:
-rm -rf ~/ndb-status-sender
-rm -rf ~/Confluence-Page-Creator
-
-# Ported to MCP tools:
-rm -rf ~/ndb-date-mover
-rm -rf ~/ndb-story-point-calculator
-rm -rf ~/ndb-say-vs-do
-rm -rf ~/ndb-projects-bin-packing
-rm -rf ~/Release-Timelines-Visualizer
-rm -rf ~/ndb-capacity-planner
-rm -rf ~/GitHub-Commits
-
-# Tier D (no migration; archived only):
-rm -rf ~/NDB-Outstanding-Work-Realistic-Timelines
-rm -rf ~/NDB-SWOT
-rm -rf ~/ndb-status-update-app
-rm -rf ~/ndb-release-sprint-analysis-with-chatbot
-rm -rf ~/NamPortfolioManagement
-rm -rf ~/jira-pm-app-full
-rm -rf ~/PM-App
-rm -rf ~/Data-Dash
-```
-
-Recovery if anything goes wrong:
+For the legacy imports:
 
 ```bash
 cd ~
 tar -xzf ~/NDB-Ops-Tools/_archive/<project>.tar.gz
 ```
 
-## Step 6 — Verify
+## What's still pending
 
-```bash
-ls ~/NDB-Ops-Tools/                          # should be ndb-delivery-ops + _archive
-ls ~/NDB-Ops-Tools/_archive/ | wc -l         # ~17 tarballs (Tier D + imported)
-du -sh ~/NDB-Ops-Tools/                      # should be << the pre-consolidation total
-```
-
-Done.
+See `ARCHITECTURE_TARGET.md` § "Execution order" — three short waves. The
+remaining work is to migrate, not decommission. No more legacy folders to
+delete.

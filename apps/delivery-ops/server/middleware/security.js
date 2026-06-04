@@ -67,13 +67,15 @@ const authLimiter = rateLimit({
   skipFailedRequests: true, // Also skip failed requests to avoid blocking during testing
 });
 
-// Email sending rate limiter - 10 emails per hour per IP
+// Email sending rate limiter
+//   prod: 10 sends / hour   dev: 200 / hour  (testing involves many test sends + schedule fetches)
 const emailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  max: process.env.NODE_ENV === 'production' ? 10 : 200,
   message: 'Too many email sending attempts from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipOptions,
 });
 
 // JIRA/Confluence API rate limiter

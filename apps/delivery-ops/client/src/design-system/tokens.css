@@ -1,0 +1,137 @@
+/*
+ * design-system/tokens.css — single source of truth for the new
+ * portfolio-delivery-ops visual language.
+ *
+ * Palette + density + typography ported from `apps/bin-packing/css/main.css`,
+ * which the Portfolio Manager called out as "the UX is nice and usable."
+ *
+ * Strategy:
+ *   - Tokens live under `.ds-scope` so the legacy Atlassian-light surface
+ *     stays untouched. Any new page wraps itself in `<div className="ds-scope">`
+ *     to opt in. When/if we re-skin the whole app, we lift `.ds-scope` rules
+ *     to `:root`.
+ *   - Status colors match the GitHub/bin-packing palette so error/success/
+ *     warn read consistently across the new pages and the bin-packing app
+ *     when it's embedded inside a parent shell later.
+ *   - Type scale is intentionally compact (12px base muted, 14px body,
+ *     16px section title, 22px page title) — per `ui-density.mdc` and
+ *     the Gantt's revealed preference for dense layouts.
+ */
+
+.ds-scope {
+  /* ── core surfaces ─────────────────────────────────────────────────── */
+  --ds-bg: #0f1419;
+  --ds-surface: #1a2332;
+  --ds-surface-raised: #20293a;
+  --ds-border: #2d3a4d;
+  --ds-border-strong: #3a4a60;
+  --ds-divider: rgba(255, 255, 255, 0.06);
+
+  /* ── ink ───────────────────────────────────────────────────────────── */
+  --ds-text: #e6edf3;
+  --ds-text-strong: #f0f6fc;
+  --ds-muted: #8b949e;
+  --ds-muted-soft: #6e7681;
+
+  /* ── one accent ────────────────────────────────────────────────────── */
+  --ds-accent: #58a6ff;
+  --ds-accent-soft: rgba(88, 166, 255, 0.12);
+  --ds-accent-border: rgba(88, 166, 255, 0.4);
+
+  /* ── status ────────────────────────────────────────────────────────── */
+  --ds-success: #3fb950;
+  --ds-success-soft: rgba(63, 185, 80, 0.12);
+  --ds-warning: #d29922;
+  --ds-warning-soft: rgba(210, 153, 34, 0.12);
+  --ds-danger: #f85149;
+  --ds-danger-soft: rgba(248, 81, 73, 0.12);
+  --ds-neutral: #6e7681;
+
+  /* ── RAG (release-status) ──────────────────────────────────────────── */
+  --ds-rag-green: var(--ds-success);
+  --ds-rag-amber: var(--ds-warning);
+  --ds-rag-red: var(--ds-danger);
+  --ds-rag-grey: var(--ds-neutral);
+
+  /* ── type scale ────────────────────────────────────────────────────── */
+  --ds-font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --ds-font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --ds-fs-page: 1.375rem; /* 22px — page titles */
+  --ds-fs-section: 1rem; /* 16px — section titles */
+  --ds-fs-body: 0.875rem; /* 14px — body */
+  --ds-fs-kpi-number: 1.75rem; /* 28px — the big number on KPI cards */
+  --ds-fs-small: 0.8125rem; /* 13px — table cells, dense */
+  --ds-fs-muted: 0.75rem; /* 12px — uppercase muted labels */
+
+  --ds-lh-tight: 1.2;
+  --ds-lh-body: 1.5;
+
+  --ds-tracking-label: 0.05em;
+
+  --ds-fw-regular: 400;
+  --ds-fw-medium: 500;
+  --ds-fw-semi: 600;
+
+  /* ── spacing (compact-by-default; per ui-density.mdc) ──────────────── */
+  --ds-space-1: 0.25rem; /* 4 */
+  --ds-space-2: 0.5rem; /* 8 */
+  --ds-space-3: 0.75rem; /* 12 */
+  --ds-space-4: 1rem; /* 16 */
+  --ds-space-5: 1.5rem; /* 24 */
+  --ds-space-6: 2rem; /* 32 */
+
+  /* ── radii + shadows ───────────────────────────────────────────────── */
+  --ds-radius-sm: 4px;
+  --ds-radius: 6px;
+  --ds-radius-lg: 8px;
+  --ds-radius-pill: 999px;
+
+  --ds-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  --ds-shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.02),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+
+  /* ── motion ────────────────────────────────────────────────────────── */
+  --ds-transition: 0.15s ease;
+
+  /* ── layout ────────────────────────────────────────────────────────── */
+  --ds-max-width: 1400px;
+
+  /* ── apply base look ───────────────────────────────────────────────── */
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-fs-body);
+  line-height: var(--ds-lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Full-page scope wrapper. Use when an entire route's main content sits
+ * inside the new design language. Pads the container; layers wrap their
+ * own content widths internally.
+ */
+.ds-page {
+  min-height: 100vh;
+  padding: var(--ds-space-5);
+}
+
+.ds-page__inner {
+  max-width: var(--ds-max-width);
+  margin: 0 auto;
+}
+
+/* ── inline numeric niceness ─────────────────────────────────────────── */
+.ds-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── focus ring (single rule for every focusable thing inside ds-scope) */
+.ds-scope :focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}

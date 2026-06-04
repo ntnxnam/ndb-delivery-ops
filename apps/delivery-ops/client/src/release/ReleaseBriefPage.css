@@ -1,0 +1,134 @@
+/* ReleaseBriefPage — scoped under .ds-scope */
+
+.ds-scope .ds-page {
+  min-height: 100vh;
+  background: var(--ds-bg-page, #f8f9fa);
+}
+
+.ds-scope .ds-page__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--ds-space-4, 1rem) var(--ds-space-6, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-6, 1.5rem);
+}
+
+/* Page header */
+.rb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3, 0.75rem);
+}
+
+.rb-header__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ds-text-primary, #111);
+}
+
+.rb-header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2, 0.5rem);
+}
+
+/* Meta strip */
+.rb-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3, 0.75rem);
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--ds-text-muted, #666);
+}
+
+.rb-meta__divider {
+  color: var(--ds-border, #ddd);
+}
+
+/* KPI grid */
+.ds-grid-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--ds-space-3, 0.75rem);
+}
+
+/* Skeleton loading placeholder */
+.rb-skeleton {
+  height: 120px;
+  border-radius: var(--ds-radius-md, 8px);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 400% 100%;
+  animation: rb-shimmer 1.4s ease infinite;
+}
+
+@keyframes rb-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Empty / error states */
+.rb-empty {
+  color: var(--ds-text-muted, #888);
+  font-size: 0.9rem;
+  padding: var(--ds-space-4, 1rem) 0;
+}
+
+.rb-error {
+  color: var(--ds-rag-red, #d32f2f);
+  background: #fff5f5;
+  border: 1px solid #fcc;
+  border-radius: var(--ds-radius-sm, 4px);
+  padding: var(--ds-space-3, 0.75rem) var(--ds-space-4, 1rem);
+  font-size: 0.9rem;
+}
+
+/* Refresh button */
+.rb-refresh-btn {
+  background: none;
+  border: 1px solid var(--ds-border, #ddd);
+  border-radius: var(--ds-radius-sm, 4px);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--ds-text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.15s;
+}
+
+.rb-refresh-btn:hover {
+  background: var(--ds-bg-hover, #f0f0f0);
+}
+
+.rb-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Release picker select */
+.rb-release-select {
+  border: 1px solid var(--ds-border, #ddd);
+  border-radius: var(--ds-radius-sm, 4px);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--ds-text-primary, #333);
+  cursor: pointer;
+  min-width: 130px;
+}
+
+.rb-release-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Gantt panel overrides — keep it compact on the brief page */
+.rb-gantt-wrap {
+  overflow-x: auto;
+}

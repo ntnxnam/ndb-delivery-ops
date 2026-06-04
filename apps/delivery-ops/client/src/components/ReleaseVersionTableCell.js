@@ -10,6 +10,7 @@ import {
 } from '../utils/releaseVersionUtils';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import TaskBreakdownCell from './TaskBreakdownCell';
+import ExecSummaryCell from './ExecSummaryCell';
 
 function getStatusDisplayValue(item) {
   const raw = item?.status;
@@ -219,7 +220,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   checkpointHistory,
   jiraBaseUrl,
   itemExecutiveSummary,
-  ganttConfig: _ganttConfig = null,
+  ganttConfig = null,
   breakdownDataMap,
   loadingBreakdowns
 }) {
@@ -558,6 +559,20 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
           breakdownData={breakdownData}
           loading={isBreakdownLoading}
           compact={true}
+        />
+      </td>
+    );
+  }
+
+  // Executive Summary (AI-generated, push to customfield_38460)
+  if (columnKey === 'execSummary') {
+    return (
+      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top', minWidth: '220px', maxWidth: '280px' }}>
+        <ExecSummaryCell
+          item={item}
+          selectedVersion={selectedVersion}
+          ganttConfig={ganttConfig}
+          breakdownData={breakdownData}
         />
       </td>
     );

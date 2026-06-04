@@ -81,7 +81,10 @@ router.post('/move-gate-date', auth, async (req, res) => {
         .json({ success: false, error: 'JIRA Bearer token required in Authorization header' });
     }
 
-    const baseEnv = loadEnv();
+    // requirePat:false — same rationale as releaseDataset.js: per-user
+    // PAT comes from the request, not from process env. Avoids a 500
+    // when the server boots without JIRA_PAT set.
+    const baseEnv = loadEnv({ requirePat: false });
     // Inject the user's PAT for both connectors. Confluence reuses JIRA PAT
     // when they share SSO (most Atlassian deployments).
     const env = {

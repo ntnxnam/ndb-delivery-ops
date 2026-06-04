@@ -90,6 +90,37 @@ export {
   PROCESSED_DATASET_COLUMNS,
 } from './services/releaseDatasetService.js';
 
+// Phase 3 of #1b — cache + sync + changelog enrichment.
+export {
+  ReleaseDatasetCache,
+  CACHE_SCHEMA,
+  SYNC_LOCK_STALE_SECONDS,
+  computeReleaseJqlHash,
+} from './services/releaseDatasetCache.js';
+export type {
+  CacheOptions,
+  ReleaseCacheMeta,
+  BundleCacheMeta,
+  BundleCachePayload,
+  CachedReleaseInfo,
+  LoadReleaseOptions,
+} from './services/releaseDatasetCache.js';
+export {
+  syncReleaseDataset,
+  rebuildBundleFromDisk,
+  enrichClosedDates,
+  extractClosedDate,
+  CHANGELOG_REQUIRED_TYPES,
+  DEFAULT_CHANGELOG_CONCURRENCY,
+} from './services/releaseDatasetSync.js';
+export type {
+  SyncOptions,
+  SyncResult,
+  SyncProgressEvent,
+  EnrichClosedDatesOptions,
+  JiraChangelogHistory,
+} from './services/releaseDatasetSync.js';
+
 export {
   parseVersion,
   classifyRelease,
@@ -138,6 +169,58 @@ export {
 export type { SprintCalendar } from './services/sprintsService.js';
 
 export {
+  computeSprintVelocity,
+  computeRecentSprintVelocity,
+  QA_VERIFICATION_EFFORT_RATIO,
+} from './services/velocityService.js';
+export type {
+  ComputeSprintVelocityOptions,
+  SprintVelocityStream,
+  SprintVelocityResult,
+} from './services/velocityService.js';
+
+export {
+  buildOutstandingJqls,
+  computeOutstandingCounts,
+  OUTSTANDING_TILE_KEYS,
+} from './services/outstandingService.js';
+export type {
+  OutstandingJqlOptions,
+  OutstandingTileKey,
+  OutstandingTileResult,
+} from './services/outstandingService.js';
+
+export {
+  computeLandingForecast,
+  classifyConfidence,
+  classifyVerdict,
+  gapPhrase,
+  buildForecastOneLiner,
+  FORECAST_VERDICT_COLORS,
+  FORECAST_VERDICT_LABELS,
+  FORECAST_CONFIDENCE_LABELS,
+} from './services/landingForecastService.js';
+export type {
+  ComputeLandingForecastOptions,
+  LandingForecastResult,
+  ForecastVerdict,
+  ForecastConfidence,
+} from './services/landingForecastService.js';
+
+export {
+  parseReleaseGateTimeline,
+  gateKindLabel,
+  gateKindColor,
+} from './services/gateTimelineService.js';
+export type {
+  GateKind,
+  GateStyle,
+  GateEvent,
+  ReleaseGateTimeline,
+  ParseGateTimelineOptions,
+} from './services/gateTimelineService.js';
+
+export {
   computePayloadMetrics,
   computeLabelAnchoredMetrics,
   computeReleaseInsights,
@@ -153,3 +236,24 @@ export type {
   ReleaseInsights,
   ReleaseInsightsOptions,
 } from './services/releaseInsightsService.js';
+
+export {
+  buildFeatureListJql,
+  buildCanonicalPayloadJql,
+  buildFeatIdMentionJql,
+  buildFeatNumberMentionJql,
+  issueFromJira,
+  toFeatureListItem,
+  diffByKey,
+  buildFlowSeries,
+  buildFeatureKpis,
+  parseStatusUpdate20,
+  FEATURE_DASHBOARD_FIELDS,
+} from './services/featureDashboardService.js';
+export type {
+  FeatureListItem,
+  FeatureDashboardIssue,
+  FeatureFlowPoint,
+  FeatureKpiTile,
+  StatusUpdateSection,
+} from './services/featureDashboardService.js';

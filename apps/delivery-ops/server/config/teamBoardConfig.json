@@ -1,6 +1,6 @@
 {
-  "_schema_version": "2.0",
-  "_description": "Team configuration with support for both dedicated projects (like NDB->ERA) and parent projects (like DataLens->ENG)",
+  "_schema_version": "3.0-ndb-only",
+  "_description": "NDB-only configuration. Multi-product entries (DataLens, NCM) removed per ARCHITECTURE_TARGET.md v2 (2026-05-20). ProductService kept as a thin shim so shared services don't need to be rewritten; this config will only ever have one team.",
   "sprintFieldId": "customfield_10360",
   "storyPointsFieldId": "customfield_10002",
   "completedStatusName": "Closed",
@@ -17,26 +17,6 @@
       "labelPrefix": "ndb",
       "releasePrefix": "NDB-",
       "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }
-    },
-    {
-      "id": "datalens",
-      "name": "DataLens",
-      "boardId": null,
-      "projectKey": "ENG",
-      "projectType": "parent",
-      "versionPatterns": ["^DataLens.*", "^DL.*"],
-      "baseFilter": "filter=DataLens-All-Base-Filter and statusCategory!=Done",
-      "sprintBaseFilter": "filter=DataLens-All-Base-Filter"
-    },
-    {
-      "id": "ncm",
-      "name": "NCM",
-      "boardId": null,
-      "projectKey": "FEAT",
-      "projectType": "parent",
-      "versionPatterns": ["^NCM.*", "^CALM.*"],
-      "baseFilter": "filter=175938 and statusCategory!=Done",
-      "sprintBaseFilter": "filter=175938"
     }
   ],
   "defaultTeamId": "ndb"

@@ -303,6 +303,7 @@ router.post('/test-jql', [
  * before the upstream failure).
  */
 function sendPartialItemsFailure(res, error, endpointName) {
+  if (res.headersSent) return; // timeout already responded — don't double-send
   const requestId = error.requestId || 'unknown';
   console.error(`[${requestId}] Error in ${endpointName}:`, error.message);
   console.error(`[${requestId}] Error stack:`, error.stack);
@@ -3300,9 +3301,11 @@ router.post('/release-items-commit', jiraTimeout, releaseVersionsLimiter, valida
       fixVersion: req.body?.fixVersion,
       username: req.user?.username,
     });
+    if (res.headersSent) return; // timeout already responded
     return res.json({ success: true, data: { items }, cached });
   } catch (error) {
     if (error.statusCode === 400) {
+      if (res.headersSent) return;
       return res.status(400).json({ success: false, error: error.message });
     }
     return sendPartialItemsFailure(res, error, '/api/jira/release-items-commit');
@@ -3319,9 +3322,11 @@ router.post('/release-items-long-term', jiraTimeout, releaseVersionsLimiter, val
       fixVersion: req.body?.fixVersion,
       username: req.user?.username,
     });
+    if (res.headersSent) return; // timeout already responded
     return res.json({ success: true, data: { items }, cached });
   } catch (error) {
     if (error.statusCode === 400) {
+      if (res.headersSent) return;
       return res.status(400).json({ success: false, error: error.message });
     }
     return sendPartialItemsFailure(res, error, '/api/jira/release-items-long-term');

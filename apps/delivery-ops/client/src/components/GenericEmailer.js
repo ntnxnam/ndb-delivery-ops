@@ -383,7 +383,8 @@ function GenericEmailer() {
             <button
               type="button"
               onClick={handleSend}
-              disabled={sending || selectedFieldIdsInOrder.length === 0}
+              disabled={sending || issues.length === 0 || selectedFieldIdsInOrder.length === 0}
+              title={issues.length === 0 ? 'Fetch issues first before sending' : selectedFieldIdsInOrder.length === 0 ? 'Select at least one column' : 'Send email'}
               style={{ padding: '0.5rem 1rem' }}
             >
               {sending ? 'Sending...' : 'Send Email'}
@@ -396,6 +397,16 @@ function GenericEmailer() {
         </div>
       </section>
 
+      {issues.length === 0 && !fetching && jql.trim() === '' && (
+        <div style={{ color: '#718096', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          Enter a JQL query and click <strong>Fetch</strong> to load issues, then click <strong>Send Email</strong>.
+        </div>
+      )}
+      {issues.length === 0 && !fetching && jql.trim() !== '' && (
+        <div style={{ color: '#718096', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          Click <strong>Fetch</strong> to load issues before sending.
+        </div>
+      )}
       {error && <div className="generic-emailer-error" style={{ color: '#c53030', marginBottom: '1rem' }}>{error}</div>}
       {success && <div className="generic-emailer-success" style={{ color: '#276749', marginBottom: '1rem' }}>{success}</div>}
 

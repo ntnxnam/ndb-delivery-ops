@@ -201,6 +201,15 @@
       "width": "20%",
       "description": "Shows breakdown of sub-tasks, bugs, and stories by status"
     },
+    "execSummary": {
+      "label": "AI Exec Summary",
+      "includeInUI": true,
+      "includeInEmail": false,
+      "order": 16.8,
+      "width": "22%",
+      "customField": "customfield_38460",
+      "description": "AI-generated executive summary via NAI. Generate per row, review, then push to JIRA customfield_38460."
+    },
     "statusUpdateDate": {
       "label": "Status Update Date",
       "includeInUI": true,
@@ -218,6 +227,7 @@
     "riskIndicator",
     "statusUpdate",
     "taskBreakdown",
+    "execSummary",
     "statusUpdateDate"
   ]
 }

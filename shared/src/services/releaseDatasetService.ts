@@ -22,17 +22,20 @@
  *   - `processMaster()` — cross-release assembly into a single dataset
  *   - Sidecar merging helpers (`_merge_*_sidecar_inplace`)
  *
- * Deferred to Phase 3:
+ * Phase 3 (landed — see `releaseDatasetCache.ts` and
+ * `releaseDatasetSync.ts`):
  *
- *   - Cache (per-release + bundle) — needs a re-imagined story for Node
- *     (the Python version uses pickle + ThreadPoolExecutor + Streamlit
- *     `@st.cache_data`; we'll likely use JSON + an explicit on-disk
- *     cache, or a SQLite layer)
- *   - `sync()` orchestration
- *   - Cache-schema upgrade path (the v11 story — probably a fresh start)
- *   - Targeted changelog fetch for `Closed Date` on Bug/Improvement
- *     (needs `jiraConnector.getIssue(key, { expand: 'changelog' })`
- *     which isn't on the connector yet)
+ *   - Per-release + bundle cache (JSON + atomic writes, fresh
+ *     `v1-node-2026-05` schema, no upgrade path from the legacy
+ *     pickle-based `v11-chatbot-scoped-2026-05`). Per-product
+ *     directory scoping via `ReleaseDatasetCache({ cacheDir, productId })`.
+ *   - `syncReleaseDataset()` — full-sync vs scoped-refetch dispatcher,
+ *     bundle assembly across `{fresh fetch} ∪ {strict cache hits}`.
+ *   - Targeted changelog enrichment for `Closed Date` on Bug/Improvement
+ *     resolved as Done. Uses the new
+ *     `jiraConnector.getIssue(key, { expand: 'changelog' })` overload.
+ *     Required for the QA Verification flag (per
+ *     `sprint-velocity-types.mdc`).
  *
  * Product-agnostic notes (D1):
  *

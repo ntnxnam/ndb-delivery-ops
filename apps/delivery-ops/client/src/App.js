@@ -11,7 +11,6 @@ import { useAuth } from './auth/hooks/useAuth';
 // Import existing components (these will be gradually migrated to the new modules)
 import EmailSender from './components/EmailSender';
 import ReleaseVersionTab from './components/ReleaseVersionTab';
-import ReleaseTrendsPage from './components/ReleaseTrendsPage';
 import ReleaseSetup from './components/ReleaseSetup';
 import ReleaseConfigPage from './components/ReleaseConfigPage';
 import GenericEmailer from './components/GenericEmailer';
@@ -19,6 +18,10 @@ import EmailHistoryTab from './components/EmailHistoryTab';
 import SprintReportPage from './components/SprintReportPage';
 import KPIPage from './components/KPIPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
+import DesignSystemDemo from './design-system/DesignSystemDemo';
+import ReleaseBriefPage from './release/ReleaseBriefPage';
+import FeatureDashboardPage from './feature/FeatureDashboardPage';
+import { ComponentReport } from './components/ComponentReport';
 
 import './App.css';
 
@@ -115,27 +118,19 @@ const AuthenticatedApp = () => {
         } 
       />
       
-      <Route 
-        path="/all-status" 
+      <Route
+        path="/project-status"
         element={
           <ProtectedRoute permissions={['release_versions_view']}>
             <Layout>
               <ReleaseVersionTab />
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/release-trends" 
-        element={
-          <ProtectedRoute permissions={['release_trends_view']}>
-            <Layout>
-              <ReleaseTrendsPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
+
+      {/* Back-compat: old /all-status URLs (bookmarks, emails) redirect to /project-status */}
+      <Route path="/all-status" element={<Navigate to="/project-status" replace />} />
       
       <Route 
         path="/release-setup" 
@@ -214,6 +209,61 @@ const AuthenticatedApp = () => {
         } 
       />
       
+      <Route
+        path="/design"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <DesignSystemDemo />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/release/brief"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <ReleaseBriefPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/release/:name/brief"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <ReleaseBriefPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/feature-dashboard"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <FeatureDashboardPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/component-report"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <ComponentReport />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
