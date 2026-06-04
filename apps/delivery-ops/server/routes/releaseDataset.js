@@ -684,6 +684,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // =========================================================================
     console.log('[project-breakdown] STAGE 1: Fetching top-level projects...');
     const topLevelJql = `fixVersion = "${release}" AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
+    console.log('[project-breakdown] STAGE 1 JQL:', topLevelJql);
     const topLevelProjects = await jira.searchAll(
       topLevelJql,
       fieldsList,
@@ -708,6 +709,7 @@ router.get('/project-breakdown', auth, async (req, res) => {
     if (topLevelKeys.length > 0) {
       // Use both parent (built-in) and parentLink (custom) to find child epics
       const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys})${parentLinkFields.length > 0 ? ` OR "${parentLinkFields[0]}" in (${topLevelKeys})` : ''})`;
+      console.log('[project-breakdown] STAGE 2 JQL:', parentEpicsJql);
       const childEpics = await jira.searchAll(
         parentEpicsJql,
         fieldsList,
