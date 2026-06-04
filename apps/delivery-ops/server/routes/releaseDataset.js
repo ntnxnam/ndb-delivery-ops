@@ -632,11 +632,13 @@ router.get('/project-breakdown', auth, async (req, res) => {
     
     const searchOpts = { perPageTimeoutMs: 30000 };
     
-    // Build field list for API calls - always include both custom fields
+    // Build field list for API calls.
+    // NOTE: parentLinkField (customfield_20363) is intentionally NOT included here —
+    // it is only used in JQL WHERE clauses (e.g. "Parent Link" in (...)), not as a
+    // field to fetch. Including it in fields= causes a 400 from JIRA when the field
+    // ID doesn't exist or the user lacks permission. The built-in `parent` field
+    // captures the same relationship for reading.
     let fieldsList = `key,issuetype,summary,parent,status`;
-    if (parentLinkFields.length > 0) {
-      fieldsList += `,${parentLinkFields.join(',')}`;
-    }
     if (epicLinkFields.length > 0) {
       fieldsList += `,${epicLinkFields.join(',')}`;
     }
@@ -707,19 +709,15 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // Batch: find all epics with a parent link to any top-level project
     const topLevelKeys = topLevelProjects.map(p => p.key).join(',');
     if (topLevelKeys.length > 0) {
-      // Use both parent (built-in) and parentLink (custom) to find child epics
-      const parentEpicsJql = `issuetype = Epic AND (parent in (${topLevelKeys})${parentLinkFields.length > 0 ? ` OR "${parentLinkFields[0]}" in (${topLevelKeys})` : ''})`;
+      // Find epics where Parent Link (portfolio hierarchy) points to top-level projects
+      const parentEpicsJql = `issuetype = Epic AND "Parent Link" in (${topLevelKeys})`;
       console.log('[project-breakdown] STAGE 2 JQL:', parentEpicsJql);
-      const childEpics = await jira.searchAll(
-        parentEpicsJql,
-        fieldsList,
-        searchOpts
-      ) || [];
+      const childEpics = await jira.searchAll(parentEpicsJql, fieldsList, searchOpts) || [];
       console.log(`[project-breakdown] STAGE 2: Found ${childEpics.length} child epics`);
 
       // Map epics to their parent projects
       for (const epic of childEpics) {
-        const parentKey = epic.fields?.parent?.key || readLinkKey(epic.fields, parentLinkFields);
+        const parentKey = readLinkKey(epic.fields, parentLinkFields);
         if (parentKey && epicsByProjectKey[parentKey]) {
           epicsByProjectKey[parentKey].push(epic);
         }
@@ -760,14 +758,10 @@ router.get('/project-breakdown', auth, async (req, res) => {
     // STAGE 4: Fetch STANDALONE EPICS (no parent link)
     // =========================================================================
     console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
-    // Check both parent and parentLink fields for empty
-    const parentLinkEmptyCondition = parentLinkFields.length > 0 ? ` AND "${parentLinkFields[0]}" is EMPTY` : '';
-    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND parent is EMPTY${parentLinkEmptyCondition} AND status not in (Cancelled, Backlog)`;
-    const standaloneEpics = await jira.searchAll(
-      standaloneEpicsJql,
-      `key,summary`,
-      searchOpts
-    ) || [];
+    // Find epics with no Parent Link (not children of any portfolio item)
+    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND "Parent Link" is EMPTY AND status not in (Cancelled, Backlog)`;
+    console.log('[project-breakdown] STAGE 4 JQL:', standaloneEpicsJql);
+    const standaloneEpics = await jira.searchAll(standaloneEpicsJql, `key,summary`, searchOpts) || [];
     console.log(`[project-breakdown] STAGE 4: Found ${standaloneEpics.length} standalone epics`);
 
     const workItemsByStandaloneEpicKey = {};

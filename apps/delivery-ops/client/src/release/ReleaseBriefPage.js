@@ -127,6 +127,13 @@ export default function ReleaseBriefPage() {
             <LandingForecastPanel
               forecast={forecast?.forecast}
               loading={loadingForecast}
+            />
+          )}
+
+          {ready && (
+            <OutstandingStreamsPanel
+              forecast={forecast?.forecast}
+              loading={loadingForecast}
               jiraBaseUrl={jiraBaseUrl}
             />
           )}
@@ -416,20 +423,82 @@ function LandingForecastPanel({ forecast, loading }) {
               rag={gapWeeks <= 0 ? 'green' : gapWeeks <= 3 ? 'amber' : 'red'}
             />
           )}
-          {typeof forecast.unresolved === 'number' && (
+          {typeof forecast.requiredVelocity === 'number' && forecast.requiredVelocity !== null && (
             <KPICard
-              label="Unresolved"
-              value={forecast.unresolved.toLocaleString()}
-              caption={`At current velocity (${forecast.recentVelocity ?? '—'} tix/sprint)`}
-              rag={forecast.unresolved === 0 ? 'green' : 'amber'}
+              label="Required Velocity"
+              value={forecast.requiredVelocity.toLocaleString()}
+              unit="tix/sprint"
+              caption="weighted pace needed to land on planned GA"
             />
           )}
-          {typeof forecast.pendingVerification === 'number' && (
+        </div>
+      )}
+    </SectionPanel>
+  );
+}
+
+function OutstandingStreamsPanel({ forecast, jiraBaseUrl, loading }) {
+  if (!forecast && !loading) return null;
+
+  const devUnresolved = typeof forecast?.devUnresolved === 'number' ? forecast.devUnresolved : null;
+  const qaVerificationPending = typeof forecast?.qaVerificationPending === 'number' ? forecast.qaVerificationPending : null;
+  const qaTestTasksUnresolved = typeof forecast?.qaTestTasksUnresolved === 'number' ? forecast.qaTestTasksUnresolved : null;
+
+  const devHref = forecast?.jqlDevUnresolved 
+    ? jiraBaseUrl && new URL(`/issues/?jql=${encodeURIComponent(forecast.jqlDevUnresolved)}`, jiraBaseUrl).href
+    : undefined;
+  const qaVerHref = forecast?.jqlQaVerificationPending
+    ? jiraBaseUrl && new URL(`/issues/?jql=${encodeURIComponent(forecast.jqlQaVerificationPending)}`, jiraBaseUrl).href
+    : undefined;
+  const qaTestHref = forecast?.jqlQaTestTasksUnresolved
+    ? jiraBaseUrl && new URL(`/issues/?jql=${encodeURIComponent(forecast.jqlQaTestTasksUnresolved)}`, jiraBaseUrl).href
+    : undefined;
+
+  return (
+    <SectionPanel
+      title="Outstanding Work (by Stream)"
+      caption="Dev, QA Verification, and QA Test Tasks breakdown"
+    >
+      {loading && !forecast && (
+        <div className="ds-grid-kpis">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rb-skeleton" />
+          ))}
+        </div>
+      )}
+      {forecast && (
+        <div className="ds-grid-kpis">
+          {devUnresolved !== null && (
             <KPICard
-              label="Pending Verification"
-              value={forecast.pendingVerification.toLocaleString()}
-              caption="Bug & Improvement in Resolved status"
-              rag={forecast.pendingVerification === 0 ? 'green' : 'amber'}
+              label="Outstanding Dev"
+              value={devUnresolved.toLocaleString()}
+              unit={devUnresolved === 1 ? 'issue' : 'issues'}
+              caption="Unresolved development work"
+              href={devHref}
+              title={forecast.jqlDevUnresolved || undefined}
+              rag={devUnresolved === 0 ? 'green' : 'amber'}
+            />
+          )}
+          {qaVerificationPending !== null && (
+            <KPICard
+              label="Outstanding QA Verification"
+              value={qaVerificationPending.toLocaleString()}
+              unit={qaVerificationPending === 1 ? 'issue' : 'issues'}
+              caption="Bug & Improvement awaiting QA sign-off"
+              href={qaVerHref}
+              title={forecast.jqlQaVerificationPending || undefined}
+              rag={qaVerificationPending === 0 ? 'green' : 'amber'}
+            />
+          )}
+          {qaTestTasksUnresolved !== null && (
+            <KPICard
+              label="Outstanding QA Test Tasks"
+              value={qaTestTasksUnresolved.toLocaleString()}
+              unit={qaTestTasksUnresolved === 1 ? 'issue' : 'issues'}
+              caption="Unresolved test execution work"
+              href={qaTestHref}
+              title={forecast.jqlQaTestTasksUnresolved || undefined}
+              rag={qaTestTasksUnresolved === 0 ? 'green' : 'amber'}
             />
           )}
         </div>

@@ -140,10 +140,31 @@ export interface LandingForecastResult {
   /** Available work capacity in today's remaining days. */
   todayCapacityItems: number;
 
+  /** 3-stream outstanding breakdown (per sprint-velocity-types.mdc). */
+  devUnresolved: number;
+  jqlDevUnresolved: string;
+  qaVerificationPending: number;
+  jqlQaVerificationPending: string;
+  qaTestTasksUnresolved: number;
+  jqlQaTestTasksUnresolved: string;
+
   /** TODO(parity) — populated when baseline/curve port lands. */
   baselineVelocity: number;
   velocityVsBaselinePct: number | null;
   payloadTotal: number;
+
+  /**
+   * Weighted outstanding = devUnresolved + qaVerificationPending×0.33 + qaTestTasksUnresolved.
+   * Used as the forecast numerator so units match the weighted velocity denominator.
+   */
+  weightedOutstanding: number;
+  /** Average weighted inflow per sprint (dev + 0.33×bugImpr + test created per sprint). */
+  weightedInflowPerSprint: number;
+  /** plannedGaSprint - todaySprint (null when no GA date configured). */
+  sprintsRemaining: number | null;
+  /** weightedOutstanding / sprintsRemaining — pace needed to land on planned GA. */
+  requiredVelocity: number | null;
+
   /** Stream-level errors so the UI can render partial. */
   errors: string[];
 }
@@ -324,11 +345,13 @@ function daysRemainingInCurrentSprint(
 }
 
 /**
- * Calculate the average net inflow (discovered - closed) of Bug + Improvement
- * items over a set of sprints. Used to project how many new bugs will arrive
- * by the forecast date.
- * 
- * Returns: items per sprint (positive = growing backlog, negative = shrinking)
+ * Calculate the average weighted inflow across all 3 velocity streams over a
+ * set of sprints. Uses the same weighting as sprintVelocityTotal so the result
+ * is directly subtractable from recentVelocity (consistent units).
+ *
+ * weightedInflow = devCreated + bugImprCreated×0.33 + testCreated   [per sprint]
+ *
+ * Returns: weighted items per sprint (positive = growing backlog).
  */
 async function calculateNetInflowTrend(
   jira: JiraConnector,
@@ -339,28 +362,37 @@ async function calculateNetInflowTrend(
 ): Promise<number> {
   if (sprintNumbers.length === 0) return 0;
 
-  const discovered: number[] = [];
-  const closed: number[] = [];
+  let totalWeightedInflow = 0;
 
   for (const sprintNum of sprintNumbers) {
     const { startIso, endIso } = sprintWindow(sprintNum, calendar);
 
-    // Bugs discovered (created) during the sprint
-    const jqlDiscovered = `project = ${projectKey} AND issuetype in (Bug, Improvement) AND created >= "${startIso}" AND created <= "${endIso}"`;
-    const countDiscovered = await jira.searchCount(jqlDiscovered).catch(() => 0);
-    discovered.push(countDiscovered);
+    const [devCreated, bugImprCreated, testCreated] = await Promise.all([
+      // Dev stream: non-portfolio, non-Test items created during sprint
+      jira
+        .searchCount(
+          `project = ${projectKey} AND issueType not in (Feature, Initiative, Epic, X-FEAT, Capability, Test) AND created >= "${startIso}" AND created <= "${endIso}"`
+        )
+        .catch(() => 0),
+      // QA Verification stream: Bug + Improvement items created during sprint
+      jira
+        .searchCount(
+          `project = ${projectKey} AND issuetype in (Bug, Improvement) AND created >= "${startIso}" AND created <= "${endIso}"`
+        )
+        .catch(() => 0),
+      // QA Test Tasks stream: Test items created during sprint
+      jira
+        .searchCount(
+          `project = ${projectKey} AND issueType = Test AND created >= "${startIso}" AND created <= "${endIso}"`
+        )
+        .catch(() => 0),
+    ]);
 
-    // Bugs closed (moved to Closed) during the sprint
-    const jqlClosed = `project = ${projectKey} AND issuetype in (Bug, Improvement) AND status changed to "Closed" during ("${startIso}", "${endIso}")`;
-    const countClosed = await jira.searchCount(jqlClosed).catch(() => 0);
-    closed.push(countClosed);
+    totalWeightedInflow +=
+      devCreated + bugImprCreated * QA_VERIFICATION_EFFORT_RATIO + testCreated;
   }
 
-  const totalDiscovered = discovered.reduce((a, b) => a + b, 0);
-  const totalClosed = closed.reduce((a, b) => a + b, 0);
-  const netPerSprint = (totalDiscovered - totalClosed) / sprintNumbers.length;
-
-  return netPerSprint;
+  return totalWeightedInflow / sprintNumbers.length;
 }
 
 // ── Public entrypoint ────────────────────────────────────────────────────
@@ -411,6 +443,39 @@ export async function computeLandingForecast(
     ],
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3-Stream Outstanding Breakdown (per sprint-velocity-types.mdc)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Dev unresolved: all non-portfolio, non-Test items in Unresolved state
+  const jqlDevUnresolved = buildEngineeringPayloadJql(rel, {
+    projectKey: opts.projectKey,
+    extras: [
+      'issueType not in (Feature, Initiative, Epic, X-FEAT, Capability, Test)',
+      'resolution = Unresolved',
+      `(labels != "${deferredLabel}" OR labels is EMPTY)`,
+    ],
+  });
+
+  // QA Verification pending: Bug + Improvement in Resolved (awaiting QA sign-off)
+  const jqlQaVerificationPending = buildEngineeringPayloadJql(rel, {
+    projectKey: opts.projectKey,
+    extras: [
+      'issuetype in (Bug, Improvement)',
+      'status = Resolved',
+    ],
+  });
+
+  // QA Test Tasks unresolved: Test issues in Unresolved state
+  const jqlQaTestTasksUnresolved = buildEngineeringPayloadJql(rel, {
+    projectKey: opts.projectKey,
+    extras: [
+      'issueType = Test',
+      'resolution = Unresolved',
+      `(labels != "${deferredLabel}" OR labels is EMPTY)`,
+    ],
+  });
+
   const errors: string[] = [];
   const safeCount = async (jql: string, label: string): Promise<number> => {
     try {
@@ -439,11 +504,14 @@ export async function computeLandingForecast(
     }
   };
 
-  const [unresolved, pendingVerification, payloadTotal, recentSprints] = await Promise.all([
+  const [unresolved, pendingVerification, payloadTotal, recentSprints, devUnresolved, qaVerificationPending, qaTestTasksUnresolved] = await Promise.all([
     safeCount(jqlUnresolved, 'unresolved'),
     safeCount(jqlPendingVerification, 'pendingVerification'),
     safeCount(jqlPayloadTotal, 'payloadTotal'),
     safeVelocity(),
+    safeCount(jqlDevUnresolved, 'devUnresolved'),
+    safeCount(jqlQaVerificationPending, 'qaVerificationPending'),
+    safeCount(jqlQaTestTasksUnresolved, 'qaTestTasksUnresolved'),
   ]);
 
   const velocities = recentSprints.map(sprintVelocityTotal);
@@ -464,18 +532,25 @@ export async function computeLandingForecast(
   let gapSprints: number | null = null;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // IMPROVED FORECAST: Account for today's remaining capacity + bug inflow trend
+  // WEIGHTED OUTSTANDING — consistent units with velocity denominator
+  // devUnresolved + qaVerificationPending×0.33 + qaTestTasksUnresolved
   // ─────────────────────────────────────────────────────────────────────────
-  
-  let netInflowPerSprint = 0;
+  const weightedOutstanding =
+    devUnresolved +
+    qaVerificationPending * QA_VERIFICATION_EFFORT_RATIO +
+    qaTestTasksUnresolved;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // WEIGHTED INFLOW TREND — 3-stream, same weighting as velocity
+  // ─────────────────────────────────────────────────────────────────────────
+  let weightedInflowPerSprint = 0;
   try {
-    // Calculate the sprint numbers to sample for inflow trend
     const sprintsToAnalyze = recentSprints
       .map((_, i) => todaySprint - window + i)
       .filter((s) => s >= 1);
-    
+
     if (sprintsToAnalyze.length > 0) {
-      netInflowPerSprint = await calculateNetInflowTrend(
+      weightedInflowPerSprint = await calculateNetInflowTrend(
         opts.jira,
         opts.projectKey,
         rel,
@@ -486,27 +561,36 @@ export async function computeLandingForecast(
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'inflow calculation failed';
     errors.push(`inflow: ${message}`);
-    netInflowPerSprint = 0;
+    weightedInflowPerSprint = 0;
   }
 
-  // Effective velocity = actual velocity minus net inflow.
-  // If net inflow exceeds velocity, the backlog is growing and we can't finish.
-  const effectiveVelocity = Math.max(0.1, recentVelocity - netInflowPerSprint);
-  
+  // Effective velocity = actual velocity minus weighted inflow.
+  // Both are now in the same units (weighted tix/sprint), so the subtraction is valid.
+  const effectiveVelocity = Math.max(0.1, recentVelocity - weightedInflowPerSprint);
+
+  // Required velocity: weighted outstanding / sprints remaining until planned GA.
+  const sprintsRemaining =
+    plannedGaSprint !== null ? Math.max(1, plannedGaSprint - todaySprint) : null;
+  const requiredVelocity =
+    sprintsRemaining !== null
+      ? Math.round((weightedOutstanding / sprintsRemaining) * 100) / 100
+      : null;
+
   // Calculate remaining days in today's sprint and today's available capacity.
   const daysRemaining = daysRemainingInCurrentSprint(calendar, now);
   const DAYS_PER_SPRINT = calendar.sprintDays;
   const dailyVelocity = recentVelocity / DAYS_PER_SPRINT;
   const todayCapacity = dailyVelocity * daysRemaining;
 
-  // Determine forecast sprint by allocating work: today first, then future sprints.
-  if (unresolved > 0 && effectiveVelocity > 0) {
-    if (unresolved <= todayCapacity) {
+  // Determine forecast sprint using weightedOutstanding (numerator now matches
+  // the weighted velocity denominator — no more unit mismatch).
+  if (weightedOutstanding > 0 && effectiveVelocity > 0) {
+    if (weightedOutstanding <= todayCapacity) {
       // All work fits in today's remaining capacity
       forecastGaSprint = todaySprint;
     } else {
       // Work spills into future sprints
-      const workOverflow = unresolved - todayCapacity;
+      const workOverflow = weightedOutstanding - todayCapacity;
       const sprintsToFinish = Math.ceil(workOverflow / effectiveVelocity);
       forecastGaSprint = todaySprint + sprintsToFinish;
     }
@@ -515,8 +599,8 @@ export async function computeLandingForecast(
     if (plannedGaSprint !== null) {
       gapSprints = forecastGaSprint - plannedGaSprint;
     }
-  } else if (unresolved === 0) {
-    // No unresolved work; we're done today
+  } else if (weightedOutstanding === 0) {
+    // No outstanding work; we're done today
     forecastGaSprint = todaySprint;
     const { endIso } = sprintWindow(todaySprint, calendar);
     forecastGaDate = endIso;
@@ -529,8 +613,8 @@ export async function computeLandingForecast(
   // release_burn.release_burn(). For MVP we infer from the inputs.
   let burnStatus = 'Active';
   if (!plannedGaDate) burnStatus = 'Missing GA';
-  else if (elapsedSprints === 0 && unresolved === 0) burnStatus = 'Not started';
-  else if (unresolved === 0 && plannedGaSprint !== null && todaySprint > plannedGaSprint) {
+  else if (elapsedSprints === 0 && weightedOutstanding === 0) burnStatus = 'Not started';
+  else if (weightedOutstanding === 0 && plannedGaSprint !== null && todaySprint > plannedGaSprint) {
     burnStatus = 'Shipped';
   }
 
@@ -557,10 +641,20 @@ export async function computeLandingForecast(
     jqlUnresolved,
     jqlPendingVerification,
     forecastMethod: 'fallback_running',
-    netInflowPerSprint: Math.round(netInflowPerSprint * 100) / 100,
+    netInflowPerSprint: Math.round(weightedInflowPerSprint * 100) / 100,
     effectiveVelocity: Math.round(effectiveVelocity * 100) / 100,
     daysRemainingToday: daysRemaining,
     todayCapacityItems: Math.round(todayCapacity * 100) / 100,
+    devUnresolved,
+    jqlDevUnresolved,
+    qaVerificationPending,
+    jqlQaVerificationPending,
+    qaTestTasksUnresolved,
+    jqlQaTestTasksUnresolved,
+    weightedOutstanding: Math.round(weightedOutstanding * 100) / 100,
+    weightedInflowPerSprint: Math.round(weightedInflowPerSprint * 100) / 100,
+    sprintsRemaining,
+    requiredVelocity,
     baselineVelocity: 0,
     velocityVsBaselinePct: null,
     payloadTotal,
