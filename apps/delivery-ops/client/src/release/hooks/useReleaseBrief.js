@@ -18,19 +18,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  fetchGateTimeline,
   fetchLandingForecast,
-  fetchOutstanding,
-  fetchProjectBreakdown,
   fetchReleaseKpiBatch,
-  fetchReleasePayloadSynopsis,
-  fetchSprintVelocity,
-  listReleaseVersions,
   listTeamKpis,
-  pickDefaultRelease,
 } from '../services/releaseBriefService';
-
-const DEFAULT_PREFERRED_RELEASE = 'NDB-2.11';
+import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
+import { useReleaseData } from '../../contexts/ReleaseDataContext';
+import {
+  deriveSynopsisFromBundle,
+  deriveOutstandingFromBundle,
+  deriveVelocityFromBundle,
+  deriveBurndownFromBundle,
+  deriveProjectBreakdownFromBundle,
+} from '../utils/bundleUtils';
 
 export function useReleaseBrief({
   teamId,
@@ -39,21 +39,23 @@ export function useReleaseBrief({
   username,
   jiraBaseUrl,
 }) {
-  const [versions, setVersions] = useState([]);
   const [kpis, setKpis] = useState([]);
   const [results, setResults] = useState({});
   const [synopsis, setSynopsis] = useState(null);
   const [velocity, setVelocity] = useState(null);
   const [forecast, setForecast] = useState(null);
-  const [gateTimeline, setGateTimeline] = useState(null);
   const [outstanding, setOutstanding] = useState(null);
   const [projectBreakdown, setProjectBreakdown] = useState(null);
-  const [selectedRelease, setSelectedRelease] = useState(() => {
-    return (
-      localStorage.getItem('releaseBriefSelectedRelease') ||
-      DEFAULT_PREFERRED_RELEASE
-    );
-  });
+  const [burndown, setBurndown] = useState(null);
+  const {
+    versions,
+    selectedRelease,
+    setSelectedRelease,
+    gateTimeline,
+    loadingGateTimeline,
+  } = useSelectedRelease();
+  const { releaseTickets, releaseError } = useReleaseData();
+
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [loadingKpis, setLoadingKpis] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -63,6 +65,7 @@ export function useReleaseBrief({
   const [loadingGates, setLoadingGates] = useState(false);
   const [loadingOutstanding, setLoadingOutstanding] = useState(false);
   const [loadingProjectBreakdown, setLoadingProjectBreakdown] = useState(false);
+  const [loadingBurndown, setLoadingBurndown] = useState(false);
   const [error, setError] = useState('');
   
   // Debounce ref for project-breakdown to prevent duplicate concurrent requests.
@@ -71,35 +74,19 @@ export function useReleaseBrief({
   // overwriting the good data.
   const projectBreakdownTimeoutRef = useRef(null);
 
+  // Refs so loadForecast can read the latest results/gateTimeline without
+  // taking them as useCallback dependencies. Without these, every time
+  // loadResults or loadGates completes, loadForecast gets a new function
+  // reference → useEffect re-fires → forecast is called 3+ times per page
+  // load, toggling loadingForecast and making the full page reload repeatedly.
+  const resultsRef = useRef(results);
+  const gateTimelineRef = useRef(gateTimeline);
+  useEffect(() => { resultsRef.current = results; }, [results]);
+  useEffect(() => { gateTimelineRef.current = gateTimeline; }, [gateTimeline]);
+
   const ready = !!teamId && !!jiraToken;
 
-  // 1. versions
-  const loadVersions = useCallback(async () => {
-    if (!ready) return;
-    setLoadingVersions(true);
-    setError('');
-    try {
-      const { versions: v } = await listReleaseVersions({
-        teamId,
-        jiraToken,
-        username,
-      });
-      setVersions(v);
-      setSelectedRelease((prev) => {
-        const next = pickDefaultRelease(v, prev || DEFAULT_PREFERRED_RELEASE);
-        if (next && next !== prev) {
-          localStorage.setItem('releaseBriefSelectedRelease', next);
-        }
-        return next || prev;
-      });
-    } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to load versions');
-    } finally {
-      setLoadingVersions(false);
-    }
-  }, [ready, teamId, jiraToken, username]);
-
-  // 2. KPI defs
+  // 1. KPI defs
   const loadKpis = useCallback(async () => {
     if (!ready) return;
     setLoadingKpis(true);
@@ -117,7 +104,7 @@ export function useReleaseBrief({
     }
   }, [ready, teamId, jiraToken, username]);
 
-  // 3. results for the picked release
+  // 2. results for the picked release
   const loadResults = useCallback(async () => {
     if (!ready || !selectedRelease) return;
     setLoadingResults(true);
@@ -129,6 +116,7 @@ export function useReleaseBrief({
         username,
       });
       setResults(r);
+      setError('');
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to load KPI results');
       setResults({});
@@ -137,117 +125,44 @@ export function useReleaseBrief({
     }
   }, [ready, teamId, selectedRelease, jiraToken, username]);
 
-  // 4. Engineering Payload synopsis (D36) — independent of team KPIs.
-  // Only needs a JIRA token + a release; bypasses the team-KPI permission
-  // gate because it's just JIRA counts the user can already see in JIRA.
+  // 3. Engineering Payload synopsis — from per-release dataset.
   const loadSynopsis = useCallback(async () => {
-    if (!jiraToken || !selectedRelease) {
+    if (!selectedRelease) {
       setSynopsis(null);
       return;
     }
     setLoadingSynopsis(true);
     try {
-      const { synopsis: s } = await fetchReleasePayloadSynopsis({
-        productId,
-        release: selectedRelease,
-        jiraToken,
-        username,
-      });
-      setSynopsis(s);
-    } catch (e) {
-      setError(
-        e.response?.data?.error || e.message || 'Failed to load payload synopsis'
-      );
-      setSynopsis(null);
+      setSynopsis(deriveSynopsisFromBundle(releaseTickets, selectedRelease));
     } finally {
       setLoadingSynopsis(false);
     }
-  }, [productId, selectedRelease, jiraToken, username]);
+  }, [releaseTickets, selectedRelease]);
 
-  // 5. Sprint Velocity (3-stream per `sprint-velocity-types.mdc`) — independent
-  // of team KPIs and payload synopsis. Backed by Path B (shared/JiraConnector).
-  //
-  // Intentionally **NOT** scoped to `selectedRelease`. Sprint velocity is a
-  // team-capacity metric, not a release metric — the team's pace in a sprint
-  // doesn't change just because you switch which release you're looking at.
-  // Filtering velocity by a single release was misleading: it under-counted
-  // work the team did on parallel releases / patches and gave a false sense
-  // of slowdown. Drop the release filter and report whole-team velocity.
+  // 4. Sprint Velocity — from dataset.
+  // NOT release-scoped (team capacity metric, not per-release).
   const loadVelocity = useCallback(async () => {
-    if (!jiraToken) {
-      setVelocity(null);
-      return;
-    }
     setLoadingVelocity(true);
     try {
-      const { velocity: v } = await fetchSprintVelocity({
-        productId,
-        // release omitted on purpose — see comment above.
-        sprintsBack: 3,
-        jiraToken,
-        username,
-      });
-      setVelocity(v);
-    } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to load velocity');
-      setVelocity(null);
+      setVelocity(deriveVelocityFromBundle(releaseTickets, 3));
     } finally {
       setLoadingVelocity(false);
     }
-  }, [productId, jiraToken, username]);
+  }, [releaseTickets]);
 
-  // 6. Release-gate timeline (EC + CC + CG + PG + GA per the RM-curated
-  // releaseVersionsEmailConfig.json). Independent of JIRA — pure config
-  // read, so fast. Becomes the canonical source of `plannedGaIso` for
-  // the Landing Forecast below.
-  const loadGates = useCallback(async () => {
-    if (!jiraToken || !selectedRelease) {
-      setGateTimeline(null);
-      return;
-    }
-    setLoadingGates(true);
-    try {
-      const { timeline } = await fetchGateTimeline({
-        release: selectedRelease,
-        jiraToken,
-        username,
-      });
-      setGateTimeline(timeline);
-    } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to load gate timeline');
-      setGateTimeline(null);
-    } finally {
-      setLoadingGates(false);
-    }
-  }, [selectedRelease, jiraToken, username]);
-
-  // 7. Outstanding & Deferred (5 tiles, JQL semantics approved 2026-05-20).
-  // Independent of team KPIs and synopsis. Counts open/closed/blocked
-  // within the engineering payload, plus deferred-by-label and
-  // pushed-out-by-fixVersion-history outside the payload.
+  // 5. Outstanding & Deferred — from dataset.
   const loadOutstanding = useCallback(async () => {
-    if (!jiraToken || !selectedRelease) {
+    if (!selectedRelease) {
       setOutstanding(null);
       return;
     }
     setLoadingOutstanding(true);
     try {
-      const { outstanding: o } = await fetchOutstanding({
-        productId,
-        release: selectedRelease,
-        jiraToken,
-        username,
-      });
-      setOutstanding(o);
-    } catch (e) {
-      setError(
-        e.response?.data?.error || e.message || 'Failed to load outstanding tiles'
-      );
-      setOutstanding(null);
+      setOutstanding(deriveOutstandingFromBundle(releaseTickets, selectedRelease, productId));
     } finally {
       setLoadingOutstanding(false);
     }
-  }, [productId, selectedRelease, jiraToken, username]);
+  }, [productId, releaseTickets, selectedRelease]);
 
   // 8. Landing forecast (MVP — first fusion of Streamlit's landing_forecast.py).
   // Sources `plannedGaIso` in this priority order:
@@ -255,6 +170,12 @@ export function useReleaseBrief({
   //   2. First 'dotted' GA event (planned but not yet committed)
   //   3. A KPI whose key contains 'ga' or 'promotion' with an ISO value
   // If none, send no plannedGaIso → server returns verdict='unknown'.
+  //
+  // IMPORTANT: reads results/gateTimeline via refs (not as deps) so this
+  // callback is only recreated when release/token changes, not every time
+  // other data loads complete. Without refs, loadForecast would be called
+  // 3+ times per page load (mount + results arrive + gateTimeline arrives),
+  // causing the full-page loading state to flicker repeatedly.
   const loadForecast = useCallback(async () => {
     if (!jiraToken || !selectedRelease) {
       setForecast(null);
@@ -264,16 +185,18 @@ export function useReleaseBrief({
     try {
       let plannedGaIso;
 
-      // (1)(2) gate timeline GA events — preferred source.
-      const gaEvents = (gateTimeline?.gates || []).filter((g) => g.kind === 'GA');
+      // (1)(2) gate timeline GA events — preferred source. Read via ref.
+      const currentGateTimeline = gateTimelineRef.current;
+      const gaEvents = (currentGateTimeline?.gates || []).filter((g) => g.kind === 'GA');
       const solidGa = [...gaEvents].reverse().find((g) => g.style === 'solid');
       const dottedGa = gaEvents.find((g) => g.style === 'dotted');
       const pickedGa = solidGa || dottedGa || null;
       if (pickedGa) plannedGaIso = pickedGa.iso;
 
-      // (3) KPI fallback for teams that haven't configured gate dates.
+      // (3) KPI fallback for teams that haven't configured gate dates. Read via ref.
       if (!plannedGaIso) {
-        for (const [key, val] of Object.entries(results || {})) {
+        const currentResults = resultsRef.current;
+        for (const [key, val] of Object.entries(currentResults || {})) {
           if (val && typeof val.value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val.value)) {
             if (/ga|promotion/i.test(key)) {
               plannedGaIso = val.value.slice(0, 10);
@@ -291,99 +214,112 @@ export function useReleaseBrief({
         username,
       });
       setForecast(f);
+      setError('');
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to load forecast');
       setForecast(null);
     } finally {
       setLoadingForecast(false);
     }
-  }, [productId, selectedRelease, jiraToken, username, results, gateTimeline]);
+  }, [productId, selectedRelease, jiraToken, username]);
 
-  // 9. Project breakdown — per-project issue type group counts by status.
-  // Independent of other data loads.
-  // Includes debounce to prevent duplicate requests: after a successful load,
-  // any new call within 500ms is skipped to prevent the second request from
-  // timing out and overwriting the good data.
-  // CRITICAL: On error, we do NOT clear the data — keep showing the previous
-  // successful fetch instead of displaying "No data available". This ensures
-  // the user always sees the latest good state, not a blank page on transient errors.
+  // 6. Project breakdown — from dataset.
   const loadProjectBreakdown = useCallback(async () => {
-    if (!jiraToken || !selectedRelease) {
-      setProjectBreakdown(null);
-      return;
-    }
+    if (!selectedRelease) { setProjectBreakdown(null); return; }
     setLoadingProjectBreakdown(true);
     try {
-      const { breakdown } = await fetchProjectBreakdown({
-        productId,
-        release: selectedRelease,
-        jiraToken,
-        username,
-      });
-      setProjectBreakdown(breakdown);
-      // Set debounce: prevent re-fetching for 500ms after success
-      if (projectBreakdownTimeoutRef.current) {
-        clearTimeout(projectBreakdownTimeoutRef.current);
-      }
+      if (projectBreakdownTimeoutRef.current) return; // debounce guard
+      setProjectBreakdown(deriveProjectBreakdownFromBundle(releaseTickets, selectedRelease));
+      if (projectBreakdownTimeoutRef.current) clearTimeout(projectBreakdownTimeoutRef.current);
       projectBreakdownTimeoutRef.current = setTimeout(() => {
         projectBreakdownTimeoutRef.current = null;
       }, 500);
-    } catch (e) {
-      // Log error but do NOT clear projectBreakdown — keep showing the previous good data
-      setError(e.response?.data?.error || e.message || 'Failed to load project breakdown');
-      // setProjectBreakdown(null); — REMOVED: keep the previous successful data
     } finally {
       setLoadingProjectBreakdown(false);
     }
-  }, [productId, selectedRelease, jiraToken, username]);
+  }, [releaseTickets, selectedRelease]);
+
+  // 7. Burndown (Created vs Resolved) — from dataset.
+  const loadBurndown = useCallback(async () => {
+    if (!selectedRelease) { setBurndown(null); return; }
+    setLoadingBurndown(true);
+    try {
+      setBurndown(deriveBurndownFromBundle(releaseTickets, selectedRelease, 52));
+    } finally {
+      setLoadingBurndown(false);
+    }
+  }, [releaseTickets, selectedRelease]);
 
   useEffect(() => {
-    loadVersions();
+    setLoadingVersions(false);
     loadKpis();
-  }, [loadVersions, loadKpis]);
+  }, [loadKpis]);
 
   useEffect(() => {
     loadResults();
     loadSynopsis();
     loadVelocity();
-    loadGates();
     loadOutstanding();
+    loadBurndown();
     // Debounce project breakdown: only call it if ref is not set
     // (i.e., we haven't called it in the last 500ms)
     if (!projectBreakdownTimeoutRef.current) {
       loadProjectBreakdown();
     }
-  }, [loadResults, loadSynopsis, loadVelocity, loadGates, loadOutstanding, loadProjectBreakdown]);
+  }, [loadResults, loadSynopsis, loadVelocity, loadOutstanding, loadBurndown, loadProjectBreakdown]);
 
-  // Forecast load runs after `results` and `gateTimeline` change so the
-  // planned-GA hint can come from the gate config first, KPI results
-  // second. Safe to depend on `loadForecast` — it's `useCallback`-stable.
+  // Forecast fires once per release/token change. loadForecast is stable
+  // (no results/gateTimeline deps) so this effect only runs when the release
+  // or token actually changes — not every time other data arrives.
   useEffect(() => {
     loadForecast();
   }, [loadForecast]);
+
+  // Re-run the forecast once gates have loaded so the plannedGaIso hint is
+  // available. We track whether this effect has already re-fired for the
+  // current (release + gateTimeline) pair to avoid a duplicate call.
+  const lastForecastedGateRef = useRef(null);
+  useEffect(() => {
+    if (!gateTimeline || !selectedRelease) return;
+    const key = `${selectedRelease}:${JSON.stringify(gateTimeline)}`;
+    if (lastForecastedGateRef.current === key) return;
+    lastForecastedGateRef.current = key;
+    loadForecast();
+  }, [gateTimeline, selectedRelease, loadForecast]);
 
   const refresh = useCallback(() => {
     loadResults();
     loadSynopsis();
     loadVelocity();
-    loadGates();
     loadOutstanding();
+    loadBurndown();
     loadProjectBreakdown();
     loadForecast();
   }, [
     loadResults,
     loadSynopsis,
     loadVelocity,
-    loadGates,
     loadOutstanding,
+    loadBurndown,
     loadProjectBreakdown,
     loadForecast,
   ]);
 
   const onSelectRelease = useCallback((name) => {
     setSelectedRelease(name);
-    if (name) localStorage.setItem('releaseBriefSelectedRelease', name);
-  }, []);
+  }, [setSelectedRelease]);
+
+  useEffect(() => {
+    setLoadingGates(loadingGateTimeline);
+  }, [loadingGateTimeline]);
+
+  useEffect(() => {
+    if (releaseError === 'not_synced') {
+      setError(`Release ${selectedRelease || ''} is not synced yet. Run Sync to load per-release data.`);
+    } else if (releaseError === 'load_failed') {
+      setError('Failed to load per-release cached data.');
+    }
+  }, [releaseError, selectedRelease]);
 
   const loading =
     loadingVersions ||
@@ -394,7 +330,8 @@ export function useReleaseBrief({
     loadingForecast ||
     loadingGates ||
     loadingOutstanding ||
-    loadingProjectBreakdown;
+    loadingProjectBreakdown ||
+    loadingBurndown;
 
   return useMemo(
     () => ({
@@ -409,6 +346,7 @@ export function useReleaseBrief({
       loadingGates,
       loadingOutstanding,
       loadingProjectBreakdown,
+      loadingBurndown,
       error,
       versions,
       kpis,
@@ -419,6 +357,7 @@ export function useReleaseBrief({
       gateTimeline,
       outstanding,
       projectBreakdown,
+      burndown,
       jiraBaseUrl,
       selectedRelease,
       setSelectedRelease: onSelectRelease,
@@ -436,6 +375,7 @@ export function useReleaseBrief({
       loadingGates,
       loadingOutstanding,
       loadingProjectBreakdown,
+      loadingBurndown,
       error,
       versions,
       kpis,
@@ -446,6 +386,7 @@ export function useReleaseBrief({
       gateTimeline,
       outstanding,
       projectBreakdown,
+      burndown,
       jiraBaseUrl,
       selectedRelease,
       onSelectRelease,

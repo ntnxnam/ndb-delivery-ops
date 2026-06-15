@@ -280,8 +280,8 @@ function buildProjectBreakdown(payload) {
   // ── Parent→children map (all children, no status filter at this layer) ─────
   // Parent key resolution depends on JIRA hierarchy level:
   //   portfolioChildren (Epics under Features)  → customfield_20363 (Parent Link)
-  //   epicChildren / standaloneEpicChildren      → customfield_10017 (Epic Link)
-  //   sub-tasks                                  → issue.parent.key (standard field)
+  //   epicChildren / standaloneEpicChildren      → customfield_10361 (Epic Link, Nutanix field ID)
+  //   sub-tasks                                  → parent.key (standard field)
   const childrenOf = {};
   const addChild = (issue, parentKey) => {
     if (!parentKey) return;
@@ -292,21 +292,20 @@ function buildProjectBreakdown(payload) {
   payload.portfolioChildren.forEach(issue => {
     // customfield_20363 (Parent Link) is a string "ERA-XXXX" for epics under features
     const parentLink = issue.customfield_20363;
-    const pk = (typeof parentLink === 'string' ? parentLink : parentLink?.key) || issue.parent?.key;
+    const pk = typeof parentLink === 'string' ? parentLink : parentLink?.key;
     addChild(issue, pk);
   });
 
   payload.epicChildren.forEach(issue => {
-    // customfield_10361 (Epic Link) is the correct field ID for this JIRA instance
-    const epicLink = issue.customfield_10361;
-    const pk = (typeof epicLink === 'string' ? epicLink : epicLink?.key) || issue.parent?.key;
-    addChild(issue, pk);
+    // Epic Link is customfield_10361 in Nutanix JIRA. Fall back to parent.key
+    // when the field isn't included in the fetch (e.g. lightweight payloads).
+    const epicLinkRaw = issue.customfield_10361 ?? issue.fields?.customfield_10361;
+    const epicLink = typeof epicLinkRaw === 'string' ? epicLinkRaw : epicLinkRaw?.key ?? null;
+    addChild(issue, epicLink || issue.parent?.key || issue.fields?.parent?.key);
   });
 
   payload.standaloneEpicChildren.forEach(issue => {
-    const epicLink = issue.customfield_10361;
-    const pk = (typeof epicLink === 'string' ? epicLink : epicLink?.key) || issue.parent?.key;
-    addChild(issue, pk);
+    addChild(issue, issue.parent?.key);
   });
 
   function collectDescendants(key, visited = new Set()) {

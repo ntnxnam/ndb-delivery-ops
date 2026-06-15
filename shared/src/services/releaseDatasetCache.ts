@@ -66,9 +66,13 @@ import {
 import { join } from 'node:path';
 import {
   DEFERRED_COMPONENT,
+  EXTENSION_COMPONENT,
+  LONG_TERM_COMPONENT,
   WISHLIST_COMPONENT,
   getComponentQueries,
   getDeferredQuery,
+  getExtensionQuery,
+  getLongTermFundedQuery,
   getWishlistQuery,
 } from './payloadJqlService.js';
 import type {
@@ -79,11 +83,10 @@ import type {
 /**
  * On-disk schema version. Bump when the cache file layout changes in a
  * way that older Node code couldn't safely read. v1 = first Node-era
- * release; intentionally NOT continuous with the legacy `v11-chatbot-
- * scoped-2026-05` pickle schema (different runtime, different format,
- * fresh start).
+ * release; v2 = added Summary, Story Points, Due Date, CC/CG/PG Date,
+ * Parent Key, Portfolio Parent Key, Epic Link Key to ProcessedTicket.
  */
-export const CACHE_SCHEMA = 'v1-node-2026-05';
+export const CACHE_SCHEMA = 'v2-node-2026-06';
 
 /**
  * Stale-lock threshold. The sync orchestrator touches the lock file
@@ -182,12 +185,16 @@ export function computeReleaseJqlHash(
   const buckets = getComponentQueries(release);
   const wishlist = getWishlistQuery(release, { labelPrefix });
   const deferred = getDeferredQuery(release, { labelPrefix });
+  const longTerm = getLongTermFundedQuery(release, { labelPrefix });
+  const extension = getExtensionQuery(release, { labelPrefix });
   // Stable ordering: bucket keys are already ordered; sidecars
   // tail-append.
   const parts: string[] = [];
   for (const [k, v] of Object.entries(buckets)) parts.push(`${k}::${v}`);
   parts.push(`${WISHLIST_COMPONENT}::${wishlist}`);
   parts.push(`${DEFERRED_COMPONENT}::${deferred}`);
+  parts.push(`${LONG_TERM_COMPONENT}::${longTerm}`);
+  parts.push(`${EXTENSION_COMPONENT}::${extension}`);
   return createHash('md5').update(parts.join('|')).digest('hex').slice(0, 8);
 }
 

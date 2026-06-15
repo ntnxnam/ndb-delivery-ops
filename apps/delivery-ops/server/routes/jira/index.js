@@ -48,7 +48,7 @@ const { getSprintsForBoard, resolveSprintState, classifySprintIssue, getAddedToS
 const { runWithConcurrency } = require('../../utils/concurrency');
 const releaseSetupService = require('../../services/releaseSetupService');
 const releaseDataService = require('../../services/releaseDataService');
-const releaseItemsService = require('../../services/releaseItemsService');
+const releaseItemsService = require('../../services/releaseItemsDataService');
 const releaseHistoryService = require('../../services/releaseHistoryService');
 const releaseAnalysisService = require('../../services/releaseAnalysisService');
 
@@ -713,6 +713,25 @@ async function buildKpiCombinedJql(teamId, kpiBaseQuery, cleanToken, httpsAgent)
 
 
 /**
+ * Derive the deferred label for a release version.
+ * "NDB-2.11" → "ndb-2.11-deferred", "DataLens-1.0" → "datalens-1.0-deferred".
+ * Mirrors the getDeferredQuery logic in shared/src/services/payloadJqlService.ts.
+ */
+function deriveDeferredLabel(releaseVersion) {
+  return `${(releaseVersion || '').toLowerCase()}-deferred`;
+}
+
+/**
+ * Append the deferred-exclusion clause to a JQL string when the KPI has
+ * excludeDeferred: true. Excludes tickets carrying the release's deferred label.
+ * Clause: AND (labels is EMPTY OR labels != "ndb-2.11-deferred")
+ */
+function appendDeferredExclusion(jql, releaseVersion) {
+  const label = deriveDeferredLabel(releaseVersion);
+  return `${jql} AND (labels is EMPTY OR labels != "${label}")`;
+}
+
+/**
  * Build combined JQL for release KPIs: "filter=ReleaseBase and filter=KpiFilter" (or and (rawJQL)).
  * Does not resolve filters to JQL; JIRA search accepts filter= by name/id. If no release base, returns resolved KPI only.
  */
@@ -853,9 +872,12 @@ router.post('/release-kpi-results', validateJiraTokenMiddleware, apiLimiter, asy
 
     const cleanToken = req.jiraToken;
     const httpsAgent = createHttpsAgent();
-    const jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, cleanToken, httpsAgent, normalizedTeamId);
+    let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, cleanToken, httpsAgent, normalizedTeamId);
     if (!jql) {
       return res.status(400).json({ error: 'Could not resolve release KPI query (check release base filter config)' });
+    }
+    if (kpi.excludeDeferred) {
+      jql = appendDeferredExclusion(jql, releaseVersion);
     }
     if (displayType === 'count') {
       const response = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
@@ -927,10 +949,13 @@ router.post('/release-kpi-results-batch', validateJiraTokenMiddleware, apiLimite
       const displayType = kpi.displayType === 'list' ? 'list' : 'count';
 
       try {
-        const jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, cleanToken, httpsAgent, teamId);
+        let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, cleanToken, httpsAgent, teamId);
         if (!jql) {
           results[kpi.id] = { error: 'Could not resolve query (check release base filter)' };
           continue;
+        }
+        if (kpi.excludeDeferred) {
+          jql = appendDeferredExclusion(jql, releaseVersion);
         }
 
         if (displayType === 'count') {
@@ -3288,48 +3313,6 @@ router.post('/release-items', releaseVersionsLimiter, validateJiraTokenMiddlewar
         details: { name: error.name, code: error.code },
       }),
     });
-  }
-});
-
-/**
- * Fetch Section 1 (Commit) items
- * POST /api/jira/release-items-commit
- */
-router.post('/release-items-commit', jiraTimeout, releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
-  try {
-    const { items, cached } = await releaseItemsService.getCommitItems(req.jiraToken, {
-      fixVersion: req.body?.fixVersion,
-      username: req.user?.username,
-    });
-    if (res.headersSent) return; // timeout already responded
-    return res.json({ success: true, data: { items }, cached });
-  } catch (error) {
-    if (error.statusCode === 400) {
-      if (res.headersSent) return;
-      return res.status(400).json({ success: false, error: error.message });
-    }
-    return sendPartialItemsFailure(res, error, '/api/jira/release-items-commit');
-  }
-});
-
-/**
- * Fetch Section 2 (Long-term-funded) items
- * POST /api/jira/release-items-long-term
- */
-router.post('/release-items-long-term', jiraTimeout, releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
-  try {
-    const { items, cached } = await releaseItemsService.getLongTermItems(req.jiraToken, {
-      fixVersion: req.body?.fixVersion,
-      username: req.user?.username,
-    });
-    if (res.headersSent) return; // timeout already responded
-    return res.json({ success: true, data: { items }, cached });
-  } catch (error) {
-    if (error.statusCode === 400) {
-      if (res.headersSent) return;
-      return res.status(400).json({ success: false, error: error.message });
-    }
-    return sendPartialItemsFailure(res, error, '/api/jira/release-items-long-term');
   }
 });
 

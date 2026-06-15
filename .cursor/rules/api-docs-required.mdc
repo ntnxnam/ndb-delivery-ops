@@ -1,0 +1,88 @@
+---
+description: Every new API endpoint requires a contract doc before the route handler is wired up
+alwaysApply: true
+---
+
+# New API Endpoint Documentation Gate
+
+Before a new endpoint ships (i.e., before a new `router.get/post/put/delete/patch` line
+is committed in any `server/routes/` file), its contract must be documented.
+
+## Where the doc lives
+
+```
+apps/delivery-ops/docs/api/
+  {resource}.md          ← one file per route file / resource domain
+```
+
+Examples:
+```
+docs/api/release-dataset.md
+docs/api/jira.md
+docs/api/email.md
+docs/api/admin.md
+docs/api/component.md
+```
+
+Group endpoints by the route file they live in. Do not create one file per endpoint.
+
+## Required sections per endpoint entry
+
+Each endpoint block inside the resource doc must cover:
+
+```markdown
+### METHOD /api/path/to/endpoint
+
+**Purpose**: one sentence — what this endpoint does and why it exists.
+
+**Auth**: required / not required / admin-only
+
+**Request**
+- Method + path
+- Query params (name, type, required/optional, description)
+- Body params (for POST/PUT/PATCH)
+- Required headers
+
+**Server flow**
+Route handler → service/util → external system (JIRA/Confluence/SMTP/disk)
+One line per hop.
+
+**Response shape**
+Minimal JSON example of the success response.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 4xx/5xx   | ...  | ...           |
+
+**Caching**
+Yes/No — TTL and invalidation trigger if yes.
+```
+
+## Hard rules
+
+1. **No new route line without a doc entry.** If you add `router.get('/foo', ...)`, the
+   corresponding entry in `docs/api/{resource}.md` must exist in the same commit.
+
+2. **No undocumented query params.** Every `req.query.*` read must appear in the doc.
+
+3. **No undocumented body fields.** Every `req.body.*` read must appear in the doc.
+
+4. **Retrofit obligation.** When you edit an existing route handler for any reason,
+   add or update its doc entry in the same session if it is missing.
+
+5. **Breaking changes need a migration note.** If you change a response shape or
+   remove a param, add a `> ⚠️ Breaking change in <date>: ...` note to the entry.
+
+## What does NOT need a doc entry
+
+- Internal helper functions that are not Express route handlers
+- Middleware (auth, rate-limit, timeout) — these belong in `docs/middleware.md` if complex
+- Test-only endpoints behind `NODE_ENV === 'test'` guards
+
+## Never do
+
+- Add a route without documenting it
+- Document a route in a comment inside the route file instead of the doc
+- Use the page data-layer docs as a substitute for an API contract doc
+  (page docs describe the *consumer* view; API docs describe the *provider* contract)

@@ -126,6 +126,30 @@ export class ProductService {
   }
 
   /**
+   * Optional feature-root project key used by retrospective and feature-level
+   * analysis (NDB uses FEAT for Feature roots). Falls back to FEAT.
+   */
+  getFeatureProjectKey(productId: string): string {
+    const p = this.getProduct(productId);
+    return p.featureProjectKey ?? 'FEAT';
+  }
+
+  /**
+   * Non-engineering companion disciplines to show as a separate readiness
+   * stream in retrospective views (e.g. TECHPUBS, SDL, LEG, SR, NDBQUAL).
+   */
+  getCompanionDisciplines(
+    productId: string
+  ): Array<{ projectKey: string; label: string; hardGate: 'PG' | 'GA' }> {
+    const p = this.getProduct(productId);
+    return (p.companionDisciplines ?? []).map((row) => ({
+      projectKey: row.projectKey,
+      label: row.label,
+      hardGate: row.hardGate ?? 'GA',
+    }));
+  }
+
+  /**
    * Returns the JQL fragment for "tickets belonging to this product".
    * For dedicated: `project = ERA`. For parent: `project = ENG AND
    * fixVersion ~ "DataLens"` (parent products are version-scoped).
@@ -231,6 +255,16 @@ export class ProductService {
   getReleasePrefix(productId: string): string {
     const p = this.getProduct(productId);
     return p.releasePrefix ?? `${p.name}-`;
+  }
+
+  /**
+   * Returns the list of exact JIRA version names that are always included
+   * in the sync alongside any `releasePrefix`-matched versions. Typical
+   * examples: `"master"`, `"Era Future"`. Returns an empty array when
+   * none are configured.
+   */
+  getActiveVersionNames(productId: string): string[] {
+    return this.getProduct(productId).activeVersionNames ?? [];
   }
 
   /**

@@ -35,11 +35,15 @@ export {
   getComponentQueries,
   getWishlistQuery,
   getDeferredQuery,
+  getLongTermFundedQuery,
+  getExtensionQuery,
   PAYLOAD_BUCKET_KEYS,
   PORTFOLIO_ROOT_TYPES,
   PORTFOLIO_CONTAINER_TYPES,
   WISHLIST_COMPONENT,
   DEFERRED_COMPONENT,
+  LONG_TERM_COMPONENT,
+  EXTENSION_COMPONENT,
 } from './services/payloadJqlService.js';
 export type {
   EngineeringPayloadOptions,
@@ -73,6 +77,8 @@ export {
 export type {
   ProcessedTicket,
   ProcessedTicketWithDerived,
+  GateDateHistory,
+  GateDateHistoryEntry,
   FetchReleaseResult,
   FetchReleaseOptions,
   FetchBucketResult,
@@ -109,8 +115,10 @@ export {
   syncReleaseDataset,
   rebuildBundleFromDisk,
   enrichClosedDates,
+  enrichGateDateHistory,
   extractClosedDate,
   CHANGELOG_REQUIRED_TYPES,
+  GATE_HISTORY_TYPES,
   DEFAULT_CHANGELOG_CONCURRENCY,
 } from './services/releaseDatasetSync.js';
 export type {
@@ -143,6 +151,7 @@ export {
   groupFilterJql,
   PROJECT_HIERARCHY,
   DEV_CODE,
+  KNOWN_EVERYTHING_ELSE,
   ALL_GROUPS,
   DISPLAY_GROUPS,
 } from './services/issueGroupsService.js';
@@ -219,6 +228,22 @@ export type {
   ReleaseGateTimeline,
   ParseGateTimelineOptions,
 } from './services/gateTimelineService.js';
+
+export {
+  buildRetroJqls,
+  resolveGateDates,
+  getRetroBootstrap,
+  getRetroProjectsPage,
+  getRetroProjectDetail,
+  runRetroGateChecks,
+  runNaughtyList,
+} from './services/retroService.js';
+export type {
+  RetrospectiveOptions,
+  RetroProjectsPageOptions,
+  RetrospectiveParentProject,
+  RetrospectiveDiscipline,
+} from './services/retroService.js';
 
 export {
   computePayloadMetrics,

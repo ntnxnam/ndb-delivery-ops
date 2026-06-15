@@ -64,6 +64,8 @@ export interface ProductConfig {
   boardId: number | null;
   /** JIRA project key the product's tickets live under (e.g. 'ERA') */
   projectKey: string;
+  /** Optional feature-root project key (e.g. FEAT for NDB feature roots). */
+  featureProjectKey?: string;
   /** Whether the product has a dedicated project or shares a parent */
   projectType: ProductProjectType;
   /**
@@ -101,6 +103,13 @@ export interface ProductConfig {
    */
   releasePrefix?: string;
   /**
+   * Exact JIRA version names that are always included in the sync,
+   * regardless of whether they match `releasePrefix`. Used for special
+   * planning versions such as `"master"` or `"Era Future"` that don't
+   * carry the product prefix but belong to the product's dataset.
+   */
+  activeVersionNames?: string[];
+  /**
    * Sprint calendar (S1 anchor + sprint length in days). Required by
    * `sprintsService` and `releaseDatasetService` derived columns. No
    * default — must be explicitly configured per product because cadence
@@ -110,6 +119,15 @@ export interface ProductConfig {
     s1StartIso: string;
     sprintDays: number;
   };
+  /**
+   * Non-engineering companion projects shown in retrospective readiness views.
+   * These are checkpointed at PG and hard-gated at GA by default.
+   */
+  companionDisciplines?: Array<{
+    projectKey: string;
+    label: string;
+    hardGate?: 'PG' | 'GA';
+  }>;
 }
 
 /**

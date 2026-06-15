@@ -31,6 +31,11 @@ export interface RetroProjectsPageOptions {
   featureProjectKey: string;
   page: number;
   limit: number;
+  labelPrefix?: string; // e.g., "ndb" — used to detect deferred items
+  releasePrefix?: string; // e.g., "NDB-" — used with labelPrefix to build deferred label pattern
+  ccmDate?: string; // ISO date for CCM gate (for historical status queries)
+  cgDate?: string; // ISO date for CG gate (for historical status queries)
+  pgDate?: string; // ISO date for PG gate (for historical status queries)
 }
 
 interface ResolvedGateDates {
@@ -351,6 +356,10 @@ export async function getRetroProjectsPage(
     const directScope = `issueFunction in portfolioChildrenOf("key = ${parentKey}")`;
     const fullHierarchyScope = `(${directScope} OR ${epicsScope})`;
 
+    // NOTE: These JQL links are for the projects table and show items that are CURRENTLY open.
+    // They do NOT use historical "status was X ON date" checks — they show present status only.
+    // This is intentional: the table lets you click through to see what's currently blocking,
+    // not what was blocking on the historical gate date.
     const ccOpenJql  = `${fullHierarchyScope} AND issueType in (Task, "Unit Test") AND statusCategory != Done`;
     const ccOpenEraJql = `${ccOpenJql} AND project = ERA`;
     const ccOpenNonEraJql = `${ccOpenJql} AND project != ERA`;
@@ -365,14 +374,28 @@ export async function getRetroProjectsPage(
 
     const children = await jira.searchAll(
       childJql,
-      'issuetype,priority,status,resolutiondate',
+      'issuetype,priority,status,resolutiondate,labels,fixVersions',
       { maxIssues: 2000 }
     );
 
-    // Gate buckets with ERA/non-ERA split
+    // Build deferred label pattern (e.g., "ndb-2.11-deferred" for release "NDB-2.11")
+    // NOTE: Unlike the sprint-based normalization, deferred labels keep the dots
+    const deferredLabelPattern = options.labelPrefix && options.releasePrefix
+      ? `${options.labelPrefix}-${options.release.toLowerCase().replace(options.releasePrefix.toLowerCase(), '')}-deferred`
+      : null;
+
+    // Gate dates for "missed gate" counting — items open ON the gate date
+    // = closed AFTER gate date OR still open now (and not deferred).
+    const ccmCutoff = options.ccmDate || null;
+    const cgCutoff  = options.cgDate  || null;
+    const pgCutoff  = options.pgDate  || null;
+
+    // Gate buckets with ERA/non-ERA split.
+    // openEra / openNonEra = items that MISSED the gate (closed after, or still open).
     const ccm = { done: 0, openEra: 0, openNonEra: 0, lastClosedDate: null as string | null };
     const cg  = { done: 0, openEra: 0, openNonEra: 0, lastResolvedDate: null as string | null };
     const pg  = { done: 0, openEra: 0, openNonEra: 0, lastResolvedDate: null as string | null };
+    const deferred = { era: 0, nonEra: 0, targetVersions: new Set<string>() };
 
     const ccmDoneDates: string[] = [];
     const cgResolvedDates: string[] = [];
@@ -391,58 +414,99 @@ export async function getRetroProjectsPage(
         ((fields?.status as Record<string, unknown>)?.statusCategory as Record<string, unknown>)?.name || ''
       ).toLowerCase();
 
-      // For Tasks/UnitTests: "done" = statusCategory Done (Closed).
-      // For Bugs/Improvements: "dev-fixed" = Resolved OR Closed.
-      //   Resolved = dev fixed, pending QA verification (pendingQAStatusName in config).
-      //   Closed   = QA verified — happens AFTER PG, so both count as gate-ready.
-      //   Verification (Closed) is a post-PG activity and should NOT gate the PG check.
-      const isClosed = statusCat === 'done'; // Closed
-      const isResolved = statusName === 'Resolved'; // dev-fixed, pending verification
-      const isDevFixed = isClosed || isResolved;   // gate-ready for bugs
+      const labelsArray = Array.isArray(fields?.labels) ? (fields?.labels as string[]) : [];
+      const isDeferredLabel = deferredLabelPattern && labelsArray.some((label: string) =>
+        label && typeof label === 'string' && label === deferredLabelPattern
+      );
+
+      const isClosed = statusCat === 'done' || statusName === 'Closed';
+      const isResolved = statusName === 'Resolved';
+      const isDevFixed = isClosed || isResolved;
+      const isCurrentlyOpen = !isClosed && !isResolved;
 
       const rd = toIsoDate(fields?.resolutiondate as string | undefined);
 
-      // CCM gate: Task + Unit Test (pure coding deliverables)
+      // "Missed gate" = closed after the gate cutoff date, OR still open now (not deferred).
+      // When no gate date is available (gates in the future), fall back to current open status.
+      const missedCcm = (issueKey: string, resolvedDate: string | null): boolean => {
+        if (!ccmCutoff) return isCurrentlyOpen;
+        if (isCurrentlyOpen) return true;          // still open → missed
+        if (resolvedDate && resolvedDate > ccmCutoff) return true; // closed late → missed
+        return false;
+      };
+      const missedCg = (resolvedDate: string | null): boolean => {
+        if (!cgCutoff) return isCurrentlyOpen;
+        if (isCurrentlyOpen) return true;
+        if (resolvedDate && resolvedDate > cgCutoff) return true;
+        return false;
+      };
+      const missedPg = (resolvedDate: string | null): boolean => {
+        if (!pgCutoff) return isCurrentlyOpen;
+        if (isCurrentlyOpen) return true;
+        if (resolvedDate && resolvedDate > pgCutoff) return true;
+        return false;
+      };
+
+      // CCM gate: Task + Unit Test
       if (issueTypeName === 'Task' || issueTypeName === 'Unit Test') {
         if (isClosed) {
           ccm.done++;
           if (rd) ccmDoneDates.push(rd);
-        } else {
-          if (isEra) ccm.openEra++;
-          else ccm.openNonEra++;
+        }
+        if (!isDeferredLabel) {
+          if (missedCcm(issueKey, rd)) {
+            if (isEra) ccm.openEra++;
+            else ccm.openNonEra++;
+          }
         }
       }
 
-      // CG gate: high-severity (P0/P1/Blocker/Critical) Bugs + Improvements
-      // Gate is met when bug is Resolved (dev fix in) — verification is post-PG.
+      // CG gate: high-severity (P0/P1) Bugs + Improvements
       if (issueTypeName === 'Bug' || issueTypeName === 'Improvement') {
         if (isHighSeverity(fields)) {
           if (isDevFixed) {
             cg.done++;
             if (rd) cgResolvedDates.push(rd);
-          } else {
+          }
+          if (!isDeferredLabel && missedCg(rd)) {
             if (isEra) cg.openEra++;
             else cg.openNonEra++;
           }
         }
-        // PG gate: ALL Bugs + Improvements — Resolved counts as gate-ready
+        // PG gate: ALL Bugs + Improvements
         if (isDevFixed) {
           pg.done++;
           if (rd) pgResolvedDates.push(rd);
-        } else {
+        }
+        if (!isDeferredLabel && missedPg(rd)) {
           if (isEra) pg.openEra++;
           else pg.openNonEra++;
         }
       }
 
-      // PG gate: Test tickets — closed by QA before PG sign-off
+      // PG gate: Test tickets
       if (issueTypeName === 'Test') {
         if (isClosed) {
           pg.done++;
           if (rd) pgResolvedDates.push(rd);
-        } else {
+        }
+        if (!isDeferredLabel && missedPg(rd)) {
           if (isEra) pg.openEra++;
           else pg.openNonEra++;
+        }
+      }
+
+      // Deferred items
+      if (isDeferredLabel) {
+        if (isEra) deferred.era++;
+        else deferred.nonEra++;
+
+        const fixVersionField = fields?.fixVersions as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(fixVersionField)) {
+          fixVersionField.forEach((fv: Record<string, unknown>) => {
+            const versionName = fv?.name as string | undefined;
+            if (versionName) deferred.targetVersions.add(versionName);
+          });
         }
       }
     }
@@ -469,6 +533,10 @@ export async function getRetroProjectsPage(
       ccm,
       cg,
       pg,
+      deferred: {
+        ...deferred,
+        targetVersions: Array.from(deferred.targetVersions),
+      },
       links: {
         ccmOpen: ccOpenJql,
         ccmOpenEra: ccOpenEraJql,
@@ -479,6 +547,15 @@ export async function getRetroProjectsPage(
         pgOpen: pgOpenJql,
         pgOpenEra: pgOpenEraJql,
         pgOpenNonEra: pgOpenNonEraJql,
+        deferred: deferredLabelPattern
+          ? `${childScope} AND labels = "${deferredLabelPattern}"`
+          : null,
+        deferredEra: deferredLabelPattern
+          ? `${childScope} AND labels = "${deferredLabelPattern}" AND project = ERA`
+          : null,
+        deferredNonEra: deferredLabelPattern
+          ? `${childScope} AND labels = "${deferredLabelPattern}" AND project != ERA`
+          : null,
       },
     };
   });

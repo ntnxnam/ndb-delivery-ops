@@ -17,12 +17,14 @@ jest.mock('../../config/api', () => ({
 jest.mock('axios');
 const axios = require('axios');
 
-// Mock auth service
+// Mock auth service — admin route uses checkFeatureAccess; keep checkAuthorization
+// as a stub so any other consumers that destructure it don't throw.
 jest.mock('../../services/authService', () => ({
-  checkAuthorization: jest.fn()
+  checkAuthorization: jest.fn(),
+  checkFeatureAccess: jest.fn()
 }));
 
-const { checkAuthorization } = require('../../services/authService');
+const { checkAuthorization, checkFeatureAccess } = require('../../services/authService');
 const adminRoutes = require('../../routes/admin');
 
 describe('Admin Routes', () => {
@@ -38,6 +40,7 @@ describe('Admin Routes', () => {
 
     // Default auth to authorized
     checkAuthorization.mockReturnValue({ authorized: true });
+    checkFeatureAccess.mockReturnValue({ authorized: true });
 
     // Default file system mocks
     fs.readFileSync.mockImplementation((filePath) => {
@@ -81,10 +84,8 @@ describe('Admin Routes', () => {
     });
 
     it('should deny access for unauthorized users', async () => {
-      checkAuthorization.mockReturnValue({ 
-        authorized: false, 
-        error: 'Access denied' 
-      });
+      checkAuthorization.mockReturnValue({ authorized: false, error: 'Access denied' });
+      checkFeatureAccess.mockReturnValue({ authorized: false, error: 'Access denied' });
 
       await request(app)
         .get('/api/admin/teams')

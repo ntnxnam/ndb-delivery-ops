@@ -8,12 +8,13 @@ import { useJiraConfig } from '../utils/jiraConfig';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { logUserAction, UserActions } from '../utils/userActionLogger';
 import { useTeam } from '../contexts/TeamContext';
+import { useReleaseData } from '../contexts/ReleaseDataContext';
 import { 
   useReleaseVersions, 
   useColumnConfig, 
   useGanttConfig,
   useAllVersionsConfig, 
-  useReleaseItems, 
+  useReleaseItems,
   useCheckpointHistory, 
   useEmailForm,
   useTcmsData
@@ -66,17 +67,15 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     allVersionsConfig
   } = useAllVersionsConfig();
 
+  const { releaseError: releaseDataError } = useReleaseData();
   const {
     items,
     loadingItems,
     error: itemsError,
     setError: setItemsError,
     fetchItemsForVersion,
-    _fetchItemsInBatches,
-    fetchLongTermItems,
     setItems,
     sectionMetadata,
-    _cancelRequests
   } = useReleaseItems();
 
   const {
@@ -417,38 +416,26 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     console.log('[ReleaseVersionTab] Starting sequential loading...');
     
     try {
-      // Step 1: Load committed items first
-      console.log('[ReleaseVersionTab] Step 1: Loading committed items...');
+      // Step 1: Fetch all items (commit + long-term) in one unified call
+      console.log('[ReleaseVersionTab] Step 1: Loading release items...');
       const itemsResult = await fetchItemsForVersion(selectedVersion);
       
       if (itemsResult) {
-        console.log('[ReleaseVersionTab] Step 1 complete: Committed items loaded and displayed');
+        console.log('[ReleaseVersionTab] Step 1 complete: Items loaded');
         
-        // Step 2: Load history for committed items  
-        console.log('[ReleaseVersionTab] Step 2: Loading history for committed items...');
+        // Step 2: Load checkpoint history
+        console.log('[ReleaseVersionTab] Step 2: Loading checkpoint history...');
         try {
           await fetchHistoryForVersion(selectedVersion);
           console.log('[ReleaseVersionTab] Step 2 complete: History loaded');
         } catch (historyError) {
-          console.warn('[ReleaseVersionTab] History fetch failed (committed items still available):', historyError?.message || historyError);
+          console.warn('[ReleaseVersionTab] History fetch failed (items still available):', historyError?.message || historyError);
         }
-        
-        // Step 3: Load long-term funded items (non-blocking)
-        console.log('[ReleaseVersionTab] Step 3: Loading long-term funded items...');
-        setTimeout(async () => {
-          try {
-            await fetchLongTermItems(selectedVersion);
-            console.log('[ReleaseVersionTab] Step 3 complete: Long-term funded items loaded');
-          } catch (longTermError) {
-            console.warn('[ReleaseVersionTab] Long-term items fetch failed:', longTermError?.message || longTermError);
-          }
-        }, 1000); // Small delay to let UI render committed items first
-        
       } else {
-        console.error('[ReleaseVersionTab] Failed to load committed items');
+        console.error('[ReleaseVersionTab] Failed to load release items');
       }
     } catch (error) {
-      console.error('[ReleaseVersionTab] Error in sequential loading:', error);
+      console.error('[ReleaseVersionTab] Error loading release items:', error);
     }
 
     // Background tasks will be handled by useEffect when items are loaded
@@ -1420,6 +1407,11 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           onDownload={handleDownload}
         />
       </div>
+      {releaseDataError === 'not_synced' && (
+        <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#fff3cd', borderLeft: '3px solid #ffc107', fontSize: '0.85rem' }}>
+          Selected release is not synced yet. Run sync from Sync Hub and reload.
+        </div>
+      )}
       
       {/* Rich Text Notes Section and Email — visible when user is allowed to send (allowlist or gating disabled) */}
       {isEmailSectionUser && !loadingItems && selectedVersion && ((items.commit?.length || 0) > 0 || (items.longTermFunded?.length || 0) > 0) && (

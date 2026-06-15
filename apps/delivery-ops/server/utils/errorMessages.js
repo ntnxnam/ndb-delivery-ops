@@ -362,8 +362,10 @@ function extractApiError(apiError, service = '', context = {}) {
       httpStatus = 503;
     }
 
+    const isUnreachable = apiError.code === 'ENOTFOUND' || apiError.code === 'EAI_AGAIN' || apiError.code === 'ECONNREFUSED';
     return formatErrorResponse(errorInfo, httpStatus, {
       errorCode: apiError.code,
+      ...(isUnreachable && { reason: 'jira_unreachable' }),
       service,
       baseUrl: context.baseUrl
     });

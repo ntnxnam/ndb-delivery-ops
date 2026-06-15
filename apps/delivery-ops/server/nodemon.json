@@ -1,0 +1,7 @@
+{
+  "watch": ["index.js", "routes", "services", "utils", "middleware"],
+  "ext": "js,mjs,cjs",
+  "ignore": ["node_modules", "*.test.js"],
+  "delay": 3000,
+  "signal": "SIGKILL"
+}

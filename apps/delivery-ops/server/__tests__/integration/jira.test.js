@@ -37,6 +37,38 @@ jest.mock('../../middleware/authMiddleware', () => ({
   }
 }));
 
+// @portfolio-delivery-ops/shared is pure ESM ("type":"module") and cannot be
+// loaded via dynamic import() in Jest's CJS mode.  Provide a minimal CJS stub
+// so routes that call getShared() can exercise their own logic under test.
+jest.mock('@portfolio-delivery-ops/shared', () => {
+  const mockProductService = {
+    getProduct: jest.fn().mockReturnValue({ projectKey: 'ERA', labelPrefix: 'ndb', displayName: 'NDB' }),
+    getLabelPrefix: jest.fn().mockReturnValue('ndb'),
+    getDisplayName: jest.fn().mockReturnValue('NDB'),
+    getJiraProjects: jest.fn().mockReturnValue(['ERA', 'NDB']),
+    getCustomFields: jest.fn().mockReturnValue({}),
+    getBoards: jest.fn().mockReturnValue([]),
+    getReleaseNamePattern: jest.fn().mockReturnValue(/^NDB-/),
+  };
+  const mockCache = {
+    getCachedReleasesInfo: jest.fn().mockReturnValue({}),
+    loadReleaseLenient: jest.fn().mockReturnValue({ tickets: [], meta: null }),
+    saveRelease: jest.fn(),
+  };
+  const ReleaseDatasetCache = jest.fn().mockImplementation(() => mockCache);
+  const getProductService = jest.fn().mockReturnValue(mockProductService);
+  return {
+    getProductService,
+    ReleaseDatasetCache,
+    PAYLOAD_BUCKET_KEYS: ['top_level_projects', 'work_toward_project', 'standalone_epics', 'work_toward_standalone_epic', 'direct_tickets'],
+    LONG_TERM_COMPONENT: 'long_term_funded',
+    EXTENSION_COMPONENT: 'extension',
+    getPayloadJql: jest.fn().mockReturnValue('project = ERA'),
+    getLongTermFundedQuery: jest.fn().mockReturnValue('project = ERA'),
+    getExtensionQuery: jest.fn().mockReturnValue('project = ERA'),
+  };
+});
+
 const request = require('supertest');
 const app = require('../../index');
 const { getSprintsForBoard } = require('../../utils/sprintCache');
@@ -73,22 +105,39 @@ describe('JIRA API Integration Tests', () => {
     });
   });
 
-  describe('POST /api/jira/release-items-commit', () => {
-    test('IT-JIRA-002: Should return commit items', async () => {
+  describe('GET /api/release-dataset/per-release/:release', () => {
+    test('IT-JIRA-002: Should return 404 not_cached for unknown release cache', async () => {
       const response = await request(app)
-        .post('/api/jira/release-items-commit')
-        .set(baseHeaders)
-        .send({
-          fixVersion: defaultVersion,
-          jiraToken: validToken
-        });
+        .get('/api/release-dataset/per-release/NO-SUCH-RELEASE-TEST')
+        .set({
+          ...baseHeaders,
+          Authorization: `Bearer ${validToken}`,
+        })
+        .query({ productId: 'ndb' });
 
-      if (response.status === 200) {
-        expect(response.body).toHaveProperty('success', true);
-        expect(response.body).toHaveProperty('data');
-        expect(response.body.data).toHaveProperty('items');
-        expect(Array.isArray(response.body.data.items)).toBe(true);
-      }
+      expect(response.status).toBe(404);
+      expect(response.body).toHaveProperty('success', false);
+      expect(response.body).toHaveProperty('reason', 'not_cached');
+    });
+  });
+
+  describe('GET /api/release-dataset/releases', () => {
+    test('returns cache-status shape for synced releases', async () => {
+      const response = await request(app)
+        .get('/api/release-dataset/releases')
+        .set({
+          ...baseHeaders,
+          Authorization: `Bearer ${validToken}`,
+        })
+        .query({ productId: 'ndb' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toHaveProperty('synced');
+      expect(response.body.data).toHaveProperty('meta');
+      expect(Array.isArray(response.body.data.synced)).toBe(true);
+      expect(typeof response.body.data.meta).toBe('object');
     });
   });
 

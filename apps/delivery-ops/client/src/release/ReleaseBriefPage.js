@@ -30,6 +30,18 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
+import {
   KPICard,
   GateTimeline,
   MutedLabel,
@@ -62,6 +74,7 @@ export default function ReleaseBriefPage() {
     loadingGates,
     loadingOutstanding,
     loadingProjectBreakdown,
+    loadingBurndown,
     error,
     versions,
     kpis,
@@ -72,6 +85,7 @@ export default function ReleaseBriefPage() {
     gateTimeline,
     outstanding,
     projectBreakdown,
+    burndown,
     selectedRelease,
     setSelectedRelease,
     refresh,
@@ -121,6 +135,15 @@ export default function ReleaseBriefPage() {
             <div className="rb-empty">
               Pick a team in the header to load the release brief.
             </div>
+          )}
+
+          {ready && (
+            <BurndownPanel
+              burndown={burndown}
+              loading={loadingBurndown}
+              selectedRelease={selectedRelease}
+              jiraBaseUrl={jiraBaseUrl}
+            />
           )}
 
           {ready && (
@@ -832,5 +855,197 @@ function VelocityTile({
       title={stream.jql}
       rag={count === 0 ? 'grey' : 'green'}
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BurndownPanel — Created vs Resolved week-on-week chart (52 weeks)
+// ---------------------------------------------------------------------------
+
+const BURNDOWN_COLORS = {
+  created: '#4f8ef7',   // blue — inflow
+  resolved: '#3dbb77',  // green — throughput
+  net: '#f5a623',       // amber — weekly net (created − resolved)
+};
+
+/**
+ * Custom X-axis tick: show the label every 4 weeks to avoid crowding.
+ * `index` is available via Recharts' tick renderer.
+ */
+function BurndownXTick({ x, y, payload, index, visibleCount }) {
+  // Show roughly every 4 ticks; always show the last tick (most recent week)
+  const step = Math.max(1, Math.round(visibleCount / 13));
+  const isLast = index === visibleCount - 1;
+  if (!isLast && index % step !== 0) return null;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        fill="#888"
+        fontSize={11}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+}
+
+function BurndownPanel({ burndown, loading, selectedRelease, jiraBaseUrl }) {
+  const weeks = burndown?.weeklyData || [];
+  const totalFetched = burndown?.totalFetched ?? null;
+  const jqlBase = burndown?.jqlBase || null;
+
+  // Compute running totals and net for each week (for tooltip context)
+  let cumCreated = 0;
+  let cumResolved = 0;
+  const chartData = weeks.map((w) => {
+    cumCreated += w.created;
+    cumResolved += w.resolved;
+    return {
+      ...w,
+      net: w.created - w.resolved,
+      cumCreated,
+      cumResolved,
+      cumOpen: cumCreated - cumResolved,
+    };
+  });
+
+  const hasData = chartData.length > 0;
+  const totalCreated = chartData[chartData.length - 1]?.cumCreated ?? 0;
+  const totalResolved = chartData[chartData.length - 1]?.cumResolved ?? 0;
+  const netBurnStatus =
+    totalResolved >= totalCreated
+      ? 'green'
+      : totalResolved >= totalCreated * 0.8
+      ? 'amber'
+      : 'red';
+
+  const jiraHref =
+    jqlBase && jiraBaseUrl ? jiraSearchUrl(jiraBaseUrl, jqlBase) : undefined;
+
+  return (
+    <SectionPanel
+      title="Created vs Resolved — Week on Week"
+      caption={
+        hasData
+          ? `${weeks.length}-week burn-down for ${selectedRelease || '—'}. Bars = weekly inflow (Created) and throughput (Resolved). Net line shows weekly surplus/deficit. ${totalFetched != null ? `${totalFetched.toLocaleString()} tickets in scope.` : ''}`
+          : loading
+          ? 'Fetching ticket history…'
+          : `No data${selectedRelease ? ` for ${selectedRelease}` : ''}.`
+      }
+      actions={
+        <span style={{ display: 'inline-flex', gap: 'var(--ds-space-2)', alignItems: 'center' }}>
+          {selectedRelease && <Pill tone="muted">{selectedRelease}</Pill>}
+          {hasData && (
+            <Pill tone={netBurnStatus === 'green' ? 'success' : netBurnStatus === 'amber' ? 'muted' : 'danger'}>
+              {totalResolved.toLocaleString()} / {totalCreated.toLocaleString()} resolved
+            </Pill>
+          )}
+          {jiraHref && (
+            <a
+              href={jiraHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: '0.78rem', color: 'var(--ds-text-muted, #888)', textDecoration: 'none' }}
+              title={jqlBase}
+            >
+              view in JIRA ↗
+            </a>
+          )}
+        </span>
+      }
+    >
+      {loading && !hasData && (
+        <div className="rb-skeleton" style={{ height: '260px' }} />
+      )}
+      {!loading && !hasData && (
+        <div className="rb-empty">No burndown data available for {selectedRelease || 'this release'}.</div>
+      )}
+      {hasData && (
+        <div style={{ width: '100%', height: 280 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 8, right: 24, left: 0, bottom: 8 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis
+                dataKey="weekLabel"
+                tick={(props) => (
+                  <BurndownXTick {...props} visibleCount={chartData.length} />
+                )}
+                tickLine={false}
+                axisLine={{ stroke: '#e8e8e8' }}
+                interval={0}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: '#888' }}
+                width={36}
+              />
+              <Tooltip
+                contentStyle={{
+                  fontSize: '0.82rem',
+                  borderRadius: 6,
+                  border: '1px solid #e0e0e0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
+                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                formatter={(value, name) => {
+                  const labels = {
+                    created: 'Created',
+                    resolved: 'Resolved',
+                    net: 'Net (Created − Resolved)',
+                  };
+                  return [value, labels[name] || name];
+                }}
+                labelFormatter={(label, payload) => {
+                  const d = payload?.[0]?.payload;
+                  if (!d) return label;
+                  return `${label} · ${d.weekStart} · Open: ${d.cumOpen.toLocaleString()}`;
+                }}
+              />
+              <Legend
+                verticalAlign="top"
+                height={28}
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => {
+                  const labels = { created: 'Created', resolved: 'Resolved', net: 'Net / week' };
+                  return <span style={{ fontSize: '0.82rem', color: '#555' }}>{labels[value] || value}</span>;
+                }}
+              />
+              <ReferenceLine y={0} stroke="#ccc" strokeDasharray="2 2" />
+              <Bar
+                dataKey="created"
+                fill={BURNDOWN_COLORS.created}
+                opacity={0.75}
+                radius={[2, 2, 0, 0]}
+                maxBarSize={18}
+              />
+              <Bar
+                dataKey="resolved"
+                fill={BURNDOWN_COLORS.resolved}
+                opacity={0.75}
+                radius={[2, 2, 0, 0]}
+                maxBarSize={18}
+              />
+              <Line
+                type="monotone"
+                dataKey="net"
+                stroke={BURNDOWN_COLORS.net}
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </SectionPanel>
   );
 }

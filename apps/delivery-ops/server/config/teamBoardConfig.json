@@ -12,10 +12,19 @@
       "boardId": 2888,
       "projectKey": "ERA",
       "projectType": "dedicated",
+      "featureProjectKey": "FEAT",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
       "sprintBaseFilter": "filter=NDB-All-Base-Filter",
       "labelPrefix": "ndb",
       "releasePrefix": "NDB-",
+      "activeVersionNames": ["master", "Era Future"],
+      "companionDisciplines": [
+        { "projectKey": "TECHPUBS", "label": "TechPubs / Docs", "hardGate": "GA" },
+        { "projectKey": "SDL", "label": "Security (SDL)", "hardGate": "GA" },
+        { "projectKey": "LEG", "label": "Legal", "hardGate": "GA" },
+        { "projectKey": "SR", "label": "Security Review", "hardGate": "GA" },
+        { "projectKey": "NDBQUAL", "label": "NDB Quality", "hardGate": "GA" }
+      ],
       "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }
     }
   ],

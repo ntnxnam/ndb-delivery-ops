@@ -96,6 +96,12 @@ export const Sidebar = () => {
       description: 'Feature payload, gates, reconciliation, and burn'
     },
     {
+      path: '/release/retrospective',
+      label: 'Retrospective',
+      icon: '🔍',
+      description: 'Gate compliance and behavior per release'
+    },
+    {
       path: '/generic-emailer',
       label: 'JIRA Emailer',
       icon: '📋',
@@ -112,6 +118,12 @@ export const Sidebar = () => {
       label: 'Sprint Report',
       icon: '🏃',
       description: 'Sprint reporting and metrics'
+    },
+    {
+      path: '/sync-hub',
+      label: 'Sync Hub',
+      icon: '⟳',
+      description: 'Manage the centralised JIRA data cache'
     },
     {
       path: '/component-report',

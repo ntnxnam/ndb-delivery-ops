@@ -30,6 +30,25 @@ export const PROJECT_HIERARCHY = new Set([
 
 export const DEV_CODE = new Set(['Task', 'Unit Test']);
 
+/**
+ * Issue types that live in the "Everything Else" bucket but are known
+ * to the platform. Listing them here lets dashboards surface them by
+ * name rather than lumping them into an anonymous bucket.
+ * Add new types as they appear in the JIRA instance; the groupFor()
+ * function already routes unknowns to "Everything Else" safely.
+ */
+export const KNOWN_EVERYTHING_ELSE = new Set([
+  'Story',
+  'Spike',
+  'Sub-task',
+  'PoC',
+  'Blog',
+  'New Feature',
+  'Technical Task',
+  'Design',
+  'Research',
+]);
+
 export const ALL_GROUPS = [
   'Project Hierarchy',
   'Bug',

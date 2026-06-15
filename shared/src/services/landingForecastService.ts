@@ -344,57 +344,6 @@ function daysRemainingInCurrentSprint(
   return Math.max(1, daysUntilEnd + 1);
 }
 
-/**
- * Calculate the average weighted inflow across all 3 velocity streams over a
- * set of sprints. Uses the same weighting as sprintVelocityTotal so the result
- * is directly subtractable from recentVelocity (consistent units).
- *
- * weightedInflow = devCreated + bugImprCreated×0.33 + testCreated   [per sprint]
- *
- * Returns: weighted items per sprint (positive = growing backlog).
- */
-async function calculateNetInflowTrend(
-  jira: JiraConnector,
-  projectKey: string,
-  release: string,
-  calendar: SprintCalendar,
-  sprintNumbers: number[]
-): Promise<number> {
-  if (sprintNumbers.length === 0) return 0;
-
-  let totalWeightedInflow = 0;
-
-  for (const sprintNum of sprintNumbers) {
-    const { startIso, endIso } = sprintWindow(sprintNum, calendar);
-
-    const [devCreated, bugImprCreated, testCreated] = await Promise.all([
-      // Dev stream: non-portfolio, non-Test items created during sprint
-      jira
-        .searchCount(
-          `project = ${projectKey} AND issueType not in (Feature, Initiative, Epic, X-FEAT, Capability, Test) AND created >= "${startIso}" AND created <= "${endIso}"`
-        )
-        .catch(() => 0),
-      // QA Verification stream: Bug + Improvement items created during sprint
-      jira
-        .searchCount(
-          `project = ${projectKey} AND issuetype in (Bug, Improvement) AND created >= "${startIso}" AND created <= "${endIso}"`
-        )
-        .catch(() => 0),
-      // QA Test Tasks stream: Test items created during sprint
-      jira
-        .searchCount(
-          `project = ${projectKey} AND issueType = Test AND created >= "${startIso}" AND created <= "${endIso}"`
-        )
-        .catch(() => 0),
-    ]);
-
-    totalWeightedInflow +=
-      devCreated + bugImprCreated * QA_VERIFICATION_EFFORT_RATIO + testCreated;
-  }
-
-  return totalWeightedInflow / sprintNumbers.length;
-}
-
 // ── Public entrypoint ────────────────────────────────────────────────────
 
 /**
@@ -540,33 +489,18 @@ export async function computeLandingForecast(
     qaVerificationPending * QA_VERIFICATION_EFFORT_RATIO +
     qaTestTasksUnresolved;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // WEIGHTED INFLOW TREND — 3-stream, same weighting as velocity
-  // ─────────────────────────────────────────────────────────────────────────
-  let weightedInflowPerSprint = 0;
-  try {
-    const sprintsToAnalyze = recentSprints
-      .map((_, i) => todaySprint - window + i)
-      .filter((s) => s >= 1);
+  // Inflow subtraction was removed: the inflow JQL had no fixVersion scope so
+  // it counted all-project ticket creation (across every release), which
+  // nearly cancelled the release-specific velocity and produced absurdly far
+  // forecast dates (e.g. 2199). The payload-scoped inflow cannot be correctly
+  // computed with a simple `created` date filter because the full payload
+  // relies on portfolioChildrenOf. Effective velocity = recent velocity.
+  // TODO(parity): re-introduce inflow when a release-scoped inflow query is available.
+  const weightedInflowPerSprint = 0;
 
-    if (sprintsToAnalyze.length > 0) {
-      weightedInflowPerSprint = await calculateNetInflowTrend(
-        opts.jira,
-        opts.projectKey,
-        rel,
-        calendar,
-        sprintsToAnalyze
-      );
-    }
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'inflow calculation failed';
-    errors.push(`inflow: ${message}`);
-    weightedInflowPerSprint = 0;
-  }
-
-  // Effective velocity = actual velocity minus weighted inflow.
-  // Both are now in the same units (weighted tix/sprint), so the subtraction is valid.
-  const effectiveVelocity = Math.max(0.1, recentVelocity - weightedInflowPerSprint);
+  // Guard against zero velocity so we don't forecast when there's no data.
+  // Use recentVelocity directly — no inflow subtraction.
+  const effectiveVelocity = recentVelocity;
 
   // Required velocity: weighted outstanding / sprints remaining until planned GA.
   const sprintsRemaining =
@@ -584,7 +518,10 @@ export async function computeLandingForecast(
 
   // Determine forecast sprint using weightedOutstanding (numerator now matches
   // the weighted velocity denominator — no more unit mismatch).
-  if (weightedOutstanding > 0 && effectiveVelocity > 0) {
+  // Guard on recentVelocity > 0: if we have no velocity data, skip the
+  // forecast entirely so forecastGaDate stays null rather than producing an
+  // absurd far-future date.
+  if (weightedOutstanding > 0 && recentVelocity > 0) {
     if (weightedOutstanding <= todayCapacity) {
       // All work fits in today's remaining capacity
       forecastGaSprint = todaySprint;

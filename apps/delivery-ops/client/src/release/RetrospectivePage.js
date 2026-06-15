@@ -148,22 +148,34 @@ export default function RetrospectivePage() {
     topN: 10,
   });
 
-  // Gate compliance data always comes from bootstrap (release-level, standalone epics + tickets only).
-  // Row selection in the table does NOT change the gate compliance cards.
-  // projectDetail is used for other panels below, not for gate cards.
+  // Priority: per-project detail (when a project row is selected) >
+  //           release-level checks from bootstrap (fast, loads with gate timeline) >
+  //           full retroFallback (legacy aggregate endpoint, only on error).
   const retro = useMemo(() => {
-    if (bootstrap?.gateChecks) {
+    if (projectDetail) {
       return {
-        gateChecks: bootstrap.gateChecks,
+        gateChecks: projectDetail.checks,
         companionReadiness: null,
         pgToGa: null,
         gateTimeline: bootstrap?.gateTimeline,
       };
     }
+    if (bootstrap?.gateChecks) {
+      return {
+        gateChecks: bootstrap.gateChecks,
+        companionReadiness: null,
+        pgToGa: bootstrap.pgToGa ?? null,
+        gateTimeline: bootstrap?.gateTimeline,
+      };
+    }
     return retroFallback;
-  }, [bootstrap, retroFallback]);
+  }, [projectDetail, bootstrap, retroFallback]);
 
-  const cards = useMemo(() => gateCardData(retro, jiraBaseUrl), [retro, jiraBaseUrl]);
+  // Gate compliance cards should always use bootstrap data (standalone epics + tickets only),
+  // not projectDetail. Row selection should NOT change the cards.
+  const cards = useMemo(() => gateCardData({
+    gateChecks: bootstrap?.gateChecks || retroFallback?.gateChecks
+  }, jiraBaseUrl), [bootstrap, retroFallback, jiraBaseUrl]);
 
   const companionWithUrls = useMemo(() => {
     const rows = retro?.companionReadiness?.rows || [];
@@ -268,6 +280,7 @@ export default function RetrospectivePage() {
                       <th title="Code Complete Met: Tasks/Unit Tests. Shows slip in days and count of ERA vs other tickets closed after planned date">CCM</th>
                       <th title="Commit Gate: P0/P1 Bugs/Improvements. Shows slip in days and count of ERA vs other tickets resolved after planned date">CG</th>
                       <th title="Promotion Gate: All Bugs/Improvements/Tests. Shows slip in days and count of ERA vs other tickets resolved after planned date">PG</th>
+                      <th title="Deferred: Items moved out of this release (marked with deferred label)">Deferred</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -305,7 +318,7 @@ export default function RetrospectivePage() {
                         ? `✓ Last Task/Unit Test closed ${p.ccm?.lastClosedDate} — ${Math.abs(ccmSlip)} day${Math.abs(ccmSlip) !== 1 ? 's' : ''} before the CCM gate (planned ${gd.ccmDate}). Coding done on time.`
                         : `Last Task/Unit Test closed exactly on the CCM gate date (${gd.ccmDate}).`;
                       const ccmSlipJql = ccmSlip != null && gd.ccmDate && p.links?.ccmOpen
-                        ? `${p.links.ccmOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.ccmDate}"`
+                        ? `(issueFunction in portfolioChildrenOf("key = ${p.key}") OR issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key = ${p.key}')")) AND issueType in (Task, "Unit Test") AND status was not in (Resolved, Closed, Done) ON "${gd.ccmDate}"`
                         : null;
                       const ccmCell = buildGateCell(ccmSlip, p.ccm?.openEra || 0, p.ccm?.openNonEra || 0, ccmSlipJql, ccmSlipTooltip);
 
@@ -319,7 +332,7 @@ export default function RetrospectivePage() {
                         ? `✓ Last P0/P1 bug resolved ${p.cg?.lastResolvedDate} — ${Math.abs(cgSlip)} day${Math.abs(cgSlip) !== 1 ? 's' : ''} before the CG gate (planned ${gd.cgDate}). All critical bugs resolved on time.`
                         : `Last P0/P1 bug resolved exactly on the CG gate date (${gd.cgDate}).`;
                       const cgSlipJql = cgSlip != null && gd.cgDate && p.links?.cgOpen
-                        ? `${p.links.cgOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.cgDate}"`
+                        ? `(issueFunction in portfolioChildrenOf("key = ${p.key}") OR issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key = ${p.key}')")) AND issueType in (Bug, Improvement) AND priority in ("Blocker - P0", "Critical - P1") AND status was not in (Resolved, Closed, Done) ON "${gd.cgDate}"`
                         : null;
                       const cgCell = buildGateCell(cgSlip, p.cg?.openEra || 0, p.cg?.openNonEra || 0, cgSlipJql, cgSlipTooltip);
 
@@ -333,9 +346,18 @@ export default function RetrospectivePage() {
                         ? `✓ Last bug/test resolved ${p.pg?.lastResolvedDate} — ${Math.abs(pgSlip)} day${Math.abs(pgSlip) !== 1 ? 's' : ''} before the PG gate (planned ${gd.pgDate}). All quality work resolved on time.`
                         : `Last bug/test resolved exactly on the PG gate date (${gd.pgDate}).`;
                       const pgSlipJql = pgSlip != null && gd.pgDate && p.links?.pgOpen
-                        ? `${p.links.pgOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.pgDate}"`
+                        ? `(issueFunction in portfolioChildrenOf("key = ${p.key}") OR issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key = ${p.key}')")) AND issueType in (Bug, Improvement, Test) AND status was not in (Resolved, Closed, Done) ON "${gd.pgDate}"`
                         : null;
                       const pgCell = buildGateCell(pgSlip, p.pg?.openEra || 0, p.pg?.openNonEra || 0, pgSlipJql, pgSlipTooltip);
+
+                      // Calculate total deferred count and format target versions
+                      const totalDeferred = (p.deferred?.era || 0) + (p.deferred?.nonEra || 0);
+                      const targetVersionsStr = p.deferred?.targetVersions && p.deferred.targetVersions.length > 0
+                        ? ` (to ${p.deferred.targetVersions.join(', ')})`
+                        : '';
+                      const deferredLabel = totalDeferred > 0
+                        ? `${totalDeferred} Deferred${targetVersionsStr}`
+                        : '—';
 
                       return (
                         <tr
@@ -357,144 +379,88 @@ export default function RetrospectivePage() {
                           </td>
                           <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.summary}>{p.summary}</td>
                           <td style={{ color: 'var(--ds-muted)', whiteSpace: 'nowrap' }}>{p.parentType}</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>{fmt(gd.ccmDate)}</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>{fmt(p.ccm?.lastClosedDate)}</td>
-                          <td style={{ color: ccmSlipColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: ccmSlip != null ? 'pointer' : 'default' }} title={ccmSlipTooltip}>
-                            {ccmSlip != null && ccmSlipJql ? (
+                          <td style={{ color: ccmCell.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: ccmCell.isDelayed ? 'pointer' : 'default' }} title={ccmCell.tooltip}>
+                            {ccmCell.jql ? (
                               <a
-                                href={jiraSearchUrl(jiraBaseUrl, ccmSlipJql)}
+                                href={jiraSearchUrl(jiraBaseUrl, ccmCell.jql)}
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 style={{ color: 'inherit', textDecoration: 'none' }}
-                                title={ccmSlipTooltip}
+                                title={ccmCell.tooltip}
                               >
-                                {ccmSlipLabel}
+                                {ccmCell.label}
                               </a>
                             ) : (
-                              ccmSlipLabel
+                              ccmCell.label
                             )}
                           </td>
-                          <td style={{ color: p.ccm?.openEra > 0 || p.ccm?.openNonEra > 0 ? 'var(--ds-warning)' : 'var(--ds-muted)', textAlign: 'center', fontSize: '0.9em' }}>
-                            {p.ccm?.openEra > 0 || p.ccm?.openNonEra > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {p.ccm?.openEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.ccmOpenEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-danger)', fontWeight: 'bold', textDecoration: 'none' }}
-                                    title="ERA tasks/unit tests currently open"
-                                  >
-                                    {p.ccm.openEra} ERA
-                                  </a>
-                                ) : null}
-                                {p.ccm?.openNonEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.ccmOpenNonEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-warning)', textDecoration: 'none' }}
-                                    title="Non-ERA tasks/unit tests currently open"
-                                  >
-                                    {p.ccm.openNonEra} other
-                                  </a>
-                                ) : null}
-                              </div>
-                            ) : p.ccm?.done > 0 ? '✓' : '—'}
-                          </td>
-                          <td style={{ color: p.cg?.openEra > 0 || p.cg?.openNonEra > 0 ? 'var(--ds-danger)' : 'var(--ds-muted)', textAlign: 'center', fontSize: '0.9em' }}>
-                            {p.cg?.openEra > 0 || p.cg?.openNonEra > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {p.cg?.openEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.cgOpenEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-danger)', fontWeight: 'bold', textDecoration: 'none' }}
-                                    title="ERA P0/P1 bugs currently open"
-                                  >
-                                    {p.cg.openEra} ERA
-                                  </a>
-                                ) : null}
-                                {p.cg?.openNonEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.cgOpenNonEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-warning)', textDecoration: 'none' }}
-                                    title="Non-ERA P0/P1 bugs currently open"
-                                  >
-                                    {p.cg.openNonEra} other
-                                  </a>
-                                ) : null}
-                              </div>
-                            ) : p.cg?.done > 0 ? '✓' : '—'}
-                          </td>
-                          <td style={{ color: cgSlipColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: cgSlip != null ? 'pointer' : 'default' }} title={cgSlipTooltip}>
-                            {cgSlip != null && cgSlipJql ? (
+                          <td style={{ color: cgCell.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: cgCell.isDelayed ? 'pointer' : 'default' }} title={cgCell.tooltip}>
+                            {cgCell.jql ? (
                               <a
-                                href={jiraSearchUrl(jiraBaseUrl, cgSlipJql)}
+                                href={jiraSearchUrl(jiraBaseUrl, cgCell.jql)}
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 style={{ color: 'inherit', textDecoration: 'none' }}
-                                title={cgSlipTooltip}
+                                title={cgCell.tooltip}
                               >
-                                {cgSlipLabel}
+                                {cgCell.label}
                               </a>
                             ) : (
-                              cgSlipLabel
+                              cgCell.label
                             )}
                           </td>
-                          <td style={{ color: p.pg?.openEra > 0 || p.pg?.openNonEra > 0 ? 'var(--ds-warning)' : 'var(--ds-muted)', textAlign: 'center', fontSize: '0.9em' }}>
-                            {p.pg?.openEra > 0 || p.pg?.openNonEra > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {p.pg?.openEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.pgOpenEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-danger)', fontWeight: 'bold', textDecoration: 'none' }}
-                                    title="ERA bugs/tests currently open"
-                                  >
-                                    {p.pg.openEra} ERA
-                                  </a>
-                                ) : null}
-                                {p.pg?.openNonEra > 0 ? (
-                                  <a
-                                    href={jiraSearchUrl(jiraBaseUrl, p.links?.pgOpenNonEra)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ color: 'var(--ds-warning)', textDecoration: 'none' }}
-                                    title="Non-ERA bugs/tests currently open"
-                                  >
-                                    {p.pg.openNonEra} other
-                                  </a>
-                                ) : null}
-                              </div>
-                            ) : p.pg?.done > 0 ? '✓' : '—'}
-                          </td>
-                          <td style={{ color: pgSlipColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: pgSlip != null ? 'pointer' : 'default' }} title={pgSlipTooltip}>
-                            {pgSlip != null && pgSlipJql ? (
+                          <td style={{ color: pgCell.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: pgCell.isDelayed ? 'pointer' : 'default' }} title={pgCell.tooltip}>
+                            {pgCell.jql ? (
                               <a
-                                href={jiraSearchUrl(jiraBaseUrl, pgSlipJql)}
+                                href={jiraSearchUrl(jiraBaseUrl, pgCell.jql)}
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 style={{ color: 'inherit', textDecoration: 'none' }}
-                                title={pgSlipTooltip}
+                                title={pgCell.tooltip}
                               >
-                                {pgSlipLabel}
+                                {pgCell.label}
                               </a>
                             ) : (
-                              pgSlipLabel
+                              pgCell.label
+                            )}
+                          </td>
+                          <td style={{ color: p.deferred?.era > 0 || p.deferred?.nonEra > 0 ? 'var(--ds-warning)' : 'var(--ds-muted)', textAlign: 'center', fontSize: '0.9em' }}>
+                            {p.deferred?.era > 0 || p.deferred?.nonEra > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontWeight: 'bold' }}>
+                                  {p.links?.deferred ? (
+                                    <a href={jiraSearchUrl(jiraBaseUrl, p.links.deferred)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                      {deferredLabel}
+                                    </a>
+                                  ) : deferredLabel}
+                                </div>
+                                <div style={{ fontSize: '0.85em' }}>
+                                  {p.deferred?.era > 0 ? (
+                                    p.links?.deferredEra ? (
+                                      <a href={jiraSearchUrl(jiraBaseUrl, p.links.deferredEra)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--ds-danger)', textDecoration: 'none' }}>
+                                        {p.deferred.era} ERA
+                                      </a>
+                                    ) : (
+                                      <span style={{ color: 'var(--ds-danger)' }}>{p.deferred.era} ERA</span>
+                                    )
+                                  ) : null}
+                                  {p.deferred?.era > 0 && p.deferred?.nonEra > 0 ? ', ' : null}
+                                  {p.deferred?.nonEra > 0 ? (
+                                    p.links?.deferredNonEra ? (
+                                      <a href={jiraSearchUrl(jiraBaseUrl, p.links.deferredNonEra)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--ds-warning)', textDecoration: 'none' }}>
+                                        {p.deferred.nonEra} other
+                                      </a>
+                                    ) : (
+                                      <span style={{ color: 'var(--ds-warning)' }}>{p.deferred.nonEra} other</span>
+                                    )
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : (
+                              '—'
                             )}
                           </td>
                         </tr>
@@ -502,7 +468,7 @@ export default function RetrospectivePage() {
                     })}
                     {!projectsPage?.projects?.length ? (
                       <tr>
-                        <td colSpan={11}>No projects found for this release.</td>
+                        <td colSpan={7}>No projects found for this release.</td>
                       </tr>
                     ) : null}
                   </tbody>
@@ -511,20 +477,60 @@ export default function RetrospectivePage() {
             )}
           </SectionPanel>
 
-          {/* Scope label: always shows release-level gate compliance (standalone epics + tickets) */}
-          <div className="retro-hint" style={{ marginBottom: 8, marginTop: 16 }}>
-            {loadingBootstrap
-              ? `Loading gate compliance for: ${selectedRelease}…`
-              : bootstrap?.gateChecks
-              ? `Gate compliance for: standalone epics & tickets · ${selectedRelease}`
-              : null}
-          </div>
+          <SectionPanel
+            title="Gate Compliance"
+            subtitle={loadingBootstrap ? `Loading for ${selectedRelease}…` : `Standalone Epics & Tickets · ${selectedRelease}`}
+          >
+            <div className="retro-grid">
+              {cards.map((c) => (
+                <GateComplianceCard key={c.title} {...c} />
+              ))}
+            </div>
+          </SectionPanel>
 
-          <div className="retro-grid">
-            {cards.map((c) => (
-              <GateComplianceCard key={c.title} {...c} />
-            ))}
-          </div>
+          {/* Standalone Deferred Tickets Tile */}
+          {pgToGaWithUrls?.deferredInWindow !== null && (
+            <div
+              style={{
+                marginTop: 16,
+                marginBottom: 12,
+                padding: 'var(--ds-space-3) var(--ds-space-4)',
+                backgroundColor: 'var(--ds-surface-raised)',
+                border: '1px solid var(--ds-border)',
+                borderRadius: 'var(--ds-radius-lg)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--ds-space-3)',
+                fontSize: 'var(--ds-fs-small)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'inline-block',
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--ds-warning)',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ color: 'var(--ds-text-strong)' }}>
+                <strong>Standalone Deferred Tickets:</strong>{' '}
+                {pgToGaWithUrls?.deferredInWindow ? (
+                  <a
+                    href={pgToGaWithUrls.deferredInWindow}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'var(--ds-warning)', textDecoration: 'none', fontWeight: 'bold' }}
+                  >
+                    {pgToGaWithUrls.deferredInWindow.split('=').pop()?.split('&')[0] || 'view in JIRA'}
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </span>
+            </div>
+          )}
 
           {loadingBootstrap ? (
             <div className="rb-empty" style={{ textAlign: 'center', marginTop: 8 }}>

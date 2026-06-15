@@ -36,6 +36,7 @@ export const TAB_PERMISSIONS = {
   '/': [], // Email Sender - available to all authenticated users
   '/project-status': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/release/brief': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+  '/release/retrospective': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/feature-dashboard': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/component-report': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/release-setup': [PERMISSIONS.RELEASE_SETUP_MANAGE],
@@ -43,6 +44,7 @@ export const TAB_PERMISSIONS = {
   '/generic-emailer': [PERMISSIONS.EMAIL_SEND_GENERIC],
   '/email-history': [PERMISSIONS.EMAIL_HISTORY_VIEW],
   '/sprint-report': [PERMISSIONS.SPRINT_REPORTS_VIEW],
+  '/sync-hub': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/kpis': [PERMISSIONS.KPI_VIEW],
   '/admin': [PERMISSIONS.ADMIN_PANEL_ACCESS]
 };

@@ -35,3 +35,4 @@ export * from './resolutionCategoriesService.js';
 export * from './sprintsService.js';
 export * from './releaseInsightsService.js';
 export * from './featureDashboardService.js';
+export * from './retroService.js';

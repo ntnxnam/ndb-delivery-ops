@@ -60,9 +60,22 @@ export const PORTFOLIO_ROOT_TYPES = '(Feature, Initiative)';
 export const PORTFOLIO_CONTAINER_TYPES =
   '(Feature, Initiative, Epic, X-FEAT, Capability)';
 
-/** Canonical bucket keys. Order matters: parents before children. */
+/**
+ * Canonical Group 1 bucket keys — the 6 disjoint buckets that make up
+ * the "currently in this release" payload. Order matters: parents before
+ * children, so the within-release dedup loop tags a ticket with its
+ * highest-level bucket when it appears in multiple results.
+ *
+ *   1A. top_level_projects        — Features/Initiatives directly tagged
+ *   1B. epics_of_projects         — Epics that are portfolio children of 1A
+ *   2.  work_toward_project       — Tasks/Bugs/Tests inside those Epics
+ *   3.  standalone_epics          — Epics tagged with no Parent Link
+ *   4.  work_toward_standalone_epic — Tasks/Bugs/Tests inside standalone Epics
+ *   5.  direct_tickets            — loose Bugs/Tasks/Improvements (no Epic Link)
+ */
 export const PAYLOAD_BUCKET_KEYS = [
   'top_level_projects',
+  'epics_of_projects',
   'work_toward_project',
   'standalone_epics',
   'work_toward_standalone_epic',
@@ -74,40 +87,130 @@ export type PayloadBucketKey = (typeof PAYLOAD_BUCKET_KEYS)[number];
 /** Canonical sidecar tag values. */
 export const WISHLIST_COMPONENT = 'wishlist';
 export const DEFERRED_COMPONENT = 'deferred';
+export const LONG_TERM_COMPONENT = 'long_term_funded';
+export const EXTENSION_COMPONENT = 'extension';
 
-// ── Bucket builders (each returns the bucket-only JQL, sans project scope) ──
+/** Group 2: tickets that WERE in the release but have been moved out. */
+export const MOVED_OUT_COMPONENT = 'moved_out';
+
+/** Group 3: Feature/Initiative top-level items on future/master releases. */
+export const LONG_TERM_PROJECTS_COMPONENT = 'long_term_projects';
+/** Group 3: Epics that are portfolio children of long-term funded features. */
+export const LONG_TERM_EPICS_COMPONENT = 'long_term_epics';
+/** Group 3: Work (Tasks/Bugs/Tests) under long-term funded epics. */
+export const LONG_TERM_WORK_COMPONENT = 'long_term_work';
+
+// ── JQL quoting helpers ────────────────────────────────────────────────────
+
+/**
+ * Quote a fixVersion value for **top-level** JQL.
+ * Single-word names (`NDB-2.11`, `master`) need no quotes.
+ * Multi-word names (`Era Future`) must be wrapped in double-quotes.
+ */
+function q(v: string): string {
+  return /\s/.test(v) ? `"${v}"` : v;
+}
+
+/**
+ * Quote a fixVersion value for use **inside** a double-quoted JQL string
+ * (e.g., the inner JQL argument of `portfolioChildrenOf("...")` or
+ * `issuesInEpics("...")`).
+ *
+ * Cannot use double-quotes inside an already-double-quoted string because
+ * that would close the outer delimiter. Use single-quotes instead — they
+ * are equally valid JQL string delimiters.
+ */
+function qInner(v: string): string {
+  return /\s/.test(v) ? `'${v}'` : v;
+}
+
+// ── Group 1 bucket builders (each returns the bucket JQL, no project prefix) ─
 
 function jqlTopLevelProjects(release: string): string {
   return (
-    `fixVersion = ${release} AND status not in (Cancelled, Backlog) ` +
+    `fixVersion = ${q(release)} AND status not in (Cancelled, Backlog) ` +
     `AND issueType in ${PORTFOLIO_ROOT_TYPES}`
   );
 }
 
+/**
+ * Bucket 1B: Epics that are direct portfolio children of top-level projects.
+ * Distinct from `work_toward_project` (which uses issuesInEpics to get tasks).
+ * This bucket captures the Epics themselves so the FEAT→Epic→Task chain is
+ * fully materialised in the flat dump.
+ */
+function jqlEpicsOfProjects(release: string): string {
+  // release is inside portfolioChildrenOf("...") — must use single-quotes for
+  // multi-word names so they don't close the outer double-quote delimiter.
+  return (
+    `issueFunction in portfolioChildrenOf(` +
+    `"fixVersion = ${qInner(release)} AND status not in (Cancelled, Backlog) ` +
+    `AND issueType in ${PORTFOLIO_ROOT_TYPES}") ` +
+    `AND issueType = Epic`
+  );
+}
+
 function jqlWorkTowardProject(release: string): string {
+  // release is inside the \\"...\\" escaped inner string — use single-quotes.
   return (
     'issueFunction in issuesInEpics(' +
     `"issuefunction in portfolioChildrenOf(` +
-    `\\"fixVersion = ${release} AND status not in (Cancelled, Backlog) ` +
+    `\\"fixVersion = ${qInner(release)} AND status not in (Cancelled, Backlog) ` +
     `AND issueType in ${PORTFOLIO_ROOT_TYPES}\\")")`
   );
 }
 
 function jqlStandaloneEpics(release: string): string {
-  return `type = Epic AND fixVersion = ${release} AND "Parent Link" is EMPTY`;
+  return `type = Epic AND fixVersion = ${q(release)} AND "Parent Link" is EMPTY`;
 }
 
 function jqlWorkTowardStandaloneEpic(release: string): string {
+  // release is inside issuesInEpics("...") — must use single-quotes.
   return (
-    `issueFunction in issuesInEpics("type = Epic AND fixVersion = ${release} ` +
+    `issueFunction in issuesInEpics("type = Epic AND fixVersion = ${qInner(release)} ` +
     `AND \\"Parent Link\\" is EMPTY")`
+  );
+}
+
+/**
+ * Catch-all version variant of `work_toward_standalone_epic`.
+ *
+ * For versions like "master" / "Era Future" that accumulate unbounded
+ * historical work, the standard query returns >20,000 issues. This variant
+ * adds `AND updated >= startOfYear(-1)` to limit the result to tickets
+ * touched in the last ~2 years — old inactive work under master epics is not
+ * operationally useful.
+ */
+function jqlWorkTowardStandaloneEpicCatchAll(release: string): string {
+  return (
+    `issueFunction in issuesInEpics("type = Epic AND fixVersion = ${qInner(release)} ` +
+    `AND \\"Parent Link\\" is EMPTY") AND updated >= startOfYear(-1)`
   );
 }
 
 function jqlDirectTickets(release: string): string {
   return (
-    `(fixVersion was ${release} OR fixVersion = ${release} ` +
-    `OR affectedVersion = ${release}) AND "Epic Link" is EMPTY ` +
+    `(fixVersion was ${q(release)} OR fixVersion = ${q(release)} ` +
+    `OR affectedVersion = ${q(release)}) AND "Epic Link" is EMPTY ` +
+    `AND issueType not in ${PORTFOLIO_CONTAINER_TYPES}`
+  );
+}
+
+/**
+ * Catch-all version variant of `direct_tickets`.
+ *
+ * For versions like "master" / "Era Future":
+ *   - `fixVersion was master` scans all JIRA changelog history and exceeds
+ *     the 20,000-issue cap (and often times out at 30s).
+ *   - `affectedVersion = master` is not meaningful for a planning bucket.
+ *
+ * This variant uses only `fixVersion = master` — tickets CURRENTLY in the
+ * catch-all version with no Epic parent. This is the relevant set for
+ * operational triage.
+ */
+function jqlDirectTicketsCatchAll(release: string): string {
+  return (
+    `fixVersion = ${q(release)} AND "Epic Link" is EMPTY ` +
     `AND issueType not in ${PORTFOLIO_CONTAINER_TYPES}`
   );
 }
@@ -115,22 +218,38 @@ function jqlDirectTickets(release: string): string {
 // ── Public surface ─────────────────────────────────────────────────────────
 
 /**
- * The 5 disjoint bucket queries keyed by canonical Components tag.
+ * The 6 disjoint Group 1 bucket queries keyed by canonical Components tag.
  *
  * Order is the iteration order used by the within-release dedup in the
- * dataset assembler: when a ticket happens to match multiple buckets
- * during fetch, it's tagged with the first match (parents before
- * children).
+ * dataset assembler: when a ticket matches multiple buckets, it's tagged
+ * with the first match (parents before children).
+ *
+ * No project prefix is applied here — the callers in `fetchReleaseData`
+ * and `buildReleasePayloadJql` handle scoping. Features/Initiatives live
+ * in FEAT, engineering work in ERA, documentation in TECHPUBS, etc. A
+ * blanket `project = ERA` would silently exclude all of them.
+ *
+ * @param catchAllVersion - When true, use simplified JQL for
+ *   `work_toward_standalone_epic` and `direct_tickets` that avoids
+ *   unbounded historical scans. Intended for planning-bucket versions like
+ *   "master" / "Era Future" that are never released and accumulate vast
+ *   ticket histories. See individual function docs for the exact change.
  */
 export function getComponentQueries(
-  release: string
+  release: string,
+  catchAllVersion = false
 ): Record<PayloadBucketKey, string> {
   return {
     top_level_projects: jqlTopLevelProjects(release),
+    epics_of_projects: jqlEpicsOfProjects(release),
     work_toward_project: jqlWorkTowardProject(release),
     standalone_epics: jqlStandaloneEpics(release),
-    work_toward_standalone_epic: jqlWorkTowardStandaloneEpic(release),
-    direct_tickets: jqlDirectTickets(release),
+    work_toward_standalone_epic: catchAllVersion
+      ? jqlWorkTowardStandaloneEpicCatchAll(release)
+      : jqlWorkTowardStandaloneEpic(release),
+    direct_tickets: catchAllVersion
+      ? jqlDirectTicketsCatchAll(release)
+      : jqlDirectTickets(release),
   };
 }
 
@@ -284,4 +403,110 @@ export function getDeferredQuery(
 ): string {
   const suffix = deriveReleaseSuffix(release, options.labelPrefix);
   return `labels = "${options.labelPrefix.toLowerCase()}-${suffix}-deferred"`;
+}
+
+export function getLongTermFundedQuery(
+  release: string,
+  options: SidecarOptions
+): string {
+  const suffix = deriveReleaseSuffix(release, options.labelPrefix);
+  return `labels = "${options.labelPrefix.toLowerCase()}-${suffix}-long-term-funded"`;
+}
+
+export function getExtensionQuery(
+  release: string,
+  options: SidecarOptions
+): string {
+  const suffix = deriveReleaseSuffix(release, options.labelPrefix);
+  const prefix = `${options.labelPrefix.toLowerCase()}-${suffix}`;
+  return `labels in ("${prefix}-code-complete-extension-recieved", "${prefix}-code-complete-extention-recieved")`;
+}
+
+// ── Group 2 — Moved-out tickets ─────────────────────────────────────────────
+
+/**
+ * Group 2: a single broad query that captures ALL tickets that carried
+ * `fixVersion = {release}` at some point but no longer do.
+ *
+ * We use one broad query (not 6 sub-queries) to avoid the JIRA timeout
+ * risk of running nested `portfolioChildrenOf` / `issuesInEpics` for the
+ * moved-out universe. Bucket classification (1A/1B/2/3/4/5) is done in
+ * the middleware from the ticket's `issuetype` + hierarchy link fields
+ * (`Portfolio Parent Key`, `Epic Link Key`) — these are populated by the
+ * expanded `RELEASE_DATASET_FIELDS` fetch.
+ *
+ * "Hygienic" vs "needs cleanup" is also derived in-memory:
+ *   - hygienic  = parent Feature was also moved (they moved together)
+ *   - needs cleanup = parent Feature is still in the release but this
+ *                     child was moved independently (orphaned reference)
+ */
+export function getMovedOutQuery(release: string): string {
+  return (
+    `fixVersion was ${q(release)} AND fixVersion not in (${q(release)}) ` +
+    `AND status not in (Cancelled)`
+  );
+}
+
+// ── Group 3 — Long-term funded (future/master releases) ─────────────────────
+
+export interface LongTermOptions {
+  /**
+   * Unreleased JIRA versions that are NOT currently active releases.
+   * Determined at sync time by calling `jira.getProjectVersions(projectKey)`
+   * and filtering: `released = false AND name NOT IN (activeReleases)`.
+   * Also includes the string `'master'` if the JIRA project uses it.
+   */
+  futureReleases: string[];
+}
+
+/**
+ * Group 3, Bucket 1A: Feature/Initiative tickets on future or master releases.
+ * These represent work the team is ALSO doing during the current release
+ * timeframe but that's officially scoped for a future version.
+ *
+ * Returns empty string when `futureReleases` is empty — callers must skip
+ * the fetch in that case.
+ */
+export function getLongTermProjectsQuery(options: LongTermOptions): string {
+  if (options.futureReleases.length === 0) return '';
+  // Top-level JQL — use double-quotes for multi-word names.
+  const inList = options.futureReleases.map((r) => q(r)).join(', ');
+  return (
+    `issueType in ${PORTFOLIO_ROOT_TYPES} AND ` +
+    `fixVersion in (${inList}) AND ` +
+    `status not in (Cancelled)`
+  );
+}
+
+/**
+ * Group 3, Bucket 1B: Epics that are portfolio children of long-term projects.
+ */
+export function getLongTermEpicsQuery(options: LongTermOptions): string {
+  if (options.futureReleases.length === 0) return '';
+  // inListOuter: top-level JQL wrapper (getLongTermProjectsQuery mirror)
+  const inListOuter = options.futureReleases.map((r) => q(r)).join(', ');
+  // inListInner: inside portfolioChildrenOf("...") — must use single-quotes
+  // so multi-word names like "Era Future" don't close the outer delimiter.
+  const inListInner = options.futureReleases.map((r) => qInner(r)).join(', ');
+  return (
+    `issueFunction in portfolioChildrenOf(` +
+    `"issueType in ${PORTFOLIO_ROOT_TYPES} AND fixVersion in (${inListInner}) ` +
+    `AND status not in (Cancelled)") ` +
+    `AND issueType = Epic AND fixVersion in (${inListOuter})`
+  );
+}
+
+/**
+ * Group 3, Bucket 2: Tasks/Bugs/Tests under long-term funded Epics.
+ */
+export function getLongTermWorkQuery(options: LongTermOptions): string {
+  if (options.futureReleases.length === 0) return '';
+  // Both nesting levels use single-quotes for safety inside outer string delimiters.
+  const inListInner = options.futureReleases.map((r) => qInner(r)).join(', ');
+  return (
+    `issueFunction in issuesInEpics(` +
+    `"issueFunction in portfolioChildrenOf(` +
+    `\\"issueType in ${PORTFOLIO_ROOT_TYPES} AND fixVersion in (${inListInner}) ` +
+    `AND status not in (Cancelled)\\") AND issueType = Epic")`
+  );
 }

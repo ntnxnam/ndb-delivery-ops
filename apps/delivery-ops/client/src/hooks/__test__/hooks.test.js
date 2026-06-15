@@ -7,7 +7,6 @@ import {
   useReleaseVersions,
   useColumnConfig,
   useGanttConfig,
-  useReleaseItems,
   useCheckpointHistory,
   useEmailForm
 } from '../index';
@@ -20,7 +19,6 @@ describe('Custom Hooks Structure', () => {
     expect(useReleaseVersions).toBeDefined();
     expect(useColumnConfig).toBeDefined();
     expect(useGanttConfig).toBeDefined();
-    expect(useReleaseItems).toBeDefined();
     expect(useCheckpointHistory).toBeDefined();
     expect(useEmailForm).toBeDefined();
   });
@@ -29,7 +27,6 @@ describe('Custom Hooks Structure', () => {
     expect(typeof useReleaseVersions).toBe('function');
     expect(typeof useColumnConfig).toBe('function');
     expect(typeof useGanttConfig).toBe('function');
-    expect(typeof useReleaseItems).toBe('function');
     expect(typeof useCheckpointHistory).toBe('function');
     expect(typeof useEmailForm).toBe('function');
   });

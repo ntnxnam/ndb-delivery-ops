@@ -7,9 +7,15 @@
  * Data is fetched ONCE per component. Release filter is applied client-side.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { authenticatedGet, getApiBase } from '../utils/api';
 import { useTeam } from '../contexts/TeamContext';
+import { useTeamDataset } from '../hooks/useTeamDataset';
+import {
+  deriveComponentListFromBundle,
+  deriveComponentHealthFromBundle,
+  deriveComponentDataFromBundle,
+} from '../release/utils/bundleUtils';
 import './ComponentReport.css';
 
 const API_BASE = getApiBase();
@@ -366,6 +372,98 @@ const ProjectsWidget = ({ projectBreakdown }) => {
   );
 };
 
+// ── Legend panel ────────────────────────────────────────────────────────────
+const LegendPanel = () => {
+  const [open, setOpen] = useState(false);
+
+  const sections = [
+    {
+      heading: 'Row symbols (Key column)',
+      items: [
+        { symbol: '*', desc: 'fixVersion mismatch — one or more child tickets are committed to a different release than the parent project/epic' },
+        { symbol: '⚠', desc: 'affectedVersion anomaly — this item has an affectedVersion of "ERA Future" or "Triage", which signals it may not be properly committed' },
+      ],
+    },
+    {
+      heading: 'Column headers',
+      items: [
+        { symbol: '↑', desc: 'Outstanding count — open items still needing work (lower is better)' },
+        { symbol: 'Bugs ↑', desc: 'Open Bug-type issues under this project' },
+        { symbol: 'Tasks+UnitTests ↑', desc: 'Open Task and Unit Test items' },
+        { symbol: 'Improvements ↑', desc: 'Open Improvement-type issues' },
+        { symbol: 'Tests ↑', desc: 'Open Test-type issues (test-case writing and execution)' },
+        { symbol: 'Others ↑', desc: 'All other open issue types not covered by the above buckets' },
+      ],
+    },
+    {
+      heading: 'Cell content',
+      items: [
+        { symbol: 'N open', desc: 'Number of outstanding (not yet done) issues in that category' },
+        { symbol: '🔴 N P0', desc: 'Blocker-priority sub-count within that cell — requires immediate attention' },
+        { symbol: '⚠ N P1', desc: 'Critical-priority sub-count within that cell' },
+        { symbol: 'Name (N)', desc: 'Bug cells only — top assignees and their open bug counts' },
+        { symbol: '✓ N done', desc: 'Completed (closed/resolved) items in this category — shown below the open count' },
+        { symbol: '—', desc: 'No items in this category' },
+      ],
+    },
+    {
+      heading: 'Health indicators',
+      items: [
+        { symbol: '🟢', desc: 'Green — healthy: 0–1 P0s, all under 20 days old' },
+        { symbol: '🟡', desc: 'Yellow — at risk: 2–3 P0s, or a P0 between 20–30 days old' },
+        { symbol: '🔴', desc: 'Red — critical: any P0 older than 30 days, more than 3 P0s, or deferral rate over 25%' },
+      ],
+    },
+    {
+      heading: 'Age badges (issue tables)',
+      items: [
+        { symbol: 'Nd (green)', desc: 'Age < 30 days — normal' },
+        { symbol: 'Nd (orange)', desc: 'Age 30–59 days — watch and escalate if no progress' },
+        { symbol: 'Nd (red)', desc: 'Age ≥ 60 days — overdue, needs immediate owner action' },
+      ],
+    },
+    {
+      heading: 'Row highlights',
+      items: [
+        { symbol: 'Yellow row', desc: 'fixVersion mismatch detected — child tickets belong to a different release than this parent' },
+        { symbol: 'Orange row', desc: 'affectedVersion anomaly — ERA Future or Triage set as affectedVersion, which is unexpected for active work' },
+      ],
+    },
+  ];
+
+  return (
+    <div className="cr-legend-panel">
+      <button
+        className="cr-legend-toggle"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
+        <span className="cr-legend-toggle-label">Legend — what do the symbols mean?</span>
+        <span className="cr-accordion-chevron">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="cr-legend-body">
+          {sections.map(sec => (
+            <div key={sec.heading} className="cr-legend-section">
+              <div className="cr-legend-section-heading">{sec.heading}</div>
+              <table className="cr-legend-table">
+                <tbody>
+                  {sec.items.map(item => (
+                    <tr key={item.symbol}>
+                      <td className="cr-legend-symbol"><code>{item.symbol}</code></td>
+                      <td className="cr-legend-desc">{item.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Widget 5 (KPI) placeholder ──────────────────────────────────────────────
 const KpiWidget = () => (
   <p className="cr-placeholder-text">
@@ -573,6 +671,7 @@ const ReportSection = ({ title, badge, outstanding, projectBreakdown, isSelected
 // ── Main component ──────────────────────────────────────────────────────────
 export const ComponentReport = () => {
   const { selectedTeamId } = useTeam();
+  const { bundle } = useTeamDataset();
 
   const [componentList, setComponentList] = useState([]);
   const [componentListLoading, setComponentListLoading] = useState(false);
@@ -593,6 +692,19 @@ export const ComponentReport = () => {
 
   // ── Fetch component list ──────────────────────────────────────────────────
   const fetchComponents = async (forceRefresh = false) => {
+    // Bundle-first: derive component list from synced data
+    if (!forceRefresh) {
+      const bundleDerived = deriveComponentListFromBundle(bundle);
+      if (bundleDerived) {
+        setComponentList(bundleDerived.components);
+        if (bundleDerived.components.length > 0 && !selectedComponent) {
+          setSelectedComponent(bundleDerived.components[0].name);
+        }
+        setComponentListError(null);
+        return;
+      }
+    }
+    // Original fallback — unchanged:
     setComponentListLoading(true);
     setComponentListError(null);
     try {
@@ -618,6 +730,23 @@ export const ComponentReport = () => {
   // ── Fetch report data — only runs when user clicks "Fetch" ───────────────
   const fetchReportData = () => {
     if (!selectedComponent) return;
+
+    // Bundle-first: derive health + data from synced bundle (instant, no loading state)
+    const bundleHealth = deriveComponentHealthFromBundle(bundle, selectedComponent);
+    const bundleData = deriveComponentDataFromBundle(bundle, selectedComponent);
+    if (bundleHealth && bundleData) {
+      setHealthData(bundleHealth.health);
+      setActionItems(bundleHealth.actions);
+      setTabData(bundleData);
+      setFetchedAt(new Date());
+      const releases = bundleData.availableReleases || [];
+      setAvailableReleases(releases);
+      setSelectedReleases(new Set(releases.filter(r => /^NDB-\d+\.\d+/.test(r) || r.toLowerCase() === 'master')));
+      setTabDataError(null);
+      return;
+    }
+
+    // Original fallback — unchanged:
     setTabDataLoading(true);
     setTabDataError(null);
     setTabData(null);
@@ -784,6 +913,9 @@ export const ComponentReport = () => {
       {!selectedComponent && !tabDataLoading && (
         <div className="cr-empty-page">Select a component above to load the report.</div>
       )}
+
+      {/* ── Legend ────────────────────────────────────────────────────────── */}
+      {tabData && <LegendPanel />}
 
       {/* ── Sections ─────────────────────────────────────────────────────── */}
       {selectedComponent && !tabDataLoading && !tabDataError && tabData && (

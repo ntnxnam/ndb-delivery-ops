@@ -98,9 +98,24 @@ function ReleaseVersionSelector({
               style={{ flex: '0 1 auto', minWidth: '200px', maxWidth: '300px', padding: '0.4rem', fontSize: '0.85rem' }}
             >
               <option value="">-- Select --</option>
-              {versions.map(version => (
-                <option key={version} value={version}>{version}</option>
-              ))}
+              {(() => {
+                const unreleased = versions.filter(v => !(typeof v === 'object' ? v.released : false));
+                const released = versions.filter(v => (typeof v === 'object' ? v.released : false));
+                const toOption = (version) => {
+                  const name = typeof version === 'string' ? version : version.name;
+                  return <option key={name} value={name}>{name}</option>;
+                };
+                return (
+                  <>
+                    {unreleased.map(toOption)}
+                    {released.length > 0 && (
+                      <optgroup label="── Past Releases ──">
+                        {released.map(toOption)}
+                      </optgroup>
+                    )}
+                  </>
+                );
+              })()}
             </select>
           ) : (
             <input
