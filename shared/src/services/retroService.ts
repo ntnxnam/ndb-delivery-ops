@@ -220,7 +220,7 @@ export function buildRetroJqls(
 
 export function resolveGateDates(gateTimeline: ReleaseGateTimeline): ResolvedGateDates {
   return {
-    ccmDate: resolveGateDate(gateTimeline.gates, 'CC'),
+    ccmDate: resolveGateDate(gateTimeline.gates, 'CCM'),
     cgDate: resolveGateDate(gateTimeline.gates, 'CG'),
     pgDate: resolveGateDate(gateTimeline.gates, 'PG'),
     gaDate: resolveGateDate(gateTimeline.gates, 'GA'),
