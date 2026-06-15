@@ -148,18 +148,10 @@ export default function RetrospectivePage() {
     topN: 10,
   });
 
-  // Priority: per-project detail (when a project row is selected) >
-  //           release-level checks from bootstrap (fast, loads with gate timeline) >
-  //           full retroFallback (legacy aggregate endpoint, only on error).
+  // Gate compliance data always comes from bootstrap (release-level, standalone epics + tickets only).
+  // Row selection in the table does NOT change the gate compliance cards.
+  // projectDetail is used for other panels below, not for gate cards.
   const retro = useMemo(() => {
-    if (projectDetail) {
-      return {
-        gateChecks: projectDetail.checks,
-        companionReadiness: null,
-        pgToGa: null,
-        gateTimeline: bootstrap?.gateTimeline,
-      };
-    }
     if (bootstrap?.gateChecks) {
       return {
         gateChecks: bootstrap.gateChecks,
@@ -169,7 +161,7 @@ export default function RetrospectivePage() {
       };
     }
     return retroFallback;
-  }, [projectDetail, bootstrap, retroFallback]);
+  }, [bootstrap, retroFallback]);
 
   const cards = useMemo(() => gateCardData(retro, jiraBaseUrl), [retro, jiraBaseUrl]);
 
@@ -273,70 +265,77 @@ export default function RetrospectivePage() {
                       <th>Key</th>
                       <th>Summary</th>
                       <th>Type</th>
-                      <th title="Code Complete Met (CCM) gate date for this release — same baseline for all projects">Planned CCM</th>
-                      <th title="Latest date a Task or Unit Test was closed under this project">Actual CCM</th>
-                      <th title="Actual CCM minus Planned CCM. Negative = early, positive = late">CCM Slip</th>
-                      <th title="Tasks + Unit Tests still open (coding not done)">CCM Open</th>
-                      <th title="P0/P1 Bugs + Improvements still open — must resolve by Commit Gate">CG Open</th>
-                      <th title="Last P0/P1 bug resolved vs planned CG date. Negative = before gate, positive = after gate">CG Slip</th>
-                      <th title="All Bugs + Improvements + Tests still open — must resolve by Promotion Gate">PG Open</th>
-                      <th title="Last bug/test resolved vs planned PG date. Negative = before gate, positive = after gate">PG Slip</th>
+                      <th title="Code Complete Met: Tasks/Unit Tests. Shows slip in days and count of ERA vs other tickets closed after planned date">CCM</th>
+                      <th title="Commit Gate: P0/P1 Bugs/Improvements. Shows slip in days and count of ERA vs other tickets resolved after planned date">CG</th>
+                      <th title="Promotion Gate: All Bugs/Improvements/Tests. Shows slip in days and count of ERA vs other tickets resolved after planned date">PG</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(projectsPage?.projects || []).map((p) => {
                       const gd = bootstrap?.gateDates || {};
 
+                      // Helper: Build consolidated gate cell with slip + breakdown
+                      const buildGateCell = (slip, eraCount, nonEraCount, slipJql, tooltip) => {
+                        if (slip == null) return { label: '—', color: 'var(--ds-muted)' };
+                        if (slip === 0) return { label: '✓', color: 'var(--ds-success)' };
+                        const color = slip > 0 ? 'var(--ds-danger)' : 'var(--ds-success)';
+                        const slipLabel = slip > 0 ? `+${slip}d` : `${slip}d`;
+                        const breakdown = eraCount > 0 || nonEraCount > 0
+                          ? ` (${eraCount > 0 ? eraCount + ' ERA' : ''}${eraCount > 0 && nonEraCount > 0 ? ', ' : ''}${nonEraCount > 0 ? nonEraCount + ' other' : ''})`
+                          : '';
+                        return {
+                          label: slipLabel + breakdown,
+                          color,
+                          jql: slipJql,
+                          tooltip,
+                          isDelayed: slip > 0,
+                        };
+                      };
+
                       // CCM slip: actual last-closed Task/UnitTest vs the release-level CCM gate date.
                       // CG/PG slips already use gd.cgDate / gd.pgDate — CCM follows the same pattern.
                       // We do NOT use customfield_11067 (the per-FEAT "CC Date" field); that is the
                       // team's self-set date and has no meaning for gate compliance tracking.
                       const ccmSlip = computeSlip(p.ccm?.lastClosedDate, gd.ccmDate);
-                      const ccmSlipColor = ccmSlip == null ? 'var(--ds-muted)' : ccmSlip > 0 ? 'var(--ds-danger)' : ccmSlip < 0 ? 'var(--ds-success)' : 'var(--ds-muted)';
-                      const ccmSlipLabel = ccmSlip == null ? '—' : ccmSlip > 0 ? `+${ccmSlip}d` : ccmSlip < 0 ? `${ccmSlip}d` : '0d';
                       const ccmSlipTooltip = ccmSlip == null
                         ? 'No Task/Unit Test closed date available'
                         : ccmSlip > 0
-                        ? `⚠ Last Task/Unit Test closed ${p.ccm?.lastClosedDate} — ${ccmSlip} day${ccmSlip !== 1 ? 's' : ''} after the CCM gate (planned ${gd.ccmDate}). Coding work was not complete at the gate.`
+                        ? `⚠ Last Task/Unit Test closed ${p.ccm?.lastClosedDate} — ${ccmSlip} day${ccmSlip !== 1 ? 's' : ''} after the CCM gate (planned ${gd.ccmDate}). ${p.ccm?.openEra || 0} ERA and ${p.ccm?.openNonEra || 0} other tickets still open.`
                         : ccmSlip < 0
                         ? `✓ Last Task/Unit Test closed ${p.ccm?.lastClosedDate} — ${Math.abs(ccmSlip)} day${Math.abs(ccmSlip) !== 1 ? 's' : ''} before the CCM gate (planned ${gd.ccmDate}). Coding done on time.`
                         : `Last Task/Unit Test closed exactly on the CCM gate date (${gd.ccmDate}).`;
-                      // Client-side JQL for CCM slip: Tasks/UnitTests still open at CCM gate date
                       const ccmSlipJql = ccmSlip != null && gd.ccmDate && p.links?.ccmOpen
                         ? `${p.links.ccmOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.ccmDate}"`
                         : null;
+                      const ccmCell = buildGateCell(ccmSlip, p.ccm?.openEra || 0, p.ccm?.openNonEra || 0, ccmSlipJql, ccmSlipTooltip);
 
                       // CG slip: last P0/P1 bug resolved vs planned CG date
                       const cgSlip = computeSlip(p.cg?.lastResolvedDate, gd.cgDate);
-                      const cgSlipColor = cgSlip == null ? 'var(--ds-muted)' : cgSlip > 0 ? 'var(--ds-danger)' : cgSlip < 0 ? 'var(--ds-success)' : 'var(--ds-muted)';
-                      const cgSlipLabel = cgSlip == null ? '—' : cgSlip > 0 ? `+${cgSlip}d` : cgSlip < 0 ? `${cgSlip}d` : '0d';
                       const cgSlipTooltip = cgSlip == null
                         ? p.cg?.done === 0 ? 'No P0/P1 bugs found for this project' : 'No P0/P1 bug resolution date available'
                         : cgSlip > 0
-                        ? `⚠ Last P0/P1 bug resolved ${p.cg?.lastResolvedDate} — ${cgSlip} day${cgSlip !== 1 ? 's' : ''} after the CG gate (planned ${gd.cgDate}). Critical bugs were still open at commit gate.`
+                        ? `⚠ Last P0/P1 bug resolved ${p.cg?.lastResolvedDate} — ${cgSlip} day${cgSlip !== 1 ? 's' : ''} after the CG gate (planned ${gd.cgDate}). ${p.cg?.openEra || 0} ERA and ${p.cg?.openNonEra || 0} other P0/P1 bugs still open.`
                         : cgSlip < 0
                         ? `✓ Last P0/P1 bug resolved ${p.cg?.lastResolvedDate} — ${Math.abs(cgSlip)} day${Math.abs(cgSlip) !== 1 ? 's' : ''} before the CG gate (planned ${gd.cgDate}). All critical bugs resolved on time.`
                         : `Last P0/P1 bug resolved exactly on the CG gate date (${gd.cgDate}).`;
-                      // Client-side JQL for CG slip: P0/P1 bugs still open at CG gate date
                       const cgSlipJql = cgSlip != null && gd.cgDate && p.links?.cgOpen
                         ? `${p.links.cgOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.cgDate}"`
                         : null;
+                      const cgCell = buildGateCell(cgSlip, p.cg?.openEra || 0, p.cg?.openNonEra || 0, cgSlipJql, cgSlipTooltip);
 
                       // PG slip: last bug/test resolved vs planned PG date
                       const pgSlip = computeSlip(p.pg?.lastResolvedDate, gd.pgDate);
-                      const pgSlipColor = pgSlip == null ? 'var(--ds-muted)' : pgSlip > 0 ? 'var(--ds-danger)' : pgSlip < 0 ? 'var(--ds-success)' : 'var(--ds-muted)';
-                      const pgSlipLabel = pgSlip == null ? '—' : pgSlip > 0 ? `+${pgSlip}d` : pgSlip < 0 ? `${pgSlip}d` : '0d';
                       const pgSlipTooltip = pgSlip == null
                         ? p.pg?.done === 0 ? 'No bugs or tests found for this project' : 'No bug/test resolution date available'
                         : pgSlip > 0
-                        ? `⚠ Last bug/test resolved ${p.pg?.lastResolvedDate} — ${pgSlip} day${pgSlip !== 1 ? 's' : ''} after the PG gate (planned ${gd.pgDate}). Bugs or tests were still open at promotion gate.`
+                        ? `⚠ Last bug/test resolved ${p.pg?.lastResolvedDate} — ${pgSlip} day${pgSlip !== 1 ? 's' : ''} after the PG gate (planned ${gd.pgDate}). ${p.pg?.openEra || 0} ERA and ${p.pg?.openNonEra || 0} other bugs/tests still open.`
                         : pgSlip < 0
                         ? `✓ Last bug/test resolved ${p.pg?.lastResolvedDate} — ${Math.abs(pgSlip)} day${Math.abs(pgSlip) !== 1 ? 's' : ''} before the PG gate (planned ${gd.pgDate}). All quality work resolved on time.`
                         : `Last bug/test resolved exactly on the PG gate date (${gd.pgDate}).`;
-                      // Client-side JQL for PG slip: Bugs/Tests still open at PG gate date
                       const pgSlipJql = pgSlip != null && gd.pgDate && p.links?.pgOpen
                         ? `${p.links.pgOpen} AND status was not in (Resolved, Closed, Done) ON "${gd.pgDate}"`
                         : null;
+                      const pgCell = buildGateCell(pgSlip, p.pg?.openEra || 0, p.pg?.openNonEra || 0, pgSlipJql, pgSlipTooltip);
 
                       return (
                         <tr
@@ -512,14 +511,12 @@ export default function RetrospectivePage() {
             )}
           </SectionPanel>
 
-          {/* Scope label: shows whether cards reflect the full release or a selected project */}
+          {/* Scope label: always shows release-level gate compliance (standalone epics + tickets) */}
           <div className="retro-hint" style={{ marginBottom: 8, marginTop: 16 }}>
-            {loadingDetail && selectedProjectKey
-              ? `Loading gate compliance for: ${selectedProjectKey}…`
-              : projectDetail
-              ? `Gate compliance for: ${projectDetail.parent?.key || selectedProjectKey}`
+            {loadingBootstrap
+              ? `Loading gate compliance for: ${selectedRelease}…`
               : bootstrap?.gateChecks
-              ? `Gate compliance for everything else · ${selectedRelease}`
+              ? `Gate compliance for: standalone epics & tickets · ${selectedRelease}`
               : null}
           </div>
 
