@@ -45,8 +45,8 @@ async function fetchFilteredVersionNames(team, projectKey, jiraToken) {
 
   let versions = (projectResponse.data && Array.isArray(projectResponse.data))
     ? projectResponse.data
-      .filter(v => v.name && v.released === false && v.archived !== true)
-      .map(v => v.name)
+      .filter(v => v.name && v.archived !== true)
+      .map(v => ({ name: v.name, released: !!v.released, releaseDate: v.releaseDate || undefined }))
     : [];
 
   // Parent-project teams (e.g. ENG) host many sub-projects in one JIRA project
@@ -55,11 +55,11 @@ async function fetchFilteredVersionNames(team, projectKey, jiraToken) {
   if (team && team.projectType === 'parent' && Array.isArray(team.versionPatterns)) {
     const originalCount = versions.length;
     const patterns = team.versionPatterns.map(pattern => new RegExp(pattern, 'i'));
-    versions = versions.filter(name => patterns.some(rx => rx.test(name)));
+    versions = versions.filter(v => patterns.some(rx => rx.test(v.name)));
     console.log(`[releaseDataService] Parent project filtering for ${team.id}: ${originalCount} → ${versions.length} versions`);
   }
 
-  return versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+  return versions.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 /**
@@ -123,10 +123,12 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
   }
 
   const versions = await fetchFilteredVersionNames(team, team.projectKey, jiraToken);
-  const versionsWithFilters = versions.map(name => ({
-    name,
-    dynamicFilter: getReleaseBaseFilter(name, effectiveTeamId),
-    hasConfigOverride: !!getConfigOverride(name),
+  const versionsWithFilters = versions.map(v => ({
+    name: v.name,
+    released: v.released,
+    releaseDate: v.releaseDate,
+    dynamicFilter: getReleaseBaseFilter(v.name, effectiveTeamId),
+    hasConfigOverride: !!getConfigOverride(v.name),
   }));
 
   return {

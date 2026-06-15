@@ -113,6 +113,7 @@ const statusSnapshotsRoutes = require('./routes/statusSnapshots');
 const adminRoutes = require('./routes/admin');
 const dateMoverRoutes = require('./routes/dateMover');
 const releaseDatasetRoutes = require('./routes/releaseDataset');
+const releaseSyncRoutes = require('./routes/releaseSync');
 const aiRoutes = require('./routes/ai');
 const featureRoutes = require('./routes/feature');
 
@@ -129,11 +130,14 @@ app.get('/api/health', (req, res) => {
 app.use('/api/config', configRoutes); // Config routes at /api/config/*
 app.use('/api/auth', authRoutes); // Auth routes at /api/auth/*
 app.use('/api/jira', jiraRoutes); // JIRA routes at /api/jira/*
+const jiraProxyRoutes = require('./routes/jira/proxy');
+app.use('/api/jira/proxy', jiraProxyRoutes); // Apps Script / server-side Jira proxy
 app.use('/api/email', emailRoutes); // Email routes at /api/email/*
 app.use('/api/status-snapshots', statusSnapshotsRoutes); // Snapshots & trends
 app.use('/api/admin', adminRoutes); // Admin team management routes
 app.use('/api/date-mover', dateMoverRoutes); // D30: gate-date moves w/ Confluence audit
 app.use('/api/release-dataset', releaseDatasetRoutes); // Phase 3: shared releaseDataset surface
+app.use('/api/release-dataset', releaseSyncRoutes);   // Sync lifecycle: /sync-status, /sync, /bundle
 app.use('/api/ai', aiRoutes); // AI routes: exec summary generation + JIRA push
 app.use('/api/feature', featureRoutes); // Feature-level dashboard endpoints
 const componentRoutes = require('./routes/component');

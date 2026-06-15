@@ -11,6 +11,8 @@ import {
 import { useTeam } from '../contexts/TeamContext';
 import { authenticatedPost, authenticatedGet, getApiBase } from '../utils/api';
 import { useTeams } from '../hooks/useTeams';
+import { useTeamDataset } from '../hooks/useTeamDataset';
+import { derivePastSprintReportFromBundle } from '../release/utils/bundleUtils';
 import './ReleaseVersionTab.css';
 
 const API_BASE = getApiBase();
@@ -53,6 +55,7 @@ export default function SprintReportPage() {
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
   const { selectedTeamId: teamId, hasTeamSelected, isTransitioning } = useTeam();
+  const { bundle } = useTeamDataset();
 
   const [teams, setTeams] = useState([]);
   const [sprints, setSprints] = useState([]);
@@ -249,6 +252,17 @@ export default function SprintReportPage() {
         return;
       }
     }
+
+    // Bundle-first: derive past sprint report from synced data (instant, no loading state)
+    const compNames = selectedComponentNames.length > 0 ? selectedComponentNames : undefined;
+    const bundleDerived = derivePastSprintReportFromBundle(bundle, from, to, compNames);
+    if (bundleDerived) {
+      setPastReportResult(bundleDerived);
+      setError(null);
+      return;
+    }
+
+    // Original fallback — unchanged:
     if (!teamId || !jiraToken) return;
     setLoadingPastReport(true);
     setError(null);
@@ -269,7 +283,7 @@ export default function SprintReportPage() {
     } finally {
       setLoadingPastReport(false);
     }
-  }, [teamId, jiraToken, username, periodType, startDate, endDate, fiscalYear, fiscalQuarter, selectedComponentNames]);
+  }, [teamId, jiraToken, username, periodType, startDate, endDate, fiscalYear, fiscalQuarter, selectedComponentNames, bundle]);
 
   const toggleComponent = (name) => {
     setSelectedComponentNames((prev) =>

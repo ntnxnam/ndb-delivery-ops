@@ -316,6 +316,50 @@ export async function fetchProjectBreakdown({
 }
 
 /**
+ * Fetch week-on-week Created vs Resolved ticket counts for the engineering
+ * payload of a release (the burn-down graph data).
+ *
+ * Server buckets all payload tickets into Monday-aligned ISO weeks and
+ * returns `weeks` data points (oldest first).
+ *
+ * Returned shape:
+ *   {
+ *     burndown: {
+ *       productId, release, projectKey, weeks, totalFetched,
+ *       weeklyData: [
+ *         { weekStart: "YYYY-MM-DD", weekLabel: "Jun W2", created: N, resolved: N },
+ *         ...
+ *       ],
+ *       jqlBase: "..."
+ *     } | null
+ *   }
+ *
+ * @param {{productId?: string, release: string, weeks?: number, jiraToken: string, username: string}} args
+ */
+export async function fetchBurndown({
+  productId = 'ndb',
+  release,
+  weeks = 52,
+  jiraToken,
+  username,
+}) {
+  if (!release) return { burndown: null };
+  const res = await authenticatedGet(
+    `${API_BASE}/api/release-dataset/burndown`,
+    { productId, release, weeks },
+    { jiraToken, username }
+  );
+  const body = res?.data;
+  if (!body?.success) {
+    const err = body?.error || 'Burndown failed';
+    const e = new Error(err);
+    e.response = { data: body };
+    throw e;
+  }
+  return { burndown: body.data };
+}
+
+/**
  * Turn a JQL string + a JIRA base URL into a clickable filter URL.
  *
  * Per jira-authenticity-links.mdc — every count on the page links to JIRA

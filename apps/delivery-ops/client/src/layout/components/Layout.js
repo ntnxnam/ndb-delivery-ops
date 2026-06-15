@@ -2,6 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { ToastContainer } from '../../shared/components/Toast';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
+import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
+import { useReleaseData } from '../../contexts/ReleaseDataContext';
+
+function JiraConnectivityBanner() {
+  const { jiraUnreachable: unreachableFromSelected } = useSelectedRelease();
+  const { jiraUnreachable: unreachableFromData } = useReleaseData();
+  const unreachable = unreachableFromSelected || unreachableFromData;
+
+  if (!unreachable) return null;
+
+  return (
+    <div style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 1100,
+      background: '#fff3cd',
+      borderBottom: '1px solid #ffc107',
+      padding: '8px 20px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      fontSize: '13px',
+      color: '#856404',
+      fontWeight: 500,
+    }}>
+      <span style={{ fontSize: '16px' }}>⚠️</span>
+      <span>
+        Cannot reach JIRA servers — your data may be stale.
+        Please check your <strong>VPN connection</strong> and refresh.
+      </span>
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          marginLeft: 'auto',
+          background: '#ffc107',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '3px 12px',
+          fontSize: '12px',
+          fontWeight: 600,
+          color: '#333',
+          cursor: 'pointer',
+        }}
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
 
 export const Layout = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -46,6 +95,7 @@ export const Layout = ({ children }) => {
           marginLeft: sidebarCollapsed ? '60px' : `${sidebarWidth}px`
         }}
       >
+        <JiraConnectivityBanner />
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

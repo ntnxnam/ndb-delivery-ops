@@ -4,7 +4,7 @@
   "description": "Backend server for NDB Status Sender",
   "main": "index.js",
   "scripts": {
-    "dev": "npx nodemon index.js",
+    "dev": "node --watch --watch-path=routes --watch-path=services --watch-path=utils --watch-path=middleware index.js",
     "start": "node index.js",
     "test": "jest",
     "test:watch": "jest --watch",

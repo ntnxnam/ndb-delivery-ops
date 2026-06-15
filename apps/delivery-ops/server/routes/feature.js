@@ -54,7 +54,8 @@ function buildDashboardFields(getFieldIdFn) {
     'summary', 'issuetype', 'status', 'assignee', 'priority',
     'created', 'updated', 'resolutiondate',
     'labels',                        // bug-by-phase analytics
-    getFieldIdFn('parentLink'),      // Parent Link (customfield_20363) — hierarchy grouping
+    getFieldIdFn('parentLink'),      // Parent Link (customfield_20363) — Epic → FEAT/Initiative
+    getFieldIdFn('epicLink'),        // Epic Link (customfield_10361) — Task/Bug/Test → Epic
     'issuelinks',
     getFieldIdFn('riskIndicator'),
     getFieldIdFn('statusUpdate'),
@@ -80,7 +81,11 @@ function issueFromJira(issue) {
     updated: typeof fields.updated === 'string' ? fields.updated.slice(0, 10) : null,
     priority: fields.priority?.name || null,
     labels: Array.isArray(fields.labels) ? fields.labels : [],
-    epicLink: typeof fields.customfield_20363 === 'string' ? fields.customfield_20363 : null,
+    // customfield_10361 = Epic Link (Task/Bug/Test → their Epic).
+    // customfield_20363 = Parent Link (Epic → FEAT/Initiative) — a different field.
+    epicLink: typeof fields.customfield_10361 === 'string' ? fields.customfield_10361 :
+              (fields.customfield_10361 != null && typeof fields.customfield_10361?.key === 'string'
+                ? fields.customfield_10361.key : null),
   };
 }
 

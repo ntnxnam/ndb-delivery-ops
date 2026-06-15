@@ -43,6 +43,8 @@ import {
   fetchReleaseData,
   processMaster,
   type FetchReleaseResult,
+  type GateDateHistory,
+  type GateDateHistoryEntry,
   type ProcessedTicket,
   type ProcessedTicketWithDerived,
 } from './releaseDatasetService.js';
@@ -50,8 +52,14 @@ import type { SprintCalendar } from './sprintsService.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-/** Issue types whose `Closed Date` requires a changelog look-up. */
-export const CHANGELOG_REQUIRED_TYPES = new Set(['Bug', 'Improvement']);
+/** Issue types whose changelog is fetched to fill `Closed Date`, `Last Resolved Date`, and `Reopen Count`. */
+export const CHANGELOG_REQUIRED_TYPES = new Set(['Bug', 'Improvement', 'Test']);
+
+/**
+ * Issue types whose changelog is fetched for gate-date slip history
+ * (CC / CG / PG date change trail).
+ */
+export const GATE_HISTORY_TYPES = new Set(['Feature', 'Initiative', 'X-FEAT', 'Capability']);
 
 /** Default concurrency for the changelog enrichment fan-out. */
 export const DEFAULT_CHANGELOG_CONCURRENCY = 8;
@@ -68,6 +76,8 @@ export interface JiraChangelogHistory {
   created?: string;
   items?: Array<{
     field?: string;
+    /** JIRA's machine-readable field identifier, e.g. "customfield_11067". */
+    fieldId?: string;
     toString?: string;
     fromString?: string;
   }>;
@@ -102,6 +112,59 @@ export function extractClosedDate(issue: JiraIssue): string | null {
   return null;
 }
 
+/**
+ * Find the most-recent timestamp where status transitioned **to**
+ * "Resolved" in the changelog. Returns ISO string or null.
+ *
+ * Unlike `Resolved Date` (JIRA's `resolutiondate` field, which reflects
+ * the *first* time a resolution was set), this returns the *last* time
+ * the ticket actually moved to the Resolved status — the correct anchor
+ * for QA verification sprint assignment when a ticket has been reopened
+ * and re-resolved multiple times.
+ */
+export function extractLastResolvedDate(issue: JiraIssue): string | null {
+  const histories = (issue as IssueWithChangelog).changelog?.histories;
+  if (!histories || histories.length === 0) return null;
+  for (let i = histories.length - 1; i >= 0; i--) {
+    const h = histories[i]!;
+    for (const item of h.items ?? []) {
+      if (item.field === 'status' && item.toString === 'Resolved') {
+        return h.created ?? null;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Count how many times the ticket transitioned FROM "Resolved" or
+ * "Closed" BACK to an open/active state (reopen events).
+ *
+ * A high reopen count is a quality signal — it indicates the fix was
+ * insufficient or the ticket was insufficiently tested before being
+ * marked resolved.
+ */
+export function extractReopenCount(issue: JiraIssue): number {
+  const histories = (issue as IssueWithChangelog).changelog?.histories;
+  if (!histories || histories.length === 0) return 0;
+  const RESOLVED_STATES = new Set(['Resolved', 'Closed']);
+  let count = 0;
+  for (const h of histories) {
+    for (const item of h.items ?? []) {
+      if (
+        item.field === 'status' &&
+        item.fromString != null &&
+        item.toString != null &&
+        RESOLVED_STATES.has(item.fromString) &&
+        !RESOLVED_STATES.has(item.toString)
+      ) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
 export interface EnrichClosedDatesOptions {
   /** Bounded concurrency for the per-issue changelog fetches. */
   concurrency?: number;
@@ -118,28 +181,26 @@ export interface EnrichClosedDatesOptions {
 }
 
 /**
- * Walk a ticket list, find every Bug/Improvement-Done row that lacks
- * a `Closed Date`, fetch its changelog with bounded concurrency, and
- * mutate the rows in place to fill `Closed Date`.
+ * Walk a ticket list, find every Bug/Improvement/Test row, fetch its
+ * changelog with bounded concurrency, and mutate the rows in place to fill:
+ *
+ *   - `Closed Date`        — last transition to "Closed" (Done-resolution only)
+ *   - `Last Resolved Date` — last transition to "Resolved" (all required types)
+ *   - `Reopen Count`       — times reopened from Resolved/Closed (all required types)
  *
  * Returns counts so callers can surface progress / verify coverage.
- * Mutates `tickets` in place to match the Python contract (which
- * mutated the per-key dict by reference).
- *
- * Errors on individual changelog fetches are caught and counted in
- * `errors` — a single bad ticket should never abort the whole release.
+ * Mutates `tickets` in place. Errors on individual changelog fetches
+ * are caught and counted — a single bad ticket never aborts the whole release.
  */
 export async function enrichClosedDates(
   jira: JiraConnector,
   tickets: ProcessedTicket[],
   options: EnrichClosedDatesOptions = {}
 ): Promise<{ enriched: number; errors: number; checked: number }> {
-  const needs = tickets.filter(
-    (t) =>
-      CHANGELOG_REQUIRED_TYPES.has(t['Issue Type']) &&
-      isDoneResolution(t.Resolution) &&
-      !t['Closed Date']
-  );
+  // All Bug/Improvement/Test tickets need changelog enrichment — not
+  // just Done-resolution ones — because Reopen Count applies regardless
+  // of final resolution.
+  const needs = tickets.filter((t) => CHANGELOG_REQUIRED_TYPES.has(t['Issue Type']));
   if (needs.length === 0) {
     return { enriched: 0, errors: 0, checked: 0 };
   }
@@ -165,11 +226,24 @@ export async function enrichClosedDates(
       const ticket = needs[i]!;
       try {
         const issue = await doFetch(jira, ticket['Issue Key']);
-        const closed = extractClosedDate(issue);
-        if (closed) {
-          ticket['Closed Date'] = closed;
-          enriched += 1;
+
+        // Closed Date — only relevant for Done-resolution tickets
+        if (isDoneResolution(ticket.Resolution) && !ticket['Closed Date']) {
+          const closed = extractClosedDate(issue);
+          if (closed) {
+            ticket['Closed Date'] = closed;
+            enriched += 1;
+          }
         }
+
+        // Last Resolved Date — all required types
+        const lastResolved = extractLastResolvedDate(issue);
+        if (lastResolved) {
+          ticket['Last Resolved Date'] = lastResolved;
+        }
+
+        // Reopen Count — all required types
+        ticket['Reopen Count'] = extractReopenCount(issue);
       } catch {
         errors += 1;
       }
@@ -179,6 +253,108 @@ export async function enrichClosedDates(
       }
     }
   }
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return { enriched, errors, checked: needs.length };
+}
+
+// ── Gate date history enrichment ───────────────────────────────────────────
+
+/**
+ * Walk every Feature / Initiative / X-FEAT / Capability ticket, fetch its
+ * changelog, and populate `ticket['Gate Date History']` with the full
+ * chronological trail of CC / CG / PG date changes.
+ *
+ * Each entry is `{ value: "YYYY-MM-DD", changedAt: ISO }` — the date
+ * that was SET at that moment (the `toString` value from the JIRA
+ * changelog item). Oldest-first ordering mirrors JIRA's changelog
+ * default; the last entry is always the current committed date.
+ *
+ * Field IDs are the Nutanix defaults per jira-date-hierarchy.mdc:
+ *   CC Date  → customfield_11067
+ *   CG Date  → customfield_35863
+ *   PG Date  → customfield_35864
+ *
+ * TODO(D1): accept productService fieldId overrides when non-NDB products land.
+ */
+export async function enrichGateDateHistory(
+  jira: JiraConnector,
+  tickets: ProcessedTicket[],
+  options: {
+    concurrency?: number;
+    /** `(done, total)` progress hook fired every 10 tickets. */
+    onProgress?: (done: number, total: number) => void;
+    /** Internal: override the per-issue fetch — used by tests. */
+    fetchChangelog?: (jira: JiraConnector, key: string) => Promise<JiraIssue>;
+  } = {}
+): Promise<{ enriched: number; errors: number; checked: number }> {
+  const needs = tickets.filter((t) => GATE_HISTORY_TYPES.has(t['Issue Type']));
+  if (needs.length === 0) return { enriched: 0, errors: 0, checked: 0 };
+
+  const concurrency = Math.min(
+    options.concurrency ?? DEFAULT_CHANGELOG_CONCURRENCY,
+    needs.length
+  );
+  const doFetch =
+    options.fetchChangelog ??
+    ((j: JiraConnector, key: string) =>
+      j.getIssue(key, { expand: 'changelog' }));
+
+  // Nutanix canonical gate-date customfield IDs (per jira-date-hierarchy.mdc).
+  const CC_FIELD = 'customfield_11067';
+  const CG_FIELD = 'customfield_35863';
+  const PG_FIELD = 'customfield_35864';
+
+  let enriched = 0;
+  let errors = 0;
+  let done = 0;
+  const queue = [...needs];
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const ticket = queue.shift();
+      if (!ticket) break;
+      try {
+        const issue = await doFetch(jira, ticket['Issue Key']);
+        const histories = (issue as IssueWithChangelog).changelog?.histories ?? [];
+
+        const ccHistory: GateDateHistoryEntry[] = [];
+        const cgHistory: GateDateHistoryEntry[] = [];
+        const pgHistory: GateDateHistoryEntry[] = [];
+
+        // JIRA changelog is oldest-first. Each history entry is a change event;
+        // `items` can cover multiple fields changed simultaneously.
+        for (const h of histories) {
+          for (const item of (h.items ?? [])) {
+            const fid = item.fieldId;
+            const toVal = item.toString;
+            if (!fid || !toVal || toVal === 'null' || toVal === '') continue;
+            const entry: GateDateHistoryEntry = {
+              value: toVal,
+              changedAt: h.created ?? '',
+            };
+            if (fid === CC_FIELD) ccHistory.push(entry);
+            else if (fid === CG_FIELD) cgHistory.push(entry);
+            else if (fid === PG_FIELD) pgHistory.push(entry);
+          }
+        }
+
+        const history: GateDateHistory = {
+          codeComplete: ccHistory,
+          commitGate: cgHistory,
+          promotionGate: pgHistory,
+        };
+        ticket['Gate Date History'] = history;
+        enriched += 1;
+      } catch {
+        errors += 1;
+      }
+      done += 1;
+      if (options.onProgress && (done % 10 === 0 || done === needs.length)) {
+        options.onProgress(done, needs.length);
+      }
+    }
+  }
+
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return { enriched, errors, checked: needs.length };
 }
@@ -202,7 +378,16 @@ export interface SyncProgressEvent {
 export interface SyncOptions {
   /** Required: where to cache. Caller-owned (D5 / D34). */
   cache: ReleaseDatasetCache;
-  /** Required: JIRA project to scope the bucket queries to (D1 / D36). */
+  /**
+   * JIRA project key used ONLY for the cache file naming convention and
+   * the JIRA versions API call to determine future releases.
+   *
+   * It is NO LONGER passed as a project scope to the bucket queries —
+   * those now run without a project filter so Features (FEAT), docs
+   * (TECHPUBS), and engineering work (ERA) are all captured.
+   *
+   * Required for cache key stability (D1 — no hardcoded ERA).
+   */
   projectKey: string;
   /** Required: label prefix for sidecars + derived columns (D1). */
   labelPrefix: string;
@@ -216,6 +401,13 @@ export interface SyncOptions {
    * and scoped-refetch share the same dispatch — see docstring).
    */
   forceReleases?: string[];
+  /**
+   * When true, the Group 3 (long-term funded) fetch is included. The
+   * sync will call `jira.getProjectVersions(projectKey)` to determine
+   * which versions are "future" (unreleased + not in the active release
+   * set). Defaults to true.
+   */
+  includeLongTermFunded?: boolean;
   /**
    * Skip the targeted changelog pass. Useful for tests, or when the
    * caller doesn't care about `Closed Date` and wants the fetch to be
@@ -251,8 +443,10 @@ export interface SyncResult {
   errors: Record<string, string>;
   /** Per-release fetch outcome: 'cache_hit' | 'fetched' | 'error'. */
   source: Record<string, 'cache_hit' | 'fetched' | 'error'>;
-  /** Number of tickets the changelog pass updated (across all releases). */
+  /** Number of tickets the Phase 2 changelog pass updated (Bug/Improvement/Test). */
   changelogEnriched: number;
+  /** Number of Feature/Initiative/X-FEAT tickets whose gate date history was enriched. */
+  gateHistoryEnriched: number;
 }
 
 /**
@@ -309,10 +503,40 @@ export async function syncReleaseDataset(
     `${new Date().toISOString()}\n${releaseIter.length} releases\nscoped=${scoped}\n`
   );
 
+  // ── Determine future releases for Group 3 (long-term funded) ───────────────
+  // Active releases = the releases we're syncing right now. Future releases =
+  // any unreleased JIRA version that is NOT in that active set.
+  // We attempt this once; if the versions API fails we log and skip Group 3
+  // rather than aborting the whole sync.
+  let futureReleases: string[] = [];
+  const includeLongTerm = options.includeLongTermFunded !== false;
+  if (includeLongTerm) {
+    try {
+      const allVersions = await jira.getProjectVersions(projectKey);
+      const activeSet = new Set(releaseIter.map((r) => r.toUpperCase()));
+      futureReleases = allVersions
+        .filter((v) => !v.released && !v.archived)
+        .map((v) => v.name)
+        .filter((name) => !activeSet.has(name.toUpperCase()));
+      // eslint-disable-next-line no-console
+      console.info(
+        `[releaseDatasetSync] Group 3: ${futureReleases.length} future releases found`,
+        futureReleases.slice(0, 5)
+      );
+    } catch (err) {
+      // Non-fatal — Group 3 fetch is omitted but Group 1 + 2 still run.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[releaseDatasetSync] Could not fetch project versions for Group 3 — skipping long-term funded: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   const perRelease: Record<string, ProcessedTicket[]> = {};
   const errors: Record<string, string> = {};
   const source: Record<string, 'cache_hit' | 'fetched' | 'error'> = {};
   let changelogEnriched = 0;
+  let gateHistoryEnriched = 0;
   const emit = (e: SyncProgressEvent) => options.onProgress?.(e);
 
   try {
@@ -333,15 +557,33 @@ export async function syncReleaseDataset(
         }
       }
 
-      emit({ release, status: 'fetching', detail: 'starting bucket fan-out' });
+      // "master", "Era Future", and any other non-versioned planning bucket
+      // don't start with the product prefix (e.g. "NDB-").  Their accumulated
+      // ticket history is too large for the standard JQL — skip moved_out and
+      // use recency-bounded variants for the heavy buckets.
+      const isCatchAllVersion = !release
+        .toUpperCase()
+        .startsWith(productPrefix.toUpperCase());
+
+      emit({ release, status: 'fetching', detail: 'starting bucket fan-out (Groups 1+2+3)' });
       let result: FetchReleaseResult;
       try {
         result = await fetchReleaseData(jira, release, {
-          projectKey,
+          // No projectKey passed — full Release Payload (ERA + FEAT + TECHPUBS + …)
           labelPrefix,
+          futureReleases,
+          isCatchAllVersion,
           pageSize: options.fetchOptions?.pageSize,
           maxIssuesPerBucket: options.fetchOptions?.maxIssuesPerBucket,
           concurrency: options.fetchOptions?.concurrency,
+          // Per-bucket progress: emit a fetching event after each bucket so
+          // the UI shows "top_level_projects: 47 tickets" in real time instead
+          // of going silent for minutes while Jira API calls run.
+          onProgress: (bucketName, status, detail) => {
+            if (status === 'done' || status === 'error') {
+              emit({ release, status: 'fetching', detail: `${bucketName}: ${detail}` });
+            }
+          },
         });
       } catch (err) {
         const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
@@ -354,20 +596,34 @@ export async function syncReleaseDataset(
 
       if (result.error) {
         // Partial fetch — keep the tickets we did get, surface the error.
+        // eslint-disable-next-line no-console
+        console.warn(`[releaseDatasetSync] ${release}: partial fetch error — ${result.error}`);
         errors[release] = result.error;
       }
 
-      // Targeted changelog enrichment. Mutates result.tickets in place.
+      // Phase 2: Changelog enrichment — Closed Date, Last Resolved Date, Reopen Count.
       if (!options.skipChangelog && result.tickets.length > 0) {
+        const changelogNeeds = result.tickets.filter(
+          (t) =>
+            t['Issue Type'] === 'Bug' ||
+            t['Issue Type'] === 'Improvement' ||
+            t['Issue Type'] === 'Test'
+        ).length;
         emit({
           release,
           status: 'changelog',
-          detail: 'finding Closed Date for Bug/Improvement-Done',
+          detail: `changelog: 0/${changelogNeeds} tickets`,
         });
         try {
           const enrichResult = await enrichClosedDates(jira, result.tickets, {
             concurrency: options.changelogConcurrency,
             fetchChangelog: options.fetchChangelog,
+            onProgress: (done, total) => {
+              // Emit every 100 tickets to avoid flooding the SSE log.
+              if (done % 100 === 0 || done === total) {
+                emit({ release, status: 'changelog', detail: `changelog: ${done}/${total} tickets` });
+              }
+            },
           });
           changelogEnriched += enrichResult.enriched;
         } catch (err) {
@@ -378,6 +634,39 @@ export async function syncReleaseDataset(
           errors[release] = errors[release]
             ? `${errors[release]}; changelog: ${msg}`
             : `changelog: ${msg}`;
+        }
+      }
+
+      // Phase 3: Gate date history — CC / CG / PG slip trail for FEATs.
+      // Targets only Feature/Initiative/X-FEAT/Capability (~30–80 per release),
+      // so the cost is small relative to Phase 2's Bug/Improvement/Test pass.
+      if (!options.skipChangelog && result.tickets.length > 0) {
+        const gateNeeds = result.tickets.filter((t) =>
+          GATE_HISTORY_TYPES.has(t['Issue Type'])
+        ).length;
+        if (gateNeeds > 0) {
+          emit({
+            release,
+            status: 'changelog',
+            detail: `gate history: 0/${gateNeeds} FEAT tickets`,
+          });
+          try {
+            const gateResult = await enrichGateDateHistory(jira, result.tickets, {
+              concurrency: options.changelogConcurrency,
+              fetchChangelog: options.fetchChangelog,
+              onProgress: (done, total) => {
+                emit({ release, status: 'changelog', detail: `gate history: ${done}/${total} FEAT tickets` });
+                // Every 10 ticks (from enrichGateDateHistory) → emit all; FEATs per release ≈ 30–80
+              },
+            });
+            gateHistoryEnriched += gateResult.enriched;
+          } catch (err) {
+            // Non-fatal — slip analytics degrade gracefully to null.
+            const msg = err instanceof Error ? err.message : String(err);
+            errors[release] = errors[release]
+              ? `${errors[release]}; gate-history: ${msg}`
+              : `gate-history: ${msg}`;
+          }
         }
       }
 
@@ -423,6 +712,7 @@ export async function syncReleaseDataset(
       errors,
       source,
       changelogEnriched,
+      gateHistoryEnriched,
     };
   } finally {
     cache.releaseSyncLock();

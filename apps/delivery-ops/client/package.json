@@ -59,5 +59,11 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:6001"
+  "proxy": "http://localhost:6001",
+  "jest": {
+    "moduleNameMapper": {
+      "^axios$": "<rootDir>/node_modules/axios/dist/node/axios.cjs",
+      "^axios/(.*)$": "<rootDir>/node_modules/axios/dist/node/axios.cjs"
+    }
+  }
 }

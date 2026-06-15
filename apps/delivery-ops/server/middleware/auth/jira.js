@@ -144,13 +144,19 @@ async function validateJiraToken(token, username) {
     
     return result;
   } catch (apiError) {
-    // Handle connection aborted/timeout errors specifically
-    if (apiError.code === 'ECONNABORTED' || apiError.code === 'ETIMEDOUT' || apiError.code === 'ECONNRESET') {
-      console.error(`[JIRA Auth] Connection error (${apiError.code}):`, apiError.message);
+    // Handle all network-level errors that mean JIRA is unreachable
+    const networkCodes = ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED'];
+    if (networkCodes.includes(apiError.code)) {
+      const isVpnError = apiError.code === 'ENOTFOUND' || apiError.code === 'EAI_AGAIN';
+      const userMessage = isVpnError
+        ? `Cannot reach JIRA (${apiError.code}). Please check that you are connected to the corporate VPN and try again.`
+        : `Connection to JIRA was interrupted (${apiError.code}). This may be a temporary network issue. Please try again.`;
+      console.error(`[JIRA Auth] Network error (${apiError.code}):`, apiError.message);
       return {
         valid: false,
-        error: 'Connection Aborted',
-        message: `Connection to JIRA was interrupted (${apiError.code}). This may be a temporary network issue. Please try again.`,
+        error: isVpnError ? 'JIRA Unreachable' : 'Connection Error',
+        message: userMessage,
+        reason: 'jira_unreachable',
         statusCode: 503
       };
     }
@@ -161,6 +167,7 @@ async function validateJiraToken(token, username) {
       valid: false,
       error: errorResponse.error,
       message: errorResponse.message,
+      ...(errorResponse.reason && { reason: errorResponse.reason }),
       statusCode: errorResponse.statusCode
     };
   }
@@ -238,6 +245,7 @@ const validateJiraTokenMiddleware = async (req, res, next) => {
       return res.status(statusCode).json({
         error: validationResult.error || 'Failed to validate JIRA token',
         message: validationResult.message || validationResult.error,
+        ...(validationResult.reason && { reason: validationResult.reason }),
         statusCode
       });
     }

@@ -36,7 +36,7 @@
 
 // ── Public types ──────────────────────────────────────────────────────────
 
-export type GateKind = 'EC' | 'CC' | 'CG' | 'PG' | 'GA';
+export type GateKind = 'EC' | 'CCM' | 'CG' | 'PG' | 'GA';
 
 export type GateStyle = 'dotted' | 'solid';
 
@@ -85,7 +85,7 @@ export interface ParseGateTimelineOptions {
 
 const CANONICAL_COLOR: Record<GateKind, string> = {
   EC: '#1F4E79',
-  CC: '#de350b',
+  CCM: '#de350b',
   CG: '#ff9800',
   PG: '#9c27b0',
   GA: '#28a745',
@@ -93,7 +93,7 @@ const CANONICAL_COLOR: Record<GateKind, string> = {
 
 const KIND_LABELS: Record<GateKind, string> = {
   EC: 'Early Commit',
-  CC: 'Code Complete',
+  CCM: 'Code Complete Met',
   CG: 'Commit Gate',
   PG: 'Promotion Gate',
   GA: 'General Availability',
@@ -144,7 +144,7 @@ export function parseReleaseGateTimeline(
     }
 
     // CC variants live under ccm{N}Gate (array). Some configs use ccm with no number.
-    extractNumberedGate(cfg, 'ccm', 'Gate', 'CC', gates, todayIso);
+    extractNumberedGate(cfg, 'ccm', 'Gate', 'CCM', gates, todayIso);
 
     // CG / PG variants live under commitGate{N} / promotionGate{N} (object or array).
     extractNumberedGate(cfg, 'commitGate', '', 'CG', gates, todayIso);

@@ -129,9 +129,9 @@ status.
 | Service | Status | Owns | Used by |
 |---|---|---|---|
 | `productService` (D1, D34) | ● | Resolve `productId` → `projectKey`, `labelPrefix`, `releasePrefix`, `sprintCalendar`, audience overrides, Confluence space. Reads `teamBoardConfig.json`. The **only** source for these D1 inputs. | every service that touches external systems |
-| `payloadJqlService` (#1a, D36) | ● | Build the 5-bucket release JQL union. Exposes both `buildEngineeringPayloadJql` (project-scoped, legacy) and `buildReleasePayloadJql` (cross-project, new) — see "Payload concepts" below. Wishlist + deferred sidecars. | release dataset, future engineering/release dashboards |
+| `payloadJqlService` (#1a, D36) | ● | Build the **6-bucket** release JQL union (added `epics_of_projects` — Bucket 1B). Exposes `buildEngineeringPayloadJql` (project-scoped, legacy) and `buildReleasePayloadJql` (cross-project). Group 2 builder: `getMovedOutQuery` (single broad `fixVersion was X AND fixVersion not in X`). Group 3 builders: `getLongTermProjectsQuery`, `getLongTermEpicsQuery`, `getLongTermWorkQuery` (take `futureReleases[]`). Wishlist + deferred + extension sidecars. | release dataset, group 2/3 analytics, clickable JQL hyperlinks |
 | `ticketFetchService` (#17) | ● | 8-clause cross-project FEAT-walk JQL. Optional `projectKey` scoping. Builds both JQL and JIRA URLs. | `/api/jira/issue-breakdown` (live), TaskBreakdownCell, future skills |
-| `releaseDatasetService` (#1b Phases 1+2) | ◐ | "Trunk": fetch raw issues from 5 buckets + sidecars in parallel, dedup within release (`fetchReleaseData`); add 11 derived columns and assemble cross-release dataset (`processMaster`). Currently Engineering Payload only (D36). Phase 3 (cache + sync + changelog) pending. | future analytics consumers; today exercised only by tests + synthetic pipeline |
+| `releaseDatasetService` (#1b Phases 1+2+3) | ◐ | "Trunk": fetch raw issues across **3 groups and 6 Group-1 buckets** in parallel, dedup within release (`fetchReleaseData`); add derived columns and assemble cross-release dataset (`processMaster`). **Now defaults to Release Payload** (no project scope — ERA + FEAT + TECHPUBS + all contributors). Group 2 (`moved_out`) and Group 3 (long-term funded, 3 buckets) included in every sync. `fetchBucket.projectKey` is optional (omit = Release Payload; set = Engineering Payload for legacy EM/IC views). Cache + sync + changelog enrichment landed in Phase 3. `ProcessedTicket` interface now 56 columns (added date, people, content, links, sprint fields). | analytics consumers, release dataset cache, SyncHub endpoint |
 | `releaseClassificationService` | ● | Parse/classify/sort release names (`NDB-2.11`, `DataLens-X-EA`). Major/Minor / Maintenance / Patch / Pre-release / Unknown. D1 via `productPrefix`. | dataset assembly, release-readiness comparators |
 | `issueGroupsService` | ● | 6-group + work-type mapping (Story/Task/Bug/etc → logical group). | dataset assembly, group filter JQL |
 | `resolutionCategoriesService` | ● | 4-bucket resolution mapping (Done/Dupe/Won't-do/Other). | dataset assembly, completion logic |
@@ -218,20 +218,20 @@ concepts to exist as first-class citizens:
 
 | Concept | JQL shape | Audience | Status |
 |---|---|---|---|
-| **Engineering Payload** | `project = ERA AND (5-bucket union)` — scoped to the dev team's project | EM, IC, sprint reports, dev burndown | What the legacy chatbot computed. Numbers people trust = these numbers. `buildEngineeringPayloadJql`. |
-| **Release Payload** | `(5-bucket union)` — no project filter; anything with the release fixVersion across every contributing team's project | TPM, RM, Team Exec, "are we shipping?" dashboards | NEW concept (D36). `buildReleasePayloadJql`. No pollution guard — trust fixVersion. |
+| **Engineering Payload** | `project = ERA AND (6-bucket union)` — scoped to the dev team's project | EM, IC, sprint reports, dev burndown | What the legacy chatbot computed. Numbers people trust. `buildEngineeringPayloadJql`. Available by passing `projectKey` to `fetchBucket`. |
+| **Release Payload** | `(6-bucket union)` — **no project filter**; anything with the release fixVersion across every contributing project (ERA + FEAT + TECHPUBS + …) | TPM, RM, Team Exec, "are we shipping?" dashboards | **Default** for `fetchReleaseData` and `syncReleaseDataset` (2026-06-13). `buildReleasePayloadJql`. No pollution guard — trust fixVersion. |
+| **Group 2 — Moved Out** | `fixVersion was {release} AND fixVersion not in ({release})` (single broad query) | TPM, RM, hygiene analysis | **NEW** — captures all tickets that left the release. Hygienic vs needs-cleanup is derived in-memory from parent-link fields. `getMovedOutQuery`. |
+| **Group 3 — Long-term Funded** | `issuetype in (Feature, Initiative) AND fixVersion in ({futureReleases})` + epics + work | TPM, Team Exec, capacity planning | **NEW** — work being done now for future releases. `getLongTermProjectsQuery` / `getLongTermEpicsQuery` / `getLongTermWorkQuery`. `futureReleases` determined at sync time from JIRA versions API. |
 
-`releaseDatasetService.fetchReleaseData` and `releaseInsightsService`
-currently produce **Engineering Payload** only, preserving legacy
-numbers. When the first cross-team consumer lands, add
-`fetchReleasePayloadData` (same code path, no project scope) and label
-the resulting metrics distinctly so they aren't confused with the
-engineering-only number people already see.
+`releaseDatasetService.fetchReleaseData` **now defaults to Release
+Payload** (no project scope). Pass `projectKey` to `fetchBucket` if you
+need the engineering-only view. `releaseInsightsService` still operates
+on Engineering Payload until a cross-team consumer forces it to switch.
 
 `productService.getJiraProjects(productId)` returns the **engineering
-project** (e.g. `['ERA']` for NDB). It does NOT enumerate every
-contributing project — there's no need to, because Release Payload is
-anchored by fixVersion, not by a project list.
+project** (e.g. `['ERA']` for NDB). It is used for the JIRA versions API
+call (Group 3 future-release lookup) and the cache key — never as a
+blanket project filter on the fetch.
 
 ---
 
@@ -334,8 +334,8 @@ per-capability ports is `CONSOLIDATION.md`.
 | **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — `mcp-server` + `apps/delivery-ops/server` both consume |
 | **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
 | **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | ⏳ pending |
-| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~5 of 20 capabilities done: #1a payload JQL, #1b dataset trunk (Phases 1+2 of 3), #3 insights first slice, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). |
-| **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | ⏳ pending — blocked on completing #1b Phase 3 (cache) |
+| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~5 of 20 capabilities done: #1a payload JQL (now 6-bucket + Group 2/3 builders), #1b dataset trunk (all 3 phases, now Release Payload default + 3-group model), #3 insights first slice, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). |
+| **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | 🟡 SyncHubPage simplified (one Sync Now button). Insights + Sprint Analysis still pending. |
 | **E. Streamlit retirement (tpm-confluence-tools)** | Rebuild Bulk Page Creator + Template Editor as React pages | ⏳ pending |
 | **F. MCP-backed UI pages** | React pages for Capacity Planner, Bin-Packing, Story Points, Date Mover, Say vs Do | 🟡 only bin-packing has a sidebar entry today (static-mounted, opens in new tab). Date Mover backend ships but no React form. |
 | **G. New gaps** | Sprint Planner, Status Page Auto-Publisher, Cross-team dependency map, Triage UI | ⏳ pending |

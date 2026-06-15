@@ -6,42 +6,48 @@
         "name": "Top-CFI",
         "baseQuery": "filter=142539",
         "displayType": "count",
-        "order": 0
+        "order": 0,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mlt8xtjw_7iu388x4",
         "name": "Top-CFD",
         "baseQuery": "filter=142537",
         "displayType": "count",
-        "order": 1
+        "order": 1,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mlt8y8o9_m7f8uo6d",
         "name": "Non-Top-CFI",
         "baseQuery": "filter=142543",
         "displayType": "count",
-        "order": 2
+        "order": 2,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mlt8ykk1_87kzd1g2",
         "name": "Non-Top-CFD",
         "baseQuery": "filter=142541",
         "displayType": "count",
-        "order": 3
+        "order": 3,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mltpmqym_g5u55h35",
         "name": "Product Blockers",
         "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
         "displayType": "count",
-        "order": 4
+        "order": 4,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mltqufvv_0eregk0s",
         "name": "Product Criticals",
         "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
         "displayType": "count",
-        "order": 5
+        "order": 5,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mltqw1zl_35j6oo0k",
@@ -55,21 +61,24 @@
         "name": "System Test",
         "baseQuery": "filter=NDB-System-Test",
         "displayType": "count",
-        "order": 7
+        "order": 7,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mltr5hi3_0qdmhcep",
         "name": "Smokes",
         "baseQuery": "filter=NDB-Smokes",
         "displayType": "count",
-        "order": 8
+        "order": 8,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mmaylqy1_a8nuacz5",
         "name": "NDB PreCommits",
         "baseQuery": "filter=NDB-PreCommits",
         "displayType": "count",
-        "order": 9
+        "order": 9,
+        "excludeDeferred": true
       },
       {
         "id": "kpi_mmosswaj_h8bp5a7r",

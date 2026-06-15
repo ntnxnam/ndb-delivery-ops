@@ -1,0 +1,487 @@
+# API Contract — `/api/jira/*`
+
+**Route file**: `server/routes/jira/index.js`  
+**Auth**: most endpoints require `validateJiraTokenMiddleware`; noted where different  
+**Mounted at**: `/api/jira`
+
+This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
+
+---
+
+## Diagnostics & Validation
+
+### GET /api/jira/jira-diagnostic
+
+**Purpose**: Test JIRA connectivity and return API version + current user info.
+
+**Auth**: validates token from query/header
+
+**Response**: `{ user, serverInfo, status: "ok" }`
+
+---
+
+### POST /api/jira/test-jql
+
+**Purpose**: Run a test JQL query and return the count + first 10 keys. For dev/debug.
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string }`
+
+**Response**: `{ total, issues: [{ key }] }`
+
+---
+
+### POST /api/jira/validate
+
+**Purpose**: Validate a JIRA token — returns the authenticated user's profile.
+
+**Auth**: token from body
+
+**Request** — Body: `{ token: string, username: string }`
+
+**Response**: `{ valid: true, user: { displayName, email, accountId } }`
+
+---
+
+## Search & Fetch
+
+### POST /api/jira/search-by-jql
+
+**Purpose**: Generic JQL search — returns issues with requested fields.
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string, fields: string[], maxResults?: number, startAt?: number }`
+
+> ⚠️ JQL approval rule applies — any change to JQL passed by callers requires approval.
+
+**Response**: `{ issues: [...], total, startAt, maxResults }`
+
+---
+
+### POST /api/jira/fetch-all-jira-tickets
+
+**Purpose**: Paginated bulk fetch of all tickets matching a JQL, up to a high limit (e.g. 10 000).
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string, fields: string[], batchSize?: number }`
+
+**Response**: `{ issues: [...], total }`
+
+---
+
+### POST /api/jira/fetch-epics
+
+**Purpose**: Fetch all epics for a set of parent keys.
+
+**Auth**: required
+
+**Request** — Body: `{ parentKeys: string[], productId: string }`
+
+**Response**: `{ epics: [...] }`
+
+---
+
+### POST /api/jira/fetch
+
+**Purpose**: Generic JIRA fetch — passes a pre-built request config to the connector. Lower-level than `search-by-jql`.
+
+**Auth**: required
+
+**Request** — Body: `{ endpoint: string, method: string, params?: object, body?: object }`
+
+---
+
+## KPI
+
+### POST /api/jira/kpi-results
+
+**Purpose**: Run a single KPI query for a team and return the result (count + JIRA link).
+
+**Auth**: required
+
+**Request** — Body: `{ teamId, kpiId, release, productId }`
+
+**Response**: `{ kpiId, label, count, jql, jiraUrl }`
+
+---
+
+### POST /api/jira/kpi-results-batch
+
+**Purpose**: Run all KPI queries for a team in parallel and return results array.
+
+**Auth**: required
+
+**Request** — Body: `{ teamId, release, productId, kpiIds?: string[] }`
+
+**Response**: `{ results: [{ kpiId, label, count, jql, jiraUrl }] }`
+
+---
+
+### POST /api/jira/release-kpi-results
+
+**Purpose**: Run a single release-level KPI query (not team-scoped).
+
+**Auth**: required
+
+**Request** — Body: `{ kpiId, release, productId }`
+
+**Response**: `{ kpiId, label, count, jql, jiraUrl }`
+
+---
+
+### POST /api/jira/release-kpi-results-batch
+
+**Purpose**: Batch release-level KPI queries — powers `ReleaseBriefPage` KPI cards.
+
+**Auth**: required
+
+**Request** — Body: `{ release, productId, kpiIds?: string[] }`
+
+**Response**: `{ results: [{ kpiId, label, count, jql, jiraUrl }] }`
+
+---
+
+## Issue Breakdown & History
+
+### POST /api/jira/issue-breakdown
+
+**Purpose**: Break down a set of issue keys by issue type group (Project Hierarchy / Bug / Dev Code / Test / etc.).
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], productId: string }`
+
+**Response**: `{ breakdown: { "Bug": 34, "Dev Code": 120, ... } }`
+
+---
+
+### POST /api/jira/checkpoint-history
+
+**Purpose**: Fetch the date-history of a custom field (e.g. gate date changes over time) for a set of tickets.
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], fieldId: string, productId: string }`
+
+**Response**: `{ history: [{ key, changes: [{ date, from, to }] }] }`
+
+---
+
+## Release Versions
+
+### POST /api/jira/release-versions
+
+**Purpose**: List all JIRA release versions for a product.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ productId: string }`
+
+**Response**: `{ versions: [{ id, name, released, releaseDate }] }`
+
+---
+
+### POST /api/jira/discover-versions
+
+**Purpose**: Auto-discover release versions from JIRA that match the product naming pattern.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ productId: string, pattern?: string }`
+
+**Response**: `{ versions: [...] }`
+
+---
+
+### POST /api/jira/check-version-exists
+
+**Purpose**: Check if a version name already exists before creating.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ versionName: string, projectKey: string }`
+
+**Response**: `{ exists: boolean, version?: { id, name } }`
+
+---
+
+### POST /api/jira/create-version
+
+**Purpose**: Create a new JIRA release version.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ name: string, description?: string, releaseDate?: string, projectKey: string }`
+
+**Response**: `{ success: true, version: { id, name, self } }`
+
+---
+
+### POST /api/jira/rename-release-cascade
+
+**Purpose**: Cascade-rename a release and all companion versions (NDB-2.11 → NDB-2.12, plus .1, .1.1, etc.).
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ oldName: string, newName: string, projectKey: string, dryRun?: boolean }`
+
+**Response**: `{ success: true, renamed: [{ id, oldName, newName }], errors: [] }`
+
+---
+
+## Filters
+
+### POST /api/jira/check-filter-exists
+
+**Auth**: required + `releaseSetup` permission  
+**Request** — Body: `{ filterName: string }`  
+**Response**: `{ exists: boolean, filter?: { id, name } }`
+
+---
+
+### POST /api/jira/create-filter
+
+**Auth**: required + `releaseSetup` permission  
+**Request** — Body: `{ name: string, jql: string, description?: string }`  
+**Response**: `{ success: true, filter: { id, name, self } }`
+
+---
+
+### POST /api/jira/cleanup-duplicate-prefix-filters
+
+**Purpose**: Remove duplicate JIRA filters that have a redundant prefix from a rename operation.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ prefix: string, dryRun?: boolean }`
+
+**Response**: `{ deleted: [{ id, name }], errors: [] }`
+
+---
+
+## Sprints
+
+### GET /api/jira/sprints
+
+**Purpose**: List sprints for a board.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Query: `boardId` (number, required)
+
+**Response**: `{ sprints: [{ id, name, state, startDate, endDate }] }`
+
+---
+
+### POST /api/jira/sprints
+
+**Purpose**: (Alternate) List sprints — accepts boardId in body for clients that can't use query params.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ boardId: number }`
+
+**Response**: same as GET
+
+---
+
+### GET /api/jira/project-components
+
+**Purpose**: List components for a JIRA project.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Query: `projectKey` (string, required)
+
+**Response**: `{ components: [{ id, name }] }`
+
+---
+
+### POST /api/jira/sprint-report
+
+**Purpose**: Full sprint report for a team/sprint — velocity, resolution breakdown, issue type breakdown.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, sprintId, boardId, startDate, endDate, productId }`
+
+**Response**:
+```json
+{
+  "dev": { "count": 47, "storyPoints": 89, "jql": "..." },
+  "qaVerification": { "count": 18, "adjustedCount": 5.94, "jql": "..." },
+  "qaTestTasks": { "count": 12, "storyPoints": 24, "jql": "..." },
+  "resolutionBreakdown": { "Done": 47, "Unresolved": 5, "Duplicate or Not Reproducible": 3, "Others": 2 }
+}
+```
+
+---
+
+### POST /api/jira/sprint-report-by-range
+
+**Purpose**: Sprint report across a date range (e.g., a fiscal quarter) — returns per-sprint data.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, startDate, endDate, productId }`
+
+**Response**: `{ sprints: [ /* per-sprint report objects */ ] }`
+
+---
+
+### POST /api/jira/sprint-kpi-breakdown
+
+**Purpose**: KPI breakdown per sprint — used for multi-sprint trend charts.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, sprintIds: number[], productId }`
+
+---
+
+### POST /api/jira/sprint-report-trends
+
+**Purpose**: Multi-sprint trend data — velocity over time, issue type trends.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, startDate, endDate, productId }`
+
+---
+
+### POST /api/jira/sprint-gantt-data
+
+**Purpose**: Gantt chart data for sprint-based tickets — resolves sprint end dates for timeline bars.
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], productId: string }`
+
+**Response**: `{ items: [{ key, summary, startDate, endDate, issueType }] }`
+
+---
+
+## Release Items
+
+### POST /api/jira/release-items
+
+**Purpose**: Fetch the full 5-bucket engineering payload for a release. Core data source for Project Status page.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+
+**Response**: `{ items: [...], total, bucketCounts: { topLevelProjects, portfolioChildren, epicChildren, standaloneEpics, directTickets } }`
+
+---
+
+### POST /api/jira/release-items-history
+
+**Purpose**: Fetch the history of which items were added/removed from a release payload over time.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string }`
+
+---
+
+### POST /api/jira/release-items-tcms
+
+**Purpose**: Enrich release items with TCMS (test management) data.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string }`
+
+---
+
+## Executive Summary
+
+### PUT /api/jira/update-executive-summary
+
+**Purpose**: Write an updated executive summary string to a JIRA field.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ issueKey: string, summary: string }`
+
+---
+
+### POST /api/jira/generate-exec-summary
+
+**Purpose**: AI-generate an executive summary for a release payload. Returns generated text.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+
+**Response**: `{ summary: string, generatedAt: string }`
+
+---
+
+### POST /api/jira/enhanced-exec-summary
+
+**Purpose**: Enhanced (richer) AI executive summary with predictive analytics section.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+
+---
+
+## Risk & Misc
+
+### POST /api/jira/risk-indicator-changes
+
+**Purpose**: Fetch the history of risk indicator changes for items in a release.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string }`
+
+---
+
+### GET /api/jira/fields
+
+**Purpose**: Return JIRA field metadata — field IDs and display names. Used by column configurator in JIRA Emailer.
+
+**Auth**: required
+
+**Response**: `{ fields: [{ id, name, type }] }`
+
+---
+
+### GET /api/jira/team-configurations
+
+**Purpose**: Return team configurations visible to the current user.
+
+**Auth**: `releaseVersions` permission
+
+**Response**: `{ teams: [{ id, name, boardId, kpiConfig }] }`
+
+---
+
+### POST /api/jira/log-user-action
+
+**Purpose**: Server-side audit log for significant user actions (e.g., email sent, release renamed).
+
+**Auth**: none (fire-and-forget from client; no sensitive data logged)
+
+**Request** — Body: `{ action: string, meta?: object }`
+
+**Response**: `{ logged: true }`
+
+---
+
+### GET /api/jira/test-changelog/:key
+
+**Purpose**: Dev/debug endpoint — return the full changelog for a JIRA ticket key.
+
+**Auth**: required
+
+**Request** — Path: `key` (JIRA issue key)
+
+**Response**: `{ changelog: [...] }`

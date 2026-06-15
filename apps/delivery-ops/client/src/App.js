@@ -2,6 +2,9 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './auth/context/AuthContext';
 import { TeamProvider } from './contexts/TeamContext';
+import { TeamDatasetProvider } from './contexts/TeamDatasetContext';
+import { SelectedReleaseProvider } from './contexts/SelectedReleaseContext';
+import { ReleaseDataProvider } from './contexts/ReleaseDataContext';
 import { ProtectedRoute } from './auth/components/ProtectedRoute';
 import { LoginForm } from './auth/components/LoginForm';
 import { Layout } from './layout/components/Layout';
@@ -20,6 +23,8 @@ import KPIPage from './components/KPIPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
 import ReleaseBriefPage from './release/ReleaseBriefPage';
+import RetrospectivePage from './release/RetrospectivePage';
+import SyncHubPage from './release/SyncHubPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
 
@@ -103,6 +108,9 @@ const LoginPage = () => {
 const AuthenticatedApp = () => {
   return (
     <TeamProvider>
+      <TeamDatasetProvider>
+      <SelectedReleaseProvider>
+      <ReleaseDataProvider>
       <Routes>
       <Route 
         path="/login" 
@@ -243,6 +251,17 @@ const AuthenticatedApp = () => {
       />
 
       <Route
+        path="/release/retrospective"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <RetrospectivePage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/feature-dashboard"
         element={
           <ProtectedRoute permissions={['release_versions_view']}>
@@ -264,9 +283,23 @@ const AuthenticatedApp = () => {
         }
       />
 
+      <Route
+        path="/sync-hub"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <SyncHubPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ReleaseDataProvider>
+      </SelectedReleaseProvider>
+      </TeamDatasetProvider>
     </TeamProvider>
   );
 };

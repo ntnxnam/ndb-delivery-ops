@@ -164,8 +164,128 @@ async function fetchComponentPayload(componentName, jiraToken) {
   };
 }
 
+// ── Velocity / burndown helpers ────────────────────────────────────────────
+
+/**
+ * Paginated JIRA search fetching only specific fields.
+ * Returns an array of issue.fields objects.
+ */
+async function paginatedJqlFetch(jql, fields, jiraToken, maxIssues = 5000) {
+  const httpsAgent = createHttpsAgent();
+  const allFields = [];
+  let startAt = 0;
+  const pageSize = 100;
+
+  while (allFields.length < maxIssues) {
+    let response;
+    try {
+      response = await axios.get(JIRA_API_V2.SEARCH, {
+        headers: {
+          Authorization: `Bearer ${jiraToken.trim()}`,
+          Accept: 'application/json',
+        },
+        params: { jql, fields, maxResults: pageSize, startAt },
+        httpsAgent,
+        timeout: 30000,
+      });
+    } catch (err) {
+      console.error('[componentReportService] paginatedJqlFetch error:', err.message, '| jql:', jql.substring(0, 100));
+      break;
+    }
+
+    const data = response.data;
+    const issues = data.issues || [];
+    allFields.push(...issues.map(i => i.fields));
+    startAt += issues.length;
+    if (issues.length === 0 || startAt >= (data.total || 0)) break;
+  }
+
+  return allFields;
+}
+
+/** Return the Monday of the ISO week containing `date`. */
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun … 6=Sat
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** "Jan 06", "Mar 24" style label for a week-start date. */
+function formatWeekLabel(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/**
+ * Fetch weekly Created-vs-Resolved burndown for a component.
+ *
+ * New JQL (net-new — does not modify any existing query):
+ *   created:  project=ERA AND (component="X" OR "Primary Component"="X") AND created >= "-Nd"
+ *   resolved: same base, resolutiondate >= "-Nd"
+ *
+ * Returns: { weeks: string[], created: number[], resolved: number[] }
+ */
+async function fetchComponentVelocity(componentName, jiraToken, weeks = 52) {
+  const projectKey = getProjectKey();
+  const esc = componentName.replace(/"/g, '\\"');
+  const compFilter = `(component = "${esc}" OR "Primary Component" = "${esc}")`;
+  // Add a buffer week so partial current week is included without cutting off history
+  const daysBack = weeks * 7 + 7;
+
+  const jqlBase = `project = ${projectKey} AND ${compFilter}`;
+  console.log('[componentReportService] Velocity fetch for:', componentName, `(${weeks} weeks, ${daysBack}d lookback)`);
+
+  const [createdFields, resolvedFields] = await Promise.all([
+    paginatedJqlFetch(
+      `${jqlBase} AND created >= "-${daysBack}d" ORDER BY created ASC`,
+      'created',
+      jiraToken,
+    ),
+    paginatedJqlFetch(
+      `${jqlBase} AND resolutiondate >= "-${daysBack}d" ORDER BY resolutiondate ASC`,
+      'resolutiondate',
+      jiraToken,
+    ),
+  ]);
+
+  console.log('[componentReportService] Velocity raw counts — created:', createdFields.length, 'resolved:', resolvedFields.length);
+
+  // Build Monday-aligned week slots from cutoff to now
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  const cutoff = new Date(now.getTime() - daysBack * 86400000);
+
+  const weekSlots = [];
+  const cursor = getWeekStart(cutoff);
+  while (cursor <= now) {
+    const weekStart = new Date(cursor);
+    const weekEnd = new Date(cursor);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    weekSlots.push({ start: weekStart, end: weekEnd, label: formatWeekLabel(weekStart) });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  const countByWeek = (fieldsList, fieldName) =>
+    weekSlots.map(slot =>
+      fieldsList.filter(f => {
+        const v = f[fieldName];
+        if (!v) return false;
+        const d = new Date(v);
+        return d >= slot.start && d < slot.end;
+      }).length
+    );
+
+  return {
+    weeks: weekSlots.map(w => w.label),
+    created: countByWeek(createdFields, 'created'),
+    resolved: countByWeek(resolvedFields, 'resolutiondate'),
+  };
+}
+
 module.exports = {
   fetchComponentsFromERA,
   buildComponentPayloadJQL,
   fetchComponentPayload,
+  fetchComponentVelocity,
 };

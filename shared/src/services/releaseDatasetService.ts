@@ -1,73 +1,63 @@
 /**
- * releaseDatasetService — Phase 1 of the trunk port.
+ * releaseDatasetService — Phase 1 of the trunk port (updated to full
+ * Release Payload model per D36 / user approval 2026-06-13).
  *
- * Ports the core fetch + dedup logic from
- * `ndb-release-sprint-analysis-with-chatbot/data_layer.py` (CONSOLIDATION
- * #1b) into a callable TS service. The full Python data layer is ~1,500
- * LOC; this phase ports ~400 LOC of essential machinery:
+ * Fetch model (3 groups, 6 Group-1 buckets):
  *
- *   - The `ProcessedTicket` row shape (kept identical to the Python
- *     ticket dict so downstream insights/velocity/forecast ports don't
- *     have to translate field names)
- *   - `ticketFromIssue()` — raw JIRA issue → flat ticket dict
- *   - `fetchBucket()` — per-bucket paginated fetch via jiraConnector +
- *     payloadJqlService (single source of truth for the 5-bucket JQL)
- *   - `fetchReleaseData()` — orchestrator that fans out the 5 buckets
- *     + 2 sidecars in parallel and dedups within-release with the
- *     comma-joined `Components` tag
+ *   Group 1 — currently in release (6 buckets, no project scope):
+ *     1A. top_level_projects        — Features/Initiatives tagged to release
+ *     1B. epics_of_projects         — Epics that are portfolio children of 1A
+ *     2.  work_toward_project       — Tasks/Bugs inside those Epics
+ *     3.  standalone_epics          — Epics tagged with no Parent Link
+ *     4.  work_toward_standalone_epic
+ *     5.  direct_tickets            — loose Bugs/Tasks (no Epic Link)
  *
- * Deferred to Phase 2:
+ *   Group 2 — moved out (1 broad query, classified in-memory):
+ *     moved_out — all tickets where fixVersion was {release} but no longer is
+ *     "hygienic" vs "needs cleanup" is derived from parent-link fields.
  *
- *   - Components / Priority augmentation (the `_augment_*_inplace` family)
- *   - `processMaster()` — cross-release assembly into a single dataset
- *   - Sidecar merging helpers (`_merge_*_sidecar_inplace`)
+ *   Group 3 — long-term funded (3 buckets, based on futureReleases list):
+ *     long_term_projects — Features on future/master releases
+ *     long_term_epics    — Epics of those features
+ *     long_term_work     — Tasks/Bugs under those epics
  *
- * Phase 3 (landed — see `releaseDatasetCache.ts` and
- * `releaseDatasetSync.ts`):
+ *   Sidecars (label-based, NOT in the Group 1 union):
+ *     wishlist, deferred, extension
  *
- *   - Per-release + bundle cache (JSON + atomic writes, fresh
- *     `v1-node-2026-05` schema, no upgrade path from the legacy
- *     pickle-based `v11-chatbot-scoped-2026-05`). Per-product
- *     directory scoping via `ReleaseDatasetCache({ cacheDir, productId })`.
- *   - `syncReleaseDataset()` — full-sync vs scoped-refetch dispatcher,
- *     bundle assembly across `{fresh fetch} ∪ {strict cache hits}`.
- *   - Targeted changelog enrichment for `Closed Date` on Bug/Improvement
- *     resolved as Done. Uses the new
- *     `jiraConnector.getIssue(key, { expand: 'changelog' })` overload.
- *     Required for the QA Verification flag (per
- *     `sprint-velocity-types.mdc`).
+ * Project scope (D36, revised):
+ *   The fetch NO LONGER adds `project = ERA` to every bucket. Features
+ *   live in FEAT, documentation in TECHPUBS, engineering in ERA — a
+ *   blanket project filter silently excludes legitimate tickets. Each
+ *   bucket JQL is specific enough (fixVersion, issueType, Epic Link,
+ *   Parent Link) to avoid returning unrelated data.
  *
  * Product-agnostic notes (D1):
- *
- *   - `projectKey` is REQUIRED on every public entry. The Python
- *     hardcoded `project = ERA`; we pass it through so DataLens / NCM /
- *     other tenants can supply their own value via productService.
- *   - `labelPrefix` is required for the wishlist + deferred sidecars
- *     (the Python hardcoded `ndb-`). Caller supplies — same pattern as
- *     payloadJqlService.
- *
- * Payload scope (D36):
- *
- *   This service computes the **Engineering Payload** — every bucket
- *   query is scoped to `project = ${projectKey}` (see `fetchBucket`).
- *   That matches the legacy Python `data_layer.py` exactly and preserves
- *   the completion-% numbers people are used to seeing.
- *
- *   It does NOT yet compute the cross-team **Release Payload** (which
- *   would include TECHPUBS / FEAT / PM tickets carrying the same
- *   fixVersion). When the first cross-team consumer lands, add a
- *   `fetchReleasePayloadData` variant that omits the project scope and
- *   re-runs `processMaster` on the result. The bucket queries themselves
+ *   - `projectKey` is retained in options for the CACHE KEY and for
+ *     engineering-only callers that still want the project-scoped view.
+ *     Pass `projectKey: undefined` for the full Release Payload.
+ *   - `labelPrefix` is required for sidecar labels.
  *   are already project-agnostic — see `buildReleasePayloadJql`.
  */
 
-import type { JiraConnector, JiraIssue } from '../connectors/jiraConnector.js';
+import { JiraConnector, type JiraIssue } from '../connectors/jiraConnector.js';
 import {
   DEFERRED_COMPONENT,
+  EXTENSION_COMPONENT,
+  LONG_TERM_COMPONENT,
+  LONG_TERM_EPICS_COMPONENT,
+  LONG_TERM_PROJECTS_COMPONENT,
+  LONG_TERM_WORK_COMPONENT,
+  MOVED_OUT_COMPONENT,
   PAYLOAD_BUCKET_KEYS,
   WISHLIST_COMPONENT,
   getComponentQueries,
   getDeferredQuery,
+  getExtensionQuery,
+  getLongTermEpicsQuery,
+  getLongTermFundedQuery,
+  getLongTermProjectsQuery,
+  getLongTermWorkQuery,
+  getMovedOutQuery,
   getWishlistQuery,
   type PayloadBucketKey,
 } from './payloadJqlService.js';
@@ -97,7 +87,19 @@ import {
  * JIRA fields requested on the main fetch. Kept identical to the Python
  * FIELDS constant so the row shape lines up.
  */
+/**
+ * Fields fetched for every ticket in the release dataset — applies to ALL issue
+ * types (Bug, Task, Spike, Story, Blog, PoC, Sub-task, Epic, FEAT, etc.).
+ *
+ * Rule of thumb: if any downstream consumer (retrospective, velocity chart,
+ * gantt, naughty list) needs a field, it belongs here.
+ *
+ * Custom field IDs per jiraFieldsConfig.json / teamBoardConfig.json.
+ * TODO(D1): move IDs to productService so non-NDB tenants can override.
+ */
 export const RELEASE_DATASET_FIELDS = [
+  // ── Core identity ──────────────────────────────────────────────────────────
+  'summary',      // ticket title — all types need this for display
   'issuetype',
   'status',
   'statusCategory',
@@ -107,9 +109,64 @@ export const RELEASE_DATASET_FIELDS = [
   'updated',
   'fixVersions',
   'labels',
-  'components',
+  'components',   // JIRA system Components field (team/area tagging)
   'priority',
   'assignee',
+
+  // ── Effort / velocity ──────────────────────────────────────────────────────
+  // Applies to Bug, Task, Spike, Story, PoC, Blog, Sub-task, Unit Test, etc.
+  'customfield_10002', // Story Points (teamBoardConfig.json: storyPointsFieldId)
+
+  // ── Date fields by issue type (per jira-date-hierarchy.mdc) ───────────────
+  'duedate',           // Epic → Due Date is the Epic's timeline end point
+
+  // Gate dates — non-null on FEAT/Initiative/X-FEAT/Capability tickets only.
+  'customfield_11067', // Code Complete Date        (jiraFieldsConfig: checkpointDates.codeComplete)
+  'customfield_35863', // Commit Gate Estimation     (jiraFieldsConfig: checkpointDates.commitGate)
+  'customfield_35864', // Promotion Gate Estimation  (jiraFieldsConfig: checkpointDates.promotionGate)
+  'customfield_11068', // Test Plan Date             (jiraFieldsConfig: checkpointDates.testPlan)
+  'customfield_13861', // FS/DS Done Date            (jiraFieldsConfig: checkpointDates.fsdsDone)
+  'customfield_45660', // Status Update Last Updated Date (jiraFieldsConfig: checkpointDates.statusUpdateDate)
+
+  // ── Parent / hierarchy links ───────────────────────────────────────────────
+  // Together these reconstruct FEAT → Epic → Spike/Story/Bug/Task chains from
+  // the flat dataset without extra JIRA calls.
+  // If these return null after a fresh fetch, verify IDs via:
+  //   GET /rest/api/2/field  →  search for "Epic Link" and "Parent Link"
+  //   GET /rest/api/2/issue/{key}?expand=names  →  spot-check a known Epic
+  'parent',            // Immediate parent (standard JIRA field; populated for
+                       //   sub-tasks and portfolio-direct children)
+  'customfield_20363', // Portfolio Parent Link (JPO) — links Epics → FEAT/Initiative
+                       //   (jiraFieldsConfig: relationships.parentLink)
+  'customfield_10361', // Epic Link — links Task/Bug/Test/UnitTest → their Epic
+                       //   Nutanix JIRA field ID (NOT customfield_10017 Atlassian default)
+                       //   (jiraFieldsConfig: relationships.epicLink)
+
+  // ── People (non-null primarily on Feature/Initiative tickets) ──────────────
+  'customfield_10860', // QA Contact     (jiraFieldsConfig: people.qaContact)
+  'customfield_27764', // TPM Owner      (jiraFieldsConfig: people.tpmOwner)
+  'customfield_11065', // Test Lead      (jiraFieldsConfig: people.testLead)
+  'customfield_11861', // GUI Lead       (jiraFieldsConfig: people.guiLead)
+  'customfield_51460', // Team Members   (jiraFieldsConfig: people.teamMembers)
+  'customfield_11260', // PM Owner       (jiraFieldsConfig: people.pmOwner)
+
+  // ── Content / indicators (Feature/Initiative level) ────────────────────────
+  'customfield_23073', // Status Update           (jiraFieldsConfig: content.statusUpdate)
+  'customfield_38460', // Executive Status Update (jiraFieldsConfig: content.executiveStatusUpdate)
+                       //   ADF field — use extractTextFieldValue() to get plain text
+  'customfield_23560', // Risk Indicator          (jiraFieldsConfig: indicators.riskIndicator)
+                       //   Values: Green / Yellow / Red
+
+  // ── Document links (Feature/Initiative level) ──────────────────────────────
+  'customfield_14463', // Link to Requirements (jiraFieldsConfig: links.requirementsLink)
+  'customfield_31460', // TCMS Link            (jiraFieldsConfig: links.tcmsLink)
+  'customfield_14464', // Link to Design Doc   (jiraFieldsConfig: links.designDocLink)
+  'customfield_14465', // Link to Test Plan    (jiraFieldsConfig: links.testPlanLink)
+
+  // ── Sprint (NDB board uses non-standard field ID) ──────────────────────────
+  'customfield_10360', // Sprint (NDB board — teamBoardConfig: sprintFieldId)
+                       //   NOT customfield_10020 (Atlassian default) or
+                       //   customfield_10021 (multi-sprint boards)
 ] as const;
 
 /** Default page size — matches Python's PAGE_SIZE. */
@@ -118,8 +175,31 @@ export const DEFAULT_PAGE_SIZE = 500;
 /** Default per-component max issue cap. */
 export const DEFAULT_MAX_ISSUES_PER_BUCKET = 20_000;
 
-/** Concurrency for the 5-bucket + 2-sidecar parallel fetch. */
-export const DEFAULT_FETCH_CONCURRENCY = 7;
+/** Concurrency for the 5-bucket + 4-sidecar parallel fetch. */
+export const DEFAULT_FETCH_CONCURRENCY = 9;
+
+// ── Gate date history types ────────────────────────────────────────────────
+
+/**
+ * One point in a gate-date slip timeline.
+ * `value` is the date that was SET at this moment (i.e. the `toString`
+ * value from the JIRA changelog item). `changedAt` is the ISO timestamp
+ * of the changelog history entry — when the change was made.
+ */
+export interface GateDateHistoryEntry {
+  value: string;     // YYYY-MM-DD
+  changedAt: string; // ISO-8601 timestamp
+}
+
+/**
+ * Full slip trail for a Feature/Initiative/X-FEAT/Capability ticket.
+ * Each array is oldest-first; the LAST entry is the current value.
+ */
+export interface GateDateHistory {
+  codeComplete: GateDateHistoryEntry[];   // CC date (customfield_11067) changes
+  commitGate: GateDateHistoryEntry[];     // CG date (customfield_35863) changes
+  promotionGate: GateDateHistoryEntry[];  // PG date (customfield_35864) changes
+}
 
 // ── The canonical row shape ────────────────────────────────────────────────
 
@@ -135,6 +215,7 @@ export const DEFAULT_FETCH_CONCURRENCY = 7;
  */
 export interface ProcessedTicket {
   'Issue Key': string;
+  Summary: string;
   'Issue Type': string;
   Status: string;
   'Status Category': string;
@@ -152,6 +233,113 @@ export interface ProcessedTicket {
   'Primary Component': string;
   Priority: string;
   Assignee: string;
+  /**
+   * Story Points (customfield_10002). Non-null on any issue type that has
+   * story points set — Bug, Task, Spike, Story, PoC, Blog, Sub-task, Unit Test.
+   * Used by all velocity calculations (sprint-velocity-types.mdc).
+   */
+  'Story Points': number | null;
+  /** Due Date. Non-null on Epic tickets only (per jira-date-hierarchy.mdc). */
+  'Due Date': string | null;
+  /** Code Complete Date from customfield_11067. Non-null on FEAT/Initiative/X-FEAT/Capability tickets only. */
+  'CC Date': string | null;
+  /** Commit Gate Ready Estimation Date from customfield_35863. */
+  'CG Date': string | null;
+  /** Promotion Gate Ready Estimation Date from customfield_35864. */
+  'PG Date': string | null;
+  /**
+   * Immediate parent issue key (standard `parent` JIRA field).
+   * Populated for sub-tasks and direct children of portfolio-tier issues.
+   * Used together with `Portfolio Parent Key` to reconstruct the
+   * FEAT → Epic → child hierarchy entirely from the bundle.
+   */
+  'Parent Key': string | null;
+  /**
+   * Portfolio Parent Link (customfield_20363).
+   * Non-null on Epic tickets — links the Epic back to its parent FEAT/Initiative.
+   */
+  'Portfolio Parent Key': string | null;
+  /**
+   * Epic Link (customfield_10361 in Nutanix JIRA).
+   * Non-null on Task, Bug, Test, Unit Test, and similar leaf issue types
+   * that live under an Epic. Pair with `Portfolio Parent Key` on the Epic
+   * to resolve the full chain to a FEAT without extra JIRA calls.
+   */
+  'Epic Link Key': string | null;
+  /**
+   * Last Resolved Date — the most-recent timestamp where the ticket's
+   * status transitioned **to** "Resolved". Populated by the changelog
+   * enrichment pass for Bug, Improvement, and Test tickets.
+   * Distinct from `Resolved Date` (which is JIRA's `resolutiondate` field
+   * and reflects only the first time a resolution was set).
+   * Use this field for QA verification sprint assignment.
+   */
+  'Last Resolved Date': string | null;
+  /**
+   * Reopen Count — number of times the ticket transitioned FROM
+   * "Resolved" or "Closed" back to an open/active state.
+   * Quality signal: high reopen counts indicate poor fix quality or
+   * insufficient test coverage. Populated by the changelog enrichment
+   * pass for Bug, Improvement, and Test tickets.
+   */
+  'Reopen Count': number;
+
+  // ── Gate date slip history (Feature / Initiative / X-FEAT / Capability) ──────
+  /**
+   * Chronological trail of CC / CG / PG date changes.
+   * Each entry is { value: "YYYY-MM-DD", changedAt: ISO } — the date that
+   * was SET at that point in time (i.e., the `toString` value from the
+   * JIRA changelog item). Oldest → newest ordering.
+   *
+   * Populated by the `enrichGateDateHistory` pass during sync. Null for
+   * all issue types that are not Feature / Initiative / X-FEAT / Capability.
+   *
+   * Derived fields (`CC Slip Count`, `CC Slip Days`, `Declared CC`,
+   * `Final CC`) are computed in processMaster from this array.
+   */
+  'Gate Date History': GateDateHistory | null;
+
+  // ── Additional date fields ───────────────────────────────────────────────
+  /** Test Plan Date (customfield_11068). Non-null on FEAT/Initiative tickets. */
+  'Test Plan Date': string | null;
+  /** FS/DS Done Date (customfield_13861). Non-null on FEAT/Initiative tickets. */
+  'FS/DS Done Date': string | null;
+  /** Status Update Last Updated Date (customfield_45660). */
+  'Status Update Date': string | null;
+
+  // ── People (non-null primarily on Feature/Initiative tickets) ─────────────
+  /** QA Contact (customfield_10860). */
+  'QA Contact': string;
+  /** TPM Owner (customfield_27764). */
+  'TPM Owner': string;
+  /** Test Lead (customfield_11065). */
+  'Test Lead': string;
+  /** GUI Lead (customfield_11861). */
+  'GUI Lead': string;
+  /** PM Owner (customfield_11260). */
+  'PM Owner': string;
+
+  // ── Content / indicators (Feature/Initiative level) ───────────────────────
+  /** Status Update text (customfield_23073). */
+  'Status Update': string;
+  /** Executive Status Update plain text extracted from ADF (customfield_38460). */
+  'Executive Status Update': string;
+  /** Risk Indicator (customfield_23560). One of: Green | Yellow | Red | ''. */
+  'Risk Indicator': string;
+
+  // ── Document links (Feature/Initiative level) ──────────────────────────────
+  /** Link to Requirements (customfield_14463). */
+  'Requirements Link': string;
+  /** TCMS Link (customfield_31460). */
+  'TCMS Link': string;
+  /** Link to Design Doc (customfield_14464). */
+  'Design Doc Link': string;
+  /** Link to Test Plan (customfield_14465). */
+  'Test Plan Link': string;
+
+  // ── Sprint (raw sprint name from the NDB board field) ─────────────────────
+  /** Sprint name raw from customfield_10360 (NDB board). Used for display; Sprint Number is derived separately. */
+  'Sprint Name': string;
 }
 
 /**
@@ -168,6 +356,47 @@ export interface FetchReleaseResult {
 }
 
 // ── Helpers — pure transforms ──────────────────────────────────────────────
+
+/**
+ * Extract plain text from an Atlassian Document Format (ADF) field value.
+ * JIRA returns ADF as a nested JSON object for rich-text fields like
+ * customfield_38460 (Executive Status Update).
+ */
+function extractAdfText(raw: unknown): string {
+  if (!raw || typeof raw !== 'object') return '';
+  const parts: string[] = [];
+  function walk(node: Record<string, unknown>): void {
+    if (node.type === 'text' && typeof node.text === 'string') {
+      parts.push(node.text);
+    }
+    const children = node.content as Record<string, unknown>[] | undefined;
+    if (Array.isArray(children)) {
+      children.forEach(walk);
+    }
+  }
+  walk(raw as Record<string, unknown>);
+  return parts.join(' ').trim();
+}
+
+/**
+ * Extract the sprint name string from the raw JIRA sprint field value.
+ * customfield_10360 can return an array of sprint objects or a single string.
+ */
+function extractSprintName(raw: unknown): string {
+  if (!raw) return '';
+  const arr = Array.isArray(raw) ? raw : [raw];
+  const last = arr[arr.length - 1];
+  if (!last) return '';
+  if (typeof last === 'string') {
+    // Sprint name is embedded as name=... in the serialized string
+    const match = /name=([^,\]]+)/.exec(last);
+    return match ? match[1].trim() : last.trim();
+  }
+  if (typeof last === 'object') {
+    return (last as Record<string, unknown>).name as string ?? '';
+  }
+  return '';
+}
 
 /**
  * Map a raw JIRA issue into a ProcessedTicket row, tagged with the
@@ -201,8 +430,38 @@ export function ticketFromIssue(
     | undefined;
   const assignee = assigneeRaw?.name ?? assigneeRaw?.key ?? '';
 
+  const toIsoDate = (raw: unknown): string | null => {
+    if (!raw || typeof raw !== 'string') return null;
+    const d = raw.split('T')[0];
+    return d.length === 10 ? d : null;
+  };
+
+  // Story Points — applies to ALL work item types (Bug, Spike, Story, PoC, etc.).
+  const rawSp = f.customfield_10002;
+  const storyPoints: number | null =
+    typeof rawSp === 'number' ? rawSp : rawSp != null ? parseFloat(String(rawSp)) || null : null;
+
+  // Parent key from the standard `parent` field (direct children, sub-tasks).
+  const parentRaw = f.parent as { key?: string } | undefined;
+  const parentKey = parentRaw?.key ?? null;
+
+  // Portfolio Parent Link (customfield_20363 — JPO) — links Epics to their parent FEAT.
+  const portfolioParentRaw = f.customfield_20363 as { key?: string } | undefined;
+  const portfolioParentKey = portfolioParentRaw?.key ?? null;
+
+  // Epic Link (customfield_10361 in Nutanix JIRA) — links Task/Bug/Test/UnitTest to their Epic.
+  // Can come back as a plain string key or as an object with a `key` property.
+  const epicLinkRaw = f.customfield_10361;
+  const epicLinkKey: string | null =
+    typeof epicLinkRaw === 'string'
+      ? epicLinkRaw || null
+      : epicLinkRaw != null && typeof (epicLinkRaw as Record<string, unknown>).key === 'string'
+        ? ((epicLinkRaw as Record<string, unknown>).key as string) || null
+        : null;
+
   return {
     'Issue Key': issue.key,
+    Summary: (f.summary as string | undefined) ?? '',
     'Issue Type': issueType,
     Status: status?.name ?? 'Unknown',
     'Status Category': status?.statusCategory?.name ?? '',
@@ -223,6 +482,55 @@ export function ticketFromIssue(
     'Primary Component': jiraCompNames[0] ?? '',
     Priority: priority,
     Assignee: assignee,
+    // Effort / velocity — present on all work item types.
+    'Story Points': storyPoints,
+    // Per jira-date-hierarchy.mdc: Epics use Due Date.
+    'Due Date': toIsoDate(f.duedate as string | undefined),
+    // Gate dates — non-null on FEAT/Initiative/X-FEAT/Capability tickets only.
+    'CC Date': toIsoDate(f.customfield_11067),
+    'CG Date': toIsoDate(f.customfield_35863),
+    'PG Date': toIsoDate(f.customfield_35864),
+    // Parent-link chain for FEAT→Epic→Spike/Story/Bug/Task hierarchy reconstruction.
+    'Parent Key': parentKey,
+    'Portfolio Parent Key': portfolioParentKey,
+    'Epic Link Key': epicLinkKey,
+    // Changelog-enriched fields — filled in Phase 2 (enrichClosedDates pass).
+    'Last Resolved Date': null,
+    'Reopen Count': 0,
+    // Gate date history — filled in Phase 3 (enrichGateDateHistory pass).
+    'Gate Date History': null,
+
+    // Additional date fields.
+    'Test Plan Date': toIsoDate(f.customfield_11068),
+    'FS/DS Done Date': toIsoDate(f.customfield_13861),
+    'Status Update Date': toIsoDate(f.customfield_45660),
+
+    // People fields — extracting display name or username.
+    'QA Contact': (f.customfield_10860 as { displayName?: string; name?: string } | undefined)?.displayName
+      ?? (f.customfield_10860 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+    'TPM Owner': (f.customfield_27764 as { displayName?: string; name?: string } | undefined)?.displayName
+      ?? (f.customfield_27764 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+    'Test Lead': (f.customfield_11065 as { displayName?: string; name?: string } | undefined)?.displayName
+      ?? (f.customfield_11065 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+    'GUI Lead': (f.customfield_11861 as { displayName?: string; name?: string } | undefined)?.displayName
+      ?? (f.customfield_11861 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+    'PM Owner': (f.customfield_11260 as { displayName?: string; name?: string } | undefined)?.displayName
+      ?? (f.customfield_11260 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+
+    // Content / indicators.
+    'Status Update': typeof f.customfield_23073 === 'string' ? f.customfield_23073 : '',
+    // ADF field — strip to plain text by extracting text nodes from the document structure.
+    'Executive Status Update': extractAdfText(f.customfield_38460),
+    'Risk Indicator': typeof f.customfield_23560 === 'string' ? f.customfield_23560 : '',
+
+    // Document links — these come back as plain string URLs.
+    'Requirements Link': typeof f.customfield_14463 === 'string' ? f.customfield_14463 : '',
+    'TCMS Link': typeof f.customfield_31460 === 'string' ? f.customfield_31460 : '',
+    'Design Doc Link': typeof f.customfield_14464 === 'string' ? f.customfield_14464 : '',
+    'Test Plan Link': typeof f.customfield_14465 === 'string' ? f.customfield_14465 : '',
+
+    // Sprint name from the raw NDB board sprint field.
+    'Sprint Name': extractSprintName(f.customfield_10360),
   };
 }
 
@@ -235,7 +543,16 @@ export interface FetchBucketResult {
 }
 
 export interface FetchBucketOptions {
-  projectKey: string;
+  /**
+   * Optional JIRA project key. When set, the query becomes
+   * `project = {projectKey} AND ({bucketJql})` — this is the
+   * "engineering payload" scoping.
+   *
+   * When omitted, the bucket JQL is executed as-is (Release Payload
+   * mode). Features live in FEAT, docs in TECHPUBS, engineering work
+   * in ERA — omitting the project filter captures all of them.
+   */
+  projectKey?: string;
   pageSize?: number;
   maxIssues?: number;
   /**
@@ -246,8 +563,7 @@ export interface FetchBucketOptions {
 }
 
 /**
- * Fetch a single bucket's issues. Wraps the bucket JQL with the
- * project scope (`project = X AND (BUCKET_JQL)`), pages via jiraConnector.
+ * Fetch a single bucket's issues. Optionally scopes to a project key.
  *
  * Errors are CAUGHT and returned in the result — callers fan out
  * multiple buckets in parallel and we don't want one bucket's failure
@@ -261,10 +577,9 @@ export async function fetchBucket(
   bucketJql: string,
   options: FetchBucketOptions
 ): Promise<FetchBucketResult> {
-  if (!options.projectKey) {
-    throw new Error('fetchBucket: options.projectKey is required (D1)');
-  }
-  const fullJql = `project = ${options.projectKey} AND (${bucketJql})`;
+  const fullJql = options.projectKey
+    ? `project = ${options.projectKey} AND (${bucketJql})`
+    : bucketJql;
   options.onProgress?.(bucketName, 'fetching', 'page 1');
   try {
     const issues = await jira.searchAll(fullJql, RELEASE_DATASET_FIELDS.join(','), {
@@ -274,7 +589,13 @@ export async function fetchBucket(
     options.onProgress?.(bucketName, 'done', `${issues.length} fetched`);
     return { bucketName, issues, error: null };
   } catch (err) {
-    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    // Use JiraConnector.wrapError to extract the actual JIRA error message
+    // (e.g. "Function portfolioChildrenOf not available" is far more
+    // actionable than the raw axios status string).
+    const wrapped = JiraConnector.wrapError(err);
+    const msg = `[${bucketName}] ${wrapped.message} (HTTP ${wrapped.statusCode})`;
+    // eslint-disable-next-line no-console
+    console.error(`[releaseDatasetService] fetchBucket error for ${release}/${bucketName}:`, wrapped.message, wrapped.details ?? '');
     options.onProgress?.(bucketName, 'error', msg);
     return { bucketName, issues: [], error: msg };
   }
@@ -283,51 +604,74 @@ export async function fetchBucket(
 // ── Release-level orchestration ────────────────────────────────────────────
 
 export interface FetchReleaseOptions {
-  /** JIRA project key (D1 — no hardcoded ERA). Required. */
-  projectKey: string;
   /**
-   * Label prefix for the wishlist + deferred sidecars (D1 — Python
+   * Optional JIRA project key. When set, ALL bucket queries are scoped to
+   * `project = X AND (...)` (engineering-only view). When omitted (default),
+   * the full Release Payload is fetched across all projects (ERA, FEAT,
+   * TECHPUBS, etc.).
+   */
+  projectKey?: string;
+  /**
+   * Label prefix for wishlist / deferred / extension sidecars (D1 — Python
    * hardcoded `ndb`). Required.
    */
   labelPrefix: string;
+  /**
+   * Unreleased JIRA versions that are NOT active releases. Used to build
+   * the Group 3 (long-term funded) fetch. Obtain at sync time from
+   * `jira.getProjectVersions(projectKey)` filtered to `released=false` and
+   * NOT in the currently active release set.
+   *
+   * When empty or omitted, Group 3 is skipped entirely.
+   */
+  futureReleases?: string[];
   /** Page size for the per-bucket searchAll. Default 500. */
   pageSize?: number;
   /** Max issues per bucket safety cap. Default 20,000. */
   maxIssuesPerBucket?: number;
   /**
-   * Max concurrent bucket fetches. Default 7 (= 5 buckets + 2 sidecars).
-   * Lower this if you hit JIRA rate limits.
+   * Max concurrent bucket fetches. Defaults to fetch-plan length (bounded
+   * internally). Lower if JIRA rate-limits kick in.
    */
   concurrency?: number;
   /** Progress hook, see `FetchBucketOptions.onProgress`. */
   onProgress?: (bucketName: string, status: string, detail: string) => void;
+  /**
+   * Mark this release as a catch-all planning version (e.g. "master",
+   * "Era Future"). When true:
+   *
+   *   1. `moved_out` bucket is skipped entirely — `fixVersion was master`
+   *      scans all JIRA history and times out; semantically it means "every
+   *      ticket ever committed to a release" which is not actionable.
+   *   2. `work_toward_standalone_epic` uses a recency-bounded variant
+   *      (`AND updated >= startOfYear(-1)`) to avoid the >20,000-issue limit
+   *      caused by thousands of inactive epics accumulated in master.
+   *   3. `direct_tickets` uses a simplified variant (`fixVersion = master`
+   *      only, dropping `fixVersion was` and `affectedVersion`) for the
+   *      same reason.
+   */
+  isCatchAllVersion?: boolean;
 }
 
 /**
- * Fetch all 5 disjoint buckets plus the wishlist + deferred sidecars
- * for one release, dedup within-release, and emit the processed ticket
- * rows.
+ * Fetch all 3 groups (6 Group-1 buckets + Group-2 moved-out + Group-3
+ * long-term funded) plus label sidecars for one release, dedup
+ * within-release, and emit the processed ticket rows.
  *
- * Order of operations (mirrors Python `fetch_release_data`):
+ * Order of operations:
  *
- *   1. Build the fetch plan: 5 bucket JQLs + 2 sidecar JQLs (label-based,
- *      not in the 5-bucket union — see payloadJqlService docs).
- *   2. Fan out the 7 fetches with bounded concurrency.
- *   3. Within-release dedup by `Issue Key`, preserving fetch order
- *      (buckets first, then wishlist, then deferred) so a sidecar
- *      ticket that's also in-payload is *seeded* with its real bucket
- *      and only *appended* with the sidecar tag in `Components`.
+ *   1. Build the fetch plan:
+ *        Group 1 — 6 bucket JQLs (no project scope; covers ERA, FEAT, TECHPUBS)
+ *        Group 2 — 1 broad moved-out JQL (classified in-memory post-fetch)
+ *        Group 3 — 3 JQLs for long-term funded work (only when futureReleases given)
+ *        Sidecars — wishlist, deferred, extension (label-based, not in the union)
+ *   2. Fan out all fetches with bounded concurrency.
+ *   3. Within-release dedup by `Issue Key`, preserving fetch order so
+ *      parents win over children in the `Components` tag composition.
  *
- * The `error` field is the first bucket error encountered — partial
- * results land regardless, but callers should surface the error so the
- * user knows the dataset is incomplete.
- *
- * NOT YET DONE in Phase 1 (matches the deferred list at top of file):
- *
- *   - Targeted changelog fetch to fill `Closed Date` for Bug/Improvement
- *     tickets resolved as Done. The row's `Closed Date` will always be
- *     `null` here. Insights that rely on it will need to either wait
- *     for Phase 2 or skip the metric.
+ * Group 2 "hygienic vs needs cleanup" is derived in-memory from the
+ * ticket's `Portfolio Parent Key` / `Epic Link Key` fields after the
+ * flat dump lands — not at fetch time.
  */
 export async function fetchReleaseData(
   jira: JiraConnector,
@@ -335,34 +679,71 @@ export async function fetchReleaseData(
   options: FetchReleaseOptions
 ): Promise<FetchReleaseResult> {
   if (!release) throw new Error('fetchReleaseData: release is required');
-  if (!options.projectKey) {
-    throw new Error('fetchReleaseData: options.projectKey is required (D1)');
-  }
   if (!options.labelPrefix) {
     throw new Error('fetchReleaseData: options.labelPrefix is required (D1)');
   }
 
-  const buckets = getComponentQueries(release);
+  const catchAll = options.isCatchAllVersion ?? false;
+  const buckets = getComponentQueries(release, catchAll);
+  const sidecarOpts = { labelPrefix: options.labelPrefix };
 
-  // Fetch-plan keys order is significant: 5 buckets in their canonical
-  // order, then wishlist, then deferred. The dedup loop iterates this
-  // exact order so the within-release Components tag composition is
-  // deterministic.
+  // Jira labels cannot contain spaces. Releases like "Era Future" or "master"
+  // generate suffixes with spaces (e.g. "era future"), making label queries
+  // like `labels = "ndb-era future-deferred"` invalid (HTTP 400). Skip all
+  // label-anchored sidecar queries for those releases.
+  const labelSuffix = deriveReleaseSuffix(release, options.labelPrefix);
+  const sidecarsSafe = !/\s/.test(labelSuffix);
+
+  // ── Fetch plan (order matters for the within-release dedup) ───────────────
+  // Group 1: parents before children — when a ticket matches both a
+  //   parent bucket (epics_of_projects) and a child bucket (work_toward_project)
+  //   it's tagged with the parent (first seen).
+  // Group 2: after Group 1 so Group-1 tickets that still show up via
+  //   `fixVersion was` keep their Group-1 Component tag and are only
+  //   annotated with `moved_out` as an additional tag.
+  // Group 3: after Group 1 + 2 for the same dedup reason.
+  // Sidecars: last so the payload tag always wins.
   const fetchPlan: Array<{ name: string; jql: string }> = [
+    // Group 1 — 6 disjoint buckets, no project filter
     ...PAYLOAD_BUCKET_KEYS.map((k) => ({ name: k, jql: buckets[k] })),
-    {
-      name: WISHLIST_COMPONENT,
-      jql: getWishlistQuery(release, { labelPrefix: options.labelPrefix }),
-    },
-    {
-      name: DEFERRED_COMPONENT,
-      jql: getDeferredQuery(release, { labelPrefix: options.labelPrefix }),
-    },
+    // Group 2 — moved-out (single broad query).
+    // Skipped for catch-all versions (master / Era Future): `fixVersion was
+    // master` scans all JIRA history, times out at 30s, and is semantically
+    // meaningless for a planning bucket.
+    ...(catchAll
+      ? []
+      : [{ name: MOVED_OUT_COMPONENT, jql: getMovedOutQuery(release) }]),
+    // Group 3 — long-term funded (only when caller provides future releases)
+    ...(options.futureReleases && options.futureReleases.length > 0
+      ? [
+          {
+            name: LONG_TERM_PROJECTS_COMPONENT,
+            jql: getLongTermProjectsQuery({ futureReleases: options.futureReleases }),
+          },
+          {
+            name: LONG_TERM_EPICS_COMPONENT,
+            jql: getLongTermEpicsQuery({ futureReleases: options.futureReleases }),
+          },
+          {
+            name: LONG_TERM_WORK_COMPONENT,
+            jql: getLongTermWorkQuery({ futureReleases: options.futureReleases }),
+          },
+        ]
+      : []),
+    // Sidecars — label-anchored, NOT in the Group 1 union.
+    // Skipped when the release name generates a label suffix with spaces
+    // (e.g. "Era Future" → "era future") because Jira rejects such labels.
+    ...(sidecarsSafe
+      ? [
+          { name: WISHLIST_COMPONENT, jql: getWishlistQuery(release, sidecarOpts) },
+          { name: DEFERRED_COMPONENT, jql: getDeferredQuery(release, sidecarOpts) },
+          { name: LONG_TERM_COMPONENT, jql: getLongTermFundedQuery(release, sidecarOpts) },
+          { name: EXTENSION_COMPONENT, jql: getExtensionQuery(release, sidecarOpts) },
+        ]
+      : []),
   ];
 
-  // Bounded-concurrency fan-out. Node has no built-in primitive for
-  // this; a simple worker-pool over the plan is enough and matches
-  // Python's ThreadPoolExecutor cap.
+  // Bounded-concurrency fan-out.
   const concurrency = Math.min(
     options.concurrency ?? DEFAULT_FETCH_CONCURRENCY,
     fetchPlan.length
@@ -581,6 +962,7 @@ export interface ProcessedTicketWithDerived extends ProcessedTicket {
 /** All output column names in canonical order (matches Python). */
 export const PROCESSED_DATASET_COLUMNS = [
   'Issue Key',
+  'Summary',
   'Issue Type',
   'Status',
   'Status Category',
@@ -609,6 +991,38 @@ export const PROCESSED_DATASET_COLUMNS = [
   'Is Wishlist',
   'Is QA Verification',
   'Release Type',
+  'Story Points',
+  'Due Date',
+  'CC Date',
+  'CG Date',
+  'PG Date',
+  'Parent Key',
+  'Portfolio Parent Key',
+  'Epic Link Key',
+  'Last Resolved Date',
+  'Reopen Count',
+  'Gate Date History',
+  // Additional dates
+  'Test Plan Date',
+  'FS/DS Done Date',
+  'Status Update Date',
+  // People
+  'QA Contact',
+  'TPM Owner',
+  'Test Lead',
+  'GUI Lead',
+  'PM Owner',
+  // Content / indicators
+  'Status Update',
+  'Executive Status Update',
+  'Risk Indicator',
+  // Document links
+  'Requirements Link',
+  'TCMS Link',
+  'Design Doc Link',
+  'Test Plan Link',
+  // Sprint raw name
+  'Sprint Name',
 ] as const;
 
 export interface ProcessMasterOptions {

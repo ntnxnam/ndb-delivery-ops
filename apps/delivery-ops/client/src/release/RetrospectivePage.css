@@ -1,0 +1,329 @@
+/* RetrospectivePage — dark-theme styles using design-system tokens.
+ * All selectors are retro-* so they don't collide with ds-* primitives.
+ */
+
+.retrospective-page {
+  padding: 0;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────── */
+.retro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--ds-space-5);
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+}
+
+.retro-header h2 {
+  margin: 0;
+  font-size: var(--ds-fs-page);
+  font-weight: var(--ds-fw-semi);
+  color: var(--ds-text-strong);
+}
+
+.retro-hint {
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  font-weight: var(--ds-fw-semi);
+}
+
+/* ── Actions (release selector + refresh) ────────────────────────────── */
+.retro-actions {
+  display: flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+
+.retro-actions label {
+  font-size: var(--ds-fs-muted);
+  color: var(--ds-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  font-weight: var(--ds-fw-semi);
+}
+
+.retro-actions select {
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  color: var(--ds-text);
+  font-size: var(--ds-fs-small);
+  padding: 0.3rem 0.65rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--ds-transition);
+}
+
+.retro-actions select:focus {
+  border-color: var(--ds-accent-border);
+}
+
+.retro-actions button {
+  background: var(--ds-accent-soft);
+  border: 1px solid var(--ds-accent-border);
+  border-radius: var(--ds-radius);
+  color: var(--ds-accent);
+  font-size: var(--ds-fs-small);
+  font-weight: var(--ds-fw-medium);
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  transition: background var(--ds-transition), border-color var(--ds-transition);
+}
+
+.retro-actions button:hover:not(:disabled) {
+  background: rgba(88, 166, 255, 0.2);
+}
+
+.retro-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Gate compliance cards grid ──────────────────────────────────────── */
+.retro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-5);
+}
+
+/* ── Gate compliance card ─────────────────────────────────────────────── */
+.retro-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-4);
+  box-shadow: var(--ds-shadow-card);
+}
+
+.retro-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-bottom: var(--ds-space-1);
+}
+
+.retro-card-head h4 {
+  margin: 0;
+  font-size: var(--ds-fs-section);
+  font-weight: var(--ds-fw-semi);
+  color: var(--ds-text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.retro-card-contract {
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-small);
+  margin-bottom: var(--ds-space-3);
+  line-height: var(--ds-lh-body);
+}
+
+.retro-card-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.retro-metric-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--ds-space-2);
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--ds-divider);
+}
+
+.retro-metric-row:first-child {
+  border-top: none;
+}
+
+.retro-metric-label {
+  font-size: var(--ds-fs-small);
+  color: var(--ds-muted);
+}
+
+.retro-metric-value {
+  font-size: var(--ds-fs-small);
+  font-weight: var(--ds-fw-semi);
+  color: var(--ds-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.retro-metric-value a {
+  color: var(--ds-accent);
+  text-decoration: none;
+}
+
+.retro-metric-value a:hover {
+  text-decoration: underline;
+}
+
+/* ── RAG pills (dark-theme safe) ──────────────────────────────────────── */
+.retro-rag {
+  padding: 0.1rem 0.55rem;
+  border-radius: var(--ds-radius-pill);
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  white-space: nowrap;
+}
+
+.retro-rag-green  { background: var(--ds-success-soft); color: var(--ds-success); }
+.retro-rag-yellow { background: var(--ds-warning-soft); color: var(--ds-warning); }
+.retro-rag-red    { background: var(--ds-danger-soft);  color: var(--ds-danger);  }
+.retro-rag-none   { background: transparent; color: var(--ds-muted); border: 1px solid var(--ds-border); }
+
+/* ── Gate timeline ruler ──────────────────────────────────────────────── */
+.retro-timeline-row {
+  display: flex;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+}
+
+.retro-timeline-item {
+  flex: 1;
+  min-width: 100px;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  padding: var(--ds-space-3) var(--ds-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.retro-timeline-kind {
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-accent);
+}
+
+.retro-timeline-date {
+  font-size: var(--ds-fs-body);
+  color: var(--ds-text-strong);
+  font-weight: var(--ds-fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.retro-timeline-style {
+  font-size: var(--ds-fs-muted);
+  color: var(--ds-muted);
+}
+
+/* ── Projects table ───────────────────────────────────────────────────── */
+.retro-table-wrap {
+  overflow: auto;
+}
+
+.retro-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+.retro-table th {
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-muted);
+  text-align: left;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+}
+
+.retro-table td {
+  text-align: left;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  font-size: var(--ds-fs-small);
+  color: var(--ds-text);
+  border-bottom: 1px solid var(--ds-divider);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.retro-table tbody tr {
+  cursor: pointer;
+  transition: background var(--ds-transition);
+}
+
+.retro-table tbody tr:hover {
+  background: var(--ds-surface-raised);
+}
+
+.retro-row-selected {
+  background: var(--ds-accent-soft) !important;
+}
+
+.retro-row-selected td {
+  border-bottom-color: var(--ds-accent-border);
+}
+
+/* ── Inline status pill in the table ─────────────────────────────────── */
+.retro-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--ds-radius-pill);
+  font-size: var(--ds-fs-muted);
+  font-weight: var(--ds-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.retro-status-pill--success  { background: var(--ds-success-soft); color: var(--ds-success); }
+.retro-status-pill--warning  { background: var(--ds-warning-soft); color: var(--ds-warning); }
+.retro-status-pill--danger   { background: var(--ds-danger-soft);  color: var(--ds-danger);  }
+.retro-status-pill--muted    { background: transparent; color: var(--ds-muted); border: 1px solid var(--ds-border); }
+
+/* ── PG→GA & companion panels ─────────────────────────────────────────── */
+.retro-panel {
+  margin-bottom: var(--ds-space-3);
+}
+
+.retro-panel h3 {
+  margin: 0 0 var(--ds-space-2);
+  font-size: var(--ds-fs-section);
+  color: var(--ds-text-strong);
+}
+
+.retro-window-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.retro-window-tile {
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  padding: var(--ds-space-3);
+}
+
+.retro-window-label {
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  font-weight: var(--ds-fw-semi);
+  margin-bottom: 4px;
+}
+
+.retro-window-value {
+  font-size: 1.5rem;
+  font-weight: var(--ds-fw-semi);
+  color: var(--ds-text-strong);
+  font-variant-numeric: tabular-nums;
+}

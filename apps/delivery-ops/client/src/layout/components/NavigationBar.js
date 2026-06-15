@@ -1,11 +1,33 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePermissions } from '../../auth/hooks/usePermissions';
 import { TAB_PERMISSIONS } from '../../auth/constants/permissions';
+import { useTeamDataset } from '../../hooks/useTeamDataset';
+
+/** Format a lastSyncIso timestamp as a short relative label. */
+function formatSyncAge(isoString) {
+  if (!isoString) return null;
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export const NavigationBar = () => {
   const location = useLocation();
   const { canAccessTab } = usePermissions();
+  const { isSyncing, bundleMeta, refreshFromDisk } = useTeamDataset();
+
+  const handleRefresh = useCallback(
+    (e) => {
+      e.preventDefault();
+      refreshFromDisk();
+    },
+    [refreshFromDisk]
+  );
 
   // Navigation items configuration
   const navigationItems = [
@@ -40,6 +62,12 @@ export const NavigationBar = () => {
       description: 'Live KPI snapshot (in progress)'
     },
     {
+      path: '/release/retrospective',
+      label: 'Retrospective',
+      icon: '🔍',
+      description: 'Gate compliance and behavioral analysis'
+    },
+    {
       path: '/generic-emailer',
       label: 'JIRA Emailer',
       icon: '📋',
@@ -56,6 +84,12 @@ export const NavigationBar = () => {
       label: 'Sprint Report',
       icon: '🏃',
       description: 'Sprint reporting and metrics'
+    },
+    {
+      path: '/sync-hub',
+      label: 'Sync Hub',
+      icon: '⟳',
+      description: 'Manage the centralised JIRA data cache'
     },
     {
       path: '/admin',
@@ -117,6 +151,34 @@ export const NavigationBar = () => {
               </span>
             ) : null;
           })()}
+        </div>
+
+        {/* Dataset sync chip */}
+        <div className="sync-chip" title={bundleMeta?.lastSyncIso ? `Last synced: ${bundleMeta.lastSyncIso}` : 'No data synced yet'}>
+          {isSyncing ? (
+            <span className="sync-chip--syncing">
+              <span className="sync-spinner" aria-hidden="true" />
+              Syncing…
+            </span>
+          ) : bundleMeta ? (
+            <span className="sync-chip--fresh">
+              <span className="sync-dot sync-dot--green" aria-hidden="true" />
+              {formatSyncAge(bundleMeta.lastSyncIso)}
+              <button
+                className="sync-refresh-btn"
+                onClick={handleRefresh}
+                title="Refresh from disk"
+                aria-label="Refresh dataset from disk"
+              >
+                ↻
+              </button>
+            </span>
+          ) : (
+            <span className="sync-chip--empty">
+              <span className="sync-dot sync-dot--grey" aria-hidden="true" />
+              No data
+            </span>
+          )}
         </div>
       </div>
 
@@ -194,6 +256,72 @@ export const NavigationBar = () => {
 
         .nav-label {
           flex-shrink: 0;
+        }
+
+        /* Sync chip */
+        .sync-chip {
+          flex-shrink: 0;
+          margin-left: 12px;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+
+        .sync-chip--syncing,
+        .sync-chip--fresh,
+        .sync-chip--empty {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #adb5bd;
+        }
+
+        .sync-chip--syncing {
+          color: #ffd43b;
+        }
+
+        .sync-dot {
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .sync-dot--green { background: #51cf66; }
+        .sync-dot--grey  { background: #868e96; }
+
+        .sync-spinner {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          border: 2px solid rgba(255, 212, 59, 0.3);
+          border-top-color: #ffd43b;
+          border-radius: 50%;
+          animation: sync-spin 0.8s linear infinite;
+          flex-shrink: 0;
+        }
+
+        @keyframes sync-spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .sync-refresh-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #adb5bd;
+          font-size: 14px;
+          padding: 0 2px;
+          line-height: 1;
+          border-radius: 3px;
+          transition: color 0.15s;
+        }
+
+        .sync-refresh-btn:hover {
+          color: #f8f9fa;
         }
 
         .nav-indicator {

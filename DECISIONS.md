@@ -728,12 +728,23 @@ if pollution becomes a real problem.
 - `buildPayloadJql` renamed to `buildEngineeringPayloadJql`. The only
   callers were `shared/scripts/smoke-product-service-d1.mjs` and the
   re-export in `shared/src/index.ts`; both updated atomically.
-- `releaseDatasetService.fetchReleaseData` continues to compute
-  Engineering Payload only (preserves legacy numbers). Docstring updated
-  to be explicit about this. A `fetchReleasePayloadData` will be added
-  when the first cross-team consumer lands.
+- **2026-06-13 update:** `releaseDatasetService.fetchReleaseData` now
+  **defaults to Release Payload** (no project scope). Pass `projectKey`
+  to `fetchBucket` options to get the Engineering Payload. `syncReleaseDataset`
+  no longer passes `projectKey` to the bucket fetches (only uses it for the
+  cache key and the `getProjectVersions` call for Group 3). Existing reports
+  and routes that haven't yet been wired to `fetchReleaseData` are unaffected.
+- **5-bucket → 6-bucket:** `epics_of_projects` (Bucket 1B) added to both
+  `payloadJqlService.PAYLOAD_BUCKET_KEYS` and the fetch plan. This closes
+  the gap where Epics under Feature/Initiative roots were missing from the
+  flat dump, causing `Portfolio Parent Key` lookups to return sparse results.
+- **Group 2 (moved-out) and Group 3 (long-term funded)** are now fetched
+  alongside Group 1 in every sync. Their tickets appear in the flat cache
+  with distinct `Components` tags (`moved_out`, `long_term_projects`, etc.).
+  `payloadJqlService` exports builders for all three groups.
 - All existing reports and routes continue to show the same numbers they
-  did before. Release Payload surfaces as new UI explicitly labeled.
+  did before. The Release Payload metrics will be labeled explicitly when
+  the first dashboard consumer lands.
 
 **Verified by** the smoke test's new assertions: `buildEngineeringPayloadJql`
 starts with `project = ERA AND`; `buildReleasePayloadJql` does NOT contain

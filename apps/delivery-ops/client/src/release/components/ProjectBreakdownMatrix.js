@@ -1,82 +1,106 @@
 /**
- * ProjectBreakdownMatrix — displays FEAT projects vs issue type groups
- * in a matrix showing outstanding/toVerify/closed counts per cell.
+ * ProjectBreakdownMatrix — displays FEAT projects vs work streams.
  *
- * Rows: FEAT projects (sorted by total outstanding + toVerify descending)
- * Columns: 6 issue type groups
- * Cells: outstanding | verify | closed counts
+ * Columns: Dev ↑ | QA Verification ↑ | QA Test Tasks ↑ | % Done
  *
- * Fetches real project breakdown data from server endpoint.
+ * Stream derivations (per sprint-velocity-types.mdc):
+ *   Dev              — outstanding items dev team still needs to fix:
+ *                      sum(outstanding) for Bug, Improvement, Dev Code, Everything Else
+ *   QA Verification  — fixed by dev, awaiting QA close:
+ *                      sum(toVerify) for Bug + Improvement
+ *   QA Test Tasks    — open test-case work:
+ *                      sum(outstanding + toVerify) for Test group
+ *   % Done           — totalClosed / grandTotal × 100
+ *
+ * No backend change needed — backend already returns per-group
+ * outstanding/toVerify/closed; streams are derived client-side.
  */
 
 import React, { useMemo } from 'react';
 import { SectionPanel } from '../../design-system';
 
-// Color palette for issue type groups (consistent with issue-type-grouping.mdc)
-const GROUP_COLORS = {
-  'Project Hierarchy': '#9467bd',
-  'Bug': '#d62728',
-  'Improvement': '#ff7f0e',
-  'Dev Code': '#1f77b4',
-  'Test': '#2ca02c',
-  'Everything Else': '#7f7f7f',
+// Stream colors per sprint-velocity-types.mdc
+const STREAM_COLORS = {
+  dev: '#1f77b4',           // blue
+  qaVerification: '#ff7f0e', // orange
+  qaTestTasks: '#2ca02c',    // green
 };
 
-// Status color mapping
 const STATUS_COLORS = {
-  outstanding: '#d62728', // red
-  toVerify: '#ff7f0e',    // orange
-  closed: '#2ca02c',      // green
+  done: '#2ca02c',
+  warn: '#ff7f0e',
+  risk: '#d62728',
 };
+
+/** Derive the three work streams from a project's issueTypeGroups array. */
+function deriveStreams(groups) {
+  let dev = 0;
+  let qaVerification = 0;
+  let qaTestTasks = 0;
+  let totalClosed = 0;
+  let grandTotal = 0;
+
+  for (const g of groups) {
+    const outstanding = g.outstanding || 0;
+    const toVerify = g.toVerify || 0;
+    const closed = g.closed || 0;
+    const total = outstanding + toVerify + closed;
+
+    totalClosed += closed;
+    grandTotal += total;
+
+    if (g.label === 'Test') {
+      qaTestTasks += outstanding + toVerify;
+    } else if (g.label !== 'Project Hierarchy') {
+      // Bug, Improvement, Dev Code, Everything Else
+      dev += outstanding;
+      if (g.label === 'Bug' || g.label === 'Improvement') {
+        qaVerification += toVerify;
+      }
+    }
+  }
+
+  return { dev, qaVerification, qaTestTasks, totalClosed, grandTotal };
+}
 
 export function ProjectBreakdownMatrix({ projectBreakdown, selectedRelease, loading }) {
   const sectionData = useMemo(() => {
     const toRows = (items) => {
       const rows = (items || []).map((project) => {
-        const groups = (project.issueTypeGroups || []).map((group) => ({
-          label: group.label,
-          outstanding: group.outstanding || 0,
-          toVerify: group.toVerify || 0,
-          closed: group.closed || 0,
-          total: group.total || 0,
-          color: GROUP_COLORS[group.label] || '#ccc',
-        }));
-        const totalOutstanding = groups.reduce((sum, g) => sum + g.outstanding, 0);
-        const totalToVerify = groups.reduce((sum, g) => sum + g.toVerify, 0);
-        const totalClosed = groups.reduce((sum, g) => sum + g.closed, 0);
-        const grandTotal = totalOutstanding + totalToVerify + totalClosed;
+        const groups = (project.issueTypeGroups || []);
+        const streams = deriveStreams(groups);
         return {
           projectKey: project.projectKey,
           projectName: project.projectName,
-          groups,
-          totalOutstanding,
-          totalToVerify,
-          totalClosed,
-          grandTotal,
-          pctDone: grandTotal > 0 ? ((totalClosed / grandTotal) * 100).toFixed(1) : '0.0',
+          ...streams,
+          pctDone:
+            streams.grandTotal > 0
+              ? ((streams.totalClosed / streams.grandTotal) * 100).toFixed(1)
+              : '0.0',
         };
       });
-      rows.sort((a, b) => (b.totalOutstanding + b.totalToVerify) - (a.totalOutstanding + a.totalToVerify));
+      // Sort: most open work first (dev + qaVerification + qaTestTasks)
+      rows.sort(
+        (a, b) =>
+          b.dev + b.qaVerification + b.qaTestTasks -
+          (a.dev + a.qaVerification + a.qaTestTasks)
+      );
       return rows;
     };
 
-    const projectRows = toRows(projectBreakdown?.projects || []);
-    const standaloneEpicRows = toRows(projectBreakdown?.standaloneEpics || []);
-    const standaloneTicketRows = toRows(
-      projectBreakdown?.standaloneTickets ? [projectBreakdown.standaloneTickets] : []
-    );
-
     return {
-      projectRows,
-      standaloneEpicRows,
-      standaloneTicketRows,
+      projectRows: toRows(projectBreakdown?.projects || []),
+      standaloneEpicRows: toRows(projectBreakdown?.standaloneEpics || []),
+      standaloneTicketRows: toRows(
+        projectBreakdown?.standaloneTickets ? [projectBreakdown.standaloneTickets] : []
+      ),
     };
   }, [projectBreakdown]);
 
   if (loading) {
     return (
       <SectionPanel
-        title="Project Completion Matrix"
+        title="Outstanding Work by Stream"
         caption={selectedRelease ? 'Loading…' : 'No data available.'}
       >
         <div style={{ color: '#666', fontSize: '0.9rem', padding: '1rem' }}>
@@ -94,7 +118,7 @@ export function ProjectBreakdownMatrix({ projectBreakdown, selectedRelease, load
   if (totalRows === 0) {
     return (
       <SectionPanel
-        title="Project Completion Matrix"
+        title="Outstanding Work by Stream"
         caption={selectedRelease ? 'No projects found.' : 'No data available.'}
       >
         <div style={{ color: '#666', fontSize: '0.9rem', padding: '1rem' }}>
@@ -104,21 +128,28 @@ export function ProjectBreakdownMatrix({ projectBreakdown, selectedRelease, load
     );
   }
 
-  // Compute grand totals across all tiers.
+  // Grand totals across all tiers for the summary row
   const allRows = [
     ...sectionData.projectRows,
     ...sectionData.standaloneEpicRows,
     ...sectionData.standaloneTicketRows,
   ];
-  const grandTotalOutstanding = allRows.reduce((sum, r) => sum + r.totalOutstanding, 0);
-  const grandTotalVerify = allRows.reduce((sum, r) => sum + r.totalToVerify, 0);
-  const grandTotalClosed = allRows.reduce((sum, r) => sum + r.totalClosed, 0);
-  const grandTotal = grandTotalOutstanding + grandTotalVerify + grandTotalClosed;
+  const grandDev = allRows.reduce((s, r) => s + r.dev, 0);
+  const grandQaVerification = allRows.reduce((s, r) => s + r.qaVerification, 0);
+  const grandQaTestTasks = allRows.reduce((s, r) => s + r.qaTestTasks, 0);
+  const grandTotalClosed = allRows.reduce((s, r) => s + r.totalClosed, 0);
+  const grandTotal = allRows.reduce((s, r) => s + r.grandTotal, 0);
+  const grandPctDone =
+    grandTotal > 0 ? ((grandTotalClosed / grandTotal) * 100).toFixed(1) : '0.0';
 
   return (
     <SectionPanel
-      title="Project Completion Matrix"
-      caption={selectedRelease ? `Projects, standalone epics, and standalone tickets for ${selectedRelease}` : 'Loading…'}
+      title="Outstanding Work by Stream"
+      caption={
+        selectedRelease
+          ? `Projects, standalone epics, and standalone tickets for ${selectedRelease}`
+          : 'Loading…'
+      }
     >
       <div style={{ display: 'grid', gap: '1rem' }}>
         <ProjectBreakdownSection
@@ -135,57 +166,84 @@ export function ProjectBreakdownMatrix({ projectBreakdown, selectedRelease, load
         />
       </div>
 
+      {/* Grand total row */}
       <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <tbody>
             <tr style={{ borderTop: '2px solid #333', backgroundColor: '#f5f5f5', fontWeight: 600 }}>
               <td style={{ padding: '0.75rem', color: '#333' }}>TOTAL</td>
-              <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.outstanding }}>
-                {grandTotalOutstanding.toLocaleString()}
+              <td style={{ padding: '0.75rem', textAlign: 'center', color: STREAM_COLORS.dev }}>
+                {grandDev.toLocaleString()}
               </td>
-              <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.toVerify }}>
-                {grandTotalVerify.toLocaleString()}
+              <td style={{ padding: '0.75rem', textAlign: 'center', color: STREAM_COLORS.qaVerification }}>
+                {grandQaVerification.toLocaleString()}
               </td>
-              <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.closed }}>
-                {grandTotalClosed.toLocaleString()}
+              <td style={{ padding: '0.75rem', textAlign: 'center', color: STREAM_COLORS.qaTestTasks }}>
+                {grandQaTestTasks.toLocaleString()}
               </td>
               <td
                 style={{
                   padding: '0.75rem',
                   textAlign: 'center',
                   color:
-                    grandTotal > 0
-                      ? ((grandTotalClosed / grandTotal) * 100).toFixed(1) >= 80
-                        ? STATUS_COLORS.closed
-                        : ((grandTotalClosed / grandTotal) * 100).toFixed(1) >= 50
-                        ? STATUS_COLORS.toVerify
-                        : STATUS_COLORS.outstanding
-                      : '#666',
+                    grandPctDone >= 80
+                      ? STATUS_COLORS.done
+                      : grandPctDone >= 50
+                      ? STATUS_COLORS.warn
+                      : STATUS_COLORS.risk,
                 }}
               >
-                {grandTotal > 0 ? ((grandTotalClosed / grandTotal) * 100).toFixed(1) : '0.0'}%
+                {grandPctDone}%
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: STATUS_COLORS.outstanding, borderRadius: '2px' }} />
-          Outstanding
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: STATUS_COLORS.toVerify, borderRadius: '2px' }} />
-          To Verify
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: STATUS_COLORS.closed, borderRadius: '2px' }} />
-          Closed
-        </div>
+      {/* Legend */}
+      <div
+        style={{
+          marginTop: '1rem',
+          fontSize: '0.8rem',
+          color: '#666',
+          display: 'flex',
+          gap: '1.25rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <LegendItem color={STREAM_COLORS.dev} label="Dev — open items dev team needs to fix" />
+        <LegendItem
+          color={STREAM_COLORS.qaVerification}
+          label="QA Verification — fixed by dev, awaiting QA close"
+        />
+        <LegendItem color={STREAM_COLORS.qaTestTasks} label="QA Test Tasks — open test-case work" />
       </div>
     </SectionPanel>
   );
+}
+
+function LegendItem({ color, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <span
+        style={{
+          display: 'inline-block',
+          width: '12px',
+          height: '12px',
+          backgroundColor: color,
+          borderRadius: '2px',
+          flexShrink: 0,
+        }}
+      />
+      {label}
+    </div>
+  );
+}
+
+function pctDoneColor(pct) {
+  if (pct >= 80) return STATUS_COLORS.done;
+  if (pct >= 50) return STATUS_COLORS.warn;
+  return STATUS_COLORS.risk;
 }
 
 function ProjectBreakdownSection({ title, rows }) {
@@ -202,26 +260,32 @@ function ProjectBreakdownSection({ title, rows }) {
     <div>
       <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{title}</div>
       <div style={{ overflowX: 'auto' }}>
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.85rem',
-          }}
-        >
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #333', backgroundColor: '#1a1a1a', color: '#fff' }}>
-              <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, minWidth: '150px' }}>
+              <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, minWidth: '200px' }}>
                 Project
               </th>
-              <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '110px' }}>
-                Outstanding
+              <th
+                style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '90px',
+                  color: STREAM_COLORS.dev }}
+                title="Open items the dev team still needs to fix (Bug, Improvement, Task, Unit Test, Everything Else — outstanding state)"
+              >
+                Dev ↑
               </th>
-              <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '110px' }}>
-                To Verify
+              <th
+                style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '110px',
+                  color: STREAM_COLORS.qaVerification }}
+                title="Bug / Improvement items fixed by dev, awaiting QA close (In Review / Testing / Ready for Testing)"
+              >
+                QA Verify ↑
               </th>
-              <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '90px' }}>
-                Closed
+              <th
+                style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '110px',
+                  color: STREAM_COLORS.qaTestTasks }}
+                title="Open Test-type issues (test case writing and execution)"
+              >
+                QA Tests ↑
               </th>
               <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '80px' }}>
                 % Done
@@ -239,32 +303,48 @@ function ProjectBreakdownSection({ title, rows }) {
               >
                 <td style={{ padding: '0.75rem', fontWeight: 500, color: '#333' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#666' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#666', flexShrink: 0 }}>
                       {row.projectKey}
                     </span>
                     <span>{row.projectName}</span>
                   </div>
-                </td>
-                <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.outstanding, fontWeight: 600 }}>
-                  {row.totalOutstanding.toLocaleString()}
-                </td>
-                <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.toVerify, fontWeight: 600 }}>
-                  {row.totalToVerify.toLocaleString()}
-                </td>
-                <td style={{ padding: '0.75rem', textAlign: 'center', color: STATUS_COLORS.closed, fontWeight: 600 }}>
-                  {row.totalClosed.toLocaleString()}
                 </td>
                 <td
                   style={{
                     padding: '0.75rem',
                     textAlign: 'center',
                     fontWeight: 600,
-                    color:
-                      row.pctDone >= 80
-                        ? STATUS_COLORS.closed
-                        : row.pctDone >= 50
-                        ? STATUS_COLORS.toVerify
-                        : STATUS_COLORS.outstanding,
+                    color: row.dev > 0 ? STREAM_COLORS.dev : '#aaa',
+                  }}
+                >
+                  {row.dev > 0 ? row.dev.toLocaleString() : '—'}
+                </td>
+                <td
+                  style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: row.qaVerification > 0 ? STREAM_COLORS.qaVerification : '#aaa',
+                  }}
+                >
+                  {row.qaVerification > 0 ? row.qaVerification.toLocaleString() : '—'}
+                </td>
+                <td
+                  style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: row.qaTestTasks > 0 ? STREAM_COLORS.qaTestTasks : '#aaa',
+                  }}
+                >
+                  {row.qaTestTasks > 0 ? row.qaTestTasks.toLocaleString() : '—'}
+                </td>
+                <td
+                  style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: pctDoneColor(parseFloat(row.pctDone)),
                   }}
                 >
                   {row.pctDone}%

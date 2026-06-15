@@ -202,7 +202,7 @@ export class JiraConnector {
     const {
       pageSize = 1000,
       perPageDelayMs = 200,
-      perPageTimeoutMs = 6000,
+      perPageTimeoutMs = 30000,
       maxIssues = 100_000,
     } = options;
 

@@ -213,7 +213,8 @@ describe('Email API Integration Tests', () => {
 
   describe('NEG-EMAIL-008: Relay / send failure', () => {
     test('When sendMail rejects, returns 500 with safe message', async () => {
-      mockSendMail.mockRejectedValueOnce(new Error('554 5.7.1: Relay access denied'));
+      // All SMTP attempts (primary + all fallbacks) must fail to get a 500 response.
+      mockSendMail.mockRejectedValue(new Error('554 5.7.1: Relay access denied'));
 
       const testData = {
         selectedVersion: defaultVersion,
@@ -235,6 +236,9 @@ describe('Email API Integration Tests', () => {
       expect(response.body.success).toBe(false);
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).not.toMatch(/\n\s*at\s+/);
+
+      // Restore default resolved value so subsequent tests are not affected
+      mockSendMail.mockResolvedValue({ messageId: '<integration-test-id>', accepted: ['test@nutanix.com'], rejected: [] });
     });
   });
 });

@@ -1,0 +1,43 @@
+---
+description: Every new page requires a requirements doc and a data-layer doc before the route is wired up
+alwaysApply: true
+---
+
+# New Page Documentation Gate
+
+Before a new page (route entry in `routeConfig.js`) ships, two docs **must** exist
+under `apps/delivery-ops/docs/pages/`:
+
+| Doc | Filename pattern | Required sections |
+|---|---|---|
+| Requirements | `{PageName}-requirements.md` | Purpose, Audiences, User Stories, UI Behaviour, Permissions, Edge Cases, Acceptance Criteria |
+| Data & Middleware | `{PageName}-data-layer.md` | API endpoints called, server route → service → JIRA mapping, data shapes, caching strategy, error handling |
+
+## Hard rule
+
+Do **not** add a route to `routeConfig.js` or wire up a new `<Page />` in `App.js`
+without first creating both docs. If asked to add a page without them, create the
+docs as part of the same task before touching the route config.
+
+## Retrofit obligation
+
+When you **edit** any existing page file (component, hook, route handler, or service)
+for a page that is missing its docs, you must create the missing docs in that same
+session. Do not leave the gap wider than you found it.
+
+## Doc location
+
+```
+apps/delivery-ops/docs/pages/
+  EmailSender-requirements.md
+  EmailSender-data-layer.md
+  ProjectStatus-requirements.md
+  ProjectStatus-data-layer.md
+  ...
+```
+
+## Never do
+
+- Add a route to `routeConfig.js` without both docs present
+- Ship a new page component without a requirements doc
+- Treat a skill file or AGENTS.md as a substitute for a page requirements doc

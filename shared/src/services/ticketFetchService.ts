@@ -92,10 +92,12 @@ function singleKeyUnion(key: string, includeLinkedIssues: boolean): string {
 
 function bulkKeyUnion(keys: string[], includeLinkedIssues: boolean): string {
   const list = keys.join(', ');
+  // "FEAT ID" only supports the ~ (contains) operator — = and IN are both rejected by JIRA.
+  const featIdClauses = keys.map((k) => `"FEAT ID" ~ ${k}`).join(' OR ');
   const clauses = [
     `key IN (${list})`,
     `("Parent Link" IN (${list}))`,
-    `("FEAT ID" IN (${list}))`,
+    `(${featIdClauses})`,
     `("FEAT Number" IN (${list}))`,
     `(issueFunction in portfolioChildrenOf("key IN (${list})"))`,
     `(issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key IN (${list})')"))`,
@@ -330,8 +332,8 @@ export class TicketFetchService {
       'customfield_35863', // CG
       'customfield_35864', // PG
       'parent',
-      'customfield_10014', // Parent Link (Nutanix)
-      'customfield_10017', // Epic Link
+      'customfield_20363', // Parent Link (Nutanix JPO — links Epics → FEAT/Initiative)
+      'customfield_10361', // Epic Link (Nutanix field ID, confirmed from jira_custom_fields.csv)
     ];
 
     const issues = await this.jira.searchAll(jql, fields.join(','), {
@@ -361,7 +363,7 @@ export class TicketFetchService {
     for (const issue of issues) {
       const fields = (issue.fields ?? {}) as Record<string, unknown>;
       const parentLink =
-        (fields['customfield_10014'] as string | undefined) ??
+        (fields['customfield_20363'] as string | undefined) ??
         (fields['Parent Link'] as string | undefined) ??
         null;
       const featId =
@@ -393,7 +395,7 @@ export class TicketFetchService {
       const attributed = issues.filter((i) => {
         const f = (i.fields ?? {}) as Record<string, unknown>;
         const parentLink =
-          (f['customfield_10014'] as string | undefined) ??
+          (f['customfield_20363'] as string | undefined) ??
           (f['Parent Link'] as string | undefined) ??
           null;
         const featId = (f['FEAT ID'] as string | undefined) ?? '';

@@ -44,6 +44,16 @@ export const routeConfig = {
       icon: '🧭'
     },
     {
+      path: '/release/retrospective',
+      exact: true,
+      component: 'RetrospectivePage',
+      title: 'Retrospective',
+      description: 'Gate compliance and behavioral analysis',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '🔍'
+    },
+    {
       path: '/release-setup',
       exact: true,
       component: 'ReleaseSetup',
