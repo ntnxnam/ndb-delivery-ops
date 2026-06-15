@@ -599,7 +599,7 @@ export async function runRetroGateChecks(
   jira: JiraConnector
 ) {
   const dates: ResolvedGateDates = {
-    ccmDate: resolveGateDate(gateTimeline.gates, 'CC'),
+    ccmDate: resolveGateDate(gateTimeline.gates, 'CCM'),
     cgDate: resolveGateDate(gateTimeline.gates, 'CG'),
     pgDate: resolveGateDate(gateTimeline.gates, 'PG'),
     gaDate: resolveGateDate(gateTimeline.gates, 'GA'),
@@ -766,7 +766,7 @@ export async function runNaughtyList(
   jira: JiraConnector
 ) {
   const dates: ResolvedGateDates = {
-    ccmDate: resolveGateDate(gateTimeline.gates, 'CC'),
+    ccmDate: resolveGateDate(gateTimeline.gates, 'CCM'),
     cgDate: resolveGateDate(gateTimeline.gates, 'CG'),
     pgDate: resolveGateDate(gateTimeline.gates, 'PG'),
     gaDate: resolveGateDate(gateTimeline.gates, 'GA'),
