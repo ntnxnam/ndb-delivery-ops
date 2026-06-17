@@ -1,0 +1,136 @@
+# Program Management Point of View
+
+When forming a release-level or cross-team health assessment, the PM/TPM lens
+requires reasoning about **patterns across features**, not just individual feature
+status. A release can have zero RED features and still be in serious trouble.
+
+## Portfolio-Level Risk Patterns to Always Check
+
+### 1. Concentration risk
+
+- If > 30% of committed features are in the same early phase (e.g. all still in
+  Coding) with < 6 weeks to the CC gate → flag as `PHASE_CONCENTRATION_RISK`.
+- Reason: if the whole portfolio slips at the same gate simultaneously, recovery
+  is not possible by redistributing work.
+
+### 2. Dark portfolio
+
+- If > 20% of committed features have status updates ≥ 14 days old → the program
+  has a **visibility problem**, not just individual feature problems.
+- Lead the briefing with the visibility gap, not the individual dark features.
+
+### 3. Gate compression
+
+- Compute the window between consecutive binding gates (CCM → CG → PG).
+- If any window is < 3 weeks → flag as `GATE_COMPRESSION`.
+- Sub-3-week windows make QA, compliance, and stabilisation structurally impossible —
+  the schedule itself is the risk, regardless of individual feature status.
+
+### 4. Compliance clustering
+
+- If > 3 features have unfiled security or legal (SDL/LEG) with < 6 weeks to CG →
+  flag as `COMPLIANCE_CLUSTER`.
+- One unfiled ticket = a feature risk. Multiple unfiled = a program process failure.
+  The action is process-level (TPM to run a compliance checkpoint), not feature-level.
+
+### 5. Owner absence
+
+- If > 2 gate-lagging or dark features share the same TPM owner or assignee →
+  name the **pattern**, not just each feature.
+- "Three features owned by X are all dark" is a more actionable finding than
+  three separate dark-feature bullets.
+
+## RAG Verdict Adjustment for Portfolio Patterns
+
+These patterns can **elevate** the release-level verdict beyond what individual
+feature buckets suggest:
+
+| Pattern | Minimum verdict |
+|---|---|
+| `PHASE_CONCENTRATION_RISK` (> 30% same early phase near gate) | YELLOW |
+| `GATE_COMPRESSION` (any binding gap < 3 weeks) | YELLOW |
+| `COMPLIANCE_CLUSTER` (> 3 features unfiled near CG) | YELLOW |
+| `PHASE_CONCENTRATION_RISK` + `GATE_COMPRESSION` together | RED |
+| `DARK_PORTFOLIO` (> 20% dark) AND gate < 4 weeks away | RED |
+
+## Capacity Math at the Program Level
+
+Before assigning a portfolio verdict, compute whether the **aggregate** open work
+is completable in the remaining runway:
+
+```
+total_open_sp = sum of trulyOpenCount × avg_sp_per_ticket across all watching/gate-lagging features
+available_capacity = working_days(today, CG_date) × assumed_team_sp_per_day
+```
+
+- If `total_open_sp > available_capacity` AND > 30% of features are contributors →
+  surface as a program-level capacity gap, not just individual feature risks.
+- State the numbers: "The portfolio carries ~N SP of open work; at current velocity
+  there is only capacity for ~C SP before CG on `<date>`."
+
+## Action Item Framing (PM lens)
+
+PM-level action items address the **program**, not just the ticket:
+
+| Wrong (feature-level) | Right (PM-level) |
+|---|---|
+| "Ask John to file SDL ticket for Feature X." | "Run a 30-min compliance checkpoint — 4 features are approaching CG with no SDL filed. One call resolves all four." |
+| "Follow up on Feature A status update." | "All dark features are owned by Team Foo — escalate to their EM for a status sweep, not individual owners." |
+| "Monitor Feature B for gate slip." | "Feature B's CC date is 12 days past the release CCM — ask RM today whether to extend or cut scope." |
+
+## 7-Day Action List Rules (PM edition)
+
+1. Address the **most systemic** risk first, not the most severe individual ticket.
+2. Group actions by owner/team — one action item per team is more executable
+   than five items each naming a different person.
+3. Every action must have a named owner (person or role), a specific deliverable,
+   and a deadline (not "ASAP" — use a day of the week or a date).
+4. If gate compression is present, the first action is always: "Ask RM to confirm
+   whether gate dates can flex — the current schedule leaves < 3 weeks between
+   `<Gate A>` and `<Gate B>`."
+5. Never use "monitor" as an action — replace with a specific ask that has a
+   named owner and a concrete deliverable.
+
+## Calibration by Release Phase
+
+| Weeks to PG | Primary focus | Primary risk |
+|---|---|---|
+| > 8 weeks | CC date commits, child ticket creation | Uncommitted / un-scoped work |
+| 4–8 weeks | Gate lagging, compliance filing, capacity math | Slipping features |
+| 2–4 weeks | P0/P1 bugs, must-fix tickets, doc completion | Stabilisation failures |
+| < 2 weeks | Must-fix closure only; new scope is off the table | Any new risk requires explicit RM decision |
+
+Inside 2 weeks of PG: any feature not at PG Met or Shipped that raises a new
+risk must be escalated to RM immediately — the program cannot absorb it through
+normal channels.
+
+## Staleness Is a Program Signal, Not Just a Feature Signal
+
+- A single stale feature = team communication gap.
+- Two or more stale features in the same team = EM accountability gap.
+- More than 20% of the portfolio stale = program governance failure.
+
+When dark features cluster by team, the action item targets the EM or program
+lead, not the feature owner.
+
+## Never Do
+
+- Report "all features are on track" when portfolio-level patterns (concentration,
+  compression, dark percentage) indicate systemic risk
+- Assign seven separate action items for seven separate features when they share
+  an owner, a team, or a root cause
+- Use "monitor" or "keep an eye on" as a deliverable — these are not actions
+- Omit the portfolio capacity calculation when > 4 features are in early phases
+  near a gate
+- Accept individual GREEN self-reports at face value without checking gate
+  feasibility (per `release-gate-aware-reasoning.mdc`)
+
+## Cross-references
+
+- **`release-gate-aware-reasoning.mdc`** — per-feature feasibility signals that
+  feed the portfolio patterns above
+- **`ai-ticket-key-integrity.mdc`** — ticket key discipline applies to all PM outputs
+- **`citation-first-output.mdc`** — every portfolio-level claim cites a source
+  (feature key, bucket count, or gate date from `dateMetrics`)
+- **`jira-date-hierarchy.mdc`** — issue-type-aware date field mapping for child
+  ticket capacity calculations

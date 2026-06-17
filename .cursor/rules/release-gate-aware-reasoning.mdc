@@ -1,0 +1,101 @@
+# Release Gate-Aware Reasoning
+
+Before forming any point of view about a feature's delivery health, the AI must
+evaluate gate feasibility — not just current JIRA status. JIRA status is often stale;
+calendar math and capacity math are not.
+
+## The Four Gate-Feasibility Questions
+
+For every feature in Inception / Design / Coding / CC Met phase, answer all four
+before assigning a verdict:
+
+### 1. Is there a Code Complete date?
+
+- If `customfield_11067` (Code Complete Date) is null or missing on a feature in
+  Coding or CC Met phase → treat as `gate-lagging`, not `watching`.
+- Rationale: a team that has not committed to a CC date has no delivery contract.
+  Absence is itself a risk signal, not neutral.
+
+### 2. Is the CC date before the release-level CC gate?
+
+- Compare the feature's CC date against the release-level CCM marker (from
+  `releaseVersionsEmailConfig` / ganttConfig).
+- If feature CC date > release CCM date → flag as `CC_AFTER_GATE` with the delta in days.
+- YELLOW minimum; RED if delta > 14 days or if CCM has already passed.
+- The team's own estimate already violates the gate — this is not a projection, it is
+  a committed miss.
+
+### 3. Is there enough runway to the next gate?
+
+- Compute: `workingDays(today, nextGateDate)` × assumed daily velocity (default: 2 SP/day).
+- Compare against open story points on truly-open child tickets (`tasks.trulyOpenCount`
+  × average SP per task, or fetched directly if available).
+- If open work > available capacity → flag as `CAPACITY_INFEASIBLE`.
+- Surface as: "N SP of open work, ~D working days remaining to gate (capacity for ~C SP)."
+- This is a delivery risk independent of JIRA status — it answers "even if everything
+  goes perfectly, can they make it?"
+
+### 4. Are tickets created for the work?
+
+- If `tasks.trulyOpenCount = 0` AND the feature is in Coding phase with CC > 14 days
+  away → flag as `NO_CHILD_TICKETS`.
+- A feature in active coding with no open sub-tickets has either not broken down the
+  work or is tracking work entirely off-JIRA — both are visibility risks.
+
+## Signal Priority Order (first match wins for verdict floor)
+
+1. `CC_AFTER_GATE` with delta > 14d → **RED**
+2. `CAPACITY_INFEASIBLE` (open SP > 2× runway capacity) → **RED**
+3. `CC_DATE_MISSING` in Coding phase → **RED**
+4. `CC_AFTER_GATE` with delta 1–14d → **YELLOW**
+5. `CAPACITY_INFEASIBLE` (open SP > 1× but ≤ 2× runway) → **YELLOW**
+6. `NO_CHILD_TICKETS` in Coding phase → **YELLOW**
+
+## Implementation Contract
+
+These signals are computed **deterministically** in `execSummarySignals.js`,
+not by the LLM. The LLM receives pre-computed flags and reasons about them —
+it does not compute them.
+
+CRITICAL_RISKS entries for these signals follow the prefix convention:
+
+| Prefix | Meaning |
+|---|---|
+| `CC_DATE_MISSING: ...` | Feature in Coding/CC Met with no CC date set |
+| `CC_AFTER_GATE: +N days past CCM1 (YYYY-MM-DD)` | Feature's own CC estimate exceeds the release gate |
+| `CAPACITY_INFEASIBLE: N SP open, ~D days to gate, ~C SP capacity` | Not enough runway to close open work |
+| `NO_CHILD_TICKETS: feature in Coding with zero open sub-tickets` | Work not yet broken down in JIRA |
+
+The LLM prompt (`RELEASE_SUMMARY_SYSTEM_PROMPT` and `EXEC_SUMMARY_SYSTEM_PROMPT`)
+must include a `CAPACITY RISK SIGNALS` section that explains how to interpret
+these prefixes and what PATH TO GREEN actions are appropriate.
+
+## What the LLM Must Do With These Signals
+
+- **CC_DATE_MISSING**: sentence 1 must name the phase and the missing date; action
+  item = "Ask `<owner>` to commit a CC date by this week."
+- **CC_AFTER_GATE**: sentence 1 must state the delta; action item = "Negotiate scope
+  cut or request RM approval for schedule extension — `<N>` days over gate."
+- **CAPACITY_INFEASIBLE**: surface as "insufficient runway" with the numbers;
+  action item = "Reduce scope or add capacity — `<N SP>` of open work, only room for ~`<C SP>`."
+- **NO_CHILD_TICKETS**: flag as visibility gap; action item = "Break down remaining
+  work into sub-tickets this week so progress is trackable."
+
+## Gate Date Lookup Contract
+
+When `dateMetrics` or `ganttConfig` is available:
+
+- Use `ganttConfig.CCM1` (or the earliest CC marker label) as the release-level CC gate.
+- Use `ganttConfig.CG` / `ganttConfig.CG2` as the binding Commit Gate.
+- Use `ganttConfig.PG` / `ganttConfig.PG2` as the binding Promotion Gate.
+- Working-day calculation must exclude weekends; public holidays are not tracked,
+  so use calendar working days (Mon–Fri) as the approximation.
+- When `ganttConfig` is null, skip gate-comparison signals — do not fabricate dates.
+
+## Never Do
+
+- Treat a missing CC date as equivalent to "not yet relevant"
+- Treat a CC date that exceeds the release gate as YELLOW when the delta is > 14 days
+- Skip capacity math because JIRA phase or self-reported risk looks "on track"
+- Report a feature as `watching` when any of the four feasibility questions yields a flag
+- Invent gate dates not present in `dateMetrics` or `ganttConfig`
