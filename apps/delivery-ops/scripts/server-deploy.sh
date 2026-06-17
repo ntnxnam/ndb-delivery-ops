@@ -166,6 +166,12 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        # SSE (Server-Sent Events) requires buffering off so Nginx forwards
+        # each chunk immediately instead of buffering the whole response.
+        # Without this, long-running sync streams are silently killed and
+        # the client sees a network error mid-sync.
+        proxy_buffering off;
+        proxy_cache off;
     }
 
     # Legacy bin-packing app is static-mounted by the Node backend.
