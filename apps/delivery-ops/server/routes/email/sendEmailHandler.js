@@ -775,6 +775,14 @@ module.exports = async function sendEmailHandler(req, res) {
       ccEmails.add(userEmail.toLowerCase());
     }
 
+    // CC the assignee's manager when JIRA data is present (customfield_19262).
+    if (jiraData) {
+      const managerEmail = jiraData.customfield_19262?.emailAddress;
+      if (managerEmail && managerEmail.endsWith('@nutanix.com')) {
+        ccEmails.add(managerEmail.toLowerCase());
+      }
+    }
+
     // Format date for subject if not provided
     const dateStr = formatDateForEmail();
     let subject = emailSubject || `NDB Status Update - ${dateStr}`;

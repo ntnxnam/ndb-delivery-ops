@@ -88,6 +88,16 @@ function register(router) {
             });
           }
           ccEmails.add(recipientEmail);
+          // CC assignee managers from fetched JIRA items (customfield_19262).
+          if (Array.isArray(items)) {
+            items.forEach(item => {
+              const mgr = item?.customfield_19262 || item?.assigneeManagerEmail;
+              const mgrEmail = typeof mgr === 'string' ? mgr : mgr?.emailAddress;
+              if (mgrEmail && mgrEmail.endsWith('@nutanix.com')) {
+                ccEmails.add(mgrEmail.toLowerCase());
+              }
+            });
+          }
           const subject = `NDB Consolidated Status Summary (Weekly) - ${dateStr}`;
           const stripHtml = (html) => (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
           return res.json({
@@ -168,6 +178,16 @@ function register(router) {
           });
         }
         ccEmails.add(recipientEmail);
+        // CC assignee managers from fetched JIRA items (customfield_19262).
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            const mgr = item?.customfield_19262 || item?.assigneeManagerEmail;
+            const mgrEmail = typeof mgr === 'string' ? mgr : mgr?.emailAddress;
+            if (mgrEmail && mgrEmail.endsWith('@nutanix.com')) {
+              ccEmails.add(mgrEmail.toLowerCase());
+            }
+          });
+        }
 
         const mailOptions = {
           replyTo: userEmail,
