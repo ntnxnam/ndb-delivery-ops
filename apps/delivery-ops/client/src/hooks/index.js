@@ -14,6 +14,7 @@ export { useTeams } from './useTeams';
 export { useGenericEmailerConfig } from './useGenericEmailerConfig';
 export { useColumnConfig } from './useColumnConfig';
 export { useGanttConfig, useAllVersionsConfig } from './useGanttConfig';
+export { useSosItems } from './useSosItems';
 
 // UI / form state
 export { useEmailForm } from './useEmailForm';
