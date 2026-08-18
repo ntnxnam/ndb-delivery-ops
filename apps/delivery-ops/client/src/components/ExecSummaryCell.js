@@ -140,21 +140,36 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
 
       {/* ── Existing summary from JIRA ── */}
       {displaySummary && !generatedSummary && (
-        <div style={{ color: '#333', lineHeight: '1.5' }}>
-          {displaySummary}
+        <div>
+          <div style={{ color: '#333', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+            {displaySummary}
+          </div>
+          {generatedDate && (
+            <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
+              AI summary from {generatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
         </div>
       )}
 
       {/* ── Freshly generated (not yet pushed) ── */}
-      {generatedSummary && (
-        <div style={{ backgroundColor: '#f0f7ff', border: '1px solid #b3d7ff', borderRadius: '4px',
-          padding: '6px 8px', lineHeight: '1.5', color: '#1a1a2e' }}>
-          <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: 600 }}>
-            ✨ AI Generated — review before pushing
+      {generatedSummary && (() => {
+        const { text: genText, generatedDate: genDate } = parseStampedSummary(generatedSummary);
+        return (
+          <div style={{ backgroundColor: '#f0f7ff', border: '1px solid #b3d7ff', borderRadius: '4px',
+            padding: '6px 8px', lineHeight: '1.5', color: '#1a1a2e' }}>
+            <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: 600 }}>
+              ✨ AI Generated — review before pushing
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{genText}</div>
+            {genDate && (
+              <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
+                Generated {genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
           </div>
-          {generatedSummary.replace(DATE_PREFIX_REGEX, '')}
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Push success ── */}
       {pushSuccess && (
