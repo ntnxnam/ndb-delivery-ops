@@ -11,8 +11,10 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAllVersionsConfig } from '../hooks/useGanttConfig';
 import { useSosItems } from '../hooks/useSosItems';
+import { useSosHistory } from '../hooks/useSosHistory';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { authenticatedPost, authenticatedPut } from '../utils/api';
+import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
 
@@ -171,7 +173,7 @@ function GateDateStrip({ ganttConfig }) {
    Sub-component: single item row
 ───────────────────────────────────────────────────────────── */
 
-function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl }) {
+const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl, checkpointHistory = {} }) {
   const breakdown = breakdownDataMap[item.key] || null;
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
@@ -214,15 +216,15 @@ function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl 
       </td>
       {/* CC */}
       <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
-        {formatDate(item.customfield_11067)}
+        {formatDateWithHistory(item.key, 'codeComplete', item.customfield_11067, checkpointHistory)}
       </td>
       {/* CG */}
       <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
-        {formatDate(item.customfield_35863)}
+        {formatDateWithHistory(item.key, 'commitGate', item.customfield_35863, checkpointHistory)}
       </td>
       {/* PG */}
       <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
-        {formatDate(item.customfield_35864)}
+        {formatDateWithHistory(item.key, 'promotionGate', item.customfield_35864, checkpointHistory)}
       </td>
       {/* Assignee */}
       <td style={{ padding: '6px 8px', fontSize: '11px', color: '#444', whiteSpace: 'nowrap' }}>
@@ -249,13 +251,13 @@ function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl 
       </td>
     </tr>
   );
-}
+});
 
 /* ─────────────────────────────────────────────────────────────
    Sub-component: items table (Features or Initiatives)
 ───────────────────────────────────────────────────────────── */
 
-function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBaseUrl }) {
+function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBaseUrl, checkpointHistory = {} }) {
   if (!items || items.length === 0) {
     return <p style={{ color: '#aaa', fontSize: '12px', padding: '8px 0' }}>No tickets found.</p>;
   }
@@ -281,6 +283,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBase
               ganttConfig={ganttConfig}
               breakdownDataMap={breakdownDataMap}
               jiraBaseUrl={jiraBaseUrl}
+              checkpointHistory={checkpointHistory}
             />
           ))}
         </tbody>
@@ -325,7 +328,7 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({ version, allVersionsConfig, items, breakdownDataMap, jiraBaseUrl, onRefresh }) {
+function ReleaseSection({ version, allVersionsConfig, items, breakdownDataMap, jiraBaseUrl, onRefresh, checkpointHistory = {} }) {
   const ganttConfig = useMemo(() => getReleaseGanttConfig(allVersionsConfig, version), [allVersionsConfig, version]);
 
   const features = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'feature'), [items]);
@@ -385,17 +388,19 @@ function ReleaseSection({ version, allVersionsConfig, items, breakdownDataMap, j
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
           jiraBaseUrl={jiraBaseUrl}
+          checkpointHistory={checkpointHistory}
         />
       </CollapsibleSection>
 
       {/* Initiatives */}
-      <CollapsibleSection title="Initiatives" count={initiatives.length} defaultOpen={false} accentColor="#6a1b9a">
+      <CollapsibleSection title="Initiatives" count={initiatives.length} accentColor="#6a1b9a">
         <SosItemsTable
           items={initiatives}
           version={version}
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
           jiraBaseUrl={jiraBaseUrl}
+          checkpointHistory={checkpointHistory}
         />
       </CollapsibleSection>
     </div>
@@ -420,10 +425,19 @@ function SosSummaryPage() {
 
   const { batchRunning, batchProgress, runBatch } = useBatchExecSummary();
 
+  const { checkpointHistory, fetchHistory } = useSosHistory();
+
   // Fetch on mount
   useEffect(() => {
     fetchAll('ndb');
   }, [fetchAll]);
+
+  // Fire-and-forget: load checkpoint history once items are present
+  useEffect(() => {
+    if (Object.keys(byVersion).length > 0) {
+      fetchHistory('ndb');
+    }
+  }, [byVersion, fetchHistory]);
 
   // Sort versions: NDB-2.12 before NDB-2.11 etc, Unversioned last
   const sortedVersions = useMemo(() => {
@@ -519,6 +533,7 @@ function SosSummaryPage() {
           breakdownDataMap={breakdownDataMap}
           jiraBaseUrl={jiraBaseUrl}
           onRefresh={() => fetchAll('ndb')}
+          checkpointHistory={checkpointHistory}
         />
       ))}
     </div>

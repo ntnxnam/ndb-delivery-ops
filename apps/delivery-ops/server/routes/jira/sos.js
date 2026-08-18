@@ -10,18 +10,32 @@
  *
  * Body: { teamId?: string }
  * Response: { success: true, data: { byVersion: { [version]: Item[] }, usedFallbackFilter: bool } }
+ *
+ * POST /api/jira/sos-items-history
+ *
+ * Fetch checkpoint-field change history (CC, CG, PG) for all Feature/Initiative
+ * tickets in scope of the team's SoS base filter. Reuses the same filter +
+ * fetchFieldHistoryForMultiple used by /release-items-history — but scoped
+ * only to SoS items (no full release item walk needed).
+ *
+ * Body: { teamId?: string }
+ * Response: { success: true, data: { history: { [key]: { codeComplete, commitGate, promotionGate } } } }
  */
 
 const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
-const { apiLimiter } = require('../../middleware/security');
+const { apiLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
 const { getTeamSosBaseFilter } = require('../../utils/teamConfig');
 const { resolveKpiJql } = require('../../services/kpiService');
-const { createHttpsAgent, sortByRiskIndicator } = require('../../services/jiraService');
+const { createHttpsAgent, sortByRiskIndicator, makeJiraSearchFetcher } = require('../../services/jiraService');
 const {
   _internals: { fetchReleaseItemsFromJira, processReleaseItems },
 } = require('../../services/releaseItemsDataService');
+const {
+  fetchFieldHistoryForMultiple,
+  transformFieldHistoryToCheckpointHistory,
+} = require('../../utils/fieldHistoryUtils');
 
 router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   try {
@@ -67,6 +81,39 @@ router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, r
   } catch (err) {
     console.error('[sos-items] Error:', err.message);
     return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Failed to fetch SoS items' });
+  }
+});
+
+router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistoryLimiter, async (req, res) => {
+  req.setTimeout(180000);
+  res.setTimeout(180000);
+  try {
+    const { teamId = 'ndb' } = req.body;
+    const httpsAgent = createHttpsAgent();
+
+    // Resolve the same SoS filter used by /sos-items
+    const rawSosFilter = getTeamSosBaseFilter(teamId);
+    const fallback = 'filter=NDB-All-Base-Filter';
+    const sosFilter = rawSosFilter || fallback;
+    const resolvedFilter = await resolveKpiJql(sosFilter, req.jiraToken, httpsAgent);
+
+    // Fetch just the keys — no need for full field processing
+    const jql = `(${resolvedFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
+    const fetchIssues = makeJiraSearchFetcher(req.jiraToken);
+    const issues = await fetchIssues(jql, 'key');
+    const itemKeys = issues.map((i) => i.key).filter(Boolean);
+
+    if (itemKeys.length === 0) {
+      return res.json({ success: true, data: { history: {}, itemCount: 0 } });
+    }
+
+    const rawHistory = await fetchFieldHistoryForMultiple(itemKeys, req.jiraToken);
+    const history = transformFieldHistoryToCheckpointHistory(rawHistory);
+
+    return res.json({ success: true, data: { history, itemCount: itemKeys.length } });
+  } catch (err) {
+    console.error('[sos-items-history] Error:', err.message);
+    return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Failed to fetch SoS history' });
   }
 });
 

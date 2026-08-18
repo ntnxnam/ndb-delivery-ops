@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { authenticatedPost, authenticatedPut } from '../utils/api';
 
 const STALE_DAYS = 7;
@@ -49,6 +49,8 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
   const summaryIsFresh = summaryAgeDays !== null && summaryAgeDays < STALE_DAYS;
 
   const [generatedSummary, setGeneratedSummary] = useState('');
+  // Local display state — avoids mutating item directly (prevents full tree re-render)
+  const [displaySummary, setDisplaySummary] = useState(existingText);
   const [generating, setGenerating] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pushSuccess, setPushSuccess] = useState(false);
@@ -101,7 +103,9 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
     try {
       await authenticatedPut(`/api/ai/exec-summary/${item.key}`, { summary: generatedSummary });
       setPushSuccess(true);
-      item.customfield_38460 = generatedSummary;
+      // Update local display state instead of mutating item directly
+      const { text } = parseStampedSummary(generatedSummary);
+      setDisplaySummary(text);
       setGeneratedSummary('');
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Push to JIRA failed';
@@ -135,11 +139,9 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
     <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '200px' }}>
 
       {/* ── Existing summary from JIRA ── */}
-      {hasExisting && !generatedSummary && (
-        <div style={{ color: '#333', lineHeight: '1.5', maxHeight: '80px', overflow: 'hidden',
-          maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }}>
-          {existingText}
+      {displaySummary && !generatedSummary && (
+        <div style={{ color: '#333', lineHeight: '1.5' }}>
+          {displaySummary}
         </div>
       )}
 
@@ -215,4 +217,4 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
   );
 }
 
-export default ExecSummaryCell;
+export default memo(ExecSummaryCell);

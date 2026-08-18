@@ -2,7 +2,7 @@
 
 ## POST /api/jira/sos-items
 
-**Purpose**: Fetch all Feature and Initiative tickets for a single release directly from JIRA (bypasses the on-disk dataset cache). Used by the SoS Summary page to ensure leadership receives current data.
+**Purpose**: Fetch ALL Feature and Initiative tickets in scope of the team's SoS base filter, grouped by `fixVersion`. No version input required — the server resolves the filter, fetches all matching issues, and returns them bucketed by release so the client renders one section per release.
 
 **Auth**: Required (`validateJiraTokenMiddleware`)
 
@@ -14,17 +14,17 @@
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `fixVersion` | string | yes | JIRA release version name, e.g. `"NDB-2.12"` |
 | `teamId` | string | no | Team id to resolve `sosBaseFilter` from `teamBoardConfig.json`. Defaults to `"ndb"`. |
 
 **Server flow**
 
 1. Read `sosBaseFilter` for `teamId` from `teamBoardConfig.json` via `teamConfig.getTeamSosBaseFilter()`
-2. If `sosBaseFilter` is a `filter=<name>` reference, resolve the JIRA filter to its JQL via `kpiService.resolveKpiJql()`
-3. Build final JQL: `(${resolvedSosFilter}) AND fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`
+2. Resolve JIRA filter → JQL via `kpiService.resolveKpiJql()`
+3. Build final JQL: `(${resolvedSosFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`
 4. Call `releaseItemsDataService.fetchReleaseItemsFromJira()` — paginated, max 500 results
-5. Call `releaseItemsDataService.processReleaseItems()` — maps raw JIRA fields to the canonical item shape
-6. Respond with `{ success: true, data: { items } }`
+5. Call `releaseItemsDataService.processReleaseItems()` — maps raw JIRA fields to canonical item shape
+6. Group results by `fixVersions` (comma-separated string split on server). Items with no fixVersion go under `"Unversioned"`
+7. Respond with `{ success: true, data: { byVersion, usedFallbackFilter } }`
 
 **Response shape**
 
@@ -32,25 +32,25 @@
 {
   "success": true,
   "data": {
-    "items": [
-      {
-        "key": "FEAT-12345",
-        "summary": "Storage write throughput redesign",
-        "status": "In Progress",
-        "issuetype": "Feature",
-        "priority": "High",
-        "assignee": "john.doe",
-        "fixVersions": "NDB-2.12",
-        "labels": ["ndb-2.12-mustfix"],
-        "customfield_11067": "2026-09-01",
-        "customfield_35863": "2026-10-15",
-        "customfield_35864": "2026-11-01",
-        "customfield_23560": { "value": "Yellow", "color": "#FF991F" },
-        "customfield_38460": "[2026-08-10] YELLOW: ...",
-        "customfield_45660": "2026-08-10",
-        "customfield_23073": "(raw status update — AI input only, not for display)"
-      }
-    ]
+    "byVersion": {
+      "NDB-2.12": [
+        {
+          "key": "FEAT-12345",
+          "summary": "Storage write throughput redesign",
+          "status": "In Progress",
+          "issuetype": "Feature",
+          "fixVersions": "NDB-2.12",
+          "customfield_11067": "2026-09-01",
+          "customfield_35863": "2026-10-15",
+          "customfield_35864": "2026-11-01",
+          "customfield_23560": { "value": "Yellow", "color": "#FF991F" },
+          "customfield_38460": "[2026-08-10] YELLOW: ...",
+          "customfield_45660": "2026-08-10"
+        }
+      ],
+      "NDB-2.11": []
+    },
+    "usedFallbackFilter": false
   }
 }
 ```
@@ -59,12 +59,67 @@
 
 | HTTP code | When | Client should |
 |---|---|---|
-| 400 | `fixVersion` is missing | Show validation error |
 | 401 | JIRA token missing or invalid | Redirect to login |
 | 503 | JIRA unreachable | Show inline retry |
 | 500 | Unexpected server error | Show generic error toast |
 
 **Caching**: None. Always fetches live from JIRA.
+
+---
+
+## POST /api/jira/sos-items-history
+
+**Purpose**: Fetch checkpoint-field date change history (Code Complete, Commit Gate, Promotion Gate) for all Feature and Initiative tickets in scope of the team's SoS filter. Used by the SoS Summary page to show struck-out old dates and delay deltas alongside the current gate dates.
+
+**Auth**: Required (`validateJiraTokenMiddleware`)
+
+**Request**
+
+- Method: `POST`
+- Path: `/api/jira/sos-items-history`
+- Body:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | string | no | Team id to resolve `sosBaseFilter`. Defaults to `"ndb"`. |
+
+**Server flow**
+
+1. Resolve `sosBaseFilter` → JQL (same as `/sos-items`)
+2. Fetch only `key` for all matching Feature/Initiative tickets via `makeJiraSearchFetcher`
+3. Call `fetchFieldHistoryForMultiple(itemKeys, jiraToken)` — fetches JIRA changelog for `customfield_11067`, `customfield_35863`, `customfield_35864`
+4. Call `transformFieldHistoryToCheckpointHistory(rawHistory)` — normalises to `{ codeComplete, commitGate, promotionGate }` arrays per key
+5. Respond with `{ success: true, data: { history, itemCount } }`
+
+**Response shape**
+
+```json
+{
+  "success": true,
+  "data": {
+    "itemCount": 42,
+    "history": {
+      "FEAT-12345": {
+        "codeComplete": [
+          { "date": "2026-08-01", "changedAt": "2026-07-15", "from": "2026-07-25" },
+          { "date": "2026-09-01", "changedAt": "2026-08-01", "from": "2026-08-01" }
+        ],
+        "commitGate": [],
+        "promotionGate": []
+      }
+    }
+  }
+}
+```
+
+**Error responses**
+
+| HTTP code | When | Client should |
+|---|---|---|
+| 401 | JIRA token missing or invalid | Redirect to login |
+| 500 | History fetch failed | Log warning; page renders without history overlay (dates show as plain) |
+
+**Caching**: None. Fire-and-forget on the client; non-blocking — page renders from `/sos-items` before this completes.
 
 ---
 
