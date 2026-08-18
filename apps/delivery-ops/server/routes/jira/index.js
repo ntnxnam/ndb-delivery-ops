@@ -12,5 +12,6 @@ router.use('/', require('./exec-summary'));
 router.use('/', require('./gantt'));
 router.use('/', require('./misc'));
 router.use('/', require('./ai-reports'));
+router.use('/', require('./sos'));
 
 module.exports = router;

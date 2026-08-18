@@ -11,5 +11,6 @@ require('./preview').register(router);
 require('./sendGenericReminder').register(router);
 require('./schedules').register(router);
 require('./history').register(router);
+require('./sendSos').register(router);
 
 module.exports = router;
