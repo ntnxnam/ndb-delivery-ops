@@ -134,6 +134,16 @@ export const routeConfig = {
       icon: '🔄'
     },
     {
+      path: '/sos-summary',
+      exact: true,
+      component: 'SosSummaryPage',
+      title: 'SoS Summary',
+      description: 'Scrum of Scrums — live Feature/Initiative status across all active releases',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '📡'
+    },
+    {
       path: '/release/brief',
       exact: true,
       component: 'ReleaseBriefPage',
