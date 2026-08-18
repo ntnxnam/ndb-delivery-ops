@@ -28,6 +28,7 @@ import SyncHubPage from './release/SyncHubPage';
 import ChatbotPage from './release/ChatbotPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
+import SosSummaryPage from './components/SosSummaryPage';
 
 import './App.css';
 
@@ -301,6 +302,17 @@ const AuthenticatedApp = () => {
           <ProtectedRoute permissions={['ai_insights_view']}>
             <Layout>
               <ChatbotPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/sos-summary"
+        element={
+          <ProtectedRoute permissions={['release_versions_view']}>
+            <Layout>
+              <SosSummaryPage />
             </Layout>
           </ProtectedRoute>
         }
