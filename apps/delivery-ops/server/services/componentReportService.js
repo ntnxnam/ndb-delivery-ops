@@ -11,6 +11,7 @@ const { JIRA_API_V2 } = require('../config/api');
 const { runSearchByJql } = require('../utils/jiraSearchByJql');
 const { createHttpsAgent } = require('../services/jiraService');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
+const { formatDate } = require('../utils/dateFormatter');
 
 function getProjectKey() {
   const teams = Array.isArray(teamBoardConfig.teams) ? teamBoardConfig.teams : Object.values(teamBoardConfig.teams || {});
@@ -214,7 +215,7 @@ function getWeekStart(date) {
 
 /** "Jan 06", "Mar 24" style label for a week-start date. */
 function formatWeekLabel(date) {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatDate(date);
 }
 
 /**

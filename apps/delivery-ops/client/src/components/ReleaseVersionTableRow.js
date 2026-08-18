@@ -20,6 +20,7 @@ import { generateExecutiveSummary } from '../utils/generateExecutiveSummary';
  * @param {Object} props.ganttConfig - Gantt configuration
  * @param {Map} props.breakdownDataMap - Map of JIRA key to breakdown data
  * @param {boolean} props.loadingBreakdowns - Whether breakdown data is loading
+ * @param {Object} [props.releaseContext] - Release-level aggregate context for AI exec summary
  */
 const ReleaseVersionTableRow = React.memo(function ReleaseVersionTableRow({ 
   item, 
@@ -29,7 +30,8 @@ const ReleaseVersionTableRow = React.memo(function ReleaseVersionTableRow({
   jiraBaseUrl,
   ganttConfig,
   breakdownDataMap,
-  loadingBreakdowns
+  loadingBreakdowns,
+  releaseContext = null,
 }) {
   // Generate executive summary for this specific item (memoized)
   const itemExecutiveSummary = useMemo(() => generateExecutiveSummary({
@@ -76,6 +78,7 @@ const ReleaseVersionTableRow = React.memo(function ReleaseVersionTableRow({
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
           loadingBreakdowns={loadingBreakdowns}
+          releaseContext={releaseContext}
         />
       ))}
     </tr>

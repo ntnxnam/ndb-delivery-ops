@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 
+
 /**
  * Custom hook for managing release versions with team context
  * @returns {object} - { versions, selectedVersion, loadingVersions, showVersionDropdown, defaultVersion, fetchVersions, handleVersionChange, setSelectedVersion }
@@ -8,16 +9,21 @@ import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 export function useReleaseVersions() {
   const {
     versions,
+    activeVersions,
+    inactiveVersions,
     selectedRelease,
     setSelectedRelease,
+    fetchVersions: ctxFetchVersions,
     refreshVersions,
     loadingVersions,
     versionsError,
   } = useSelectedRelease();
 
+  // fetchVersions is cache-respecting (no-op if still fresh).
+  // refreshVersions force-busts the cache — only for explicit user "refresh" actions.
   const fetchVersions = useCallback(async () => {
-    await refreshVersions();
-  }, [refreshVersions]);
+    await ctxFetchVersions();
+  }, [ctxFetchVersions]);
 
   const handleVersionChange = useCallback((event) => {
     setSelectedRelease(event.target.value);
@@ -25,6 +31,8 @@ export function useReleaseVersions() {
 
   return useMemo(() => ({
     versions,
+    activeVersions,
+    inactiveVersions,
     selectedVersion: selectedRelease,
     loadingVersions,
     showVersionDropdown: versions.length > 0,
@@ -37,6 +45,8 @@ export function useReleaseVersions() {
     error: versionsError || '',
     setError: () => {},
   }), [
+    activeVersions,
+    inactiveVersions,
     versions,
     selectedRelease,
     loadingVersions,

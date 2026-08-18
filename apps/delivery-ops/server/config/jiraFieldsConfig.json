@@ -117,6 +117,14 @@
         "category": "people",
         "description": "Additional participants",
         "usedIn": ["email"]
+      },
+      "assigneeManager": {
+        "id": "customfield_19262",
+        "label": "Assignee Manager",
+        "type": "user",
+        "category": "people",
+        "description": "Manager of the ticket assignee",
+        "usedIn": ["table", "email"]
       }
     },
     "content": {

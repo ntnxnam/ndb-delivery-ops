@@ -12,6 +12,7 @@ const { checkReleaseVersionsAuthorization } = require('./middleware');
 const { sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients, formatDateForEmail } = require('../../services/emailService');
 const { normalizeToUsername, usernameToEmail } = require('../../services/userService');
 const { saveEmailHistory } = require('../../utils/emailHistoryDB');
+const { formatDate } = require('../../utils/dateFormatter');
 
 function register(router) {
   router.post(
@@ -243,7 +244,7 @@ function register(router) {
         logger.email.failed(
           req.userEmail || 'unknown',
           toEmails.length > 0 ? toEmails : [usernameToEmail(username)],
-          `NDB Consolidated Status Summary (Weekly) - ${new Date().toLocaleDateString()}`,
+          `NDB Consolidated Status Summary (Weekly) - ${formatDate(new Date())}`,
           error,
           null,
           [req.body?.selectedVersion || 'unknown'],

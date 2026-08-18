@@ -7,7 +7,11 @@ import React, { useRef, useState, useEffect } from 'react';
  * and a Download split-button (Gantt PNG / Report Excel / Report HTML / Both).
  *
  * Props:
- *   versions, selectedVersion, defaultVersion, showVersionDropdown,
+ *   activeVersions   {Array}   - unreleased versions (NDB-*, master, Era Future)
+ *   inactiveVersions {Array}   - released/past versions (NDB-*)
+ *   versions         {Array}   - legacy flat list; used as fallback when
+ *                                activeVersions is not provided
+ *   selectedVersion, defaultVersion, showVersionDropdown,
  *   loadingVersions, loadingItems, jiraToken,
  *   onVersionChange, onFetchItems,
  *   hasData          {boolean} - true once items are loaded (enables Download)
@@ -16,6 +20,8 @@ import React, { useRef, useState, useEffect } from 'react';
  *   onDownload       {function(type)} - called with 'gantt'|'excel'|'html'|'both'
  */
 function ReleaseVersionSelector({
+  activeVersions: activeVersionsProp,
+  inactiveVersions: inactiveVersionsProp,
   versions,
   selectedVersion,
   defaultVersion,
@@ -28,8 +34,23 @@ function ReleaseVersionSelector({
   hasData = false,
   hasGanttChart = false,
   downloading = false,
-  onDownload
+  onDownload,
+  onGenerateBriefing,
+  briefingState = 'idle', // idle | loading | done | error
 }) {
+  // When the parent passes pre-split lists (new API), use them directly.
+  // Fall back to splitting the flat `versions` prop with the same rule for
+  // legacy callers that haven't been updated yet.
+  const activeVersions = activeVersionsProp ?? (versions || []).filter((v) => {
+    const name = typeof v === 'string' ? v : v.name;
+    return (name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future') &&
+           !(typeof v === 'object' ? v.released : false);
+  });
+  const inactiveVersions = inactiveVersionsProp ?? (versions || []).filter((v) => {
+    const name = typeof v === 'string' ? v : v.name;
+    return (name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future') &&
+           (typeof v === 'object' ? v.released : false);
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -88,7 +109,7 @@ function ReleaseVersionSelector({
           </label>
 
           {/* Version picker */}
-          {showVersionDropdown && versions.length > 0 ? (
+          {showVersionDropdown && (activeVersions.length > 0 || inactiveVersions.length > 0) ? (
             <select
               id="release-version"
               value={selectedVersion ?? ''}
@@ -98,24 +119,18 @@ function ReleaseVersionSelector({
               style={{ flex: '0 1 auto', minWidth: '200px', maxWidth: '300px', padding: '0.4rem', fontSize: '0.85rem' }}
             >
               <option value="">-- Select --</option>
-              {(() => {
-                const unreleased = versions.filter(v => !(typeof v === 'object' ? v.released : false));
-                const released = versions.filter(v => (typeof v === 'object' ? v.released : false));
-                const toOption = (version) => {
-                  const name = typeof version === 'string' ? version : version.name;
-                  return <option key={name} value={name}>{name}</option>;
-                };
-                return (
-                  <>
-                    {unreleased.map(toOption)}
-                    {released.length > 0 && (
-                      <optgroup label="── Past Releases ──">
-                        {released.map(toOption)}
-                      </optgroup>
-                    )}
-                  </>
-                );
-              })()}
+              {activeVersions.map((v) => {
+                const name = typeof v === 'string' ? v : v.name;
+                return <option key={name} value={name}>{name}</option>;
+              })}
+              {inactiveVersions.length > 0 && (
+                <optgroup label="── Past Releases ──">
+                  {inactiveVersions.map((v) => {
+                    const name = typeof v === 'string' ? v : v.name;
+                    return <option key={name} value={name}>{name}</option>;
+                  })}
+                </optgroup>
+              )}
             </select>
           ) : (
             <input
@@ -148,6 +163,27 @@ function ReleaseVersionSelector({
           >
             {loadingItems ? 'Loading...' : 'Load'}
           </button>
+
+          {/* AI Briefing button — visible only after data is loaded */}
+          {onGenerateBriefing && hasData && (
+            <button
+              type="button"
+              onClick={onGenerateBriefing}
+              disabled={!selectedVersion || !jiraToken || briefingState === 'loading'}
+              title="Generate AI release briefing (health verdict, top blockers, 7-day action list)"
+              style={{
+                ...BTN,
+                backgroundColor: briefingState === 'loading' ? '#6c9fd4'
+                               : briefingState === 'done'    ? '#5c7cfa'
+                               : '#845ef7',
+                opacity: !selectedVersion || !jiraToken ? 0.6 : 1,
+                cursor: !selectedVersion || !jiraToken || briefingState === 'loading' ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              {briefingState === 'loading' ? '✦ Briefing…' : briefingState === 'done' ? '✦ Re-brief' : '✦ AI Briefing'}
+            </button>
+          )}
 
           {/* Download split button */}
           <div ref={menuRef} style={{ position: 'relative', display: 'inline-flex' }}>

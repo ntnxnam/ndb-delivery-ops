@@ -60,6 +60,37 @@ function isAllowed(filePath) {
   return false;
 }
 
+// Strip JS comments so we only flag localhost in actual code/strings, not in
+// comments (comments don't affect runtime, which is what the rule cares about).
+// URL schemes like `http://` are preserved so real `http://localhost` is caught.
+// `state.inBlock` carries /* ... */ status across lines within a file.
+function stripComments(line, state) {
+  let out = '';
+  for (let i = 0; i < line.length; i++) {
+    if (state.inBlock) {
+      const end = line.indexOf('*/', i);
+      if (end === -1) return out;
+      i = end + 1;
+      continue;
+    }
+    if (line[i] === '/' && line[i + 1] === '*') {
+      state.inBlock = true;
+      i += 1;
+      continue;
+    }
+    if (line[i] === '/' && line[i + 1] === '/') {
+      if (line[i - 1] === ':') {
+        out += '//'; // part of a URL scheme (e.g. http://) — keep it
+        i += 1;
+        continue;
+      }
+      return out; // rest of the line is a // comment
+    }
+    out += line[i];
+  }
+  return out;
+}
+
 function scanDir(dir, results) {
   const full = path.join(ROOT, dir);
   if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) return;
@@ -76,8 +107,10 @@ function scanDir(dir, results) {
       if (isAllowed(p)) continue;
       const content = fs.readFileSync(p, 'utf8');
       const lines = content.split('\n');
+      const state = { inBlock: false };
       lines.forEach((line, i) => {
-        if (FORBIDDEN.some((re) => re.test(line))) {
+        const code = stripComments(line, state);
+        if (FORBIDDEN.some((re) => re.test(code))) {
           results.push({ file: rel, line: i + 1, content: line.trim() });
         }
       });

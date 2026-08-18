@@ -54,7 +54,9 @@ function normalizeRelease(release: string, releasePrefix: string): string {
   const withoutPrefix = trimmed.startsWith(releasePrefix)
     ? trimmed.slice(releasePrefix.length)
     : trimmed;
-  return withoutPrefix.toLowerCase().replace(/\./g, '-');
+  // Replace dots AND spaces/whitespace — JQL label values must not contain spaces.
+  // e.g. "Era Future" → "era-future", "2.11" → "2-11"
+  return withoutPrefix.toLowerCase().replace(/[\s.]+/g, '-');
 }
 
 function resolveGateDate(gates: GateEvent[], kind: GateEvent['kind']): string | null {
@@ -206,7 +208,9 @@ export function buildRetroJqls(
   const basePgTests = `${filterClause} AND issueType = Test AND status was not in (Resolved, Closed, Done) ON "${dates.pgDate}"`;
   const basePgBugs = `${filterClause} AND issueType = Bug AND status was not in (Resolved, Closed, Done) ON "${dates.pgDate}" AND labels not in ("${quoteJql(deferredLabel)}")`;
 
-  const baseGaOpen = `${filterClause} AND status was not in (Resolved, Closed, Done) ON "${dates.gaDate}"`;
+  const baseGaOpen = dates.gaDate
+    ? `${filterClause} AND status was not in (Resolved, Closed, Done) ON "${dates.gaDate}"`
+    : '';
 
   return {
     ccmOpen: baseCcmOpen,
@@ -378,10 +382,11 @@ export async function getRetroProjectsPage(
       { maxIssues: 2000 }
     );
 
-    // Build deferred label pattern (e.g., "ndb-2.11-deferred" for release "NDB-2.11")
-    // NOTE: Unlike the sprint-based normalization, deferred labels keep the dots
+    // Build deferred label pattern (e.g., "ndb-2.11-deferred" for release "NDB-2.11").
+    // Use normalizeRelease so spaces and dots are both replaced with hyphens —
+    // JQL label values cannot contain spaces (e.g. "Era Future" → "era-future").
     const deferredLabelPattern = options.labelPrefix && options.releasePrefix
-      ? `${options.labelPrefix}-${options.release.toLowerCase().replace(options.releasePrefix.toLowerCase(), '')}-deferred`
+      ? `${options.labelPrefix}-${normalizeRelease(options.release, options.releasePrefix)}-deferred`
       : null;
 
     // Gate dates for "missed gate" counting — items open ON the gate date
@@ -597,7 +602,7 @@ export async function getRetroProjectDetail(
       hasPastCg ? jira.searchCount(jqls.cgFoundAfter) : Promise.resolve(0),
       hasPastPg ? jira.searchCount(jqls.pgTestsOpen) : Promise.resolve(0),
       hasPastPg ? jira.searchCount(jqls.pgBugsOpen) : Promise.resolve(0),
-      hasPastGa ? jira.searchCount(jqls.gaOpen) : Promise.resolve(0),
+      jqls.gaOpen ? jira.searchCount(jqls.gaOpen) : Promise.resolve(0),
       jira.searchCount(deferredJql),
     ]);
 
@@ -717,9 +722,9 @@ export async function runRetroGateChecks(
     hasPastCg ? jira.searchCount(jqls.cgFoundAfter) : Promise.resolve(0),
     hasPastPg ? jira.searchCount(jqls.pgTestsOpen) : Promise.resolve(0),
     hasPastPg ? jira.searchCount(jqls.pgBugsOpen) : Promise.resolve(0),
-    hasPastGa ? jira.searchCount(jqls.gaOpen) : Promise.resolve(0),
+    jqls.gaOpen ? jira.searchCount(jqls.gaOpen) : Promise.resolve(0),
     hasPastPg && jqls.companionPgOpen ? jira.searchCount(jqls.companionPgOpen) : Promise.resolve(0),
-    hasPastGa && jqls.companionGaOpen ? jira.searchCount(jqls.companionGaOpen) : Promise.resolve(0),
+    jqls.companionGaOpen ? jira.searchCount(jqls.companionGaOpen) : Promise.resolve(0),
     hasPastPg && hasPastGa ? jira.searchCount(jqls.pgToGaClosed) : Promise.resolve(0),
     hasPastPg ? jira.searchCount(jqls.pgToGaDeferred) : Promise.resolve(0),
   ]);

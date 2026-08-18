@@ -3,13 +3,14 @@
  * Team from header; base query from config; user selects sprint(s) and runs report.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line
 } from 'recharts';
+import { formatters } from '../shared/utils/formatters';
 import { useTeam } from '../contexts/TeamContext';
-import { authenticatedPost, authenticatedGet, getApiBase } from '../utils/api';
+import { authenticatedPost, authenticatedGet, getApiBase, getAuthHeaders } from '../utils/api';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamDataset } from '../hooks/useTeamDataset';
 import { derivePastSprintReportFromBundle } from '../release/utils/bundleUtils';
@@ -54,8 +55,8 @@ function getNutanixQuarterRange(fiscalYear, quarter) {
 export default function SprintReportPage() {
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
-  const { selectedTeamId: teamId, hasTeamSelected, isTransitioning } = useTeam();
-  const { bundle } = useTeamDataset();
+  const { selectedTeamId: teamId, hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
+  const { bundle, syncMeta } = useTeamDataset();
 
   const [teams, setTeams] = useState([]);
   const [sprints, setSprints] = useState([]);
@@ -84,6 +85,7 @@ export default function SprintReportPage() {
   const [loadingComponents, setLoadingComponents] = useState(false);
   const [loadingPastReport, setLoadingPastReport] = useState(false);
   const [pastValidationError, setPastValidationError] = useState(null);
+  const [refreshingLive, setRefreshingLive] = useState(false);
 
   const team = teams.find((t) => t.id === teamId) || null;
   const baseFilter = team?.baseFilter || '';
@@ -402,8 +404,8 @@ export default function SprintReportPage() {
     const scopePct = m.scopeCreepRate ?? 0;
     const isStale = sprint.state === 'active' && sprint.endDate && new Date(sprint.endDate) < now;
     const sprintName = escapeHtml(sprint.name || `Sprint ${sprint.id || ''}`);
-    const startStr = start ? start.toLocaleDateString() : '';
-    const endStr = end ? end.toLocaleDateString() : '';
+    const startStr = start ? (formatters.date(start) || '') : '';
+    const endStr = end ? (formatters.date(end) || '') : '';
 
     let html = '<div style="font-family: Segoe UI, sans-serif; font-size: 14px; max-width: 720px;">';
     html += `<h3 style="margin: 0 0 4px 0; font-size: 18px;">${sprintName}</h3>`;
@@ -530,6 +532,43 @@ export default function SprintReportPage() {
     return lines.join('\r\n');
   }, []);
 
+  const handleRefreshNow = useCallback(async () => {
+    setRefreshingLive(true);
+    setError(null);
+    try {
+      const productId = selectedTeam?.productId || 'ndb';
+      const headers = getAuthHeaders(jiraToken, username).headers;
+      const res = await fetch(
+        `${API_BASE}/api/release-dataset/refresh-now?productId=${encodeURIComponent(productId)}`,
+        { method: 'POST', headers }
+      );
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+      if (mode === MODES.CURRENT && selectedSprintId) {
+        await runReport();
+      } else if (mode === MODES.PAST) {
+        await runPastReport();
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to refresh live data');
+    } finally {
+      setRefreshingLive(false);
+    }
+  }, [jiraToken, mode, runPastReport, runReport, selectedSprintId, selectedTeam?.productId, username]);
+
+  const lastSyncLabel = useMemo(() => {
+    if (!syncMeta?.lastSyncIso) return 'not synced';
+    const ageMs = Date.now() - new Date(syncMeta.lastSyncIso).getTime();
+    if (ageMs < 60000) return 'just now';
+    const mins = Math.floor(ageMs / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }, [syncMeta?.lastSyncIso]);
+
   const downloadPastReportCsv = useCallback(() => {
     if (!pastReportResult) return;
     const csv = getPastReportCsvText(pastReportResult);
@@ -577,6 +616,19 @@ export default function SprintReportPage() {
   return (
     <div className="release-version-tab" style={{ padding: '1rem' }}>
       <h2 style={{ marginBottom: '1rem' }}>Sprint Report</h2>
+      <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.85rem', color: '#495057' }}>
+          Dataset freshness: <strong>{lastSyncLabel}</strong>
+        </span>
+        <button
+          type="button"
+          onClick={handleRefreshNow}
+          disabled={refreshingLive || loadingReport || loadingPastReport || loadingTrends}
+          style={{ padding: '0.35rem 0.75rem' }}
+        >
+          {refreshingLive ? 'Refreshing live…' : 'Refresh Now'}
+        </button>
+      </div>
 
       {team && (
         <p style={{ marginBottom: '1rem', color: '#6c757d', fontSize: '0.875rem' }}>
@@ -789,7 +841,7 @@ export default function SprintReportPage() {
             <h3 style={{ margin: 0 }}>{reportResult.sprint?.name || `Sprint ${reportResult.sprint?.id}`}</h3>
             {reportResult.sprint?.startDate && reportResult.sprint?.endDate && (
               <span style={{ fontSize: '0.875rem', color: '#6c757d' }}>
-                {new Date(reportResult.sprint.startDate).toLocaleDateString()} – {new Date(reportResult.sprint.endDate).toLocaleDateString()}
+                {formatters.date(reportResult.sprint.startDate)} – {formatters.date(reportResult.sprint.endDate)}
               </span>
             )}
             {reportResult.sprint?.state && (
@@ -1302,14 +1354,14 @@ export default function SprintReportPage() {
                       ? { startDate, endDate }
                       : null;
                   if (range) {
-                    const startStr = new Date(range.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-                    const endStr = new Date(range.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    const startStr = formatters.date(range.startDate) || '';
+                    const endStr = formatters.date(range.endDate) || '';
                     return ` · ${startStr} – ${endStr}`;
                   }
                   const first = pastReportResult.sprints[0].endDate;
                   const last = pastReportResult.sprints[pastReportResult.sprints.length - 1].endDate;
-                  const firstStr = first ? new Date(first).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-                  const lastStr = last ? new Date(last).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+                  const firstStr = first ? (formatters.date(first) || '') : '';
+                  const lastStr = last ? (formatters.date(last) || '') : '';
                   return firstStr && lastStr ? ` · Sprint end dates: ${firstStr} – ${lastStr}` : '';
                 })()}
               </span>

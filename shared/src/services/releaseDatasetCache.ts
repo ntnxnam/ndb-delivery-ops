@@ -120,6 +120,12 @@ export interface CacheOptions {
   productId: string;
 }
 
+/** Per-bucket count + timestamp entry in the per-release cache meta. */
+export interface BucketCacheMeta {
+  count: number;
+  fetchedAtIso: string;
+}
+
 /** Per-release cache metadata as persisted on disk. */
 export interface ReleaseCacheMeta {
   schema: string;
@@ -128,6 +134,8 @@ export interface ReleaseCacheMeta {
   labelPrefix: string;
   fetchedAtIso: string;
   ticketCount: number;
+  /** Per-bucket ticket counts + last-fetch timestamps. Written at save time. */
+  buckets?: Record<string, BucketCacheMeta>;
 }
 
 /** Bundle (cross-release) cache metadata as persisted on disk. */
@@ -292,17 +300,67 @@ export class ReleaseDatasetCache {
       throw new Error('ReleaseDatasetCache.saveRelease: labelPrefix is required');
     }
     const { data, meta } = this.releasePaths(release);
+    const nowIso = new Date().toISOString();
+
+    // Compute per-bucket counts from the Components field on each ticket.
+    const bucketCounts: Record<string, number> = {};
+    for (const ticket of tickets) {
+      const components = (ticket as unknown as Record<string, unknown>)['Components'];
+      if (typeof components === 'string') {
+        for (const part of components.split(',')) {
+          const key = part.trim();
+          if (key) bucketCounts[key] = (bucketCounts[key] ?? 0) + 1;
+        }
+      }
+    }
+    const buckets: Record<string, BucketCacheMeta> = {};
+    for (const [k, count] of Object.entries(bucketCounts)) {
+      buckets[k] = { count, fetchedAtIso: nowIso };
+    }
+
     const md: ReleaseCacheMeta = {
       schema: CACHE_SCHEMA,
       jqlHash: computeReleaseJqlHash(release, options.labelPrefix),
       projectKey: options.projectKey,
       labelPrefix: options.labelPrefix,
-      fetchedAtIso: new Date().toISOString(),
+      fetchedAtIso: nowIso,
       ticketCount: tickets.length,
+      buckets,
     };
     try {
       atomicWriteJson(data, tickets);
       atomicWriteJson(meta, md);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Patch a single bucket's count + timestamp in the existing meta without
+   * rewriting the full ticket file. Used by the cell-sync path so that a
+   * targeted bucket re-fetch updates its freshness indicator immediately.
+   *
+   * Returns false when the meta file is missing (caller should do a full save).
+   */
+  saveBucketMeta(
+    release: string,
+    bucketName: string,
+    count: number
+  ): boolean {
+    const { meta } = this.releasePaths(release);
+    const existing = safeReadJson<ReleaseCacheMeta>(meta);
+    if (!existing) return false;
+    const nowIso = new Date().toISOString();
+    const updated: ReleaseCacheMeta = {
+      ...existing,
+      buckets: {
+        ...(existing.buckets ?? {}),
+        [bucketName]: { count, fetchedAtIso: nowIso },
+      },
+    };
+    try {
+      atomicWriteJson(meta, updated);
       return true;
     } catch {
       return false;

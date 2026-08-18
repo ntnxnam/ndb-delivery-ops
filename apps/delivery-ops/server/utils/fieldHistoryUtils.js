@@ -337,13 +337,13 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
     });
     
     // Build result object with the requested format
-    // CCM = Commit Gate (customfield_35863)
+    // CG = Commit Gate (customfield_35863); CCM = Code Complete Milestone (customfield_11067)
     const commitGateStats = statistics.commitGate;
     const promotionGateStats = statistics.promotionGate;
     
     const result = {
       key: jiraKey,
-      // Commit Gate (CCM) data
+      // Commit Gate (CG) data
       codeCompleteDate: commitGateStats.dates,
       numberofTimesCCMDateMoved: commitGateStats.numberOfTimesMoved,
       WeeksDiffbwOldestandLatestCCMDate: commitGateStats.weeksDiffBetweenOldestAndLatest,
@@ -425,7 +425,7 @@ function transformFieldHistoryToCheckpointHistory(fieldHistoryData) {
   
   // Field name mapping from JSON keys to UI field names
   const fieldMapping = {
-    'codeCompleteDate': 'commitGate',        // Commit Gate (CCM) - customfield_35863
+    'codeCompleteDate': 'commitGate',        // Commit Gate (CG) - customfield_35863
     'PGCompleteDate': 'promotionGate',      // Promotion Gate - customfield_35864
     'testPlanDate': 'testPlan',             // Test Plan - customfield_11068
     'fsdsDoneDate': 'fsdsDone',             // FS/DS Done - customfield_13861

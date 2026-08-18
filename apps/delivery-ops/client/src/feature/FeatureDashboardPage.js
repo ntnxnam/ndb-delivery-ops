@@ -10,16 +10,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
-import { listReleaseVersions } from '../release/services/releaseBriefService';
+import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 import { useFeatureDashboard } from './hooks/useFeatureDashboard';
 import { jiraSearchUrl } from './services/featureDashboardService';
 import './FeatureDashboardPage.css';
 
 const DONE_STATUSES = new Set(['done', 'resolved', 'closed', 'complete', 'fixed']);
 const EPIC_TYPES = new Set(['epic']);
-const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'x-feat', 'capability']);
+const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
 
 // Phase labels to scan on bugs — add more here as needed
 const PHASE_LABEL_MAP = [
@@ -44,17 +43,31 @@ function isPortfolio(issue) {
   return PORTFOLIO_TYPES.has((issue.issueType || '').toLowerCase());
 }
 
-const DEFAULT_RELEASE = 'NDB-2.11';
-
 export default function FeatureDashboardPage() {
-  const { selectedTeamId } = useTeam();
   const { jiraBaseUrl } = useJiraConfig();
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || '';
-  const [versions, setVersions] = useState([]);
-  const [release, setRelease] = useState(DEFAULT_RELEASE);
-  const [featureKey, setFeatureKey] = useState('');
-  const [loadingVersions, setLoadingVersions] = useState(false);
+
+  // Versions come from the central context — no local fetch needed.
+  const {
+    activeVersions,
+    inactiveVersions,
+    loadingVersions,
+    selectedRelease: contextRelease,
+  } = useSelectedRelease();
+
+  // Merge active + inactive for the full picker list (active first).
+  const versions = useMemo(
+    () => [...activeVersions, ...inactiveVersions],
+    [activeVersions, inactiveVersions]
+  );
+
+  // Local release/feature selection — initialise from context's current selection.
+  const [release, setRelease] = useState(contextRelease || '');
+  // pendingFeatureKey: what's visible in the dropdown
+  // committedFeatureKey: what actually drives the dashboard load (set on "Choose")
+  const [pendingFeatureKey, setPendingFeatureKey] = useState('');
+  const [committedFeatureKey, setCommittedFeatureKey] = useState('');
   const [reasonByKey, setReasonByKey] = useState({});
 
   const {
@@ -65,38 +78,33 @@ export default function FeatureDashboardPage() {
     savingReparent,
     error,
     reparentTicket,
-  } = useFeatureDashboard({ release, featureKey, jiraToken, username });
+  } = useFeatureDashboard({ release, featureKey: committedFeatureKey, jiraToken, username });
 
+  // Keep local release in sync when context selection changes (e.g. team switch).
   useEffect(() => {
-    let cancelled = false;
-    async function loadVersions() {
-      if (!selectedTeamId || !jiraToken) return;
-      setLoadingVersions(true);
-      try {
-        const data = await listReleaseVersions({ teamId: selectedTeamId, jiraToken, username });
-        if (cancelled) return;
-        const next = data.versions || [];
-        setVersions(next);
-        if (next.length > 0) {
-          setRelease((prev) => prev || next[0].name);
-        }
-      } catch (_e) {
-        if (!cancelled) setVersions([]);
-      } finally {
-        if (!cancelled) setLoadingVersions(false);
-      }
-    }
-    loadVersions();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTeamId, jiraToken, username]);
+    if (contextRelease) setRelease((prev) => prev || contextRelease);
+  }, [contextRelease]);
 
+  // Auto-select the first active version if nothing is chosen yet.
   useEffect(() => {
-    if (!featureKey && features.length > 0) {
-      setFeatureKey(features[0].key);
+    if (!release && activeVersions.length > 0) {
+      setRelease(activeVersions[0].name);
     }
-  }, [featureKey, features]);
+  }, [release, activeVersions]);
+
+  // When a new release is picked, reset feature selection.
+  const handleReleaseChange = useCallback((name) => {
+    setRelease(name);
+    setPendingFeatureKey('');
+    setCommittedFeatureKey('');
+  }, []);
+
+  // When features load, pre-select the first one in the dropdown (but don't load dashboard yet).
+  useEffect(() => {
+    if (features.length > 0) {
+      setPendingFeatureKey((prev) => prev || features[0].key);
+    }
+  }, [features]);
 
   const featureOptions = useMemo(
     () => features.map((f) => ({ ...f, label: `${f.key} - ${f.summary}` })),
@@ -104,7 +112,6 @@ export default function FeatureDashboardPage() {
   );
 
   const flowPoints = dashboard?.flow?.points || [];
-  const kpis = dashboard?.kpis || [];
   const statusUpdate20 = dashboard?.statusUpdate20 || [];
   const payload = dashboard?.payload || {};
   const openFeatIdOnly = useMemo(
@@ -116,7 +123,12 @@ export default function FeatureDashboardPage() {
     [payload.featNumberOnly]
   );
   const markers = dashboard?.flow?.markers || {};
-  const markerDays = Object.values(markers).filter(Boolean);
+  // Deduplicate marker dates (ccm and ccmException may differ).
+  const markerDays = [...new Set(Object.values(markers).filter(Boolean))];
+
+  const handleChooseFeature = useCallback(() => {
+    if (pendingFeatureKey) setCommittedFeatureKey(pendingFeatureKey);
+  }, [pendingFeatureKey]);
 
   const handleReparent = async (ticketKey) => {
     const reason = String(reasonByKey[ticketKey] || '').trim();
@@ -137,32 +149,44 @@ export default function FeatureDashboardPage() {
             Release
             <select
               value={release}
-              onChange={(e) => {
-                setRelease(e.target.value);
-                setFeatureKey('');
-              }}
+              onChange={(e) => handleReleaseChange(e.target.value)}
               disabled={loadingVersions}
             >
-              {versions.map((v) => (
-                <option key={v.name} value={v.name}>
-                  {v.name}
-                </option>
+              <option value="">— select release —</option>
+              {activeVersions.map((v) => (
+                <option key={v.name} value={v.name}>{v.name}</option>
               ))}
+              {inactiveVersions.length > 0 && (
+                <optgroup label="── Past Releases ──">
+                  {inactiveVersions.map((v) => (
+                    <option key={v.name} value={v.name}>{v.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </label>
           <label>
             Feature
-            <select
-              value={featureKey}
-              onChange={(e) => setFeatureKey(e.target.value)}
-              disabled={loadingFeatures || featureOptions.length === 0}
-            >
-              {featureOptions.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
+            <div className="fd-picker-row">
+              <select
+                value={pendingFeatureKey}
+                onChange={(e) => setPendingFeatureKey(e.target.value)}
+                disabled={loadingFeatures || featureOptions.length === 0}
+              >
+                <option value="">— select feature —</option>
+                {featureOptions.map((f) => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="fd-choose-btn"
+                disabled={!pendingFeatureKey || loadingFeatures}
+                onClick={handleChooseFeature}
+              >
+                Choose
+              </button>
+            </div>
           </label>
         </div>
       </header>
@@ -181,33 +205,20 @@ export default function FeatureDashboardPage() {
               <span>Risk: {dashboard.header.riskIndicator?.value || 'N/A'}</span>
             </div>
             <div className="fd-gates">
-              <GateChip label="EC" value={dashboard.gates.ec} />
-              <GateChip label="CC" value={dashboard.gates.cc} />
-              <GateChip label="CG" value={dashboard.gates.cg} />
-              <GateChip label="PG" value={dashboard.gates.pg} />
-              <GateChip label="GA" value={dashboard.gates.ga} />
+              <GateChip label="EC" planned={dashboard.gates.ec} />
+              <GateChip
+                label="CCM"
+                planned={dashboard.gates.ccmException || dashboard.gates.ccm}
+                originalPlanned={dashboard.gates.ccmException ? dashboard.gates.ccm : null}
+                exceptionLabel={dashboard.gates.ccmExceptionLabel}
+                jira={dashboard.gates.jiraCcm}
+                actual={dashboard.gates.actualCcm}
+              />
+              <GateChip label="CG"  planned={dashboard.gates.cg}  jira={dashboard.gates.jiraCg}  actual={dashboard.gates.actualCg} />
+              <GateChip label="PG"  planned={dashboard.gates.pg}  jira={dashboard.gates.jiraPg}  actual={dashboard.gates.actualPg} />
+              <GateChip label="GA" planned={dashboard.gates.ga} />
             </div>
           </section>
-
-          {kpis.length > 0 && (
-            <section className="fd-section">
-              <h3>KPIs (non-zero)</h3>
-              <div className="fd-kpis">
-                {kpis.map((kpi) => (
-                  <a
-                    key={kpi.key}
-                    href={jiraSearchUrl(jiraBaseUrl, kpi.jql)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`fd-kpi fd-${kpi.severity}`}
-                  >
-                    <div className="fd-kpi-label">{kpi.label}</div>
-                    <div className="fd-kpi-count">{kpi.count}</div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
 
           {flowPoints.length > 0 && (
             <section className="fd-section">
@@ -428,17 +439,23 @@ function EpicSection({ epic, children, jiraBaseUrl, isolated = false }) {
 // ─── Analytics Widgets ────────────────────────────────────────────────────────
 
 function AnalyticsRow({ issues, canonicalJql, jiraBaseUrl }) {
-  const bugs = useMemo(() => issues.filter((i) => i.issueType.toLowerCase() === 'bug'), [issues]);
+  const workItems = useMemo(
+    () => issues.filter((i) => !PORTFOLIO_TYPES.has(i.issueType.toLowerCase())),
+    [issues]
+  );
+  const workItemsJql = `(${canonicalJql}) AND issuetype not in (Feature, Initiative, Epic, "X-FEAT", Capability)`;
+
+  const bugs = useMemo(() => workItems.filter((i) => i.issueType.toLowerCase() === 'bug'), [workItems]);
   const openBugs = useMemo(() => bugs.filter((b) => !isDone(b)), [bugs]);
 
   return (
     <div className="fd-widgets-grid">
-      <BugPhaseWidget bugs={openBugs} canonicalJql={canonicalJql} jiraBaseUrl={jiraBaseUrl} />
-      <PriorityWidget bugs={openBugs} canonicalJql={canonicalJql} jiraBaseUrl={jiraBaseUrl} />
-      <AssigneeWidget issues={issues} />
-      <BurnWidget issues={issues} />
-      <StaleWidget issues={issues} canonicalJql={canonicalJql} jiraBaseUrl={jiraBaseUrl} />
-      <QAQueueWidget bugs={bugs} canonicalJql={canonicalJql} jiraBaseUrl={jiraBaseUrl} />
+      <BugPhaseWidget bugs={openBugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
+      <PriorityWidget bugs={openBugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
+      <AssigneeWidget issues={workItems} />
+      <BurnWidget issues={workItems} />
+      <StaleWidget issues={workItems} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
+      <QAQueueWidget bugs={bugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
     </div>
   );
 }
@@ -644,11 +661,69 @@ function QAQueueWidget({ bugs, canonicalJql, jiraBaseUrl }) {
 
 // ─── Existing helpers ─────────────────────────────────────────────────────────
 
-function GateChip({ label, value }) {
+function fmtShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function calcDelta(planned, date) {
+  if (!planned || !date) return null;
+  const diff = Math.round(
+    (new Date(`${date}T00:00:00Z`) - new Date(`${planned}T00:00:00Z`)) / 86400000
+  );
+  return {
+    label: diff > 0 ? `+${diff}D` : diff < 0 ? `${diff}D` : '±0D',
+    color: diff > 0 ? '#C0392B' : '#27AE60',
+  };
+}
+
+function GateChip({ label, planned, originalPlanned, exceptionLabel, jira, actual }) {
+  const isNotProvided = actual === 'not-provided';
+  const hasRealActual = actual && !isNotProvided;
+
+  const jiraDelta   = jira ? calcDelta(planned, jira) : null;
+  const actualDelta = hasRealActual ? calcDelta(planned, actual) : null;
+
   return (
     <div className="fd-gate">
-      <span>{label}</span>
-      <strong>{value || '—'}</strong>
+      <span className="fd-gate-label">{label}</span>
+      {originalPlanned && (
+        <div className="fd-gate-exception-badge" title={exceptionLabel || 'Management-approved exception'}>
+          <span className="fd-gate-exception-icon">⚡</span>
+          <span>Exception</span>
+        </div>
+      )}
+      <div className="fd-gate-row">
+        <span className="fd-gate-row-key">Gate</span>
+        <strong className="fd-gate-planned">{fmtShort(planned) || '—'}</strong>
+      </div>
+      {originalPlanned && (
+        <div className="fd-gate-row">
+          <span className="fd-gate-row-key">Original</span>
+          <span className="fd-gate-actual fd-gate-actual--original">{fmtShort(originalPlanned)}</span>
+        </div>
+      )}
+      {jira !== undefined && (
+        <div className="fd-gate-row">
+          <span className="fd-gate-row-key">Set Date</span>
+          <span className="fd-gate-actual">{jira ? fmtShort(jira) : '—'}</span>
+          {jiraDelta && (
+            <span className="fd-gate-delta" style={{ color: jiraDelta.color }}>{jiraDelta.label}</span>
+          )}
+        </div>
+      )}
+      {actual && (
+        <div className="fd-gate-row">
+          <span className="fd-gate-row-key">Actual</span>
+          <span className={`fd-gate-actual${isNotProvided ? ' fd-gate-actual--none' : ''}`}>
+            {isNotProvided ? 'not provided' : fmtShort(actual)}
+          </span>
+          {actualDelta && (
+            <span className="fd-gate-delta" style={{ color: actualDelta.color }}>{actualDelta.label}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -679,7 +754,11 @@ function PayloadTable({ title, rows = [], jql, jiraBaseUrl, action }) {
           <tbody>
             {rows.map((row) => (
               <tr key={row.key}>
-                <td>{row.key}</td>
+                <td>
+                  <a href={`https://jira.nutanix.com/browse/${row.key}`} target="_blank" rel="noreferrer">
+                    {row.key}
+                  </a>
+                </td>
                 <td>{row.summary}</td>
                 <td>{row.issueType}</td>
                 <td>{row.status}</td>

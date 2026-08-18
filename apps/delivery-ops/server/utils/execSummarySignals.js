@@ -473,12 +473,108 @@ function summariseBreakdown(breakdownData) {
   return { totalOutstanding, totalToBeVerified, trulyOpenCount, byType, totals };
 }
 
+// ── Latest passed release-level marker ──────────────────────────────────────
+// Which release-level gate has most recently passed (relative to today)?
+// Returns null when ganttConfig has no dated markers or none have passed yet.
+//
+// We look at the BINDING markers only (solid > dotted, latest per family) so
+// we compare against the same dates the overshoot logic uses.  The result is
+// used both to anchor the phase and to detect "missed gate" critical risks —
+// i.e. the release calendar says the team should have cleared this gate by now,
+// but their JIRA status hasn't been updated to reflect it.
+function deriveLatestPassedMarker(today, { bindingCCMMarker, bindingCGMarker, bindingPGMarker, bindingGAMarker }) {
+  const candidates = [
+    { name: 'GA',          marker: bindingGAMarker,  expectedPhase: 'Shipped' },
+    { name: 'Promotion Gate', marker: bindingPGMarker, expectedPhase: 'PG Met'  },
+    { name: 'Commit Gate', marker: bindingCGMarker,  expectedPhase: 'CG Met'  },
+    { name: 'Code Complete', marker: bindingCCMMarker, expectedPhase: 'CC Met' },
+  ];
+
+  for (const { name, marker, expectedPhase } of candidates) {
+    if (!marker?.date) continue;
+    const d = new Date(marker.date);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() <= today.getTime()) {
+      return {
+        name,
+        label: marker.label || name,
+        date: marker.date,
+        daysAgo: daysBetween(d, today),
+        expectedPhase,
+      };
+    }
+  }
+  return null;
+}
+
 // ── Phase detection ─────────────────────────────────────────────────────────
-function detectPhase({ statusLabel, today, fsdsDoneDate, testPlanDate, codeCompleteDate }) {
+// Priority: release-level marker dates (objective calendar truth) come first.
+// JIRA status is consulted only when marker dates are unavailable or when the
+// feature has explicitly cleared a gate that no marker date can confirm.
+//
+// Why dates-first: JIRA statuses like "In Progress" or "Coding" are routinely
+// stale — teams don't always update the status when CC or CG passes. The
+// release calendar dates are objective and always up to date.
+function detectPhase({ statusLabel, today, fsdsDoneDate, testPlanDate, codeCompleteDate,
+                       latestCCMMarker, latestCGMarker, latestPGMarker, latestGAMarker }) {
   const s = (statusLabel || '').toLowerCase();
+
+  // Shipped / closed is always authoritative — nothing overrides a closed ticket.
   if (s.includes('closed') || s === 'resolved' || s === 'done') {
     return { phase: 'Shipped', rationale: `JIRA status = "${statusLabel}"` };
   }
+
+  // ── Date-first: walk release markers newest → oldest ──────────────────────
+  // If a release-level gate marker has already passed AND the JIRA status
+  // confirms that gate is met, use the higher gate phase.
+  // If the marker passed but JIRA status does NOT confirm, the feature is
+  // behind schedule — we still advance the phase (so PHASE_FOCUS is correct)
+  // but we record the gap in the rationale so criticalRisks can use it.
+
+  if (latestGAMarker && today && latestGAMarker.getTime() <= today.getTime()) {
+    if (s.includes('promotion gate met') || s.includes('commit gate met') || s.includes('code complete met') || s.includes('in progress')) {
+      return {
+        phase: 'PG Met',
+        rationale: `GA marker (${isoDate(latestGAMarker)}) has passed; JIRA status "${statusLabel}" — treating as PG Met pending confirmation`,
+      };
+    }
+  }
+
+  if (latestPGMarker && today && latestPGMarker.getTime() <= today.getTime()) {
+    if (s.includes('promotion gate met')) {
+      return { phase: 'PG Met', rationale: `JIRA status = "${statusLabel}" (PG marker passed ${isoDate(latestPGMarker)})` };
+    }
+    // PG date passed but status not updated — still use PG Met phase focus so
+    // the AI evaluates readiness correctly; criticalRisks will flag the gap.
+    return {
+      phase: 'PG Met',
+      rationale: `PG marker (${isoDate(latestPGMarker)}) has passed but JIRA status is still "${statusLabel}" — status likely stale`,
+    };
+  }
+
+  if (latestCGMarker && today && latestCGMarker.getTime() <= today.getTime()) {
+    if (s.includes('commit gate met') || s.includes('promotion gate met')) {
+      return { phase: 'CG Met', rationale: `JIRA status = "${statusLabel}" (CG marker passed ${isoDate(latestCGMarker)})` };
+    }
+    return {
+      phase: 'CG Met',
+      rationale: `CG marker (${isoDate(latestCGMarker)}) has passed but JIRA status is still "${statusLabel}" — status likely stale`,
+    };
+  }
+
+  if (latestCCMMarker && today && latestCCMMarker.getTime() <= today.getTime()) {
+    if (s.includes('code complete met') || s.includes('commit gate met') || s.includes('promotion gate met')) {
+      return { phase: 'CC Met', rationale: `JIRA status = "${statusLabel}" (CCM marker passed ${isoDate(latestCCMMarker)})` };
+    }
+    return {
+      phase: 'CC Met',
+      rationale: `CCM marker (${isoDate(latestCCMMarker)}) has passed but JIRA status is still "${statusLabel}" — status likely stale`,
+    };
+  }
+
+  // ── No release markers available or none have passed yet ─────────────────
+  // Fall back to JIRA status, then feature-level dates.
+
   if (s.includes('promotion gate met')) {
     return { phase: 'PG Met', rationale: `JIRA status = "${statusLabel}"` };
   }
@@ -489,7 +585,7 @@ function detectPhase({ statusLabel, today, fsdsDoneDate, testPlanDate, codeCompl
     return { phase: 'CC Met', rationale: `JIRA status = "${statusLabel}"` };
   }
 
-  // Past CC date but not "met" → coding (late)
+  // Past the feature's own CC date but not yet "met" → coding (late)
   if (codeCompleteDate && today && codeCompleteDate.getTime() < today.getTime()) {
     return { phase: 'Coding (late)', rationale: `Past Code Complete date (${isoDate(codeCompleteDate)}) but status is "${statusLabel}"` };
   }
@@ -569,7 +665,7 @@ function buildPhaseFocus(phase, naDeclarations) {
  * @param {Date}   [params.today]        Defaults to now (UTC midnight)
  * @returns {object} signals JSON for the prompt
  */
-function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrative = null, release = null, today = null }) {
+function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrative = null, release = null, today = null, releaseContext = null }) {
   if (!item || !item.key) {
     throw new Error('deriveSignals: item.key is required');
   }
@@ -660,9 +756,17 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
   // Required if within 21 days of last CG (future) OR last CG has already passed
   const complianceRequired = daysToLastCG != null && (daysToLastCG <= 21);
 
-  // --- Phase detection
+  // --- Latest passed release-level marker (objective calendar anchor)
+  // This tells us which gate the release calendar says should already be cleared.
+  // Computed before phase detection because detectPhase uses the marker dates.
+  const latestPassedMarker = deriveLatestPassedMarker(now, {
+    bindingCCMMarker, bindingCGMarker, bindingPGMarker, bindingGAMarker,
+  });
+
+  // --- Phase detection (date-first, JIRA status as fallback)
   const { phase, rationale: phaseRationale } = detectPhase({
     statusLabel, today: now, fsdsDoneDate, testPlanDate, codeCompleteDate,
+    latestCCMMarker, latestCGMarker, latestPGMarker, latestGAMarker,
   });
 
   // --- Status update text parsing (NA + QI signals)
@@ -712,6 +816,35 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
     binding?.label
       ? `${binding.label} (${isoDate(binding.date)})`
       : `${fallback} marker (${isoDate(binding?.date)})`;
+
+  // ── MISSED GATE: closest passed release marker vs. feature clearance ────────
+  // If the release calendar says a gate has already passed, but the feature's
+  // JIRA status has NOT been updated to confirm clearance, that is the highest-
+  // priority signal for the verdict. The AI should treat this as RED unless
+  // there is explicit evidence in the status update or narrative that the gate
+  // was cleared informally.
+  //
+  // "Closest date that passed" rule: we use latestPassedMarker (the most
+  // recently elapsed release-level gate) as the primary verdict anchor. If the
+  // feature's phase does not reflect clearance of that gate, it failed that gate.
+  if (latestPassedMarker) {
+    const missedGate = (() => {
+      const phaseOrder = { 'Inception': 0, 'Design': 1, 'Coding': 2, 'Coding (late)': 2,
+                           'CC Met': 3, 'CG Met': 4, 'PG Met': 5, 'Shipped': 6 };
+      const expectedOrder = { 'CC Met': 3, 'CG Met': 4, 'PG Met': 5, 'Shipped': 6 };
+      const expected = expectedOrder[latestPassedMarker.expectedPhase] ?? -1;
+      const actual = phaseOrder[phase] ?? -1;
+      return actual < expected;
+    })();
+    if (missedGate) {
+      const agePhrase = latestPassedMarker.daysAgo === 0 ? 'today'
+                       : latestPassedMarker.daysAgo === 1 ? '1 day ago'
+                       : `${latestPassedMarker.daysAgo} days ago`;
+      criticalRisks.push(
+        `MISSED GATE: The release-level ${latestPassedMarker.label} (${latestPassedMarker.date}) passed ${agePhrase}, but this feature's JIRA status is still "${statusLabel}" — it has not confirmed ${latestPassedMarker.expectedPhase}. Base the verdict primarily on this date gap. Treat as RED unless the status update text or narrative explicitly confirms the gate was cleared.`
+      );
+    }
+  }
 
   // Gate slips are only forward release risks while the team has NOT yet cleared
   // the gate in question. Once jiraStatus reports the gate as Met, the team
@@ -853,6 +986,10 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
     // compression. Rule of thumb: ~6 weeks per phase is typical; less than
     // 3 weeks between consecutive gates implies a compressed runway.
     gateGaps,
+    // The most recent release-level gate whose date has already passed.
+    // This is the primary verdict anchor — "base verdict on closest date that passed."
+    // null when no markers are configured or none have elapsed.
+    latestPassedMarker,
     links: {
       requirements: requirementsLink,
       designDoc: designDocLink,
@@ -878,6 +1015,17 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
     notApplicable: naDeclarations,
     nextGate,
     criticalRisks,
+    // Release-level aggregate context supplied by the client from
+    // /api/jira/executive-summary-unified. Null when unavailable —
+    // the prompt layer gracefully omits the RELEASE CONTEXT block.
+    releaseContext: releaseContext ? {
+      totalProjects: releaseContext.totalProjects || null,
+      riskCounts: releaseContext.riskCounts || null,
+      p0BugsCount: releaseContext.p0BugsCount != null ? releaseContext.p0BugsCount : null,
+      daysFromPG: releaseContext.daysFromPG != null ? releaseContext.daysFromPG : null,
+      currentPGDate: releaseContext.currentPGDate || null,
+      currentCGDate: releaseContext.currentCGDate || null,
+    } : null,
   };
 }
 

@@ -49,14 +49,24 @@ async function fetchFilteredVersionNames(team, projectKey, jiraToken) {
       .map(v => ({ name: v.name, released: !!v.released, releaseDate: v.releaseDate || undefined }))
     : [];
 
-  // Parent-project teams (e.g. ENG) host many sub-projects in one JIRA project
-  // and only some of those versions belong to this team. teamBoardConfig lets
-  // them specify regex patterns to whitelist their versions.
+  // Apply team-specific version filtering.
+  // For parent-project teams (e.g. ENG) use versionPatterns to whitelist versions.
+  // For all teams with a releasePrefix/activeVersionNames, use those to filter.
   if (team && team.projectType === 'parent' && Array.isArray(team.versionPatterns)) {
     const originalCount = versions.length;
     const patterns = team.versionPatterns.map(pattern => new RegExp(pattern, 'i'));
     versions = versions.filter(v => patterns.some(rx => rx.test(v.name)));
     console.log(`[releaseDataService] Parent project filtering for ${team.id}: ${originalCount} → ${versions.length} versions`);
+  } else if (team && (team.releasePrefix || team.activeVersionNames)) {
+    // Dedicated project teams: keep only versions matching the release prefix
+    // or pinned version names (e.g. "master", "Era Future").
+    const originalCount = versions.length;
+    const prefix = team.releasePrefix || '';
+    const pinned = new Set(Array.isArray(team.activeVersionNames) ? team.activeVersionNames : []);
+    versions = versions.filter(v =>
+      (prefix && v.name.startsWith(prefix)) || pinned.has(v.name)
+    );
+    console.log(`[releaseDataService] Prefix+pinned filtering for ${team.id}: ${originalCount} → ${versions.length} versions (prefix="${prefix}", pinned=[${[...pinned].join(', ')}])`);
   }
 
   return versions.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));

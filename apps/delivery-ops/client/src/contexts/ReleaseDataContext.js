@@ -67,10 +67,14 @@ export function ReleaseDataProvider({ children }) {
   const [loadingRelease, setLoadingRelease] = useState(false);
   const [releaseError, setReleaseError] = useState(null);
   const [cacheStatus, setCacheStatus] = useState({ synced: [], meta: {} });
+  const [cacheStatusLoaded, setCacheStatusLoaded] = useState(false);
   const [jiraUnreachable, setJiraUnreachable] = useState(false);
 
   const loadRelease = useCallback(async (release, force = false) => {
-    if (!release || !jiraToken) {
+    const releasePrefix = (productId || 'ndb').toUpperCase();
+    const isCatchAll = !release || !release.toUpperCase().startsWith(releasePrefix + '-');
+
+    if (!release || !jiraToken || isCatchAll) {
       setReleaseTickets([]);
       setReleaseMeta(null);
       setReleaseError(null);
@@ -174,16 +178,30 @@ export function ReleaseDataProvider({ children }) {
         setJiraUnreachable(true);
       }
       // Leave cacheStatus at its last known value; don't crash.
+    } finally {
+      setCacheStatusLoaded(true);
     }
   }, [jiraToken, productId, username]);
 
+  // Step 1: fetch the list of synced releases first.
   useEffect(() => {
     refreshCacheStatus(false);
   }, [refreshCacheStatus, productId]);
 
+  // Step 2: only attempt a per-release load AFTER we know what's synced.
+  // This prevents a guaranteed 404 for releases that haven't been synced yet.
   useEffect(() => {
+    if (!cacheStatusLoaded) return; // wait — don't fire until status is known
+
+    const syncedReleases = cacheStatus?.synced || [];
+    if (!syncedReleases.includes(selectedRelease)) {
+      setReleaseTickets([]);
+      setReleaseMeta(null);
+      setReleaseError('not_synced');
+      return;
+    }
     loadRelease(selectedRelease, false);
-  }, [selectedRelease, loadRelease]);
+  }, [selectedRelease, loadRelease, cacheStatus, cacheStatusLoaded]);
 
   const value = useMemo(() => ({
     releaseTickets,

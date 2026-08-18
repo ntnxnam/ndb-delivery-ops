@@ -92,6 +92,72 @@ When `dateMetrics` or `ganttConfig` is available:
   so use calendar working days (Mon–Fri) as the approximation.
 - When `ganttConfig` is null, skip gate-comparison signals — do not fabricate dates.
 
+## Maintenance Release Cadence Rules
+
+Maintenance releases (two-dot versions, e.g. `NDB-2.10.3`) have a **simplified two-date gate model** and a 4-week stabilisation window:
+
+### Gate Model — Maintenance releases only have CC and GA
+
+| Milestone | Expected | All other dates |
+|---|---|---|
+| **Code Complete** | Aligned with GA of preceding patch release | **Must be empty / null** |
+| **GA / Release** | 4 weeks after CC | EC, CG, PG → must be empty |
+| **CC → GA window** | 4 weeks (28 calendar days) | |
+
+**EC, Commit Gate, and Promotion Gate dates must NOT be set on maintenance releases.** If any of these fields are populated, flag as `MAINT_UNEXPECTED_GATE_DATE` (data quality warning) and do not use those dates in health calculations.
+
+Apply these thresholds when computing maintenance release health:
+
+- `GA date − today < 28 days` **and** CC not yet met → **RED** (window is broken)
+- `GA date − today < 42 days` **and** CC not yet met → **YELLOW** (at risk of missing the 4-week window)
+- CC date is set but `GA date − CC date < 28 days` → flag as `MAINT_CC_WINDOW_SHORT`; treat as **YELLOW** or **RED** if < 14 days remain
+- Maintenance CC date > GA date of the immediately preceding patch release → flag as `MAINT_CC_MISALIGNED`; treat as **YELLOW** minimum
+- Any of EC / CG / PG fields are non-null on a maintenance release → flag as `MAINT_UNEXPECTED_GATE_DATE` (data quality warning, not a health signal)
+
+### CC Alignment Rule (cross-release dependency)
+
+The maintenance release Code Complete date must be **on or before the GA date of the immediately preceding patch release**. This ensures the maintenance release enters stabilisation only after the patch train has shipped.
+
+```
+preceding_patch_GA = GA date of the last patch release for this maintenance line
+maintenance_CC     = Code Complete date of the maintenance release
+
+VALID:   maintenance_CC ≤ preceding_patch_GA
+INVALID: maintenance_CC > preceding_patch_GA  → MAINT_CC_MISALIGNED
+```
+
+Example: `NDB-2.10.3.2` GA = 2026-07-18 → `NDB-2.10.4` CC must be ≤ 2026-07-18.
+
+LLM action items:
+- `MAINT_CC_WINDOW_SHORT`: "CC date is too close to GA — the 4-week stabilisation window will not be met. Either move CC earlier or push GA by `<delta>` days."
+- `MAINT_CC_MISALIGNED`: "Maintenance CC date (`<date>`) is after the preceding patch GA (`<patch_GA>`). Align maintenance CC to ship no later than the patch GA date, or confirm the patch GA is also slipping."
+- `MAINT_UNEXPECTED_GATE_DATE`: "Maintenance releases should only have CC and GA dates set. Remove the unexpected gate date(s): `<field list>`."
+
+## Patch Release Cadence Rules
+
+Patch releases (three-dot versions, e.g. `NDB-2.10.3.2`) follow a monthly rhythm and have a **simplified gate model**:
+
+### Gate Model — Patch releases only have CC and GA
+
+| Milestone | Expected | All other dates |
+|---|---|---|
+| **Code Complete** | Week 1 of the month (first working Wednesday on or after the 1st) | **Must be empty / null** |
+| **GA / Release** | Week 3 of the month | EC, CG, PG → must be empty |
+| **CC → GA window** | 2 weeks (14 calendar days) | |
+
+**Commit Gate, Promotion Gate, and EC dates must NOT be set on patch releases.** If any of these fields are populated, treat it as a data quality flag (`PATCH_UNEXPECTED_GATE_DATE`) and surface it as a warning — do not use those dates in health calculations.
+
+Apply these thresholds when computing patch health:
+
+- Today > Week 1 **and** CC not yet met → **YELLOW** minimum (cadence slip)
+- Today > end of Week 2 **and** GA is at risk → **RED**
+- CC date is set but `CC date + 14 days > end of Week 3` → flag as `PATCH_CC_TOO_LATE`; treat as **YELLOW** unless CC has already passed, then **RED**
+- Any of EC / CG / PG fields are non-null on a patch release → flag as `PATCH_UNEXPECTED_GATE_DATE` (data quality warning, not a health signal)
+
+LLM action items:
+- `PATCH_CC_TOO_LATE`: "CC date must move earlier — current CC date leaves < 14 days to reach the Week 3 GA target."
+- `PATCH_UNEXPECTED_GATE_DATE`: "Patch releases should only have CC and GA dates set. Remove the unexpected gate date(s): `<field list>`."
+
 ## Never Do
 
 - Treat a missing CC date as equivalent to "not yet relevant"

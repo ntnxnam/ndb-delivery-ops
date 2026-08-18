@@ -25,6 +25,7 @@ import DesignSystemDemo from './design-system/DesignSystemDemo';
 import ReleaseBriefPage from './release/ReleaseBriefPage';
 import RetrospectivePage from './release/RetrospectivePage';
 import SyncHubPage from './release/SyncHubPage';
+import ChatbotPage from './release/ChatbotPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
 
@@ -289,6 +290,17 @@ const AuthenticatedApp = () => {
           <ProtectedRoute permissions={['release_versions_view']}>
             <Layout>
               <SyncHubPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chatbot"
+        element={
+          <ProtectedRoute permissions={['ai_insights_view']}>
+            <Layout>
+              <ChatbotPage />
             </Layout>
           </ProtectedRoute>
         }

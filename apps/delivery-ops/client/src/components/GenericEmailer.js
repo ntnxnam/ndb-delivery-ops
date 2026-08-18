@@ -3,6 +3,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { authenticatedPost, authenticatedGet, authenticatedPut, authenticatedDelete } from '../utils/api';
 import { useGenericEmailerConfig } from '../hooks/useGenericEmailerConfig';
+import { formatters } from '../shared/utils/formatters';
 import OutlookFallback from './shared/OutlookFallback';
 import './GenericEmailer.css';
 
@@ -107,7 +108,7 @@ function GenericEmailer() {
 
   const defaultSubject = () => {
     const d = new Date();
-    return `NDB Reminder – ${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    return `NDB Reminder – ${formatters.date(d) || d.toISOString().slice(0, 10)}`;
   };
 
   const handleFetch = async () => {

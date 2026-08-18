@@ -104,6 +104,65 @@ export const routeConfig = {
       icon: '📊'
     },
     {
+      path: '/chatbot',
+      exact: true,
+      component: 'ChatbotPage',
+      title: 'AI Chatbot',
+      description: 'Conversational release and ticket Q&A',
+      permissions: [PERMISSIONS.AI_INSIGHTS_VIEW],
+      showInNav: true,
+      icon: '💬'
+    },
+    {
+      path: '/kpis',
+      exact: true,
+      component: 'KPIPage',
+      title: 'KPIs',
+      description: 'KPI dashboard',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
+      icon: '📈'
+    },
+    {
+      path: '/sync-hub',
+      exact: true,
+      component: 'SyncHubPage',
+      title: 'Sync Hub',
+      description: 'JIRA dataset sync status and manual refresh',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '🔄'
+    },
+    {
+      path: '/release/brief',
+      exact: true,
+      component: 'ReleaseBriefPage',
+      title: 'Release Brief',
+      description: 'AI health briefing per release',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '🤖'
+    },
+    {
+      path: '/release/:name/brief',
+      exact: false,
+      component: 'ReleaseBriefPage',
+      title: 'Release Brief',
+      description: 'AI health briefing — deep link to a specific release',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: false
+    },
+    {
+      path: '/release-config',
+      exact: true,
+      component: 'ReleaseConfigPage',
+      title: 'Release Config',
+      description: 'Edit release gate dates configuration',
+      permissions: [PERMISSIONS.RELEASE_CONFIG_MANAGE],
+      showInNav: true,
+      icon: '🗓️'
+    },
+    {
       path: '/admin',
       exact: true,
       component: 'AdminPanel',

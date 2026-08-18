@@ -157,10 +157,14 @@ export const TeamProvider = ({ children }) => {
         const teamExists = stored && responseData.teams.some(t => t.id === stored);
         const effective = teamExists ? stored : defaultId;
         
-        if (effective && effective !== selectedTeamId) {
-          setSelectedTeamId(effective);
-          localStorage.setItem('releaseVersionSelectedTeamId', effective);
-          console.log(`[TeamContext] Auto-selected team: ${effective}`);
+        if (effective) {
+          setSelectedTeamId(prev => {
+            if (effective !== prev) {
+              localStorage.setItem('releaseVersionSelectedTeamId', effective);
+              console.log(`[TeamContext] Auto-selected team: ${effective}`);
+            }
+            return effective;
+          });
         }
         
         console.log(`[TeamContext] Loaded ${responseData.teams.length} teams`);
@@ -173,11 +177,11 @@ export const TeamProvider = ({ children }) => {
       setError('Failed to load teams configuration: ' + (error?.message || 'Unknown error'));
     } finally {
       setLoading(false);
-      console.log('[TeamContext] Loading complete. Teams:', teams.length);
     }
-  }, [selectedTeamId, teams.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Fetch teams on mount
+  // Fetch teams once on mount
   useEffect(() => {
     fetchTeams();
   }, [fetchTeams]);

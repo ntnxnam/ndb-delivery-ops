@@ -106,6 +106,7 @@ export {
 export type {
   CacheOptions,
   ReleaseCacheMeta,
+  BucketCacheMeta,
   BundleCacheMeta,
   BundleCachePayload,
   CachedReleaseInfo,
@@ -120,6 +121,7 @@ export {
   CHANGELOG_REQUIRED_TYPES,
   GATE_HISTORY_TYPES,
   DEFAULT_CHANGELOG_CONCURRENCY,
+  syncReleaseBucket,
 } from './services/releaseDatasetSync.js';
 export type {
   SyncOptions,
@@ -127,6 +129,8 @@ export type {
   SyncProgressEvent,
   EnrichClosedDatesOptions,
   JiraChangelogHistory,
+  SyncBucketOptions,
+  SyncBucketResult,
 } from './services/releaseDatasetSync.js';
 
 export {

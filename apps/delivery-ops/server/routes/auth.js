@@ -193,8 +193,13 @@ function transformLegacyPermissions(serverData, username) {
     roles.add('kpi_manager');
   }
 
-  // Add default permissions for all authenticated users
-  permissions.add('email_send_release'); // Email sender tab available to all
+  // Default permissions for all authenticated users — every content page is open
+  permissions.add('email_send_release');
+  permissions.add('release_versions_view');
+  permissions.add('release_trends_view');
+  permissions.add('sprint_reports_view');
+  permissions.add('kpi_view');
+  permissions.add('email_history_view');
 
   return {
     permissions: Array.from(permissions),

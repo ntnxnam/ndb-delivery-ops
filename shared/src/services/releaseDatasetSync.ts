@@ -424,6 +424,8 @@ export interface SyncOptions {
     pageSize?: number;
     maxIssuesPerBucket?: number;
     concurrency?: number;
+    /** Per-request timeout override passed through to fetchReleaseData. */
+    perPageTimeoutMs?: number;
   };
   /** Per-release progress hook (one call per status transition). */
   onProgress?: (event: SyncProgressEvent) => void;
@@ -576,6 +578,7 @@ export async function syncReleaseDataset(
           pageSize: options.fetchOptions?.pageSize,
           maxIssuesPerBucket: options.fetchOptions?.maxIssuesPerBucket,
           concurrency: options.fetchOptions?.concurrency,
+          perPageTimeoutMs: options.fetchOptions?.perPageTimeoutMs,
           // Per-bucket progress: emit a fetching event after each bucket so
           // the UI shows "top_level_projects: 47 tickets" in real time instead
           // of going silent for minutes while Jira API calls run.
@@ -717,6 +720,110 @@ export async function syncReleaseDataset(
   } finally {
     cache.releaseSyncLock();
   }
+}
+
+// ── Types shared with releaseDatasetService ─────────────────────────────────
+
+export interface SyncBucketOptions {
+  cache: ReleaseDatasetCache;
+  projectKey: string;
+  labelPrefix: string;
+  productPrefix: string;
+  sprintCalendar: SprintCalendar;
+  onProgress?: (event: SyncProgressEvent) => void;
+}
+
+export interface SyncBucketResult {
+  bucketName: string;
+  release: string;
+  count: number;
+  error?: string;
+}
+
+/**
+ * Cell-level sync: re-fetch a single bucket's JQL for one release,
+ * merge the fresh tickets into the existing per-release cache, and
+ * rebuild the bundle.
+ *
+ * Allowed for both current and past releases (the UI guards scope;
+ * the server does not block past releases here per the agreed model).
+ *
+ * The merge strategy:
+ *   1. Load existing tickets from cache (lenient — tolerate schema drift).
+ *   2. Remove all tickets whose `Components` string includes `bucketName`.
+ *   3. Fetch fresh tickets for `bucketName` from JIRA.
+ *   4. Append fresh tickets (they already carry the correct Components tag
+ *      from `fetchReleaseData`'s bucket runner).
+ *   5. Save merged list back to cache, patch bucket meta, rebuild bundle.
+ *
+ * The bucket is re-fetched using the same JQL that `fetchReleaseData`
+ * uses for that bucket, obtained from `getComponentQueries`.
+ */
+export async function syncReleaseBucket(
+  jira: JiraConnector,
+  release: string,
+  bucketName: string,
+  options: SyncBucketOptions
+): Promise<SyncBucketResult> {
+  const { cache, projectKey, labelPrefix, productPrefix, sprintCalendar, onProgress } = options;
+
+  const emit = (event: SyncProgressEvent) => onProgress?.(event);
+
+  const knownBuckets = [
+    'top_level_projects', 'epics_of_projects', 'work_toward_project',
+    'standalone_epics', 'work_toward_standalone_epic', 'direct_tickets', 'moved_out',
+  ];
+  if (!knownBuckets.includes(bucketName)) {
+    throw new Error(
+      `syncReleaseBucket: unknown bucketName '${bucketName}'. Valid: ${knownBuckets.join(', ')}`
+    );
+  }
+
+  emit({ release, status: 'fetching', detail: `cell sync: fetching ${bucketName}…` });
+
+  // Fetch fresh tickets for this one bucket only.
+  let freshTickets: ProcessedTicket[];
+  try {
+    const result: FetchReleaseResult = await fetchReleaseData(jira, release, {
+      labelPrefix,
+      bucketFilter: [bucketName],
+    });
+    freshTickets = result.tickets;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    emit({ release, status: 'error', detail: `cell sync ${bucketName}: ${msg}` });
+    return { bucketName, release, count: 0, error: msg };
+  }
+
+  // Load existing tickets from cache (lenient — we keep them regardless of schema).
+  const { tickets: existing } = cache.loadReleaseLenient(release);
+  const base = Array.isArray(existing) ? existing : [];
+
+  // Remove stale tickets for this bucket, then append fresh ones.
+  const retained = base.filter((t) => {
+    const components = (t as unknown as Record<string, unknown>)['Components'];
+    if (typeof components !== 'string') return true;
+    return !components.split(',').map((p) => p.trim()).includes(bucketName);
+  });
+  const merged = [...retained, ...freshTickets];
+
+  // Persist merged list + update bucket meta entry.
+  cache.saveRelease(release, merged, { projectKey, labelPrefix });
+
+  // Rebuild the bundle so downstream pages read fresh data.
+  const allReleases = cache.loadAllReleases({ projectKey, labelPrefix });
+  allReleases[release] = merged;
+  const processed = processMaster(allReleases, { labelPrefix, productPrefix, sprintCalendar });
+  const sortedReleases = Object.keys(allReleases).sort();
+  cache.saveBundle(processed, sortedReleases, { projectKey, labelPrefix, productPrefix });
+
+  emit({
+    release,
+    status: 'done',
+    detail: `cell sync ${bucketName}: ${freshTickets.length} tickets`,
+  });
+
+  return { bucketName, release, count: freshTickets.length };
 }
 
 /**

@@ -16,7 +16,7 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "PORT=8888 BROWSER=none react-scripts start",
+    "start": "PORT=8899 BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "build:local": "CI= react-scripts build",
     "build:email-only": "REACT_APP_ENABLE_RELEASE_VERSIONS=false react-scripts build",
@@ -29,7 +29,8 @@
     "test:new-features": "react-scripts test --testPathPattern='(useCrystalBall|AdminPanel)' --watchAll=false",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "check:no-localhost": "node scripts/check-no-localhost.js"
   },
   "eslintConfig": {
     "extends": [
@@ -59,7 +60,7 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:6001",
+  "proxy": "http://localhost:8001",
   "jest": {
     "moduleNameMapper": {
       "^axios$": "<rootDir>/node_modules/axios/dist/node/axios.cjs",

@@ -4,7 +4,7 @@
 
 The primary internal tool for sending NDB release-version status emails and dashboards to NDB Engineering. It's a React + Express stack:
 
-- **Frontend**: React app served on `localhost:6100` in dev; talks to backend on `localhost:6001`
+- **Frontend**: React app served on `localhost:8899` in dev; talks to backend on `localhost:8001`
 - **Backend**: Node/Express server in `server/`; proxies JIRA, sends SMTP through Nutanix mail relay
 - **Data sources**: JIRA (Nutanix instance), TCMS, Confluence
 
@@ -20,13 +20,12 @@ The user-level rules in `~/.cursor/rules/` are auto-applied and you don't need t
 ## Running locally
 
 ```bash
-./start          # starts backend on 6001 and frontend on 6100
-./stop           # stops both
-./restart        # restart
-tail -f .pid-backend .pid-frontend     # PIDs live here
+./scripts/start.sh          # starts backend on 8001 and frontend on 8899
+./scripts/stop.sh           # stops both
+./scripts/restart.sh        # restart
 ```
 
-Logs go to `ndb-app.log` (gitignored). Hot-reload is on for both client and server.
+Logs go to `/tmp/server.log` (backend) and `/tmp/client.log` (frontend). Hot-reload is on for both.
 
 ## Project structure
 
@@ -103,7 +102,7 @@ When working in the JIRA routes, do NOT inline these helpers — import them:
 
 ## Gotchas
 
-- Frontend port changed from 8888 → 6100 in a recent commit; old bookmarks fail.
+- Frontend dev port is `8899`; backend is `8001`. Old bookmarks on 6001/6100 will not work.
 - Some tabs (Release Trends, Release Analysis) are gated behind `release_trends_view`; only granted via legacy `allowedUsers` mapping.
 
 ## Skills available

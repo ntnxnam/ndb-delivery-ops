@@ -24,7 +24,7 @@ const { formatContentForEmail, formatJiraWikiMarkupForEmail } = require('./utils
 // directly rather than a separate npm sub-package.
 
 const app = express();
-const PORT = process.env.PORT || 6001;
+const PORT = process.env.PORT || 7001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Security and Performance Middleware
@@ -117,8 +117,9 @@ const releaseSyncRoutes = require('./routes/releaseSync');
 const aiRoutes = require('./routes/ai');
 const featureRoutes = require('./routes/feature');
 
-// CORS preflight: ensure OPTIONS for /api/* always succeeds (avoid 404 for preflight)
-app.options('/api/*', (req, res) => {
+// CORS preflight: ensure OPTIONS for all /api paths always succeeds.
+// Use RegExp to avoid path-to-regexp wildcard parsing issues.
+app.options(/^\/api\/.*$/, (req, res) => {
   res.status(204).end();
 });
 
@@ -262,6 +263,7 @@ app.use((req, res) => {
 });
 
 const emailScheduler = require('./services/emailScheduler');
+const syncScheduler = require('./jobs/syncScheduler');
 
 // Export app for supertest/integration tests (avoid starting server when required as module)
 if (require.main === module) {
@@ -279,6 +281,7 @@ if (require.main === module) {
       }
     }
     emailScheduler.start();
+    syncScheduler.start();
   });
 }
 

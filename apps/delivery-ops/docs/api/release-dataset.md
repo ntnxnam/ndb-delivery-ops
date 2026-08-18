@@ -180,19 +180,65 @@ Reads `server/config/releaseVersionsEmailConfig.json` — no JIRA call.
 
 ---
 
-### GET /api/release-dataset/project-breakdown
+### GET /api/release-dataset/project-status
 
-**Purpose**: Return per-project issue counts and RAG for a release (powers ProjectBreakdownMatrix).
+**Purpose**: Return per-project issue-type-group breakdown matrix for a release (powers ProjectBreakdownMatrix). Reads from the on-disk bundle — zero JIRA API calls. Bundle must be synced first via `POST /sync`.
 
-**Auth**: required
+**Auth**: required (JIRA token not used — bundle is read from disk)
 
 **Request**
-- Query: `release` (string, required), `productId` (string, required)
+- Query: `release` (string, required), `productId` (string, optional, default `ndb`)
 
-**Response**
+**Server flow**
+Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk read → in-memory derivation
+
+**Response shape**
 ```json
-{ "success": true, "data": { "projects": [{ "key": "ERA-100", "name": "Storage", "open": 12, "closed": 88, "rag": "amber" }] } }
+{
+  "success": true,
+  "data": {
+    "productId": "ndb",
+    "release": "NDB-2.11",
+    "projects": [
+      {
+        "projectKey": "FEAT-123",
+        "projectName": "Storage Write Path",
+        "issueType": "Feature",
+        "plannedCcDate": "2026-03-01",
+        "total": 42,
+        "outstanding": 8,
+        "closed": 34,
+        "issueTypeGroups": [
+          { "label": "Bug", "outstanding": 3, "toVerify": 1, "closed": 12, "total": 16 }
+        ]
+      }
+    ],
+    "standaloneEpics": [],
+    "standaloneTickets": { "projectKey": "standalone-tickets", "projectName": "Standalone Tickets (no epic)", "issueTypeGroups": [] },
+    "_source": "bundle",
+    "_bundleSyncedAt": "2026-06-16T10:00:00Z"
+  }
+}
 ```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 404 | No bundle found for this release | Prompt user to run a sync |
+| 400 | `release` param missing | Fix request |
+| 500 | Unexpected error | Show error message |
+
+**Caching**: Yes — served from disk bundle. Stale until next sync.
+
+> ⚠️ Breaking change 2026-06-16: renamed from `/project-breakdown`. Old path redirects (HTTP 307) to this endpoint for back-compat.
+
+---
+
+### GET /api/release-dataset/project-breakdown *(deprecated)*
+
+**Purpose**: Deprecated alias for `/project-status`. Returns HTTP 307 redirect.
+
+> Use `/project-status` instead.
 
 ---
 
@@ -296,7 +342,7 @@ Reads `server/config/releaseVersionsEmailConfig.json` — no JIRA call.
 
 ### GET /api/release-dataset/sync-status
 
-**Purpose**: Return bundle metadata (last sync time, size, release count) without making JIRA calls.
+**Purpose**: Return bundle and per-release cache metadata without making JIRA calls. Used by SyncHubPage to render per-release tick/refresh status and by TeamDatasetContext on mount.
 
 **Auth**: required
 
@@ -305,10 +351,33 @@ Reads `server/config/releaseVersionsEmailConfig.json` — no JIRA call.
 
 **Response**
 ```json
-{ "success": true, "data": { "lastSync": "2026-06-15T06:00:00Z", "releaseCount": 18, "bundleSizeBytes": 4200000 } }
+{
+  "success": true,
+  "data": {
+    "productId": "ndb",
+    "bundleMeta": { "lastSyncIso": "2026-06-15T06:00:00Z", "numTickets": 36355, "numReleases": 13, "schemaVersion": "v2-node-2026-06" },
+    "hasBundleOnDisk": true,
+    "cachedReleases": ["NDB-2.11", "NDB-2.12"],
+    "releaseStates": { "NDB-2.11": "active", "NDB-2.12": "future" },
+    "releaseMeta": {
+      "NDB-2.11": { "fetchedAtIso": "2026-06-16T13:44:24Z", "ticketCount": 1253, "loadableStrict": true, "schemaDiff": false, "jqlDiff": false }
+    },
+    "isSyncInProgress": false,
+    "scheduler": {
+      "enabled": true,
+      "running": false,
+      "intervalMs": 900000,
+      "nextRunAtIso": "2026-08-17T15:45:00Z",
+      "lastSuccessAtIso": "2026-08-17T15:30:01Z"
+    }
+  }
+}
 ```
 
-**Caching**: Reads `bundle.meta.json` from disk — no cache.
+> ⚠️ Breaking change 2026-06-16: added `releaseMeta` map with per-release fetch timestamps, ticket counts, and cache validity flags. Added `hasBundleOnDisk` and `isSyncInProgress` fields.
+> ⚠️ Breaking change 2026-06-17: `releaseMeta[rel]` now includes `buckets: Record<string, { count: number, fetchedAtIso: string }> | null` — per-bucket ticket counts and last-fetch timestamps for the 7-column SyncHub UI.
+
+**Caching**: Reads `bundle.meta.json` and `per_release/*.meta.json` from disk — no JIRA calls.
 
 ---
 
@@ -352,3 +421,121 @@ data: {"step": "done", "pct": 100, "duration": 45000}
 | Code | When | Client should |
 |------|------|---------------|
 | 409 | Sync already running | Show "Already syncing" |
+
+> ⚠️ Behaviour change 2026-06-17: when `forceAll=true`, past releases are now excluded from the force list. Only active/future releases are re-fetched. Use `POST /sync/bucket` for targeted past-release cell updates.
+
+---
+
+### POST /api/release-dataset/refresh-now
+
+**Purpose**: Trigger an immediate scheduler-backed live refresh of release dataset cache (JSON response, no SSE stream). Used by dashboard-level "Refresh Now" actions.
+
+**Auth**: required
+
+**Request**
+- Query: `productId` (string, optional, default `ndb`)
+- No body
+
+**Server flow**  
+`releaseDataset.js → syncScheduler.runNow('manual-refresh') → syncReleaseDataset(...)`
+
+**Response**
+```json
+{
+  "success": true,
+  "data": {
+    "ndb": {
+      "success": true,
+      "result": { "releases": 14, "changelogEnriched": 932, "gateHistoryEnriched": 410 }
+    }
+  },
+  "scheduler": {
+    "enabled": true,
+    "running": false,
+    "intervalMs": 900000,
+    "lastRunAtIso": "2026-08-17T15:30:00Z",
+    "lastSuccessAtIso": "2026-08-17T15:30:01Z"
+  }
+}
+```
+
+**Error responses**
+| Code | When | Client should |
+|------|------|---------------|
+| 503 | Scheduler run failed / skipped due to lock | Show "refresh busy, retry shortly" |
+| 500 | Unexpected server failure | Show error, keep cached data visible |
+
+**Caching**
+No response cache; operation refreshes on-disk cache.
+
+---
+
+### POST /api/release-dataset/sync/bucket
+
+**Purpose**: Cell-level sync — re-fetch a single bucket's JQL for one release and merge fresh tickets into the existing per-release cache. Allowed for both current and past releases.
+
+**Auth**: required
+
+**Request**
+- Query: `productId` (string, optional, default `ndb`)
+- Query: `release` (string, required) — e.g. `NDB-2.11`
+- Query: `bucket` (string, required) — one of: `top_level_projects`, `epics_of_projects`, `work_toward_project`, `standalone_epics`, `work_toward_standalone_epic`, `direct_tickets`, `moved_out`
+
+**Server flow**  
+`releaseDataset.js → syncReleaseBucket() → fetchReleaseData(bucketFilter=[bucket]) → merge into per-release cache → saveRelease → loadAllReleases → processMaster → saveBundle`
+
+**Response**: SSE stream  
+```
+data: {"type":"preflight","release":"NDB-2.11","bucket":"top_level_projects","message":"Cell sync: NDB-2.11 / top_level_projects"}
+data: {"release":"NDB-2.11","status":"fetching","detail":"cell sync: fetching top_level_projects…"}
+data: {"release":"NDB-2.11","status":"done","detail":"cell sync top_level_projects: 47 tickets"}
+data: {"type":"done","release":"NDB-2.11","bucket":"top_level_projects","count":47,"error":null,"timingMs":3210,"message":"Cell sync complete — 47 tickets in 3.2s"}
+```
+
+**Error responses**
+| Code | When | Client should |
+|------|------|---------------|
+| 400 | `release` or `bucket` missing | Show inline error |
+| 400 | Unknown `bucket` value | Show "Invalid bucket name" |
+| 401 | No JIRA token | Prompt re-auth |
+| 500 | JIRA fetch failed | Show error, offer retry |
+
+**Caching**: Reads and writes `per_release/<release>.json` + `.meta.json`. Rebuilds `bundle.json`.
+
+---
+
+### POST /api/release-dataset/backfill-meta
+
+**Purpose**: One-time migration — for every cached per-release file whose `.meta.json` is missing the `buckets` field, read ticket data from disk, count tickets by their `Components` bucket tag, and persist the counts back into the meta file. No JIRA API calls — disk-only operation.
+
+**Auth**: required
+
+**Request**
+- Query: `productId` (string, optional, default `ndb`)
+- No body
+
+**Server flow**  
+`releaseDataset.js → readdir(per_release/) → for each release: read .meta.json → if no buckets: read .json, count by Components field → write updated .meta.json`
+
+**Response shape**
+```json
+{
+  "success": true,
+  "data": {
+    "productId": "ndb",
+    "processed": [
+      { "release": "NDB-2.10", "buckets": { "top_level_projects": { "count": 22, "fetchedAtIso": "..." }, "..." } }
+    ],
+    "skipped": ["NDB-2.11", "NDB-2.12"]
+  }
+}
+```
+`processed` = releases whose meta was updated. `skipped` = releases that already had bucket data or had no ticket file.
+
+**Error responses**
+| Code | When | Client should |
+|------|------|---------------|
+| 404 | No per-release cache dir (no sync run yet) | Prompt Full Sync first |
+| 500 | Unexpected error | Show error message |
+
+**Caching**: Writes only to `per_release/<release>.meta.json`. Does not touch JIRA or bundle.json.

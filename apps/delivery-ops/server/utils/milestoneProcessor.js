@@ -7,23 +7,21 @@
  */
 
 const path = require('path');
+const { normalizeDateStr, formatDate: formatSharedDate } = require('./dateFormatter');
 
 // Helper function to format date consistently
 function formatDate(dateStr) {
   try {
     if (!dateStr) return null;
-    
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
+
+    const normalizedDate = normalizeDateStr(dateStr);
+    if (!normalizedDate) {
       console.warn(`[milestoneProcessor] Invalid date: ${dateStr}`);
       return null;
     }
-    
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }).replace(/ /g, '/');
+
+    const formatted = formatSharedDate(normalizedDate);
+    return formatted === 'Not Set' ? null : formatted;
   } catch (error) {
     console.error(`[milestoneProcessor] Error formatting date ${dateStr}:`, error);
     return null;
@@ -62,8 +60,6 @@ function calculateDaysToMilestone(targetDate) {
  * @returns {Object} - {milestones: Array, currentDate: string}
  */
 function processMilestonesForVersion(versionConfig, gatePrefix) {
-  console.log(`[milestoneProcessor] Processing milestones for ${gatePrefix}`);
-  
   const milestones = [];
   let currentDate = null;
 
@@ -102,20 +98,15 @@ function processMilestonesForVersion(versionConfig, gatePrefix) {
       }
     }
 
-    console.log(`[milestoneProcessor] Found gate keys for ${gatePrefix}:`, gateKeys);
-
     for (const gateKey of gateKeys) {
       const gate = versionConfig[gateKey];
       
       if (!gate) {
-        console.log(`[milestoneProcessor] No data found for ${gateKey}`);
         continue;
       }
 
       if (Array.isArray(gate)) {
         // Array format: [{ date: "2024-01-15", style: "dotted" }, ...]
-        console.log(`[milestoneProcessor] Processing array format for ${gateKey}:`, gate);
-        
         gate.forEach((milestone, index) => {
           if (milestone && milestone.date) {
             const formattedDate = formatDate(milestone.date);
@@ -136,14 +127,11 @@ function processMilestonesForVersion(versionConfig, gatePrefix) {
                 currentDate = formattedDate;
               }
               
-              console.log(`[milestoneProcessor] Added milestone from ${gateKey}[${index}]: ${formattedDate} (current: ${isCurrent}, strikethrough: ${isStrikeThrough})`);
             }
           }
         });
       } else if (typeof gate === 'object') {
         // Object format: { date: "2024-01-15", style: "solid" }
-        console.log(`[milestoneProcessor] Processing object format for ${gateKey}:`, gate);
-        
         if (gate.date) {
           const formattedDate = formatDate(gate.date);
           if (formattedDate) {
@@ -163,7 +151,6 @@ function processMilestonesForVersion(versionConfig, gatePrefix) {
               currentDate = formattedDate;
             }
             
-            console.log(`[milestoneProcessor] Added milestone from ${gateKey}: ${formattedDate} (current: ${isCurrent}, strikethrough: ${isStrikeThrough})`);
           }
         }
       } else {
@@ -171,8 +158,6 @@ function processMilestonesForVersion(versionConfig, gatePrefix) {
       }
     }
 
-    console.log(`[milestoneProcessor] Completed processing ${gatePrefix}. Found ${milestones.length} milestones, current date: ${currentDate}`);
-    
   } catch (error) {
     console.error(`[milestoneProcessor] Error processing milestones for ${gatePrefix}:`, error);
   }
@@ -187,8 +172,6 @@ function processMilestonesForVersion(versionConfig, gatePrefix) {
  * @returns {Object} - Complete milestone data with metrics
  */
 function processAllMilestones(versionConfig) {
-  console.log('[milestoneProcessor] Starting processAllMilestones');
-  
   try {
     if (!versionConfig) {
       console.error('[milestoneProcessor] No version config provided');
@@ -222,8 +205,6 @@ function processAllMilestones(versionConfig) {
       }
     }
 
-    console.log(`[milestoneProcessor] Calculated days to PG: ${daysToPG}`);
-
     const result = {
       daysFromCutoff: daysToPG,
       currentCCDate: ccm.currentDate || 'TBD',
@@ -236,21 +217,6 @@ function processAllMilestones(versionConfig) {
         generalAvailability: ga.milestones
       }
     };
-
-    console.log('[milestoneProcessor] processAllMilestones completed successfully:', {
-      daysFromCutoff: result.daysFromCutoff,
-      currentDates: {
-        cc: result.currentCCDate,
-        cg: result.currentCGDate,
-        pg: result.currentPGDate
-      },
-      milestoneCounts: {
-        cc: result.milestones.codeComplete.length,
-        cg: result.milestones.commitGate.length,
-        pg: result.milestones.promotionGate.length,
-        ga: result.milestones.generalAvailability.length
-      }
-    });
 
     return result;
     

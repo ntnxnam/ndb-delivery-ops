@@ -7,9 +7,9 @@ const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
 /**
  * Returns how many days old a date string is, or null if unparseable.
  */
-function daysOldFromDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
+function daysOldFromDate(dateVal) {
+  if (!dateVal) return null;
+  const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
   if (isNaN(d.getTime())) return null;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
@@ -17,12 +17,17 @@ function daysOldFromDate(dateStr) {
 /**
  * Parse a stamped exec summary string.
  * Format: "[YYYY-MM-DD] <text>"
+ * Returns { text, generatedDate } where generatedDate is a Date or null.
  */
 function parseStampedSummary(raw) {
-  if (!raw || typeof raw !== 'string') return { text: '' };
+  if (!raw || typeof raw !== 'string') return { text: '', generatedDate: null };
   const match = raw.match(DATE_PREFIX_REGEX);
-  if (!match) return { text: raw };
-  return { text: raw.slice(match[0].length).trim() };
+  if (!match) return { text: raw, generatedDate: null };
+  const generatedDate = new Date(match[1]);
+  return {
+    text: raw.slice(match[0].length).trim(),
+    generatedDate: isNaN(generatedDate.getTime()) ? null : generatedDate,
+  };
 }
 
 /**
@@ -32,14 +37,16 @@ function parseStampedSummary(raw) {
  * If that date is > 7 days ago → show "⚠ Stale Update" only, no button.
  * Otherwise → show existing summary (if any) + Generate/Regenerate button.
  */
-function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownData = null }) {
+function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownData = null, releaseContext = null }) {
   const statusUpdateDate = item?.customfield_45660 || null;
   const statusUpdateDaysOld = daysOldFromDate(statusUpdateDate);
   const isStaleUpdate = statusUpdateDaysOld !== null && statusUpdateDaysOld >= STALE_DAYS;
 
   const existingRaw = item?.customfield_38460 || '';
-  const { text: existingText } = parseStampedSummary(existingRaw);
+  const { text: existingText, generatedDate } = parseStampedSummary(existingRaw);
   const hasExisting = Boolean(existingText);
+  const summaryAgeDays = daysOldFromDate(generatedDate);
+  const summaryIsFresh = summaryAgeDays !== null && summaryAgeDays < STALE_DAYS;
 
   const [generatedSummary, setGeneratedSummary] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -62,6 +69,14 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
         ganttConfig,
         breakdownData,
         release: selectedVersion,
+        releaseContext: releaseContext ? {
+          totalProjects: releaseContext.totalProjects,
+          riskCounts: releaseContext.riskCounts,
+          p0BugsCount: releaseContext.p0BugsCount,
+          daysFromPG: releaseContext.daysFromPG,
+          currentPGDate: releaseContext.currentPGDate,
+          currentCGDate: releaseContext.currentCGDate,
+        } : null,
       });
       const summary = resp.data?.summary || '';
       // Guard against just-the-stamp ("[YYYY-MM-DD] ") with no actual content.
@@ -77,7 +92,7 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
     } finally {
       setGenerating(false);
     }
-  }, [item, selectedVersion, ganttConfig, breakdownData]);
+  }, [item, selectedVersion, ganttConfig, breakdownData, releaseContext]);
 
   const handlePushToJira = useCallback(async () => {
     if (!generatedSummary) return;
@@ -150,8 +165,10 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
       )}
 
       {/* ── Buttons ── */}
-      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-        {!generatedSummary && (
+      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Show generate button only when: no generated summary in-flight,
+            AND (no existing summary OR existing summary is stale ≥ 7 days) */}
+        {!generatedSummary && !summaryIsFresh && (
           <button onClick={handleGenerate} disabled={generating} style={{
             fontSize: '10px', padding: '3px 8px',
             backgroundColor: generating ? '#e9ecef' : '#0052cc',
@@ -162,6 +179,14 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
           }}>
             {buttonLabel}
           </button>
+        )}
+        {/* Fresh summary: show age label instead of button */}
+        {!generatedSummary && summaryIsFresh && (
+          <span style={{
+            fontSize: '10px', color: '#6c757d', fontStyle: 'italic',
+          }}>
+            {summaryAgeDays === 0 ? 'Generated today' : `Generated ${summaryAgeDays}d ago`}
+          </span>
         )}
 
         {generatedSummary && !pushSuccess && (

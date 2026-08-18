@@ -33,8 +33,8 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/client/src/$1',
     '^@server/(.*)$': '<rootDir>/server/$1',
     // axios v1.x ships an ESM index.js; redirect to bundled CJS build
-    '^axios$': '<rootDir>/server/node_modules/axios/dist/node/axios.cjs',
-    '^axios/(.*)$': '<rootDir>/server/node_modules/axios/dist/node/axios.cjs',
+    '^axios$': '<rootDir>/../../node_modules/axios/dist/node/axios.cjs',
+    '^axios/(.*)$': '<rootDir>/../../node_modules/axios/dist/node/axios.cjs',
     // node-fetch v3 is pure ESM; use a CJS stub in tests
     '^node-fetch$': '<rootDir>/__mocks__/node-fetch.js',
     // @portfolio-delivery-ops/shared is "type":"module" (pure ESM); use a CJS stub in tests

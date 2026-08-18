@@ -8,52 +8,34 @@ import { getBreakdownSummary } from '../services/taskBreakdownService';
 import { fetchJiraBaseUrl } from '../utils/jiraConfig';
 import { buildTaskBreakdownJQL } from '../utils/jiraQueryUtils';
 
-/**
- * Format breakdown data for detailed display: "Tasks: Done - 2, In Progress - 15, ..."
- */
-function formatDetailedBreakdown(breakdownData) {
-  if (!breakdownData || !breakdownData.breakdown || breakdownData.breakdown.length === 0) {
-    return 'No sub-tasks found';
-  }
+const STATUS_ORDER = ['Done', 'To Be Verified', 'In Progress', 'To Do', 'Blocked', 'Other'];
+const STATUS_SHORT = {
+  'To Be Verified': 'TBV',
+  'In Progress': 'InProg',
+  'To Do': 'ToDo',
+};
 
-  const parts = [];
-  
-  // Sort breakdown by total count (descending) and take top issue types
-  const sortedBreakdown = breakdownData.breakdown
+/**
+ * Build all issue types with their status counts — no truncation.
+ */
+function buildBreakdownLines(breakdownData) {
+  if (!breakdownData?.breakdown?.length) return [];
+  return [...breakdownData.breakdown]
     .sort((a, b) => b.total - a.total)
-    .slice(0, 3); // Show top 3 issue types
-  
-  for (const item of sortedBreakdown) {
-    const statusParts = [];
-    
-    // Order status categories for display
-    const statusOrder = ['Done', 'To Be Verified', 'In Progress', 'To Do', 'Blocked', 'Other'];
-    
-    for (const category of statusOrder) {
-      const categoryData = item.statusCategories[category];
-      if (categoryData) {
-        const count = Object.values(categoryData).reduce((sum, val) => sum + val, 0);
-        if (count > 0) {
-          // Use short names for compact display
-          const shortName = category === 'To Be Verified' ? 'TBV' : 
-                           category === 'In Progress' ? 'InProg' : 
-                           category === 'To Do' ? 'ToDo' : category;
-          statusParts.push(`${shortName} - ${count}`);
+    .map((item) => {
+      const statusParts = [];
+      for (const category of STATUS_ORDER) {
+        const categoryData = item.statusCategories?.[category];
+        if (categoryData) {
+          const count = Object.values(categoryData).reduce((sum, v) => sum + v, 0);
+          if (count > 0) {
+            statusParts.push(`${STATUS_SHORT[category] || category} - ${count}`);
+          }
         }
       }
-    }
-    
-    if (statusParts.length > 0) {
-      parts.push(`${item.type}: ${statusParts.join(', ')}`);
-    }
-  }
-
-  // Show ellipsis if there are more issue types
-  if (breakdownData.breakdown.length > 3) {
-    parts.push('...');
-  }
-
-  return parts.length > 0 ? parts : ['No breakdown available'];
+      return { type: item.type, label: statusParts.join(', ') };
+    })
+    .filter((l) => l.label);
 }
 
 /**
@@ -89,27 +71,33 @@ async function createOutstandingTicketsUrl(jiraKey, breakdownData) {
  */
 const TaskBreakdownCell = React.memo(function TaskBreakdownCell({ jiraKey, breakdownData, loading, compact = true }) {
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
-  
-  // Component is now properly memoized to prevent unnecessary re-renders
-  
-  // Debug logging removed for performance
-  
+
   const handleOutstandingClick = useCallback(async (e) => {
     e.preventDefault();
     setIsGeneratingUrl(true);
-    
     try {
       const url = await createOutstandingTicketsUrl(jiraKey, breakdownData);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Failed to generate JIRA URL:', error);
-      // Fallback to basic JIRA search if URL generation fails
-      const fallbackUrl = `https://jira.nutanix.com/browse/${jiraKey}`;
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      window.open(`https://jira.nutanix.com/browse/${jiraKey}`, '_blank', 'noopener,noreferrer');
     } finally {
       setIsGeneratingUrl(false);
     }
   }, [jiraKey, breakdownData]);
+
+  const handleTypeClick = useCallback(async (e, issueType) => {
+    e.preventDefault();
+    try {
+      const baseUrl = await fetchJiraBaseUrl();
+      const baseJql = buildTaskBreakdownJQL(jiraKey);
+      const jql = `(${baseJql}) AND issuetype = "${issueType}"`;
+      window.open(`${baseUrl}/issues/?jql=${encodeURIComponent(jql)}`, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Failed to generate type URL:', error);
+      window.open(`https://jira.nutanix.com/browse/${jiraKey}`, '_blank', 'noopener,noreferrer');
+    }
+  }, [jiraKey]);
   // Loading state
   if (loading) {
     return (
@@ -151,43 +139,28 @@ const TaskBreakdownCell = React.memo(function TaskBreakdownCell({ jiraKey, break
     );
   }
 
-  // Get summary and detailed breakdown from API response
   const summary = getBreakdownSummary(breakdownData);
-  const detailedBreakdown = formatDetailedBreakdown(breakdownData);
+  const breakdownLines = buildBreakdownLines(breakdownData);
+
+  const linkStyle = {
+    color: '#0065ff',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    font: 'inherit',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+  };
 
   // Compact view (default for table cells)
   if (compact) {
     return (
-      <div 
-        style={{
-          fontSize: '11px',
-          lineHeight: '1.4',
-          padding: '4px',
-          color: '#212529',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}
-        title={`Total: ${summary.total} | Done: ${summary.done} | To Be Verified: ${summary.toBeVerified} | In Progress: ${summary.inProgress} | Remaining: ${summary.remaining} | Completion: ${summary.completionRate}%`}
-      >
-        {/* Summary line with hyperlinked outstanding count */}
-        <div style={{ 
-          marginBottom: '2px', 
-          fontWeight: 500, 
-          color: '#495057'
-        }}>
-          <button
-            type="button"
-            onClick={handleOutstandingClick}
-            style={{
-              color: '#0065ff',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              font: 'inherit',
-              textDecoration: 'underline',
-              cursor: isGeneratingUrl ? 'wait' : 'pointer'
-            }}
-            title={`Click to view ${summary.remaining} outstanding tickets in JIRA`}
-          >
+      <div style={{ fontSize: '11px', lineHeight: '1.4', padding: '4px', color: '#212529' }}>
+        {/* Summary line */}
+        <div style={{ marginBottom: '3px', fontWeight: 500, color: '#495057' }}>
+          <button type="button" onClick={handleOutstandingClick}
+            style={{ ...linkStyle, cursor: isGeneratingUrl ? 'wait' : 'pointer' }}
+            title={`View ${summary.remaining} outstanding tickets in JIRA`}>
             {summary.remaining}
           </button>
           {' remaining out of '}
@@ -196,21 +169,20 @@ const TaskBreakdownCell = React.memo(function TaskBreakdownCell({ jiraKey, break
           {summary.completionRate}
           {'% complete)'}
         </div>
-        
-        {/* Detailed breakdown by issue type and status */}
-        <div style={{ 
-          color: '#6c757d',
-          fontSize: '10px'
-        }}>
-          {Array.isArray(detailedBreakdown) ? (
-            detailedBreakdown.map((line, index) => (
-              <div key={index} style={{ marginBottom: '1px' }}>
-                {line}
-              </div>
-            ))
-          ) : (
-            detailedBreakdown
-          )}
+
+        {/* Per-type breakdown — all types, each type label is a JIRA link */}
+        <div style={{ color: '#6c757d', fontSize: '10px' }}>
+          {breakdownLines.map(({ type, label }) => (
+            <div key={type} style={{ marginBottom: '1px' }}>
+              <button type="button" onClick={(e) => handleTypeClick(e, type)}
+                style={{ ...linkStyle, fontSize: '10px' }}
+                title={`View all ${type} tickets under ${jiraKey} in JIRA`}>
+                {type}
+              </button>
+              {': '}
+              {label}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -300,7 +272,7 @@ const TaskBreakdownCell = React.memo(function TaskBreakdownCell({ jiraKey, break
         <div style={{ fontWeight: 500, marginBottom: '4px', fontSize: '10px', color: '#6c757d' }}>
           BY TYPE:
         </div>
-        {breakdownData.breakdown.slice(0, 3).map((item, _index) => (
+        {breakdownData.breakdown.map((item, _index) => (
           <div key={item.type} style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -312,11 +284,6 @@ const TaskBreakdownCell = React.memo(function TaskBreakdownCell({ jiraKey, break
             <span>{item.total}</span>
           </div>
         ))}
-        {breakdownData.breakdown.length > 3 && (
-          <div style={{ fontSize: '10px', color: '#6c757d', fontStyle: 'italic' }}>
-            +{breakdownData.breakdown.length - 3} more types
-          </div>
-        )}
       </div>
     </div>
   );

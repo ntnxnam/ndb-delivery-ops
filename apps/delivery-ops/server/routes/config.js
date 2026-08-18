@@ -2,9 +2,16 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
+const https = require('https');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { getUserPermissions } = require('../services/authService');
 const { checkKpiViewAuthorization, checkKpiTabAuthorization, checkKpiAdminAuthorization } = require('../services/userService');
+const { sendEmailDirect } = require('../services/emailService');
+const { JIRA_API_V2 } = require('../config/api');
+const { formatDate } = require('../utils/dateFormatter');
+const jiraConfig = require('../config/jiraConfig.json');
+const releaseVersionsCCConfig = require('../config/releaseVersionsCCConfig.json');
 
 const KPI_CONFIG_PATH = path.join(__dirname, '../config/kpiConfig.json');
 const TEAM_BOARD_CONFIG_PATH = path.join(__dirname, '../config/teamBoardConfig.json');
@@ -92,7 +99,8 @@ function loadReleaseDatesConfig() {
     const raw = fs.readFileSync(RELEASE_VERSIONS_EMAIL_CONFIG_PATH, 'utf8');
     if (raw && raw.trim()) {
       const emailConfig = JSON.parse(raw);
-      config.releases = emailConfig.releases || {};
+      // releaseGateDates is the single source of truth — all server services read it
+      config.releases = emailConfig.releaseGateDates || {};
     }
   } catch (e) {
     // Config file missing or invalid
@@ -102,15 +110,16 @@ function loadReleaseDatesConfig() {
 
 function saveReleaseDatesConfig(config) {
   try {
-    // Load existing email config
     delete require.cache[require.resolve(RELEASE_VERSIONS_EMAIL_CONFIG_PATH)];
     const raw = fs.readFileSync(RELEASE_VERSIONS_EMAIL_CONFIG_PATH, 'utf8');
     const emailConfig = raw && raw.trim() ? JSON.parse(raw) : {};
-    
-    // Update just the releases section
-    emailConfig.releases = config.releases || {};
-    
-    // Save back to email config
+
+    // Write back to releaseGateDates — the single source of truth
+    emailConfig.releaseGateDates = config.releases || {};
+
+    // Remove the shadow `releases` key so there is only one copy
+    delete emailConfig.releases;
+
     fs.writeFileSync(RELEASE_VERSIONS_EMAIL_CONFIG_PATH, JSON.stringify(emailConfig, null, 2), 'utf8');
   } catch (e) {
     console.error('Error saving release dates config:', e);
@@ -532,10 +541,128 @@ router.get('/release-dates/:version', (req, res) => {
   }
 });
 
+// ── GA date side-effect helpers ─────────────────────────────────────────────
+
+function getJiraAuthHeader() {
+  const token = process.env.JIRA_TOKEN || jiraConfig.token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function httpsAgent() {
+  return new https.Agent({ rejectUnauthorized: false });
+}
+
+/**
+ * Find the JIRA version ID for a given project + version name.
+ * Returns null if not found.
+ */
+async function findJiraVersionId(projectKey, versionName) {
+  try {
+    const url = JIRA_API_V2.PROJECT_VERSIONS(projectKey);
+    const { data } = await axios.get(url, {
+      headers: { ...getJiraAuthHeader(), 'Content-Type': 'application/json' },
+      httpsAgent: httpsAgent(),
+      timeout: 10000,
+    });
+    const match = (data || []).find(v => v.name === versionName);
+    return match ? match.id : null;
+  } catch (e) {
+    console.warn(`[config] findJiraVersionId ${projectKey}/${versionName}:`, e.message);
+    return null;
+  }
+}
+
+/**
+ * Update the releaseDate on a JIRA version.
+ */
+async function updateJiraVersionReleaseDate(versionId, releaseDate) {
+  try {
+    const url = JIRA_API_V2.VERSION(versionId);
+    await axios.put(url, { releaseDate }, {
+      headers: { ...getJiraAuthHeader(), 'Content-Type': 'application/json' },
+      httpsAgent: httpsAgent(),
+      timeout: 10000,
+    });
+    return true;
+  } catch (e) {
+    console.warn(`[config] updateJiraVersionReleaseDate ${versionId}:`, e.message);
+    return false;
+  }
+}
+
+/**
+ * Fire-and-forget: update JIRA FEAT + ERA project versions when GA date changes.
+ * Does not block the API response.
+ */
+async function triggerGaJiraUpdate(version, newGaDate) {
+  const projects = ['FEAT', 'ERA'];
+  for (const proj of projects) {
+    const versionId = await findJiraVersionId(proj, version);
+    if (versionId) {
+      await updateJiraVersionReleaseDate(versionId, newGaDate);
+    }
+  }
+}
+
+/**
+ * Send GA date change notification email.
+ */
+async function sendGaChangedEmail({ version, oldGaDate, newGaDate, reason, changedBy }) {
+  try {
+    const recipients = [
+      ...(releaseVersionsCCConfig.defaultCC || []),
+      ...((releaseVersionsCCConfig.versionDRIs || {})[version] || []),
+    ].filter(Boolean);
+
+    if (!recipients.length) return;
+
+    const fmtDate = d => d || 'TBD';
+    const html = `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <h2 style="color:#333;border-bottom:2px solid #007bff;padding-bottom:8px">
+    GA Date Updated — ${version}
+  </h2>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0">
+    <tr>
+      <td style="padding:8px;background:#f8f9fa;font-weight:bold;width:140px">Release</td>
+      <td style="padding:8px">${version}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;background:#f8f9fa;font-weight:bold">Previous GA</td>
+      <td style="padding:8px;color:#dc3545">${fmtDate(oldGaDate)}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;background:#f8f9fa;font-weight:bold">New GA</td>
+      <td style="padding:8px;color:#28a745">${fmtDate(newGaDate)}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;background:#f8f9fa;font-weight:bold">Changed by</td>
+      <td style="padding:8px">${changedBy || 'unknown'}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;background:#f8f9fa;font-weight:bold;vertical-align:top">Reason</td>
+      <td style="padding:8px">${reason || '(no reason provided)'}</td>
+    </tr>
+  </table>
+  <p style="color:#6c757d;font-size:12px">
+    JIRA version release dates in FEAT and ERA projects have been updated automatically.
+  </p>
+</div>`;
+
+    await sendEmailDirect({
+      to: recipients.join(', '),
+      subject: `[${version}] GA Date Updated: ${fmtDate(oldGaDate)} → ${fmtDate(newGaDate)}`,
+      html,
+    });
+  } catch (e) {
+    console.warn('[config] sendGaChangedEmail failed:', e.message);
+  }
+}
+
 /**
  * Create or update release dates configuration
  * POST /api/config/release-dates
- * Body: { version, ecDate, ccm1Gate[], ccm2Gate[], codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, ga1, ga2 }
+ * Body: { version, ecDate, ccm1Gate[], ccm2Gate[], codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, ga1, ga2, reason }
  */
 router.post('/release-dates', express.json(), (req, res) => {
   const username = getUsername(req);
@@ -544,7 +671,7 @@ router.post('/release-dates', express.json(), (req, res) => {
     return res.status(403).json({ error: 'Access denied. You are not authorized to manage release configuration.' });
   }
 
-  const { version, ecDate, ccm1Gate, ccm2Gate, codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, ga1, ga2 } = req.body;
+  const { version, ecDate, ccm1Gate, ccm2Gate, codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, promotionGate3, promotionGateOverflow, ga1, ga2, ga3, gaOverflow, reason } = req.body;
   
   if (!version) {
     return res.status(400).json({ error: 'Release version is required' });
@@ -552,7 +679,8 @@ router.post('/release-dates', express.json(), (req, res) => {
 
   try {
     const config = loadReleaseDatesConfig();
-    
+    const previousConfig = config.releases[version] || {};
+
     // Create release configuration object
     const releaseConfig = {
       ecDate: ecDate || null,
@@ -561,14 +689,59 @@ router.post('/release-dates', express.json(), (req, res) => {
       codeFreeze: codeFreeze || null,
       commitGate1: commitGate1 || null,
       commitGate2: commitGate2 || null,
+      promotionGateOverflow: Array.isArray(promotionGateOverflow) ? promotionGateOverflow.filter(x => x?.date) : [],
       promotionGate1: promotionGate1 || null,
       promotionGate2: promotionGate2 || null,
+      promotionGate3: promotionGate3 || null,
+      gaOverflow: Array.isArray(gaOverflow) ? gaOverflow.filter(x => x?.date) : [],
       ga1: ga1 || null,
-      ga2: ga2 || null
+      ga2: ga2 || null,
+      ga3: ga3 || null
     };
     
+    // Carry forward existing date history and append any dates that changed
+    const prevDateHistory = previousConfig.dateHistory || {};
+    const newDateHistory = { ...prevDateHistory };
+
+    function recordHistory(fieldKey, prevVal, nextVal) {
+      if (prevVal && nextVal && prevVal !== nextVal) {
+        if (!newDateHistory[fieldKey]) newDateHistory[fieldKey] = [];
+        if (!newDateHistory[fieldKey].includes(prevVal)) {
+          newDateHistory[fieldKey] = [...newDateHistory[fieldKey], prevVal];
+        }
+      }
+    }
+
+    // Simple date fields
+    recordHistory('ecDate', previousConfig.ecDate, ecDate);
+    // Array gate fields (ccm1Gate, ccm2Gate)
+    ['ccm1Gate', 'ccm2Gate'].forEach(key => {
+      (releaseConfig[key] || []).forEach((entry, i) => {
+        const prevEntry = (previousConfig[key] || [])[i];
+        recordHistory(`${key}[${i}]`, prevEntry?.date, entry?.date);
+      });
+    });
+    // Object gate fields
+    ['codeFreeze','commitGate1','commitGate2','promotionGate1','promotionGate2','promotionGate3','ga1','ga2','ga3'].forEach(key => {  // eslint-disable-line
+      recordHistory(key, previousConfig[key]?.date, releaseConfig[key]?.date);
+    });
+
+    releaseConfig.dateHistory = newDateHistory;
+
     config.releases[version] = releaseConfig;
     saveReleaseDatesConfig(config);
+
+    // Detect GA date change and fire side-effects asynchronously
+    const oldGaDate = previousConfig.ga1?.date || previousConfig.ga2?.date || null;
+    const newGaDate = ga1?.date || ga2?.date || null;
+    if (newGaDate && newGaDate !== oldGaDate) {
+      const changedBy = getUsername(req);
+      // Fire and forget — don't block the response
+      Promise.all([
+        triggerGaJiraUpdate(version, newGaDate),
+        sendGaChangedEmail({ version, oldGaDate, newGaDate, reason, changedBy }),
+      ]).catch(e => console.warn('[config] GA side-effects error:', e.message));
+    }
     
     res.json({
       success: true,
@@ -633,12 +806,9 @@ router.get('/release-dates', (req, res) => {
       return res.json(config);
     }
 
-    console.log(`[release-dates] Getting config dates for version: ${version}`);
-
-    // Get version config from email config (no JIRA calls needed)
-    const versionConfig = releaseVersionsEmailConfig.releaseGateDates[version];
-    
-    console.log(`[release-dates] Version config found:`, JSON.stringify(versionConfig, null, 2));
+    // Read from releaseGateDates — the single source of truth (busts require cache)
+    const allConfig = loadReleaseDatesConfig();
+    const versionConfig = allConfig.releases[version];
     
     if (!versionConfig) {
       console.warn(`[release-dates] No config found for version: ${version}`);
@@ -660,15 +830,9 @@ router.get('/release-dates', (req, res) => {
     }
 
     // Process milestone dates from config
-    const now = new Date();
-    
-    const formatDate = (date) => {
+    const formatMilestoneDate = (date) => {
       if (!date) return null;
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
-      });
+      return formatDate(date);
     };
 
     const processMilestones = (gatePrefix) => {
@@ -695,26 +859,26 @@ router.get('/release-dates', (req, res) => {
             milestones.push({
               label: milestone.label,
               date: milestone.date,
-              formattedDate: formatDate(new Date(milestone.date)),
+              formattedDate: formatMilestoneDate(new Date(milestone.date)),
               isStrikeThrough: milestone.style === 'dotted',
               isCurrent: milestone.style === 'solid'
             });
             
             if (milestone.style === 'solid') {
-              currentDate = formatDate(new Date(milestone.date));
+              currentDate = formatMilestoneDate(new Date(milestone.date));
             }
           });
         } else {
           milestones.push({
             label: gate.label,
             date: gate.date,
-            formattedDate: formatDate(new Date(gate.date)),
+            formattedDate: formatMilestoneDate(new Date(gate.date)),
             isStrikeThrough: gate.style === 'dotted',
             isCurrent: gate.style === 'solid'
           });
           
           if (gate.style === 'solid') {
-            currentDate = formatDate(new Date(gate.date));
+            currentDate = formatMilestoneDate(new Date(gate.date));
           }
         }
         
@@ -729,7 +893,6 @@ router.get('/release-dates', (req, res) => {
     
     try {
       codeComplete = processMilestones('ccm');
-      console.log(`[release-dates] Code Complete processed:`, codeComplete);
     } catch (error) {
       console.error(`[release-dates] Error processing code complete:`, error);
       codeComplete = { milestones: [], currentDate: 'TBD' };
@@ -737,7 +900,6 @@ router.get('/release-dates', (req, res) => {
     
     try {
       commitGate = processMilestones('commitGate');
-      console.log(`[release-dates] Commit Gate processed:`, commitGate);
     } catch (error) {
       console.error(`[release-dates] Error processing commit gate:`, error);
       commitGate = { milestones: [], currentDate: 'TBD' };
@@ -745,7 +907,6 @@ router.get('/release-dates', (req, res) => {
     
     try {
       promotionGate = processMilestones('promotionGate');
-      console.log(`[release-dates] Promotion Gate processed:`, promotionGate);
     } catch (error) {
       console.error(`[release-dates] Error processing promotion gate:`, error);
       promotionGate = { milestones: [], currentDate: 'TBD' };
@@ -753,25 +914,17 @@ router.get('/release-dates', (req, res) => {
     
     try {
       generalAvailability = processMilestones('ga');
-      console.log(`[release-dates] GA processed:`, generalAvailability);
     } catch (error) {
       console.error(`[release-dates] Error processing GA:`, error);
       generalAvailability = { milestones: [], currentDate: 'TBD' };
     }
-    
-    console.log(`[release-dates] Processed milestones:`, {
-      codeComplete: codeComplete.milestones.length,
-      commitGate: commitGate.milestones.length, 
-      promotionGate: promotionGate.milestones.length,
-      generalAvailability: generalAvailability.milestones.length
-    });
 
     // Calculate days to current Promotion Gate
     let daysToPG = null;
     const currentPGMilestone = promotionGate.milestones.find(m => m.isCurrent);
     if (currentPGMilestone) {
       const pgDate = new Date(currentPGMilestone.date);
-      const diffTime = pgDate - now;
+      const diffTime = pgDate - new Date();
       daysToPG = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
@@ -787,8 +940,6 @@ router.get('/release-dates', (req, res) => {
         generalAvailability: generalAvailability.milestones
       }
     };
-    
-    console.log(`[release-dates] Successfully processed config for ${version}:`, dateMetrics);
     
     return res.json({
       success: true,

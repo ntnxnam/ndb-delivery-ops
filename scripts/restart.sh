@@ -1,5 +1,5 @@
 #!/bin/bash
-# Restart all servers: stop, rebuild if needed, then start
+# Restart all servers: stop, optionally rebuild shared, then start
 
 set -e
 
@@ -16,13 +16,14 @@ echo "1. Stopping existing servers..."
 "$SCRIPT_DIR/stop.sh"
 echo ""
 
-# Check if we need to rebuild shared package
-echo "2. Checking if shared package needs rebuild..."
-cd "$PROJECT_ROOT/shared"
-if ! npm run build 2>&1 | tail -1 | grep -q "tsc"; then
-  echo "   (skipping — no TypeScript files changed)"
+# Rebuild shared package if it has TypeScript sources
+echo "2. Rebuilding shared package (if applicable)..."
+SHARED_DIR="$PROJECT_ROOT/shared"
+if [ -f "$SHARED_DIR/tsconfig.json" ] && [ -d "$SHARED_DIR/src" ]; then
+  ( cd "$SHARED_DIR" && npm run build ) && echo "   ✓ Shared package rebuilt" \
+    || echo "   ⚠ Shared build returned non-zero (check output above)"
 else
-  echo "   ✓ Shared package rebuilt"
+  echo "   (skipping — no TypeScript sources found in shared/)"
 fi
 echo ""
 

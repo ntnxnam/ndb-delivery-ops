@@ -1,138 +1,150 @@
-# 🚀 How to Run the Application
+# How to Run the Application
 
-## Quick Start
+## Port reference
 
-### 1. Install Dependencies (if not already done)
+| Service | Dev port | Notes |
+|---|---|---|
+| Backend (Express) | `8001` | Set in `server/.env` as `PORT=8001` |
+| Frontend (React dev server) | `8899` | Set in `client/package.json` `start` script |
+| Production (Nginx) | `8899` | Public port; Nginx proxies `/api/*` to backend `8001` |
+
+---
+
+## Local development
+
+### 1. Install dependencies
+
+Run once from the repo root (workspace install covers all workspaces):
+
 ```bash
-npm run install-all
+npm install
 ```
 
-### 2. Configure SMTP Settings
-```bash
-# Copy the example environment file
-cp server/.env.example server/.env
+### 2. Configure the backend environment
 
-# Edit server/.env and add your SMTP credentials:
-# SMTP_HOST=smtp.gmail.com
-# SMTP_PORT=587
-# SMTP_USER=your-email@nutanix.com
-# SMTP_PASS=your-app-password
-# PORT=6001
+```bash
+cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+# Then edit server/.env — SMTP_*, AI_*, JIRA_TOKEN are the key fields.
+# PORT is already set to 8001; do not change it without also updating client/package.json proxy.
 ```
 
-### 3. Run the Application
+### 3. Start both servers
 
-**Option A: Run both frontend and backend together (Recommended)**
 ```bash
-npm run dev
+# From repo root — starts backend on :8001 and React dev server on :8899
+./scripts/start.sh
 ```
 
-**Option B: Run separately**
+Or start them separately (from `apps/delivery-ops/`):
 
-Terminal 1 - Backend:
 ```bash
-npm run server
-```
-Backend will run on: **http://localhost:6001**
+# Terminal 1 — backend
+npm run server          # Express on http://localhost:8001
 
-Terminal 2 - Frontend:
+# Terminal 2 — frontend
+npm run client          # React dev server on http://localhost:8899
+```
+
+Or use the `dev` script (both in one terminal via concurrently):
+
 ```bash
-npm run client
+cd apps/delivery-ops && npm run dev
 ```
-Frontend will run on: **http://localhost:6100**
 
-### 4. Access the Application
+### 4. Open the app
 
-- **Frontend (Web UI)**: Open your browser and go to **http://localhost:6100**
-- **Backend API**: Available at **http://localhost:6001**
+- **Frontend**: http://localhost:8899
+- **Backend API**: http://localhost:8001/api/health
 
-## Port Configuration
+### 5. Stop servers
 
-The application uses unusual port numbers to avoid conflicts:
-- **Backend Server**: Port `6001`
-- **Frontend React App**: Port `6100`
+```bash
+./scripts/stop.sh
+```
 
-These ports can be changed by:
-- Backend: Set `PORT` environment variable in `server/.env`
-- Frontend: Set `PORT` environment variable before running (e.g., `PORT=9999 npm run client`)
+### 6. Restart servers
+
+```bash
+./scripts/restart.sh
+```
+
+---
+
+## Pre-deploy localhost guard
+
+Before shipping to production, verify no hardcoded `localhost` or `127.0.0.1` has crept into app code:
+
+```bash
+cd apps/delivery-ops && npm run check:no-localhost
+```
+
+This is also run automatically by `deploy-to-production.sh` before packaging.
+
+---
+
+## Production deployment
+
+Production runs on a Rocky Linux 9 server behind Nginx + PM2. Two scripts handle the full lifecycle:
+
+| Script | Where it runs | Purpose |
+|---|---|---|
+| `apps/delivery-ops/scripts/deploy-to-production.sh` | Your Mac | Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script |
+| `apps/delivery-ops/scripts/server-deploy.sh` | Production server | Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend |
+
+### Quick deploy
+
+```bash
+# From anywhere in the repo
+./apps/delivery-ops/scripts/deploy-to-production.sh
+```
+
+Both scripts are idempotent — the same command works for the first deploy and every subsequent redeploy.
+
+See `DEPLOYMENT_GUIDE.md` for full production setup instructions.
+
+---
 
 ## Troubleshooting
 
-### Port Already in Use
-If you get an error that the port is already in use:
+### Port already in use
 
-**For Backend (6001):**
 ```bash
-# Find what's using the port
-lsof -i :6001
+# Find what's on port 8001 (backend)
+lsof -i :8001
 
-# Kill the process or change PORT in server/.env
+# Find what's on port 8899 (frontend)
+lsof -i :8899
+
+# Or just run stop.sh which clears both
+./scripts/stop.sh
 ```
 
-**For Frontend (6100):**
-```bash
-# Find what's using the port
-lsof -i :6100
+### Backend crashes on startup
 
-# Or run with a different port
-PORT=9999 npm run client
+```bash
+tail -50 /tmp/server.log
 ```
 
-### Dependencies Not Installed
-```bash
-# Install all dependencies
-npm run install-all
+Common causes: missing `server/.env`, wrong `PORT`, missing SMTP credentials.
 
-# Or install separately
+### Dependencies not installed
+
+```bash
+# From repo root
 npm install
-cd server && npm install
-cd ../client && npm install
 ```
 
-### SMTP Configuration Issues
-- Make sure `server/.env` exists and has correct SMTP credentials (service account for Nutanix relay).
-- All email is sent **From** the service account (e.g. `svc.ndb.team@nutanix.com`); Reply-To is set to the sender so replies go to the right person.
-- **Pre-deploy checklist**: Before production deploy, set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optionally SMTP_FROM) in server/.env; ensure server/config/emailConfig.json has smtp.from. See DEPLOYMENT_GUIDE.md for the full checklist.
-- After deploy, run `cd server && node test-smtp.js` to verify SMTP (or rely on the optional email smoke step in the deployment script).
-- For Gmail, you may need to use an "App Password" instead of your regular password
+### SMTP / email not working
 
-## Testing Email Functionality
+1. Check `server/.env` has `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
+2. Check `server/config/emailConfig.json` has `smtp.from` set.
+3. From the server, run: `cd apps/delivery-ops/server && node test-smtp.js`
 
-### Quick Test Script
-A test script is available to quickly test email sending:
+---
+
+## Production build only (no server)
 
 ```bash
-# Make sure the server is running first (npm run dev)
-# Then run:
-node test-email.js <your-confluence-token>
+cd apps/delivery-ops/client && npm run build
+# Output: apps/delivery-ops/client/build/
 ```
-
-This will:
-1. Extract content from the test Confluence page
-2. Construct the email body
-3. Send it to namratha.singh@nutanix.com
-
-**Example:**
-```bash
-node test-email.js ATATT3xFfGF0...
-```
-- Check that SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS are set correctly
-
-## Development Workflow
-
-1. **Start the application**: `npm run dev`
-2. **Make changes** to code
-3. **Hot reload** - Both frontend and backend support hot reloading
-4. **Check the browser** at http://localhost:6100
-
-## Production Build
-
-To create production builds:
-
-```bash
-# Build frontend
-cd client && npm run build
-
-# The built files will be in client/build/
-```
-

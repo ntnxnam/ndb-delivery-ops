@@ -20,4 +20,5 @@ export { useEmailForm } from './useEmailForm';
 
 // AI / analytics (future)
 export { useCrystalBall } from './useCrystalBall';
+export { useChat } from './useChat';
 

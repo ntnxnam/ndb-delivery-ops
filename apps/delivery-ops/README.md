@@ -216,12 +216,7 @@ npm start
    ```bash
    npm run install-all
    ```
-   Or install separately:
-   ```bash
-   npm install
-   cd server && npm install
-   cd ../client && npm install
-   ```
+   (`install-all` runs a single workspace install from repo root to avoid duplicate nested `node_modules` trees.)
 
 3. **Configure environment variables**:
    - Copy `server/.env.example` to `server/.env`

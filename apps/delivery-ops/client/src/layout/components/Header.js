@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { useTeam } from '../../contexts/TeamContext';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
+import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 
 export const Header = () => {
   const { user, testConnectionAndRefreshPermissions } = useAuth();
@@ -14,6 +15,7 @@ export const Header = () => {
     isTransitioning,
     loading: teamsLoading
   } = useTeam();
+  const { refreshVersionsAndResetDefault } = useSelectedRelease();
 
   // Debug logging
   console.log('[Header] Team selector debug:', {
@@ -27,7 +29,8 @@ export const Header = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
 
-  // Test JIRA connection - use enhanced auth method
+  // Test JIRA connection — on success, also re-fetches versions and re-picks
+  // the default release using the GA-date logic (clears stale localStorage).
   const testConnection = async () => {
     setTestingConnection(true);
     setConnectionStatus(null);
@@ -41,6 +44,8 @@ export const Header = () => {
           message: result.message + (result.permissionsRefreshed ? ' • Permissions refreshed' : '')
         });
         showSuccess(result.permissionsRefreshed ? 'JIRA connection successful • Permissions updated' : 'JIRA connection successful');
+        // Re-fetch versions and reset the default release to the nearest GA date.
+        refreshVersionsAndResetDefault().catch(() => {});
       } else {
         throw new Error(result.message || 'Connection test failed');
       }

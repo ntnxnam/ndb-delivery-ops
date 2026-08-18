@@ -365,7 +365,9 @@ function deriveReleaseSuffix(release: string, labelPrefix: string): string {
   const stripped = lower.startsWith(`${labelPrefix.toLowerCase()}-`)
     ? lower.slice(labelPrefix.length + 1)
     : lower;
-  return stripped;
+  // JQL label values cannot contain spaces or special chars — collapse to hyphens.
+  // e.g. "era future" → "era-future", "ndb-3.0 ea" → "ndb-3.0-ea"
+  return stripped.replace(/[\s]+/g, '-');
 }
 
 /**

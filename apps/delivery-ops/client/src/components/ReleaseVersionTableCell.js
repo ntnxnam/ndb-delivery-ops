@@ -222,7 +222,8 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   itemExecutiveSummary,
   ganttConfig = null,
   breakdownDataMap,
-  loadingBreakdowns
+  loadingBreakdowns,
+  releaseContext = null,
 }) {
   // Memoize breakdown data calculations at the top level
   const breakdownData = useMemo(() => breakdownDataMap?.get(item.key) || null, [breakdownDataMap, item.key]);
@@ -573,6 +574,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
           selectedVersion={selectedVersion}
           ganttConfig={ganttConfig}
           breakdownData={breakdownData}
+          releaseContext={releaseContext}
         />
       </td>
     );

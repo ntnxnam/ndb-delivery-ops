@@ -9,6 +9,8 @@
  *   - downloadBoth(ganttRef, items, opts)      → Gantt PNG + Excel
  */
 
+import { formatters } from '../shared/utils/formatters';
+
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -354,7 +356,7 @@ export async function downloadPDF(contentRef, version) {
 
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  const headerText = `Release Versions — ${version || ''} · ${new Date().toLocaleDateString()}`;
+  const headerText = `Release Versions — ${version || ''} · ${formatters.date(new Date()) || new Date().toISOString().slice(0, 10)}`;
   const totalPages = Math.ceil(scaledH / usableH);
 
   for (let page = 0; page < totalPages; page++) {

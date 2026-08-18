@@ -6,6 +6,7 @@ import { usePermissions } from '../../auth/hooks/usePermissions';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
 import { TAB_PERMISSIONS } from '../../auth/constants/permissions';
+import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 
 /**
  * URL for the bin-packing app. The app is static-served by the backend
@@ -37,6 +38,7 @@ export const Sidebar = () => {
     isTransitioning,
     loading: teamsLoading
   } = useTeam();
+  const { refreshVersionsAndResetDefault } = useSelectedRelease();
   const { success: showSuccess, error: showError } = useNotifications();
 
   // Sidebar state
@@ -130,6 +132,12 @@ export const Sidebar = () => {
       label: 'Component Report',
       icon: '📊',
       description: 'Component health, actionable metrics, deferral trends'
+    },
+    {
+      path: '/chatbot',
+      label: 'AI Chatbot',
+      icon: '💬',
+      description: 'Conversational release and ticket Q&A'
     },
     {
       path: getBinPackingUrl(),
@@ -247,7 +255,8 @@ export const Sidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Test JIRA connection
+  // Test JIRA connection — on success, also re-fetches versions and re-picks
+  // the default release using the GA-date logic (clears stale localStorage).
   const testConnection = async () => {
     setTestingConnection(true);
     setConnectionStatus(null);
@@ -261,6 +270,8 @@ export const Sidebar = () => {
           message: result.message + (result.permissionsRefreshed ? ' • Permissions refreshed' : '')
         });
         showSuccess(result.permissionsRefreshed ? 'JIRA connection successful • Permissions updated' : 'JIRA connection successful');
+        // Re-fetch versions and reset the default release to the nearest GA date.
+        refreshVersionsAndResetDefault().catch(() => {});
       } else {
         throw new Error(result.message || 'Connection test failed');
       }

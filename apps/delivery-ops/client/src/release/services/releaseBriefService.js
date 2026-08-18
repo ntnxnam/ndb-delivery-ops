@@ -295,7 +295,7 @@ export async function fetchProjectBreakdown({
     };
   }
   const res = await authenticatedGet(
-    `${API_BASE}/api/release-dataset/project-breakdown`,
+    `${API_BASE}/api/release-dataset/project-status`,
     { productId, release },
     { jiraToken, username }
   );
@@ -376,14 +376,45 @@ export function jiraSearchUrl(jiraBaseUrl, jql) {
  *
  * Preference order:
  *   1. Caller-provided `preferred` (if it exists in the list)
- *   2. Last unreleased version (assumed to be the active one)
- *   3. First version overall
- *   4. null
+ *   2. The one-dot unreleased release (e.g. "NDB-2.12") whose GA date
+ *      (releaseDate from JIRA) is nearest to today — future or overdue.
+ *      If multiple one-dot releases lack a releaseDate, falls back to the
+ *      last one by sort order.
+ *   3. Last unreleased version overall (any dot depth)
+ *   4. First version overall
+ *   5. null
  */
 export function pickDefaultRelease(versions, preferred) {
   if (!versions || versions.length === 0) return null;
   if (preferred && versions.some((v) => v.name === preferred)) return preferred;
+
   const unreleased = versions.filter((v) => !v.released);
+
+  // One-dot releases only: strip "NDB-" (or any prefix up to the first "-"),
+  // then match exactly X.Y — e.g. "NDB-2.11" passes, "NDB-2.11.1" does not.
+  const oneDotUnreleased = unreleased.filter((v) => {
+    const numeric = v.name.replace(/^[^-]+-/i, '');
+    return /^\d+\.\d+$/.test(numeric);
+  });
+
+  if (oneDotUnreleased.length > 0) {
+    const today = Date.now();
+    const withDate = oneDotUnreleased.filter((v) => v.releaseDate);
+    if (withDate.length > 0) {
+      // Sort by absolute distance from today so the nearest GA wins,
+      // whether it is upcoming or slightly overdue.
+      withDate.sort(
+        (a, b) =>
+          Math.abs(new Date(a.releaseDate).getTime() - today) -
+          Math.abs(new Date(b.releaseDate).getTime() - today)
+      );
+      return withDate[0].name;
+    }
+    // No releaseDate available on any one-dot release → last by sort order.
+    return oneDotUnreleased[oneDotUnreleased.length - 1].name;
+  }
+
+  // No one-dot unreleased releases → original behaviour.
   if (unreleased.length > 0) return unreleased[unreleased.length - 1].name;
   return versions[0].name;
 }

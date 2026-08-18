@@ -24,13 +24,16 @@ export function useRetrospective({
   const [selectedProjectKey, setSelectedProjectKey] = useState('');
   const [projectDetail, setProjectDetail] = useState(null);
   const [retroFallback, setRetroFallback] = useState(null);
+  const [hasFetched, setHasFetched] = useState(false);
   const {
     versions,
+    activeVersions,
+    inactiveVersions,
     selectedRelease,
     setSelectedRelease,
   } = useSelectedRelease();
   const { releaseTickets, releaseError } = useReleaseData();
-  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [loadingVersions] = useState(false);
   const [loadingBootstrap, setLoadingBootstrap] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -61,8 +64,6 @@ export function useRetrospective({
 
   const loadProjects = useCallback(async () => {
     if (!ready || !selectedRelease) return;
-
-    // Bundle-first: synchronous, no loading state needed.
     const bundleDerived = deriveRetroProjectsFromBundle(releaseTickets, selectedRelease);
     if (bundleDerived) {
       setProjectsPage(bundleDerived);
@@ -70,8 +71,6 @@ export function useRetrospective({
       setError('');
       return;
     }
-
-    // Original fallback — unchanged:
     setLoadingProjects(true);
     try {
       const { projectsPage: data } = await fetchRetrospectiveProjects({
@@ -96,8 +95,6 @@ export function useRetrospective({
     if (!ready || !selectedRelease || !selectedProjectKey || !projectsPage?.projects?.length) return;
     const row = projectsPage.projects.find((p) => p.key === selectedProjectKey);
     if (!row) return;
-
-    // Bundle-first: synchronous, no loading state needed.
     if (releaseTickets && releaseTickets.length > 0 && bootstrap?.gateDates) {
       const bundleDetail = deriveRetroDetailFromBundle(releaseTickets, selectedRelease, row.key, bootstrap.gateDates);
       if (bundleDetail) {
@@ -106,8 +103,6 @@ export function useRetrospective({
         return;
       }
     }
-
-    // Original fallback — unchanged:
     setLoadingDetail(true);
     try {
       const { detail } = await fetchRetrospectiveProjectDetail({
@@ -132,37 +127,26 @@ export function useRetrospective({
     if (!ready || !selectedRelease) return;
     setLoadingFallback(true);
     try {
-      const { retro: data } = await fetchRetrospective({
-        release: selectedRelease,
-        productId,
-        topN,
-        jiraToken,
-        username,
-      });
+      const { retro: data } = await fetchRetrospective({ release: selectedRelease, productId, topN, jiraToken, username });
       setRetroFallback(data);
     } catch (_e) {
-      // best-effort fallback
       setRetroFallback(null);
     } finally {
       setLoadingFallback(false);
     }
   }, [ready, selectedRelease, productId, topN, jiraToken, username]);
 
-  useEffect(() => {
-    setFallbackAttemptedForRelease('');
-    loadBootstrap();
-  }, [selectedRelease, loadBootstrap]);
+  // No auto-fetch on mount or release change — user must press Fetch.
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
+  // Detail still auto-loads when a project row is selected (that's a deliberate click).
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
 
+  // Fallback only triggers after a user-initiated fetch has errored.
   useEffect(() => {
     if (
+      hasFetched &&
       error &&
       selectedRelease &&
       fallbackAttemptedForRelease !== selectedRelease &&
@@ -174,46 +158,52 @@ export function useRetrospective({
       setFallbackAttemptedForRelease(selectedRelease);
       loadFallback();
     }
-  }, [
-    error,
-    selectedRelease,
-    fallbackAttemptedForRelease,
-    loadingBootstrap,
-    loadingProjects,
-    loadingDetail,
-    retroFallback,
-    loadFallback,
-  ]);
+  }, [hasFetched, error, selectedRelease, fallbackAttemptedForRelease, loadingBootstrap, loadingProjects, loadingDetail, retroFallback, loadFallback]);
 
   const onSelectRelease = useCallback((name) => {
     setSelectedRelease(name);
     setSelectedProjectKey('');
     setProjectDetail(null);
+    setBootstrap(null);
+    setProjectsPage(null);
+    setRetroFallback(null);
+    setError('');
+    setHasFetched(false);
+    setFallbackAttemptedForRelease('');
   }, [setSelectedRelease]);
 
-  // Selecting a project row clears stale detail immediately so the cards don't
-  // continue to show the previously-loaded project's data while the new one loads.
   const selectProject = useCallback((key) => {
     setProjectDetail(null);
     setSelectedProjectKey(key);
   }, []);
 
+  // Called when user presses Fetch.
   const refresh = useCallback(() => {
+    setHasFetched(true);
     setFallbackAttemptedForRelease('');
     loadBootstrap();
     loadProjects();
   }, [loadBootstrap, loadProjects]);
 
   useEffect(() => {
-    if (releaseError === 'not_synced') {
+    // Only surface the "not synced" message when there is genuinely nothing to show.
+    // If bootstrap data has already loaded (page has content), suppress it — the
+    // retrospective endpoint works independently of the release dataset cache.
+    if (releaseError === 'not_synced' && !bootstrap) {
       setError(`Release ${selectedRelease || ''} is not synced yet. Run Sync to load per-release data.`);
+    } else if (releaseError !== 'not_synced') {
+      // Clear a stale not_synced message when the release changes or data arrives.
+      setError((prev) => (prev?.includes('not synced') ? '' : prev));
     }
-  }, [releaseError, selectedRelease]);
+  }, [releaseError, selectedRelease, bootstrap]);
 
   return useMemo(
     () => ({
       ready,
       versions,
+      activeVersions,
+      inactiveVersions,
+      hasFetched,
       bootstrap,
       projectsPage,
       selectedProjectKey,
@@ -223,35 +213,15 @@ export function useRetrospective({
       retroFallback,
       selectedRelease,
       setSelectedRelease: onSelectRelease,
-      loading:
-        loadingVersions || loadingBootstrap || loadingProjects || loadingDetail || loadingFallback,
-      loadingVersions,
+      loading: loadingVersions || loadingBootstrap || loadingProjects || loadingDetail || loadingFallback,
       loadingBootstrap,
       loadingProjects,
       loadingDetail,
-      loadingFallback,
       error,
       refresh,
     }),
-    [
-      ready,
-      versions,
-      bootstrap,
-      projectsPage,
-      selectedProjectKey,
-      setSelectedProjectKey,
-      projectDetail,
-      retroFallback,
-      selectedRelease,
-      onSelectRelease,
-      selectProject,
-      loadingVersions,
-      loadingBootstrap,
-      loadingProjects,
-      loadingDetail,
-      loadingFallback,
-      error,
-      refresh,
-    ]
+    [ready, versions, activeVersions, inactiveVersions, hasFetched, bootstrap, projectsPage, selectedProjectKey,
+     projectDetail, retroFallback, selectedRelease, onSelectRelease, selectProject,
+     loadingVersions, loadingBootstrap, loadingProjects, loadingDetail, loadingFallback, error, refresh]
   );
 }

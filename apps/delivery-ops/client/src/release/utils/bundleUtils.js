@@ -377,7 +377,7 @@ export function deriveRetroDetailFromBundle(bundle, release, parentKey, gateDate
     },
     ga: {
       skipped: !hasPastGa,
-      openAtGate: hasPastGa ? gaOpenArr.length : 0,
+      openAtGate: gaOpenArr.length,
       rag: thresholdRagFn(hasPastGa ? gaOpenArr.length : 0, 2, 3),
       links: {},
     },

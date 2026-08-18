@@ -1,3 +1,4 @@
+const path = require('path');
 const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
 const {
@@ -12,6 +13,22 @@ const { getCached, setCached } = require('../utils/simpleCache');
 const { extractTextFieldValue } = require('../utils/adfText');
 const { getSprintsForBoard, resolveSprintState } = require('../utils/sprintCache');
 const { resolveTeam } = require('../utils/jiraRouteHelpers');
+const { getTeamSprintBaseFilter } = require('../utils/teamConfig');
+
+const RELEASE_DATASET_CACHE_DIR = path.resolve(
+  __dirname, '..', '..', '..', '..', 'shared', '.cache', 'release-dataset'
+);
+
+// Lazy ESM import — mirrors releaseDataset.js pattern
+let _sharedPromise = null;
+async function getShared() {
+  if (!_sharedPromise) {
+    _sharedPromise = process.env.NODE_ENV === 'test'
+      ? Promise.resolve(require('@portfolio-delivery-ops/shared'))
+      : import('@portfolio-delivery-ops/shared');
+  }
+  return _sharedPromise;
+}
 
 const RELEASE_ITEMS_CONFIG = {
   MAX_RESULTS_PER_BATCH: 100,
@@ -109,6 +126,79 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
   });
 }
 
+/**
+ * Map a cached dataset ticket (human-readable keys) to the same shape
+ * that processReleaseItems produces from a live JIRA response.
+ */
+function mapCachedTicketToItem(t) {
+  const labels = Array.isArray(t['Labels'])
+    ? t['Labels']
+    : (t['Labels'] ? String(t['Labels']).split(',').map((l) => l.trim()).filter(Boolean) : []);
+  return {
+    key: t['Issue Key'],
+    summary: t['Summary'],
+    status: t['Status'],
+    priority: t['Priority'] || 'N/A',
+    fixVersions: t['All Fix Versions'] || t['Fix Version'] || 'N/A',
+    labels,
+    labelsString: labels.join(', ') || 'N/A',
+    assignee: t['Assignee'] || null,
+    issuetype: t['Issue Type'] || null,
+    sprintState: null,
+    sprintName: t['Sprint Name'] || null,
+    customfield_10860: t['QA Contact'] || null,
+    customfield_27764: t['TPM Owner'] || null,
+    customfield_11067: t['CC Date'] || null,
+    customfield_13861: t['FS/DS Done Date'] || null,
+    customfield_11068: t['Test Plan Date'] || null,
+    customfield_35863: t['CG Date'] || null,
+    customfield_35864: t['PG Date'] || null,
+    customfield_14463: t['Requirements Link'] || null,
+    customfield_31460: t['TCMS Link'] || null,
+    customfield_14464: t['Design Doc Link'] || null,
+    customfield_14465: t['Test Plan Link'] || null,
+    customfield_23073: t['Status Update'] || null,
+    customfield_45660: t['Status Update Date'] || null,
+    customfield_23560: formatRiskIndicator(t['Risk Indicator'] || null),
+    customfield_38460: t['Executive Status Update'] || null,
+  };
+}
+
+/**
+ * Try to load Feature/Initiative items for a single release from the
+ * on-disk dataset cache.  Returns null if the cache is cold or unusable.
+ */
+async function loadItemsFromCache(fixVersion, productId = 'ndb') {
+  try {
+    const shared = await getShared();
+    const { ReleaseDatasetCache } = shared;
+    const cache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
+    const { tickets } = cache.loadReleaseLenient(fixVersion);
+    if (!Array.isArray(tickets) || tickets.length === 0) return null;
+
+    const versionLabel = fixVersion.toLowerCase();
+    const items = tickets
+      .filter((t) => {
+        const type = (t['Issue Type'] || '').toLowerCase();
+        if (type !== 'feature' && type !== 'initiative') return false;
+        if ((t['Status'] || '').toLowerCase() === 'cancelled') return false;
+        // Include tickets whose fixVersion matches OR carry the long-term-funded label
+        const fv = (t['All Fix Versions'] || t['Fix Version'] || '').toLowerCase();
+        const lbls = Array.isArray(t['Labels'])
+          ? t['Labels'].join(' ').toLowerCase()
+          : String(t['Labels'] || '').toLowerCase();
+        return fv.includes(versionLabel) || lbls.includes(`${versionLabel}-long-term-funded`);
+      })
+      .map(mapCachedTicketToItem);
+
+    console.log(`[releaseItemsDataService] Cache hit for ${fixVersion}: ${items.length} Feature/Initiative items`);
+    return items;
+  } catch (err) {
+    console.warn(`[releaseItemsDataService] Cache read failed for ${fixVersion}:`, err.message);
+    return null;
+  }
+}
+
 async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions } = {}) {
   if (!fixVersions || !Array.isArray(fixVersions) || fixVersions.length === 0) {
     const err = new Error('At least one fixVersion is required');
@@ -118,15 +208,25 @@ async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions } = {}) {
   const httpsAgent = createHttpsAgent();
   const allItems = [];
   const { team } = resolveTeam(null);
+  const sprintBaseFilter = getTeamSprintBaseFilter(team?.id || 'ndb') || `project = ${team?.projectKey || 'ERA'}`;
+
   for (const fixVersion of fixVersions) {
+    // --- Cache-first ---
+    const cached = await loadItemsFromCache(fixVersion);
+    if (cached) {
+      allItems.push(...cached);
+      continue;
+    }
+
+    // --- JQL fallback (cache cold or unreadable) ---
+    console.log(`[releaseItemsDataService] Cache miss for ${fixVersion}, falling back to JIRA JQL`);
     const versionLabel = fixVersion.toLowerCase();
-    const escapedVersionLabel = versionLabel.replace(/\./g, '\\.');
-    const extensionLabelPattern = `${escapedVersionLabel}-.*-code-complete-extention-recieved`;
-    const jql = `project = ERA AND (fixVersion = "${fixVersion}" OR labels = "${versionLabel}-long-term-funded" OR labels ~ "${extensionLabelPattern}") AND issuetype IN (Feature, Initiative) ORDER BY key ASC`;
+    const jql = `${sprintBaseFilter} AND (fixVersion = "${fixVersion}" OR labels = "${versionLabel}-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
     const issues = await fetchReleaseItemsFromJira(jql, jiraToken, httpsAgent, `release-items-${fixVersion}`);
     const mapped = await processReleaseItems(issues, jiraToken, httpsAgent, `release-items-${fixVersion}`, team?.boardId);
     allItems.push(...mapped);
   }
+
   return { allItems: sortByRiskIndicator([...allItems]) };
 }
 

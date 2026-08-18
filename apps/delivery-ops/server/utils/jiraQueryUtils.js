@@ -11,7 +11,7 @@
  */
 function buildCommitItemsJQL(fixVersion, teamConfig = null) {
   // Updated to use the correct query logic as specified
-  const baseJQL = `fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled AND (labels is EMPTY OR labels != "ndb-not-por")`;
+  const baseJQL = `fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled AND labels not in ("ndb-not-por")`;
   
   return baseJQL;
 }

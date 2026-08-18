@@ -65,6 +65,7 @@ function buildDashboardFields(getFieldIdFn) {
     getFieldIdFn('codeComplete'),
     'customfield_40468', // Feat ID
     'customfield_14262', // FEAT Number
+    getFieldIdFn('assigneeManager'), // Assignee Manager (customfield_19262)
   ].filter(Boolean).join(',');
 }
 
@@ -76,6 +77,9 @@ function issueFromJira(issue) {
     issueType: (fields.issuetype?.name || '').trim(),
     status: (fields.status?.name || '').trim(),
     assignee: fields.assignee?.displayName || null,
+    assigneeEmail: fields.assignee?.emailAddress || null,
+    assigneeManager: fields.customfield_19262?.displayName || null,
+    assigneeManagerEmail: fields.customfield_19262?.emailAddress || null,
     created: typeof fields.created === 'string' ? fields.created.slice(0, 10) : null,
     resolved: typeof fields.resolutiondate === 'string' ? fields.resolutiondate.slice(0, 10) : null,
     updated: typeof fields.updated === 'string' ? fields.updated.slice(0, 10) : null,
@@ -97,6 +101,40 @@ function toFeatureListItem(issue) {
     status: issue.status,
     assignee: issue.assignee,
   };
+}
+
+/**
+ * 3-tier actual gate date resolution:
+ *   1. Last resolved date among canonical issues matching types (+ optional priority filter)
+ *   2. Custom field value from the feature/initiative ticket
+ *   3. 'not-provided' sentinel (client renders as "not provided", no delta)
+ *
+ * @param {object[]} issues - canonicalIssues (already mapped via issueFromJira)
+ * @param {string[]} types  - issue types to include (lowercase)
+ * @param {string|null} customFieldValue - raw value from the feature ticket custom field
+ * @param {string[]|null} priorities - if set, only include issues with these priorities (lowercase)
+ */
+function resolveActualGateDate(issues, types, customFieldValue, priorities = null) {
+  const typeSet = new Set(types.map((t) => t.toLowerCase()));
+  const priSet = priorities ? new Set(priorities.map((p) => p.toLowerCase())) : null;
+
+  const relevant = issues.filter((i) => {
+    if (!typeSet.has(i.issueType.toLowerCase())) return false;
+    if (priSet && !priSet.has((i.priority || '').toLowerCase())) return false;
+    return true;
+  });
+
+  // If any relevant issue is still open, the gate has not been met — return null.
+  const hasOpenItems = relevant.some((i) => !i.resolved);
+  if (hasOpenItems) return null;
+
+  // All relevant issues are resolved: the gate date is the latest closure date.
+  const dates = relevant.map((i) => i.resolved).filter(Boolean).sort();
+  if (dates.length > 0) return dates[dates.length - 1];
+
+  // No relevant issues exist; fall back to the JIRA custom field value.
+  if (typeof customFieldValue === 'string' && customFieldValue) return customFieldValue.slice(0, 10);
+  return 'not-provided';
 }
 
 function diffByKey(source, minus) {
@@ -124,7 +162,7 @@ function buildFeatureKpis(issues, canonicalJql) {
   const bugsOpen = issues.filter(
     (i) => i.issueType.toLowerCase() === 'bug' && !done.has(i.status.toLowerCase())
   ).length;
-  const unassigned = issues.filter((i) => !i.assignee).length;
+  const unassigned = issues.filter((i) => !i.assignee && !done.has(i.status.toLowerCase())).length;
   const qaBacklog = issues.filter(
     (i) => i.issueType.toLowerCase() === 'bug' && i.status.toLowerCase() === 'resolved'
   ).length;
@@ -316,15 +354,24 @@ router.get('/dashboard', auth, async (req, res) => {
     const timeline = parseReleaseGateTimeline(release, { versionConfig });
     const ecGate = timeline.gates.find((g) => g.kind === 'EC');
     const gaGate = [...timeline.gates].reverse().find((g) => g.kind === 'GA');
-    const ccGate = timeline.gates.find((g) => g.kind === 'CC');
+    const allCcmGates = timeline.gates.filter((g) => g.kind === 'CCM');
+    // First CCM = original deadline; last CCM = effective deadline (may be a mgmt-approved exception).
+    const ccmGate = allCcmGates[0] || null;
+    const ccmExceptionGate = allCcmGates.length > 1 ? allCcmGates[allCcmGates.length - 1] : null;
     const cgGate = timeline.gates.find((g) => g.kind === 'CG');
     const pgGate = timeline.gates.find((g) => g.kind === 'PG');
     const todayIso = new Date().toISOString().slice(0, 10);
     const startIso = ecGate?.iso || canonicalIssues.map((i) => i.created).filter(Boolean).sort()[0] || todayIso;
     const endIso = gaGate?.iso || todayIso;
 
-    const flow = buildFlowSeries(canonicalIssues, startIso, endIso);
-    const allKpis = buildFeatureKpis(canonicalIssues, canonicalJql);
+    // Work items only — exclude portfolio hierarchy tickets (Feature, Initiative, Epic, X-FEAT, Capability)
+    // so KPI counts and Created vs Resolved chart reflect actual dev/QA work, not structural tickets.
+    const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
+    const workItems = canonicalIssues.filter((i) => !PORTFOLIO_TYPES.has(i.issueType.toLowerCase()));
+    const workItemsJql = `(${canonicalJql}) AND issuetype not in (Feature, Initiative, Epic, "X-FEAT", Capability)`;
+
+    const flow = buildFlowSeries(workItems, startIso, endIso);
+    const allKpis = buildFeatureKpis(workItems, workItemsJql);
     const kpis = allKpis.filter((k) => k.count > 0);
 
     const rootFields = featureRoot.fields || {};
@@ -352,11 +399,22 @@ router.get('/dashboard', auth, async (req, res) => {
         },
         gates: {
           ec: ecGate?.iso || null,
-          cc: ccGate?.iso || null,
+          // ccm = original planned CC date; ccmException = mgmt-approved extension (null if no extension).
+          ccm: ccmGate?.iso || null,
+          ccmException: ccmExceptionGate?.iso || null,
+          ccmExceptionLabel: ccmExceptionGate?.label || null,
           cg: cgGate?.iso || null,
           pg: pgGate?.iso || null,
           ga: gaGate?.iso || null,
           events: timeline.gates,
+          // Raw JIRA custom field values ("called out in JIRA")
+          jiraCcm: (() => { const v = getFieldValue(rootFields, 'codeComplete');   return typeof v === 'string' && v ? v.slice(0, 10) : null; })(),
+          jiraCg:  (() => { const v = getFieldValue(rootFields, 'commitGate');     return typeof v === 'string' && v ? v.slice(0, 10) : null; })(),
+          jiraPg:  (() => { const v = getFieldValue(rootFields, 'promotionGate');  return typeof v === 'string' && v ? v.slice(0, 10) : null; })(),
+          // Computed actual: last relevant ticket closure → JIRA field → 'not-provided'
+          actualCcm: resolveActualGateDate(canonicalIssues, ['task', 'unit test'], getFieldValue(rootFields, 'codeComplete')),
+          actualCg:  resolveActualGateDate(canonicalIssues, ['bug', 'improvement'], getFieldValue(rootFields, 'commitGate'), ['p0', 'p1']),
+          actualPg:  resolveActualGateDate(canonicalIssues, ['test', 'bug'],        getFieldValue(rootFields, 'promotionGate')),
         },
         payload: {
           canonical: canonicalIssues,
@@ -368,7 +426,8 @@ router.get('/dashboard', auth, async (req, res) => {
           endIso,
           points: flow,
           markers: {
-            cc: ccGate?.iso || null,
+            ccm: ccmGate?.iso || null,
+            ccmException: ccmExceptionGate?.iso || null,
             cg: cgGate?.iso || null,
             pg: pgGate?.iso || null,
           },

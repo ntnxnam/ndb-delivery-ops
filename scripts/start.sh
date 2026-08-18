@@ -9,9 +9,9 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "Starting servers..."
 
 # Start backend (Express)
-echo "Starting backend on port 6001..."
+echo "Starting backend on port 8001..."
 cd "$PROJECT_ROOT/apps/delivery-ops/server"
-node index.js > /tmp/server.log 2>&1 &
+PORT=8001 node index.js > /tmp/server.log 2>&1 &
 BACKEND_PID=$!
 echo "Backend started (PID: $BACKEND_PID)"
 
@@ -24,8 +24,9 @@ if ! kill -0 $BACKEND_PID 2>/dev/null; then
 fi
 
 # Start client (React dev server) in background
-echo "Starting client on port 8888..."
+echo "Starting client on port 8899..."
 cd "$PROJECT_ROOT/apps/delivery-ops/client"
+PORT=8899 \
 npm start > /tmp/client.log 2>&1 &
 CLIENT_PID=$!
 echo "Client started (PID: $CLIENT_PID)"
@@ -34,8 +35,8 @@ sleep 2
 
 echo ""
 echo "✓ All servers started:"
-echo "  Backend: http://localhost:6001"
-echo "  Client:  http://localhost:8888"
+echo "  Backend: http://localhost:8001"
+echo "  Client:  http://localhost:8899"
 echo ""
 echo "Logs:"
 echo "  Backend: /tmp/server.log"

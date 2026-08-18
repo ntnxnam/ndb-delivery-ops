@@ -1,0 +1,138 @@
+.chatbot-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chatbot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.chatbot-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.chatbot-header p {
+  margin: 4px 0 0;
+  color: #666;
+  font-size: 0.92rem;
+}
+
+.chatbot-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chatbot-release-select,
+.chatbot-clear-btn,
+.chatbot-input-row button,
+.chatbot-input-row input {
+  min-height: 2rem;
+  font-size: 0.9rem;
+}
+
+.chatbot-release-select,
+.chatbot-input-row input {
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
+.chatbot-clear-btn,
+.chatbot-input-row button {
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+
+.chatbot-scope {
+  font-size: 0.83rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.chatbot-messages {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: #fff;
+  min-height: 440px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatbot-empty {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.chatbot-message {
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.chatbot-message.user {
+  background: #e9f5ff;
+  border: 1px solid #cce5ff;
+}
+
+.chatbot-message.assistant {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+}
+
+.chatbot-role {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.chatbot-content {
+  font-size: 0.92rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.chatbot-content a {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.chatbot-loading {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.chatbot-error {
+  color: #842029;
+  background: #f8d7da;
+  border: 1px solid #f5c2c7;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.chatbot-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chatbot-input-row input {
+  flex: 1;
+}
+

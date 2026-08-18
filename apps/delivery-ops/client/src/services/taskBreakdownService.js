@@ -341,7 +341,10 @@ export async function fetchBreakdownsForKeys(jiraKeys, jiraToken, username) {
   }
 
   // Smart bulk vs individual request decision
-  const BULK_THRESHOLD = 3; // Use bulk API for 3+ keys
+  // Bulk mode disabled: the server-side attribution in groupBreakdownByProject
+  // can't correctly map tickets back to parent FEATs (required custom fields
+  // are not fetched). Individual requests use JQL functions that are accurate.
+  const BULK_THRESHOLD = Infinity;
   
   if (uncachedKeys.length >= BULK_THRESHOLD) {
     console.log(`[fetchBreakdownsForKeys] Using bulk API for ${uncachedKeys.length} keys`);

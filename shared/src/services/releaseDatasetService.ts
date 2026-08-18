@@ -521,7 +521,9 @@ export function ticketFromIssue(
     'Status Update': typeof f.customfield_23073 === 'string' ? f.customfield_23073 : '',
     // ADF field — strip to plain text by extracting text nodes from the document structure.
     'Executive Status Update': extractAdfText(f.customfield_38460),
-    'Risk Indicator': typeof f.customfield_23560 === 'string' ? f.customfield_23560 : '',
+    'Risk Indicator': typeof f.customfield_23560 === 'string'
+      ? f.customfield_23560
+      : (f.customfield_23560 as { value?: string } | null)?.value ?? '',
 
     // Document links — these come back as plain string URLs.
     'Requirements Link': typeof f.customfield_14463 === 'string' ? f.customfield_14463 : '',
@@ -560,6 +562,12 @@ export interface FetchBucketOptions {
    * Mirrors the Python `progress_cb` contract.
    */
   onProgress?: (bucketName: string, status: string, detail: string) => void;
+  /**
+   * Per-page HTTP timeout passed directly to jiraConnector.searchAll.
+   * Defaults to jiraConnector's own default (30 s). Slow buckets
+   * (portfolioChildrenOf, issuesInEpics) should pass a larger value.
+   */
+  perPageTimeoutMs?: number;
 }
 
 /**
@@ -585,6 +593,7 @@ export async function fetchBucket(
     const issues = await jira.searchAll(fullJql, RELEASE_DATASET_FIELDS.join(','), {
       pageSize: options.pageSize ?? DEFAULT_PAGE_SIZE,
       maxIssues: options.maxIssues ?? DEFAULT_MAX_ISSUES_PER_BUCKET,
+      perPageTimeoutMs: options.perPageTimeoutMs,
     });
     options.onProgress?.(bucketName, 'done', `${issues.length} fetched`);
     return { bucketName, issues, error: null };
@@ -651,6 +660,24 @@ export interface FetchReleaseOptions {
    *      same reason.
    */
   isCatchAllVersion?: boolean;
+  /**
+   * When set, only the named buckets in this list are fetched.
+   * All others in the fetch plan are skipped. Used by the cell-sync
+   * path (`syncReleaseBucket`) to re-fetch a single bucket without
+   * triggering a full release re-fetch.
+   *
+   * When omitted or empty, all buckets are fetched (normal behaviour).
+   */
+  bucketFilter?: string[];
+  /**
+   * Per-request timeout override for all buckets (milliseconds).
+   * When omitted the connector default (30 s) is used for most buckets,
+   * but `epics_of_projects` and `work_toward_project` automatically
+   * receive a higher default (90 s) because they use portfolio JQL
+   * functions (`portfolioChildrenOf`, `issuesInEpics`) that are
+   * inherently slower.
+   */
+  perPageTimeoutMs?: number;
 }
 
 /**
@@ -703,6 +730,10 @@ export async function fetchReleaseData(
   //   annotated with `moved_out` as an additional tag.
   // Group 3: after Group 1 + 2 for the same dedup reason.
   // Sidecars: last so the payload tag always wins.
+  const allowBucket = options.bucketFilter && options.bucketFilter.length > 0
+    ? new Set(options.bucketFilter)
+    : null; // null = allow all
+
   const fetchPlan: Array<{ name: string; jql: string }> = [
     // Group 1 — 6 disjoint buckets, no project filter
     ...PAYLOAD_BUCKET_KEYS.map((k) => ({ name: k, jql: buckets[k] })),
@@ -741,7 +772,8 @@ export async function fetchReleaseData(
           { name: EXTENSION_COMPONENT, jql: getExtensionQuery(release, sidecarOpts) },
         ]
       : []),
-  ];
+  // Cell-sync filter: when bucketFilter is set, only run those buckets.
+  ].filter(({ name }) => allowBucket === null || allowBucket.has(name));
 
   // Bounded-concurrency fan-out.
   const concurrency = Math.min(
@@ -755,11 +787,19 @@ export async function fetchReleaseData(
       const i = nextIdx++;
       if (i >= fetchPlan.length) return;
       const plan = fetchPlan[i]!;
+      // Heavy portfolio-function buckets routinely take 60–90 s on large
+      // releases. Use the caller override if set, otherwise default to
+      // 90 s for those two buckets and the connector default for the rest.
+      const SLOW_BUCKETS = new Set(['epics_of_projects', 'work_toward_project']);
+      const bucketTimeout =
+        options.perPageTimeoutMs ??
+        (SLOW_BUCKETS.has(plan.name) ? 90_000 : undefined);
       results[i] = await fetchBucket(jira, release, plan.name, plan.jql, {
         projectKey: options.projectKey,
         pageSize: options.pageSize,
         maxIssues: options.maxIssuesPerBucket,
         onProgress: options.onProgress,
+        perPageTimeoutMs: bucketTimeout,
       });
     }
   }
@@ -822,9 +862,11 @@ export interface LabelOptions {
 
 function deriveReleaseSuffix(release: string, labelPrefix: string): string {
   const lower = release.toLowerCase();
-  return lower.startsWith(`${labelPrefix.toLowerCase()}-`)
+  const stripped = lower.startsWith(`${labelPrefix.toLowerCase()}-`)
     ? lower.slice(labelPrefix.length + 1)
     : lower;
+  // JQL label values cannot contain spaces — collapse whitespace to hyphens.
+  return stripped.replace(/[\s]+/g, '-');
 }
 
 /**

@@ -2,6 +2,19 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useTeam } from './TeamContext';
 import { listReleaseVersions, fetchGateTimeline, pickDefaultRelease } from '../release/services/releaseBriefService';
 
+/**
+ * A version name is considered "allowed" if it belongs to the NDB product
+ * namespace or is one of the two pinned special versions.
+ *
+ * Centralised here so every consumer (FeatureDashboard, ReleaseVersionSelector,
+ * etc.) uses the same rule instead of each duplicating it.
+ */
+export function isAllowedVersion(v) {
+  const name = typeof v === 'string' ? v : v?.name;
+  if (!name) return false;
+  return name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future';
+}
+
 function isJiraUnreachable(err) {
   const status = err?.response?.status;
   if (status === 503) return true;
@@ -228,10 +241,36 @@ export function SelectedReleaseProvider({ children }) {
     loadGateTimeline(selectedRelease, false);
   }, [selectedRelease, loadGateTimeline]);
 
+  // Pre-split into active (unreleased) and inactive (released) — both filtered
+  // to the allowed namespace (NDB-*, master, Era Future).
+  const activeVersions = useMemo(
+    () => versions.filter((v) => isAllowedVersion(v) && !v.released),
+    [versions]
+  );
+  const inactiveVersions = useMemo(
+    () => versions.filter((v) => isAllowedVersion(v) && v.released),
+    [versions]
+  );
+
+  // Clears the stored preferred release and re-picks using the GA-date logic.
+  // Called after "Test Connection" succeeds so the default re-evaluates against
+  // live JIRA data rather than a potentially stale localStorage value.
+  const refreshVersionsAndResetDefault = useCallback(async () => {
+    localStorage.removeItem(RELEASE_STORAGE_KEY);
+    const fetched = await loadVersions(true);
+    setSelectedReleaseState(() => {
+      const picked = pickDefaultRelease(fetched, '') || '';
+      if (picked) localStorage.setItem(RELEASE_STORAGE_KEY, picked);
+      return picked;
+    });
+  }, [loadVersions]);
+
   const value = useMemo(() => ({
     selectedRelease,
     setSelectedRelease,
     versions,
+    activeVersions,
+    inactiveVersions,
     gateTimeline,
     loadingVersions,
     loadingGateTimeline,
@@ -239,20 +278,29 @@ export function SelectedReleaseProvider({ children }) {
     gateError,
     jiraUnreachable,
     productId: selectedTeam?.productId || 'ndb',
+    // fetchVersions — returns from cache if still fresh; never forces a re-fetch.
+    fetchVersions: () => loadVersions(false),
+    // refreshVersions — busts the cache and forces a new JIRA call.
     refreshVersions: () => loadVersions(true),
+    // refreshVersionsAndResetDefault — busts cache + clears localStorage preference
+    // so pickDefaultRelease re-runs the GA-date logic with fresh JIRA data.
+    refreshVersionsAndResetDefault,
     refreshGateTimeline: () => loadGateTimeline(selectedRelease, true),
   }), [
+    activeVersions,
+    inactiveVersions,
+    loadVersions,
     gateError,
     gateTimeline,
     jiraUnreachable,
     loadingGateTimeline,
     loadingVersions,
+    refreshVersionsAndResetDefault,
     selectedRelease,
     selectedTeam?.productId,
     setSelectedRelease,
     versions,
     versionsError,
-    loadVersions,
     loadGateTimeline,
   ]);
 

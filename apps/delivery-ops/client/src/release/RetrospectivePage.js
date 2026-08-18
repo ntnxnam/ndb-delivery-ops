@@ -125,7 +125,9 @@ export default function RetrospectivePage() {
 
   const {
     ready,
-    versions,
+    activeVersions,
+    inactiveVersions,
+    hasFetched,
     bootstrap,
     projectsPage,
     selectedProjectKey,
@@ -237,15 +239,22 @@ export default function RetrospectivePage() {
                 id="retro-release-select"
                 value={selectedRelease || ''}
                 onChange={(e) => setSelectedRelease(e.target.value)}
+                disabled={loading}
               >
-                {versions.map((v) => (
-                  <option key={v.name} value={v.name}>
-                    {v.name}
-                  </option>
+                <option value="">— select —</option>
+                {activeVersions.map((v) => (
+                  <option key={v.name} value={v.name}>{v.name}</option>
                 ))}
+                {inactiveVersions.length > 0 && (
+                  <optgroup label="── Past Releases ──">
+                    {inactiveVersions.map((v) => (
+                      <option key={v.name} value={v.name}>{v.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
-              <button onClick={refresh} type="button" disabled={loading}>
-                {loading ? 'Loading...' : 'Refresh'}
+              <button onClick={refresh} type="button" disabled={loading || !selectedRelease || !ready}>
+                {loading ? 'Loading...' : 'Fetch'}
               </button>
             </div>
           </div>
@@ -253,9 +262,11 @@ export default function RetrospectivePage() {
           {error ? <div className="rb-error">{error}</div> : null}
           {!ready ? (
             <div className="rb-empty">Pick a team in the header to load retrospective data.</div>
+          ) : !hasFetched ? (
+            <div className="rb-empty">Select a release and press <strong>Fetch</strong>.</div>
           ) : null}
 
-          <SectionPanel
+          {hasFetched && <><SectionPanel
             title="Gate Timeline"
             subtitle={`EC, CCM, CG, PG, GA${bootstrap?.parentCount ? ` · ${bootstrap.parentCount} projects` : ''}`}
           >
@@ -489,7 +500,7 @@ export default function RetrospectivePage() {
           </SectionPanel>
 
           {/* Standalone Deferred Tickets Tile */}
-          {pgToGaWithUrls?.deferredInWindow !== null && (
+          {retro?.pgToGa != null && (
             <div
               style={{
                 marginTop: 16,
@@ -516,17 +527,17 @@ export default function RetrospectivePage() {
               />
               <span style={{ color: 'var(--ds-text-strong)' }}>
                 <strong>Standalone Deferred Tickets:</strong>{' '}
-                {pgToGaWithUrls?.deferredInWindow ? (
+                {pgToGaWithUrls?.links?.deferredInWindow ? (
                   <a
-                    href={pgToGaWithUrls.deferredInWindow}
+                    href={pgToGaWithUrls.links.deferredInWindow}
                     target="_blank"
                     rel="noreferrer"
                     style={{ color: 'var(--ds-warning)', textDecoration: 'none', fontWeight: 'bold' }}
                   >
-                    {pgToGaWithUrls.deferredInWindow.split('=').pop()?.split('&')[0] || 'view in JIRA'}
+                    {pgToGaWithUrls?.deferredInWindow ?? 0}
                   </a>
                 ) : (
-                  '—'
+                  pgToGaWithUrls?.deferredInWindow ?? '—'
                 )}
               </span>
             </div>
@@ -550,6 +561,7 @@ export default function RetrospectivePage() {
             />
           ) : null}
           {retroFallback ? <PgToGaPanel pgToGa={pgToGaWithUrls} /> : null}
+          </>}
         </div>
       </div>
     </div>

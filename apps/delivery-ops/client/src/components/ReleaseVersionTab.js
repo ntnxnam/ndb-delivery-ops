@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { createPortal } from 'react-dom';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost, authenticatedGet, getApiBase, getAuthHeaders } from '../utils/api';
 import { generateTableHTMLForEmail } from '../utils/emailTableGenerator';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { logUserAction, UserActions } from '../utils/userActionLogger';
 import { useTeam } from '../contexts/TeamContext';
 import { useReleaseData } from '../contexts/ReleaseDataContext';
+import { useTeamDataset } from '../hooks/useTeamDataset';
 import { 
   useReleaseVersions, 
   useColumnConfig, 
@@ -31,15 +32,19 @@ import { generateReleaseHighlights } from '../utils/generateReleaseHighlights';
 import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
 import { useGateTimeline } from '../release/hooks/useGateTimeline';
 import { GateChipStrip } from '../design-system';
+import ReleaseSummaryPanel from './ReleaseSummaryPanel';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
 function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
-  const { hasTeamSelected, isTransitioning } = useTeam();
+  const { hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
+  const { syncMeta } = useTeamDataset();
   
   // Custom hooks for state management
   const {
     versions,
+    activeVersions,
+    inactiveVersions,
     selectedVersion,
     loadingVersions,
     showVersionDropdown,
@@ -151,6 +156,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const ganttChartRef = useRef(null);
   const pdfContentRef = useRef(null);  // wraps Gantt + tables for PDF capture
   const [downloading, setDownloading] = useState(false);
+  const [refreshingLive, setRefreshingLive] = useState(false);
 
   // Executive Summary functionality moved to ReleaseTrendsPage
 
@@ -159,6 +165,15 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   // Task Breakdown state
   const [breakdownDataMap, setBreakdownDataMap] = useState(new Map());
   const [loadingBreakdowns, setLoadingBreakdowns] = useState(false);
+
+  // Release-level context for AI exec summary enrichment
+  const [releaseContext, setReleaseContext] = useState(null);
+
+  // AI Release Briefing state (driven by ReleaseSummaryPanel via toolbar button)
+  const [briefingState, setBriefingState] = useState('idle'); // idle | loading | done | error
+  const [briefingSummary, setBriefingSummary] = useState(null);
+  const [briefingIntelligence, setBriefingIntelligence] = useState(null);
+  const [briefingError, setBriefingError] = useState(null);
 
   // Filter state — client-side, no re-fetch needed
   const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', staleness: '' });
@@ -322,8 +337,19 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       fetchBreakdownData(items, 'commit').catch(breakdownErr => 
         console.warn('[useEffect] Background breakdown fetch for committed items failed:', breakdownErr.message)
       );
+
+      // Fetch release-level context for AI exec summary enrichment (fire-and-forget)
+      if (jiraToken && selectedVersion) {
+        authenticatedGet('/api/jira/executive-summary-unified', { version: selectedVersion })
+          .then(resp => {
+            if (resp?.data) setReleaseContext(resp.data);
+          })
+          .catch(err =>
+            console.warn('[useEffect] Background release context fetch failed:', err.message)
+          );
+      }
     }
-  }, [items.commit, selectedVersion, jiraBaseUrl, fetchBreakdownData, items, setHighlights, setLowlights, setCallToAction]);
+  }, [items.commit, selectedVersion, jiraBaseUrl, fetchBreakdownData, items, setHighlights, setLowlights, setCallToAction, jiraToken]);
 
   // Handle long-term items loading completion
   useEffect(() => {
@@ -376,7 +402,12 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     setItems({ commit: [], longTermFunded: [] });
     setCheckpointHistory({});
     setBreakdownDataMap(new Map());
-    
+    setReleaseContext(null);
+    setBriefingState('idle');
+    setBriefingSummary(null);
+    setBriefingIntelligence(null);
+    setBriefingError(null);
+
     // Log user action
     await logUserAction(UserActions.VERSION_CHANGED, newVersion, {
       previousVersion: selectedVersion
@@ -384,6 +415,23 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   };
 
 
+
+  // AI Release Briefing — triggered from the toolbar button
+  const handleGenerateBriefing = useCallback(async () => {
+    if (!selectedVersion || !jiraToken) return;
+    setBriefingState('loading');
+    setBriefingError(null);
+    try {
+      const resp = await authenticatedPost('/api/ai/release-summary', { version: selectedVersion });
+      const payload = resp.data || resp;
+      setBriefingSummary(payload.summary);
+      setBriefingIntelligence(payload.intelligence);
+      setBriefingState('done');
+    } catch (err) {
+      setBriefingError(err.response?.data?.error || err.message || 'Failed to generate release briefing');
+      setBriefingState('error');
+    }
+  }, [selectedVersion, jiraToken]);
 
   // Coordinated fetch function - fetches both items and history together
   const fetchItems = async () => {
@@ -1280,6 +1328,41 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     }
   };
 
+  const handleRefreshNow = useCallback(async () => {
+    setRefreshingLive(true);
+    setError('');
+    try {
+      const productId = selectedTeam?.productId || 'ndb';
+      const headers = getAuthHeaders(jiraToken, username).headers;
+      const base = getApiBase();
+      const res = await fetch(`${base}/api/release-dataset/refresh-now?productId=${encodeURIComponent(productId)}`, {
+        method: 'POST',
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+      await refreshVersions();
+      if (selectedVersion) await fetchItems();
+    } catch (err) {
+      setError(err?.message || 'Failed to refresh live data');
+    } finally {
+      setRefreshingLive(false);
+    }
+  }, [jiraToken, refreshVersions, selectedTeam?.productId, selectedVersion, username]);
+
+  const lastSyncLabel = useMemo(() => {
+    if (!syncMeta?.lastSyncIso) return 'not synced';
+    const ageMs = Date.now() - new Date(syncMeta.lastSyncIso).getTime();
+    if (ageMs < 60000) return 'just now';
+    const mins = Math.floor(ageMs / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }, [syncMeta?.lastSyncIso]);
+
   // Row rendering moved to ReleaseVersionTableRow component
 
 
@@ -1391,7 +1474,29 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       )}
 
       <div style={{ backgroundColor: '#f8f9fa', padding: '0.75rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.8rem', color: '#495057' }}>
+            Dataset freshness: <strong>{lastSyncLabel}</strong>
+          </span>
+          <button
+            onClick={handleRefreshNow}
+            disabled={refreshingLive || loadingItems || loadingVersions}
+            style={{
+              padding: '0.3rem 0.7rem',
+              backgroundColor: '#495057',
+              color: 'white',
+              border: 'none',
+              cursor: refreshingLive || loadingItems || loadingVersions ? 'not-allowed' : 'pointer',
+              opacity: refreshingLive || loadingItems || loadingVersions ? 0.6 : 1,
+              fontSize: '0.8rem'
+            }}
+          >
+            {refreshingLive ? 'Refreshing live…' : 'Refresh Now'}
+          </button>
+        </div>
         <ReleaseVersionSelector
+          activeVersions={activeVersions}
+          inactiveVersions={inactiveVersions}
           versions={versions}
           selectedVersion={selectedVersion}
           defaultVersion={defaultVersion}
@@ -1405,6 +1510,8 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           hasGanttChart={!!ganttConfig}
           downloading={downloading}
           onDownload={handleDownload}
+          onGenerateBriefing={handleGenerateBriefing}
+          briefingState={briefingState}
         />
       </div>
       {releaseDataError === 'not_synced' && (
@@ -1480,7 +1587,15 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       {!loadingItems && selectedVersion && ((items.commit?.length || 0) > 0 || (items.longTermFunded?.length || 0) > 0) && (
         <div ref={pdfContentRef} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
-          {/* Executive Summary button removed - functionality moved to ReleaseTrendsPage */}
+          {/* AI Release Briefing — visible from loading onward */}
+          {briefingState !== 'idle' && (
+            <ReleaseSummaryPanel
+              state={briefingState}
+              summary={briefingSummary}
+              intelligence={briefingIntelligence}
+              error={briefingError}
+            />
+          )}
 
           {/* Filter bar — always shown once data is loaded */}
           <ReleaseVersionFilterBar
@@ -1549,6 +1664,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
               ganttConfig={ganttConfig}
               breakdownDataMap={breakdownDataMap}
               loadingBreakdowns={loadingBreakdowns}
+              releaseContext={releaseContext}
             />
           )}
 
@@ -1565,6 +1681,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
               ganttConfig={ganttConfig}
               breakdownDataMap={breakdownDataMap}
               loadingBreakdowns={loadingBreakdowns}
+              releaseContext={releaseContext}
             />
           )}
 

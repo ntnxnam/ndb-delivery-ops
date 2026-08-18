@@ -26,6 +26,8 @@ const router = express.Router();
 const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware, extractToken } = require('../middleware/auth/jira');
 const { getFieldId } = require('../utils/jiraFieldsConfig');
+const syncLocking = require('../utils/syncLocking');
+const syncScheduler = require('../jobs/syncScheduler');
 
 // Path to the human-curated release-gate config. Owned by RM/TPMs and
 // updated via /release-config in-app — the same file the legacy
@@ -71,13 +73,19 @@ const RELEASE_DATASET_CACHE_DIR = path.resolve(
 );
 
 const auth = [apiLimiter, validateJiraTokenMiddleware];
+const SYNC_LOCK_TTL_MS = 10 * 60 * 1000;
 
 // Lazy-import the ESM shared package (one-shot, cached) — mirrors
 // dateMover.js so we have one consistent loading pattern across routes.
 let _sharedPromise = null;
 async function getShared() {
   if (!_sharedPromise) {
-    _sharedPromise = import('@portfolio-delivery-ops/shared');
+    // In Jest/CJS tests we need require() so jest.mock() can intercept.
+    if (process.env.NODE_ENV === 'test') {
+      _sharedPromise = Promise.resolve(require('@portfolio-delivery-ops/shared'));
+    } else {
+      _sharedPromise = import('@portfolio-delivery-ops/shared');
+    }
   }
   return _sharedPromise;
 }
@@ -88,6 +96,30 @@ function buildCache(productId, shared) {
     cacheDir: RELEASE_DATASET_CACHE_DIR,
     productId,
   });
+}
+
+function acquireLockOrThrow(lockKey, owner) {
+  const lock = syncLocking.acquire(lockKey, {
+    ttlMs: SYNC_LOCK_TTL_MS,
+    owner,
+  });
+  if (!lock.ok) {
+    const remainingSec = Math.ceil((lock.remainingMs || 0) / 1000);
+    throw new Error(`A sync is already running for this release. Try again in ${remainingSec}s.`);
+  }
+}
+
+function classifySyncFailure(error) {
+  const message = error?.message || '';
+  const status = error?.response?.status || null;
+  const isRateLimited = status === 429 || /429|rate limit/i.test(message);
+  const isTimeout = /timeout|timed out|ETIMEDOUT/i.test(message);
+  return {
+    message,
+    status,
+    isRateLimited,
+    isTimeout,
+  };
 }
 
 // Human-readable labels + ordering for the synopsis component cards.
@@ -686,319 +718,210 @@ router.get('/outstanding', auth, async (req, res) => {
 });
 
 /**
- * /project-breakdown — Staged per-fixVersion traversal for three-tier grouping:
- * 1) TIER 1: Top-level Projects (Feature/Initiative/X-FEAT/Capability) with fixVersion
- * 2) For each project: TIER 2 Epics (child epics via Parent Link)
- * 3) For each epic: Count work items (non-portfolio, non-epic, not Feature/Initiative)
- * 4) THEN: Standalone Epics (no Parent Link) and their work items
- * 5) THEN: Standalone Tickets (no Epic Link)
+ * /project-status — Reads the on-disk release bundle to build the
+ * per-project issue-type-group breakdown matrix. Zero JIRA API calls.
  *
- * Per staged traversal plan from user guidance.
- * Used for the Project Breakdown Matrix component.
+ * Replaces the old 6-stage live-JIRA /project-breakdown endpoint.
+ * The bundle must have been synced via POST /sync first; if no bundle
+ * is found the endpoint returns 404 with a clear message so the client
+ * can prompt the user to run a sync.
+ *
+ * Response shape (identical to old /project-breakdown so the client
+ * needs no changes):
+ *   { success, data: { productId, release, projects, standaloneEpics,
+ *                      standaloneTickets, _source: 'bundle' } }
  */
-router.get('/project-breakdown', auth, async (req, res) => {
-  req.setTimeout(120000);
-  res.setTimeout(120000);
+router.get('/project-status', auth, async (req, res) => {
   try {
     const productId = (req.query.productId || 'ndb').toString();
     const release = (req.query.release || '').toString().trim();
-    console.log('[project-breakdown] Request: productId=', productId, 'release=', release);
-    
-    if (!release) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'release query parameter is required' });
-    }
 
-    const userJiraPat = extractToken(req);
-    if (!userJiraPat) {
-      return res
-        .status(401)
-        .json({ success: false, error: 'JIRA Bearer token required in Authorization header' });
+    if (!release) {
+      return res.status(400).json({ success: false, error: 'release query parameter is required' });
     }
 
     const shared = await getShared();
-    const { JiraConnector, getProductService, loadEnv } = shared;
+    const cache = buildCache(productId, shared);
+    const { tickets, meta } = cache.loadReleaseLenient(release);
 
-    const productService = getProductService(PRODUCT_CONFIG_PATH);
-    let product;
-    try {
-      product = productService.getProduct(productId);
-    } catch (e) {
-      return res
-        .status(400)
-        .json({ success: false, error: `Unknown productId '${productId}': ${e.message}` });
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: `No bundle data found for release "${release}". Run a sync first.`,
+        _hint: 'POST /api/release-dataset/sync',
+      });
     }
 
-    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
-    const jira = new JiraConnector(env);
-    
-    // parentLink (customfield_20363) — fetched in Stage 2 so each child epic can be
-    // mapped back to its parent project.  In Classic Jira, epic.fields.parent.key
-    // is NOT the portfolio parent (it's only set for sub-tasks); the portfolio
-    // relationship lives exclusively in customfield_20363.
-    // componentReportService.js confirms this field is available in this Jira instance.
-    const parentLinkField = getFieldId('parentLink');
-    const parentLinkFields = parentLinkField ? [parentLinkField] : [];
+    // ── Constants matching the old live endpoint ──────────────────────────
+    const FEAT_TYPES = new Set(['Feature', 'Initiative', 'X-FEAT', 'Capability']);
+    const EPIC_TYPE = 'Epic';
+    const DONE_STATUSES = new Set(['Fixed', 'Done', 'Resolved', 'Complete', 'Closed']);
+    const TO_VERIFY_STATUSES = new Set(['In Review', 'Testing', 'Ready for Testing']);
+    const GROUP_LABELS = ['Project Hierarchy', 'Bug', 'Improvement', 'Dev Code', 'Test', 'Everything Else'];
 
-    const searchOpts = { perPageTimeoutMs: 30000 };
-
-    // Base fields used by most stages.
-    const fieldsList = `key,issuetype,summary,parent,status`;
-    // Stage 2 additionally needs parentLink to map each child epic back to its
-    // parent project — `parent.key` is unreliable for Epics in Classic Jira.
-    const stage2FieldsList = parentLinkField
-      ? `${fieldsList},${parentLinkField}`
-      : fieldsList;
-
-    // Constants
-    const PROJECT_TYPES = ['Feature', 'Initiative', 'X-FEAT', 'Capability'];
-    const DONE_STATUSES = ['Fixed', 'Done', 'Resolved', 'Complete', 'Closed'];
-    const TO_VERIFY_STATUSES = ['In Review', 'Testing', 'Ready for Testing'];
-    
-    const classifyGroupKey = (issueType) => {
-      if (['Feature', 'Initiative', 'Epic', 'X-FEAT', 'Capability'].includes(issueType)) return 'Project Hierarchy';
+    const classify = (issueType) => {
+      if (FEAT_TYPES.has(issueType) || issueType === EPIC_TYPE) return 'Project Hierarchy';
       if (issueType === 'Bug') return 'Bug';
       if (issueType === 'Improvement') return 'Improvement';
-      if (['Task', 'Unit Test'].includes(issueType)) return 'Dev Code';
+      if (issueType === 'Task' || issueType === 'Unit Test') return 'Dev Code';
       if (issueType === 'Test') return 'Test';
       return 'Everything Else';
     };
 
-    const ensureGroupBucket = (groupMap, groupKey) => {
-      if (!groupMap[groupKey]) {
-        groupMap[groupKey] = { label: groupKey, outstanding: 0, toVerify: 0, closed: 0, total: 0 };
-      }
-      return groupMap[groupKey];
-    };
+    const emptyGroup = (label) => ({ label, outstanding: 0, toVerify: 0, closed: 0, total: 0 });
 
-    const countIssue = (bucket, status) => {
+    const countInto = (bucket, ticket) => {
       bucket.total++;
-      if (DONE_STATUSES.includes(status)) bucket.closed++;
-      else if (TO_VERIFY_STATUSES.includes(status)) bucket.toVerify++;
-      else bucket.outstanding++;
-    };
-
-    const readLinkKey = (fields, candidateFields) => {
-      for (const field of candidateFields) {
-        const raw = fields?.[field];
-        if (!raw) continue;
-        if (typeof raw === 'string' && raw.trim()) return raw.trim();
-        if (raw?.key) return raw.key;
+      const status = ticket['Status'] || '';
+      if (DONE_STATUSES.has(status)) {
+        if (ticket['Is QA Verification']) bucket.toVerify++;
+        else bucket.closed++;
+      } else if (TO_VERIFY_STATUSES.has(status)) {
+        bucket.toVerify++;
+      } else {
+        bucket.outstanding++;
       }
-      return null;
     };
 
-    // =========================================================================
-    // STAGE 1: Fetch TOP-LEVEL PROJECTS (Features/Initiatives/X-FEAT/Capability)
-    // =========================================================================
-    console.log('[project-breakdown] STAGE 1: Fetching top-level projects...');
-    const topLevelJql = `fixVersion = "${release}" AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`;
-    console.log('[project-breakdown] STAGE 1 JQL:', topLevelJql);
-    const topLevelProjects = await jira.searchAll(
-      topLevelJql,
-      fieldsList,
-      searchOpts
-    ) || [];
-    console.log(`[project-breakdown] STAGE 1: Found ${topLevelProjects.length} top-level projects`);
+    const makeGroupsMap = () => {
+      const m = {};
+      for (const l of GROUP_LABELS) m[l] = emptyGroup(l);
+      return m;
+    };
 
-    // Index by key
-    const topLevelByKey = new Map(topLevelProjects.map(p => [p.key, p]));
-
-    // =========================================================================
-    // STAGE 2: For each project, fetch CHILD EPICS (via Parent Link)
-    // =========================================================================
-    console.log('[project-breakdown] STAGE 2: Fetching child epics for each project...');
-    const epicsByProjectKey = {};
-    for (const project of topLevelProjects) {
-      epicsByProjectKey[project.key] = [];
+    // ── Build lookup maps from bundle ─────────────────────────────────────
+    // epicToFeat: epicKey → featKey (via Portfolio Parent Key)
+    const epicToFeat = new Map();
+    for (const t of tickets) {
+      if (t['Issue Type'] === EPIC_TYPE && t['Portfolio Parent Key']) {
+        epicToFeat.set(t['Issue Key'], t['Portfolio Parent Key']);
+      }
     }
 
-    // Batch: find all epics with a parent link to any top-level project
-    const topLevelKeys = topLevelProjects.map(p => p.key).join(',');
-    if (topLevelKeys.length > 0) {
-      // Find epics where Parent Link (portfolio hierarchy) points to top-level projects
-      const parentEpicsJql = `issuetype = Epic AND "Parent Link" in (${topLevelKeys})`;
-      console.log('[project-breakdown] STAGE 2 JQL:', parentEpicsJql);
-      const childEpics = await jira.searchAll(parentEpicsJql, stage2FieldsList, searchOpts) || [];
-      console.log(`[project-breakdown] STAGE 2: Found ${childEpics.length} child epics`);
+    // ── TIER 1: Top-level projects (FEAT/Initiative/X-FEAT/Capability
+    //           tagged in top_level_projects bucket) ──────────────────────
+    const featTickets = tickets.filter(
+      (t) => FEAT_TYPES.has(t['Issue Type']) &&
+             typeof t['Components'] === 'string' &&
+             t['Components'].includes('top_level_projects')
+    );
 
-      // Map epics to their parent projects using parentLink (customfield_20363).
-      // In Classic Jira, epic.fields.parent.key is only set for sub-tasks, not for
-      // the portfolio parent. customfield_20363 is the reliable source here.
-      let mappedEpics = 0;
-      for (const epic of childEpics) {
-        const parentKey = epic.fields?.parent?.key || readLinkKey(epic.fields, parentLinkFields);
-        if (parentKey && epicsByProjectKey[parentKey]) {
-          epicsByProjectKey[parentKey].push(epic);
-          mappedEpics++;
+    const projects = featTickets.map((feat) => {
+      const featKey = feat['Issue Key'];
+      const groupsMap = makeGroupsMap();
+
+      for (const t of tickets) {
+        if (FEAT_TYPES.has(t['Issue Type']) || t['Issue Type'] === EPIC_TYPE) continue;
+
+        // Resolve child → FEAT via Epic Link → Portfolio Parent Key
+        let resolvedFeat = null;
+        if (t['Epic Link Key']) {
+          resolvedFeat = epicToFeat.get(t['Epic Link Key']) || null;
         }
-      }
-      console.log(`[project-breakdown] STAGE 2: Mapped ${mappedEpics}/${childEpics.length} epics to projects`);
-    }
+        if (!resolvedFeat && t['Portfolio Parent Key']) {
+          resolvedFeat = t['Portfolio Parent Key'];
+        }
 
-    // =========================================================================
-    // STAGE 3: Per-project — fetch work items directly via each project's epics
-    // =========================================================================
-    // Classic Jira does not populate `parent.key` for work items under epics
-    // (that field is only for sub-tasks). By querying per-project using that
-    // project's own epic keys, we avoid any attribution mapping entirely —
-    // every returned item belongs to the project we queried for.
-    // Run in parallel batches of 5 to respect Jira rate limits.
-    console.log('[project-breakdown] STAGE 3: Fetching work items per project...');
-    const workItemsByProjectKey = {};
-    for (const project of topLevelProjects) {
-      workItemsByProjectKey[project.key] = [];
-    }
+        if (resolvedFeat !== featKey) continue;
 
-    const STAGE3_BATCH = 5;
-    let stage3Total = 0;
-    for (let i = 0; i < topLevelProjects.length; i += STAGE3_BATCH) {
-      const batch = topLevelProjects.slice(i, i + STAGE3_BATCH);
-      await Promise.all(batch.map(async (project) => {
-        const epicKeys = (epicsByProjectKey[project.key] || []).map(e => e.key);
-        if (epicKeys.length === 0) return;
-        const jql = `issueFunction in issuesInEpics("key in (${epicKeys.join(',')})") AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
-        const items = await jira.searchAll(jql, `key,issuetype,status`, searchOpts) || [];
-        workItemsByProjectKey[project.key] = items;
-        stage3Total += items.length;
-      }));
-    }
-    console.log(`[project-breakdown] STAGE 3: Found ${stage3Total} total work items across ${topLevelProjects.length} projects`);
-
-    // =========================================================================
-    // STAGE 4: Fetch STANDALONE EPICS (no parent link)
-    // =========================================================================
-    console.log('[project-breakdown] STAGE 4: Fetching standalone epics...');
-    const standaloneEpicsJql = `issuetype = Epic AND fixVersion = "${release}" AND "Parent Link" is EMPTY AND status not in (Cancelled, Backlog)`;
-    console.log('[project-breakdown] STAGE 4 JQL:', standaloneEpicsJql);
-    const standaloneEpics = await jira.searchAll(standaloneEpicsJql, `key,summary`, searchOpts) || [];
-    console.log(`[project-breakdown] STAGE 4: Found ${standaloneEpics.length} standalone epics`);
-
-    // =========================================================================
-    // STAGE 5: Per-epic — fetch work items for each standalone epic directly
-    // =========================================================================
-    // Same rationale as Stage 3: query per-epic so attribution is implicit.
-    console.log('[project-breakdown] STAGE 5: Fetching work items per standalone epic...');
-    const workItemsByStandaloneEpicKey = {};
-    for (const epic of standaloneEpics) {
-      workItemsByStandaloneEpicKey[epic.key] = [];
-    }
-
-    const STAGE5_BATCH = 5;
-    let stage5Total = 0;
-    for (let i = 0; i < standaloneEpics.length; i += STAGE5_BATCH) {
-      const batch = standaloneEpics.slice(i, i + STAGE5_BATCH);
-      await Promise.all(batch.map(async (epic) => {
-        const jql = `issueFunction in issuesInEpics("key = ${epic.key}") AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability)`;
-        const items = await jira.searchAll(jql, `key,issuetype,status`, searchOpts) || [];
-        workItemsByStandaloneEpicKey[epic.key] = items;
-        stage5Total += items.length;
-      }));
-    }
-    console.log(`[project-breakdown] STAGE 5: Found ${stage5Total} total work items across ${standaloneEpics.length} standalone epics`);
-
-    // =========================================================================
-    // STAGE 6: Fetch STANDALONE TICKETS (no epic link)
-    // =========================================================================
-    console.log('[project-breakdown] STAGE 6: Fetching standalone tickets...');
-    // Use the JIRA field name "Epic Link" (not a customfield ID) — always valid.
-    const standaloneTicketsJql = `fixVersion = "${release}" AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability) AND "Epic Link" is EMPTY AND status not in (Cancelled, Backlog)`;
-    const standaloneTickets = await jira.searchAll(
-      standaloneTicketsJql,
-      `key,issuetype,status`,
-      searchOpts
-    ) || [];
-    console.log(`[project-breakdown] STAGE 6: Found ${standaloneTickets.length} standalone tickets`);
-
-    // =========================================================================
-    // AGGREGATE: Build three-tier response
-    // =========================================================================
-    console.log('[project-breakdown] AGGREGATE: Building response structures...');
-
-    // TIER 1: Projects with aggregated work items
-    const projects = [];
-    for (const project of topLevelProjects) {
-      const projectGroups = {};
-      const workItems = workItemsByProjectKey[project.key] || [];
-      for (const item of workItems) {
-        const groupKey = classifyGroupKey(item.fields?.issuetype?.name || 'Unknown');
-        const bucket = ensureGroupBucket(projectGroups, groupKey);
-        const status = item.fields?.status?.name || 'Unknown';
-        countIssue(bucket, status);
-      }
-      projects.push({
-        projectKey: project.key,
-        projectName: project.fields?.summary || project.key,
-        issueTypeGroups: Object.values(projectGroups),
-      });
-    }
-
-    // TIER 2: Standalone Epics with aggregated work items
-    const standaloneEpicsList = [];
-    for (const epic of standaloneEpics) {
-      const epicGroups = {};
-      const workItems = workItemsByStandaloneEpicKey[epic.key] || [];
-      
-      for (const item of workItems) {
-        const groupKey = classifyGroupKey(item.fields?.issuetype?.name || 'Unknown');
-        const bucket = ensureGroupBucket(epicGroups, groupKey);
-        const status = item.fields?.status?.name || 'Unknown';
-        countIssue(bucket, status);
+        const g = classify(t['Issue Type']);
+        countInto(groupsMap[g], t);
       }
 
-      standaloneEpicsList.push({
-        projectKey: epic.key,
-        projectName: epic.fields?.summary || epic.key,
-        issueTypeGroups: Object.values(epicGroups),
-      });
-    }
+      const issueTypeGroups = GROUP_LABELS.map((l) => groupsMap[l]);
+      const allChildren = issueTypeGroups.reduce((s, g) => s + g.total, 0);
+      return {
+        projectKey: featKey,
+        projectName: feat['Summary'] || featKey,
+        issueType: feat['Issue Type'],
+        plannedCcDate: feat['CC Date'] ?? null,
+        total: allChildren,
+        outstanding: issueTypeGroups.reduce((s, g) => s + g.outstanding, 0),
+        closed: issueTypeGroups.reduce((s, g) => s + g.closed, 0),
+        issueTypeGroups,
+      };
+    });
 
-    // TIER 3: Standalone Tickets (direct counts)
-    const standaloneTicketGroups = {};
-    for (const ticket of standaloneTickets) {
-      const groupKey = classifyGroupKey(ticket.fields?.issuetype?.name || 'Unknown');
-      const bucket = ensureGroupBucket(standaloneTicketGroups, groupKey);
-      const status = ticket.fields?.status?.name || 'Unknown';
-      countIssue(bucket, status);
+    // ── TIER 2: Standalone Epics (no Portfolio Parent Key) ────────────────
+    const standaloneEpicTickets = tickets.filter(
+      (t) => t['Issue Type'] === EPIC_TYPE && !t['Portfolio Parent Key'] &&
+             typeof t['Components'] === 'string' &&
+             t['Components'].includes('standalone_epics')
+    );
+
+    const standaloneEpics = standaloneEpicTickets.map((epic) => {
+      const epicKey = epic['Issue Key'];
+      const groupsMap = makeGroupsMap();
+
+      for (const t of tickets) {
+        if (FEAT_TYPES.has(t['Issue Type']) || t['Issue Type'] === EPIC_TYPE) continue;
+        if (t['Epic Link Key'] !== epicKey) continue;
+
+        const g = classify(t['Issue Type']);
+        countInto(groupsMap[g], t);
+      }
+
+      const issueTypeGroups = GROUP_LABELS.map((l) => groupsMap[l]);
+      return {
+        projectKey: epicKey,
+        projectName: epic['Summary'] || epicKey,
+        issueTypeGroups,
+      };
+    });
+
+    // ── TIER 3: Standalone Tickets (direct_tickets bucket) ───────────────
+    const standaloneTicketItems = tickets.filter(
+      (t) => typeof t['Components'] === 'string' &&
+             t['Components'].includes('direct_tickets')
+    );
+
+    const standaloneGroupsMap = makeGroupsMap();
+    for (const t of standaloneTicketItems) {
+      countInto(standaloneGroupsMap[classify(t['Issue Type'])], t);
     }
-    const standaloneTicketsResult = {
+    const standaloneTickets = {
       projectKey: 'standalone-tickets',
       projectName: 'Standalone Tickets (no epic)',
-      issueTypeGroups: Object.values(standaloneTicketGroups),
+      issueTypeGroups: GROUP_LABELS.map((l) => standaloneGroupsMap[l]),
     };
-
-    console.log(
-      '[project-breakdown] COMPLETE:',
-      projects.length, 'projects |',
-      standaloneEpicsList.length, 'standalone epics |',
-      standaloneTickets.length, 'standalone tickets'
-    );
 
     return res
       .set('Cache-Control', 'no-cache, no-store, must-revalidate')
       .set('Pragma', 'no-cache')
       .set('Expires', '0')
-      .set('ETag', '')
       .json({
         success: true,
         data: {
           productId,
           release,
           projects,
-          standaloneEpics: standaloneEpicsList,
-          standaloneTickets: standaloneTicketsResult,
+          standaloneEpics,
+          standaloneTickets,
+          _source: 'bundle',
+          _bundleSyncedAt: meta?.syncedAt ?? null,
         },
       });
   } catch (e) {
-    console.error('[release-dataset] /project-breakdown error:', e?.response?.data || e?.message || e);
-    const status = e?.response?.status || 500;
-    return res.status(status).json({
+    console.error('[release-dataset] /project-status error:', e?.message || e);
+    return res.status(500).json({
       success: false,
-      error: e?.response?.data?.errorMessages?.[0] || e?.message || 'Project breakdown failed',
+      error: e?.message || 'Project status computation failed',
     });
   }
 });
+
+/**
+ * /project-breakdown — deprecated alias; forwards to /project-status.
+ * Kept for back-compat with stale callers. Remove after next release.
+ * @deprecated use /project-status
+ */
+router.get('/project-breakdown', auth, (req, res) => {
+  const qs = new URLSearchParams(req.query).toString();
+  return res.redirect(307, `/api/release-dataset/project-status${qs ? `?${qs}` : ''}`);
+});
+
+// (old 6-stage live-JIRA project-breakdown implementation removed 2026-06-16)
+// Replaced by bundle-backed /project-status above. Full history in git.
 
 // ── burndown helpers ─────────────────────────────────────────────────────────
 
@@ -1355,22 +1278,28 @@ router.get('/retrospective/bootstrap', auth, async (req, res) => {
     const versionConfig = gateConfig[release] || null;
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
 
+    const releasePrefix = productService.getReleasePrefix(productId);
+    // Catch-all planning buckets (e.g. "Era Future", "master") don't have real
+    // gate contracts, so gate checks and label-anchored queries are meaningless.
+    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+
     const options = {
       release,
       projectKeys: [product.projectKey, featureProjectKey],
       companionDisciplines,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix: productService.getReleasePrefix(productId),
+      releasePrefix,
     };
 
     // Run parent count and release-level gate checks in parallel so cards
     // populate as soon as bootstrap loads (~2s) instead of waiting for the
     // per-project detail call (~6s).
+    // Skip gate checks for catch-all versions — they have no gate dates.
     const [totalParentCount, gateData] = await Promise.all([
       jira.searchCount(
         `fixVersion = "${release}" AND issuetype in (Feature, Initiative, X-FEAT, Capability) AND status not in (Cancelled, Backlog)`
       ),
-      runRetroGateChecks(gateTimeline, options, jira).catch(() => null),
+      isCatchAll ? Promise.resolve(null) : runRetroGateChecks(gateTimeline, options, jira).catch(() => null),
     ]);
 
     const data = getRetroBootstrap(gateTimeline, totalParentCount, options);
@@ -1435,6 +1364,12 @@ router.get('/retrospective/projects', auth, async (req, res) => {
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
     const gateDates = resolveGateDates(gateTimeline);
 
+    const releasePrefix = productService.getReleasePrefix(productId);
+    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+    if (isCatchAll) {
+      return res.json({ success: true, data: { projects: [], total: 0, page, limit, timingMs: Date.now() - t0 } });
+    }
+
     const data = await getRetroProjectsPage(jira, {
       release,
       coreProjectKey: product.projectKey,
@@ -1442,7 +1377,7 @@ router.get('/retrospective/projects', auth, async (req, res) => {
       page,
       limit,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix: productService.getReleasePrefix(productId),
+      releasePrefix,
       ccmDate: gateDates.ccmDate || undefined,
       cgDate: gateDates.cgDate || undefined,
       pgDate: gateDates.pgDate || undefined,
@@ -1511,6 +1446,12 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
+    const releasePrefix = productService.getReleasePrefix(productId);
+    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+    if (isCatchAll) {
+      return res.json({ success: true, data: null, reason: 'catch-all version has no gate contracts' });
+    }
+
     const gateConfig = loadReleaseGateConfig();
     const versionConfig = gateConfig[release] || null;
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
@@ -1519,7 +1460,7 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
       projectKeys: [product.projectKey, featureProjectKey],
       companionDisciplines,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix: productService.getReleasePrefix(productId),
+      releasePrefix,
     };
 
     const data = await getRetroProjectDetail(
@@ -1600,6 +1541,22 @@ router.get('/sync-status', auth, async (req, res) => {
       }
     }
 
+    // Lean per-release metadata for the SyncHub UI (tick/refresh icons).
+    // Include per-bucket counts from the meta file so the 7-column table
+    // can show per-cell freshness without reading all ticket data.
+    const releaseMeta = {};
+    for (const rel of cachedReleases) {
+      const info = cachedReleasesInfo[rel];
+      releaseMeta[rel] = {
+        fetchedAtIso: info.fetchedAtIso || null,
+        ticketCount: info.ticketCount ?? null,
+        loadableStrict: info.loadableStrict,
+        schemaDiff: info.schemaDiff,
+        jqlDiff: info.jqlDiff,
+        buckets: info.buckets ?? null,
+      };
+    }
+
     return res.json({
       success: true,
       data: {
@@ -1608,12 +1565,166 @@ router.get('/sync-status', auth, async (req, res) => {
         hasBundleOnDisk: bundleMeta !== null,
         cachedReleases,
         releaseStates,
+        releaseMeta,
         isSyncInProgress: cache.isSyncInProgress(),
+        scheduler: syncScheduler.getStatus(),
       },
     });
   } catch (e) {
     console.error('[release-dataset] /sync-status error:', e?.message || e);
     return res.status(500).json({ success: false, error: e?.message || 'Failed to read sync status' });
+  }
+});
+
+/**
+ * POST /api/release-dataset/refresh-now?productId=ndb
+ *
+ * Triggers a scheduler-backed immediate sync for the configured products.
+ * Returns JSON (no SSE) for pages that need a "refresh now" action.
+ */
+router.post('/refresh-now', auth, async (_req, res) => {
+  try {
+    const result = await syncScheduler.runNow('manual-refresh');
+    if (!result.success) {
+      return res.status(503).json({
+        success: false,
+        error: result.error || result.reason || 'Refresh failed',
+        data: result.results || null,
+      });
+    }
+    return res.json({
+      success: true,
+      data: result.results || {},
+      scheduler: syncScheduler.getStatus(),
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      error: e?.message || 'Refresh failed',
+    });
+  }
+});
+
+/**
+ * POST /api/release-dataset/backfill-meta?productId=ndb
+ *
+ * One-time migration: for every cached per-release file whose .meta.json
+ * is missing the `buckets` field, read the ticket data from disk, count
+ * tickets by their Components/bucket tag, and persist the counts back into
+ * the meta file.  No JIRA API calls — purely a disk operation.
+ *
+ * This fixes the SyncHub "Past Releases" table showing `—` in all 6
+ * bucket columns for releases that were synced before per-bucket metadata
+ * tracking was introduced.
+ *
+ * Response shape:
+ *   { success, data: { productId, processed: [{ release, buckets }], skipped: string[] } }
+ */
+router.post('/backfill-meta', auth, async (req, res) => {
+  try {
+    const productId = (req.query.productId || 'ndb').toString();
+
+    const PAYLOAD_BUCKET_KEYS = [
+      'top_level_projects',
+      'epics_of_projects',
+      'work_toward_project',
+      'standalone_epics',
+      'work_toward_standalone_epic',
+      'direct_tickets',
+    ];
+
+    const perReleaseDir = path.join(RELEASE_DATASET_CACHE_DIR, productId, 'per_release');
+
+    let entries;
+    try {
+      entries = fs.readdirSync(perReleaseDir);
+    } catch (e) {
+      return res.status(404).json({
+        success: false,
+        error: `No per-release cache directory found for productId '${productId}'. Run a sync first.`,
+      });
+    }
+
+    // Find all releases that have a .json file (ticket data) and a .meta.json file.
+    const releaseNames = entries
+      .filter((f) => f.endsWith('.json') && !f.endsWith('.meta.json'))
+      .map((f) => f.slice(0, -5)); // strip .json
+
+    const processed = [];
+    const skipped = [];
+
+    for (const release of releaseNames) {
+      const metaPath = path.join(perReleaseDir, `${release}.meta.json`);
+      const dataPath = path.join(perReleaseDir, `${release}.json`);
+
+      // Skip if meta file doesn't exist.
+      if (!fs.existsSync(metaPath)) {
+        skipped.push(release);
+        continue;
+      }
+
+      let meta;
+      try {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      } catch (e) {
+        skipped.push(release);
+        continue;
+      }
+
+      // Already has bucket breakdown — skip unless forced.
+      if (meta.buckets && typeof meta.buckets === 'object' && Object.keys(meta.buckets).length > 0) {
+        skipped.push(release);
+        continue;
+      }
+
+      // Load ticket data and count by bucket (Components field).
+      let tickets;
+      try {
+        const raw = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+        tickets = Array.isArray(raw) ? raw : (raw.tickets || []);
+      } catch (e) {
+        skipped.push(release);
+        continue;
+      }
+
+      const counts = {};
+      for (const ticket of tickets) {
+        const comps = (ticket['Components'] || '').split(',');
+        for (const comp of comps) {
+          const b = comp.trim();
+          if (b) counts[b] = (counts[b] || 0) + 1;
+        }
+      }
+
+      // Build the buckets map for the 6 payload buckets only.
+      const fetchedAtIso = meta.fetchedAtIso || new Date().toISOString();
+      const buckets = {};
+      for (const key of PAYLOAD_BUCKET_KEYS) {
+        buckets[key] = {
+          count: counts[key] ?? 0,
+          fetchedAtIso,
+        };
+      }
+
+      const updatedMeta = { ...meta, buckets };
+      try {
+        fs.writeFileSync(metaPath, JSON.stringify(updatedMeta, null, 2), 'utf8');
+      } catch (e) {
+        skipped.push(release);
+        continue;
+      }
+
+      processed.push({ release, buckets });
+      console.info(`[release-dataset] backfill-meta: ${release} — wrote bucket counts`);
+    }
+
+    return res.json({
+      success: true,
+      data: { productId, processed, skipped },
+    });
+  } catch (e) {
+    console.error('[release-dataset] /backfill-meta error:', e?.message || e);
+    return res.status(500).json({ success: false, error: e?.message || 'Backfill failed' });
   }
 });
 
@@ -1690,6 +1801,7 @@ router.post('/sync', auth, async (req, res) => {
     sendEvent({ type: 'error', message: msg });
     if (!res.writableEnded) res.end();
   }
+  const acquiredLocks = [];
 
   try {
     const userJiraPat = extractToken(req);
@@ -1711,10 +1823,9 @@ router.post('/sync', auth, async (req, res) => {
     // Guard against concurrent syncs (same product). If one is already in
     // progress (fresh lock < 120s old) surface a friendly message rather
     // than running two syncs in parallel.
-    const guardCache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
-    if (guardCache.isSyncInProgress()) {
-      return sendError('A sync is already in progress for this product. Wait for it to finish or refresh the page.');
-    }
+    const lockKey = `product:${productId}:full-sync`;
+    acquireLockOrThrow(lockKey, 'api-sync');
+    acquiredLocks.push(lockKey);
 
     const productService = getProductService(PRODUCT_CONFIG_PATH);
     let product;
@@ -1765,10 +1876,6 @@ router.post('/sync', auth, async (req, res) => {
       return sendError('No JIRA versions found matching the release prefix and no forceReleases specified');
     }
 
-    // forceAll=true bypasses the per-release cache for every release in the
-    // computed list.  This is the "start fresh" path after a data-model change.
-    const forceReleases = forceAll ? [...releasesToSync] : forceReleasesInput;
-
     // Build release-status map so the client can tag active / past / future.
     // Active = EC date ≤ today ≤ GA date (from gate config).
     // Past   = JIRA version released=true OR today > GA date.
@@ -1795,6 +1902,20 @@ router.post('/sync', auth, async (req, res) => {
         state = isReleased ? 'past' : 'future';
       }
       releaseStates[rel] = state;
+    }
+
+    // forceAll=true bypasses the cache for every CURRENT (non-past) release.
+    // Past releases are excluded from a full sync — too expensive, and the
+    // data rarely changes. Use cell sync (POST /sync/bucket) for targeted
+    // past-release refreshes.
+    const forceReleases = forceAll
+      ? releasesToSync.filter((r) => releaseStates[r] !== 'past')
+      : forceReleasesInput;
+
+    for (const rel of forceReleases) {
+      const releaseLockKey = `product:${productId}:release:${rel}`;
+      acquireLockOrThrow(releaseLockKey, 'api-sync');
+      acquiredLocks.push(releaseLockKey);
     }
 
     const activeCount = Object.values(releaseStates).filter((s) => s === 'active').length;
@@ -1848,10 +1969,136 @@ router.post('/sync', auth, async (req, res) => {
       `changelog=${result.changelogEnriched} gate_history=${result.gateHistoryEnriched ?? 0} timing_ms=${timingMs}`
     );
   } catch (e) {
-    const msg = e?.message || 'Sync failed with an unexpected error';
-    console.error('[release-dataset] /sync error:', e?.message || e);
-    sendEvent({ type: 'error', release: '_global', status: 'error', detail: msg });
+    const failure = classifySyncFailure(e);
+    const base = failure.message || 'Sync failed with an unexpected error';
+    const detail = failure.isRateLimited
+      ? `${base}. Jira rate limit hit (429). Retry in 1-2 minutes.`
+      : failure.isTimeout
+        ? `${base}. Sync timed out; try a release-level or bucket sync.`
+        : base;
+    console.error('[release-dataset] /sync error:', {
+      message: failure.message || e?.message || String(e),
+      status: failure.status,
+      isRateLimited: failure.isRateLimited,
+      isTimeout: failure.isTimeout,
+    });
+    sendEvent({ type: 'error', release: '_global', status: 'error', detail });
   } finally {
+    syncLocking.releaseMany(acquiredLocks);
+    if (!res.writableEnded) res.end();
+  }
+});
+
+/**
+ * POST /api/release-dataset/sync/bucket?productId=ndb&release=NDB-2.11&bucket=top_level_projects
+ *
+ * Cell-level sync: re-fetch a single bucket's JQL for one release and
+ * merge the fresh tickets into the existing per-release cache.
+ *
+ * Allowed for both current AND past releases — the cell granularity
+ * keeps the cost contained. Full-release sync of past releases is blocked
+ * at the UI and in POST /sync (forceAll excludes past releases).
+ *
+ * Streams SSE progress like POST /sync.
+ *
+ * Valid bucket names (per PAYLOAD_BUCKET_KEYS + moved_out):
+ *   top_level_projects, epics_of_projects, work_toward_project,
+ *   standalone_epics, work_toward_standalone_epic, direct_tickets,
+ *   moved_out
+ */
+router.post('/sync/bucket', auth, async (req, res) => {
+  const t0 = Date.now();
+  const productId = (req.query.productId || 'ndb').toString();
+  const release = (req.query.release || '').toString().trim();
+  const bucketName = (req.query.bucket || '').toString().trim();
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  function sendEvent(obj) {
+    if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  }
+  function sendError(msg) {
+    sendEvent({ type: 'error', message: msg });
+    if (!res.writableEnded) res.end();
+  }
+  const acquiredLocks = [];
+
+  try {
+    if (!release) return sendError('release query parameter is required');
+    if (!bucketName) return sendError('bucket query parameter is required');
+
+    const userJiraPat = extractToken(req);
+    if (!userJiraPat) return sendError('JIRA Bearer token required in Authorization header');
+
+    sendEvent({ type: 'preflight', release, bucket: bucketName, message: `Cell sync: ${release} / ${bucketName}` });
+
+    const shared = await getShared();
+    const { JiraConnector, loadEnv, getProductService, ReleaseDatasetCache, syncReleaseBucket } = shared;
+
+    const productService = getProductService(PRODUCT_CONFIG_PATH);
+    let product;
+    try {
+      product = productService.getProduct(productId);
+    } catch (e) {
+      return sendError(`Unknown productId '${productId}': ${e.message}`);
+    }
+
+    const projectKey = product.projectKey;
+    const labelPrefix = productService.getLabelPrefix(productId);
+    const productPrefix = productService.getReleasePrefix(productId);
+    const sprintCalendar = productService.getSprintCalendar(productId);
+
+    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
+    const jira = new JiraConnector(env);
+    const cache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
+
+    const releaseLockKey = `product:${productId}:release:${release}`;
+    acquireLockOrThrow(releaseLockKey, 'api-cell-sync');
+    acquiredLocks.push(releaseLockKey);
+
+    const result = await syncReleaseBucket(jira, release, bucketName, {
+      cache,
+      projectKey,
+      labelPrefix,
+      productPrefix,
+      sprintCalendar,
+      onProgress: (event) => sendEvent(event),
+    });
+
+    const timingMs = Date.now() - t0;
+    sendEvent({
+      type: 'done',
+      release,
+      bucket: bucketName,
+      count: result.count,
+      error: result.error || null,
+      timingMs,
+      message: result.error
+        ? `Cell sync error: ${result.error}`
+        : `Cell sync complete — ${result.count} tickets in ${(timingMs / 1000).toFixed(1)}s`,
+    });
+
+    console.info(
+      `[release-dataset] /sync/bucket release=${release} bucket=${bucketName} count=${result.count} timing_ms=${timingMs}`
+    );
+  } catch (e) {
+    const failure = classifySyncFailure(e);
+    const base = failure.message || 'Cell sync failed';
+    const detail = failure.isRateLimited
+      ? `${base}. Jira rate limit hit (429); retry in a minute.`
+      : base;
+    console.error('[release-dataset] /sync/bucket error:', {
+      message: failure.message || e?.message || String(e),
+      status: failure.status,
+      isRateLimited: failure.isRateLimited,
+    });
+    sendEvent({ type: 'error', release, bucket: bucketName, detail });
+  } finally {
+    syncLocking.releaseMany(acquiredLocks);
     if (!res.writableEnded) res.end();
   }
 });

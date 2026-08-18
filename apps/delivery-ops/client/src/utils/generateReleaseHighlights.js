@@ -29,6 +29,7 @@
  * @param {string} jiraBaseUrl     - e.g. "https://jira.nutanix.com"
  * @returns {{ highlightsHtml: string, lowlightsHtml: string, callToActionHtml: string }}
  */
+import { formatters } from '../shared/utils/formatters';
 export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   const commit = items.commit || [];
   const ltf = items.longTermFunded || [];
@@ -176,11 +177,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
     return null;
   };
 
-  const dateLabel = today.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const dateLabel = formatters.date(today) || today.toISOString().slice(0, 10);
 
   // ── Classify ─────────────────────────────────────────────────────────────────
 

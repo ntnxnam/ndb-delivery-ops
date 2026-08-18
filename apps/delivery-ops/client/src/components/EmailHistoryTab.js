@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authenticatedGet, authenticatedDelete } from '../utils/api';
+import { formatters } from '../shared/utils/formatters';
 
 function EmailHistoryTab() {
   const [history, setHistory] = useState([]);
@@ -95,7 +96,7 @@ function EmailHistoryTab() {
   };
 
   const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString();
+    return formatters.date(timestamp) || 'Not Set';
   };
 
   const toggleEmailSelection = (id) => {

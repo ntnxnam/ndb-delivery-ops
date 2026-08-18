@@ -42,8 +42,13 @@ export interface FeatureFlowPoint {
 export interface FeatureKpiTile {
   key: string;
   label: string;
+  /** Outstanding (open/active) count — drives severity and the primary number shown. */
   count: number;
+  /** Total count including closed/done — shown as secondary "of N" when it differs from count. */
+  total?: number;
   jql: string;
+  /** JQL for the total (all statuses) clickthrough — only set when total differs from count. */
+  totalJql?: string;
   severity: 'green' | 'amber' | 'red' | 'grey';
 }
 
@@ -172,10 +177,15 @@ export function buildFeatureKpis(
   canonicalJql: string
 ): FeatureKpiTile[] {
   const addScoped = (extra: string) => `(${canonicalJql}) AND (${extra})`;
+  const isOpen = (i: FeatureDashboardIssue) => !DONE_STATUSES.has(i.status.toLowerCase());
+
   const bugOpen = issues.filter(
-    (i) => i.issueType.toLowerCase() === 'bug' && !DONE_STATUSES.has(i.status.toLowerCase())
+    (i) => i.issueType.toLowerCase() === 'bug' && isOpen(i)
   ).length;
-  const unassigned = issues.filter((i) => !i.assignee).length;
+
+  const unassignedOpen = issues.filter((i) => !i.assignee && isOpen(i)).length;
+  const unassignedTotal = issues.filter((i) => !i.assignee).length;
+
   const testCount = issues.filter((i) => TEST_TYPES.has(i.issueType.toLowerCase())).length;
   const qaBacklog = issues.filter(
     (i) => i.issueType.toLowerCase() === 'bug' && i.status.toLowerCase() === 'resolved'
@@ -183,9 +193,15 @@ export function buildFeatureKpis(
   const stalled14d = issues.filter((i) => {
     if (!i.updated) return false;
     const deltaDays = Math.floor((Date.now() - toDate(i.updated).getTime()) / (24 * 60 * 60 * 1000));
-    return deltaDays > 14 && !DONE_STATUSES.has(i.status.toLowerCase());
+    return deltaDays > 14 && isOpen(i);
   }).length;
-  const p1p0 = issues.filter((i) => ['p0', 'p1'].includes((i.priority || '').toLowerCase())).length;
+
+  const p1p0Open = issues.filter(
+    (i) => ['p0', 'p1'].includes((i.priority || '').toLowerCase()) && isOpen(i)
+  ).length;
+  const p1p0Total = issues.filter(
+    (i) => ['p0', 'p1'].includes((i.priority || '').toLowerCase())
+  ).length;
 
   return [
     {
@@ -198,9 +214,11 @@ export function buildFeatureKpis(
     {
       key: 'unassigned',
       label: 'Unassigned',
-      count: unassigned,
-      jql: addScoped('assignee is EMPTY'),
-      severity: unassigned > 0 ? 'amber' : 'green',
+      count: unassignedOpen,
+      total: unassignedTotal !== unassignedOpen ? unassignedTotal : undefined,
+      jql: addScoped('assignee is EMPTY AND status not in (Done, Closed, Resolved, Fixed, Complete)'),
+      totalJql: unassignedTotal !== unassignedOpen ? addScoped('assignee is EMPTY') : undefined,
+      severity: unassignedOpen > 0 ? 'amber' : 'green',
     },
     {
       key: 'qa_verification_backlog',
@@ -226,9 +244,11 @@ export function buildFeatureKpis(
     {
       key: 'high_priority',
       label: 'P0/P1 Tickets',
-      count: p1p0,
-      jql: addScoped('priority in (P0, P1)'),
-      severity: p1p0 > 0 ? 'red' : 'green',
+      count: p1p0Open,
+      total: p1p0Total !== p1p0Open ? p1p0Total : undefined,
+      jql: addScoped('priority in (P0, P1) AND status not in (Done, Closed, Resolved, Fixed, Complete)'),
+      totalJql: p1p0Total !== p1p0Open ? addScoped('priority in (P0, P1)') : undefined,
+      severity: p1p0Open > 0 ? 'red' : 'green',
     },
   ];
 }

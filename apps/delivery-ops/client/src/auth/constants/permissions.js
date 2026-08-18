@@ -39,6 +39,7 @@ export const TAB_PERMISSIONS = {
   '/release/retrospective': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/feature-dashboard': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/component-report': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+  '/chatbot': [PERMISSIONS.AI_INSIGHTS_VIEW],
   '/release-setup': [PERMISSIONS.RELEASE_SETUP_MANAGE],
   '/release-config': [PERMISSIONS.RELEASE_CONFIG_MANAGE],
   '/generic-emailer': [PERMISSIONS.EMAIL_SEND_GENERIC],

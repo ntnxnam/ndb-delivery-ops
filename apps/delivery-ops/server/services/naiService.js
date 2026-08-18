@@ -50,6 +50,7 @@ RULES:
 - Do not repeat the JIRA key or feature name of the current ticket — the reader knows what they are looking at.
 - No bullets, no markdown, no headings — flowing prose only.
 - Under 80 words total.
+- When RELEASE CONTEXT is present: use it to calibrate urgency language — do NOT repeat portfolio counts in the prose unless they directly justify the verdict. A sole RED feature in an otherwise green release gets "targeted escalation" language; a RED feature in a release where many others are RED signals systemic delivery pressure — phrase accordingly. Never fabricate portfolio numbers not present in RELEASE CONTEXT.
 
 CITE-OR-DON'T-CLAIM (zero-tolerance rule):
 - Every negative noun in your output — "slipped", "stalled", "blocked", "unfiled", "missing", "overdue", "incomplete", "pending", "drifting", "stalled" — MUST cite a specific source row visible to you in this prompt.
@@ -61,10 +62,21 @@ VERDICT FLOOR (phase-conditioned ceilings — hard rule):
 - A feature in PHASE = "Shipped" is ALWAYS a one-sentence GREEN confirmation. No analysis, no recommendations, no risk language.
 - A feature in PHASE = "CG Met" cannot be RED unless an open P0/P1 in LINKED BLOCKERS or OUTSTANDING SUBTASKS is named in your output.
 
-STATUS AUTHORITATIVE (JIRA status trumps historical dates):
-- When SIGNALS.jiraStatus reports a gate as Met ("Code Complete Met", "Commit Gate Met", "Promotion Gate Met"), that gate is cleared. The team accepted whatever date slip occurred and the release moved on.
-- Historical overshootMarker values for cleared gates are bookkeeping, NOT a forward risk. Never use a cleared-gate overshoot to justify a downgraded verdict (RED/YELLOW).
-- You may mention historical slip as context once, in the form "CG was met N days late", when it adds useful colour — but it must not be the sentence-1 lead and it must not be the reason for the verdict.
+CLOSEST-DATE-THAT-PASSED RULE (primary verdict anchor):
+- SIGNALS.latestPassedMarker contains the most recent release-level gate whose date has already elapsed. This is your PRIMARY anchor for the verdict — more reliable than JIRA status, which is often stale.
+- If latestPassedMarker is non-null, ask: has the feature confirmed clearance of that gate? Use this logic:
+    CC Met expected: SIGNALS.jiraStatus must include "Code Complete Met", "Commit Gate Met", "Promotion Gate Met", or "Closed/Shipped" — otherwise treat gate as NOT cleared.
+    CG Met expected: SIGNALS.jiraStatus must include "Commit Gate Met", "Promotion Gate Met", or "Closed/Shipped".
+    PG Met expected: SIGNALS.jiraStatus must include "Promotion Gate Met" or "Closed/Shipped".
+- If the gate has passed but jiraStatus does NOT confirm clearance → the feature FAILED that gate. The verdict is RED by default unless the status update text or a RECENT COMMENT (<14 days) contains explicit words like "gate cleared", "approved", "passed" for that specific gate.
+- When CRITICAL_RISKS contains a "MISSED GATE" entry, treat it as your sentence-1 lead and set verdict to RED.
+- The daysAgo field on latestPassedMarker quantifies urgency: ≤7 days = borderline (YELLOW if no other RED signals), 8–21 days = significant miss (RED), >21 days = severe miss (RED + escalation language).
+
+STATUS AUTHORITATIVE (JIRA status for cleared gates only):
+- When SIGNALS.jiraStatus reports a gate as Met AND the release calendar date for that gate has passed, the gate is cleared.
+- When SIGNALS.jiraStatus reports a gate as Met BUT the latestPassedMarker.expectedPhase indicates a higher gate is now due and not cleared, do NOT treat the feature as green — the new gate takes priority.
+- Historical overshootMarker values for already-cleared gates are bookkeeping, NOT a forward risk. Never use a cleared-gate overshoot to justify a downgraded verdict.
+- You may mention historical slip as context once ("CG was met N days late") but it must not lead sentence 1 and must not be the verdict reason.
 
 JIRA RISK INDICATOR ALIGNMENT:
 - SIGNALS.jiraRiskIndicator (Green / Yellow / Red) is the team's own attestation. When non-null, your RAG verdict should match it.
@@ -251,12 +263,45 @@ function buildGateGapsLine(gateGaps) {
 }
 
 // ── User message builder ────────────────────────────────────────────────────
+function buildReleaseContextBlock(releaseContext) {
+  if (!releaseContext) return null;
+  const { totalProjects, riskCounts, p0BugsCount, daysFromPG, currentPGDate, currentCGDate } = releaseContext;
+  const rc = riskCounts || {};
+  const lines = [
+    `Total commit projects: ${totalProjects ?? 'unknown'}`,
+    rc.red != null || rc.yellow != null || rc.green != null
+      ? `Portfolio risk distribution: ${rc.red ?? 0} RED / ${rc.yellow ?? 0} YELLOW / ${rc.green ?? 0} GREEN${rc.notSet != null ? ` / ${rc.notSet} not set` : ''}`
+      : null,
+    p0BugsCount != null ? `Release-wide P0 blockers: ${p0BugsCount}` : null,
+    daysFromPG != null
+      ? `Days to Promotion Gate: ${daysFromPG}${currentPGDate ? ` (${currentPGDate})` : ''}`
+      : currentPGDate
+        ? `Promotion Gate: ${currentPGDate}`
+        : null,
+    currentCGDate ? `Commit Gate: ${currentCGDate}` : null,
+  ].filter(Boolean);
+
+  if (lines.length === 0) return null;
+
+  return [
+    'RELEASE CONTEXT (portfolio health for this release — use to calibrate urgency, do NOT recite counts verbatim in prose):',
+    ...lines.map(l => `  - ${l}`),
+    '  Calibration rule: a RED feature in a mostly-green release (≤2 RED of 25+) signals isolated risk requiring targeted escalation; a RED feature in a release where 8+ projects are RED signals systemic delivery pressure — phrase urgency accordingly.',
+  ].join('\n');
+}
+
 function buildUserPrompt(signals, narrative, rawStatusText) {
   const today = new Date().toISOString().slice(0, 10);
   const phaseFocusList = (signals.phaseFocus || []).join(', ') || 'none';
   const phaseIgnoreList = (signals.phaseIgnore || []).join(', ') || 'none';
   const teamNAList = (signals.teamNA || []).join(', ') || 'none';
   const gateGapsLine = buildGateGapsLine(signals.gateGaps);
+  const releaseContextBlock = buildReleaseContextBlock(signals.releaseContext);
+
+  const lpm = signals.latestPassedMarker;
+  const latestPassedMarkerLine = lpm
+    ? `LATEST_PASSED_GATE: ${lpm.label} (${lpm.date}) — passed ${lpm.daysAgo === 0 ? 'today' : lpm.daysAgo === 1 ? '1 day ago' : `${lpm.daysAgo} days ago`}. Expected feature phase: ${lpm.expectedPhase}. Actual phase: ${signals.phase}. ${signals.phase === lpm.expectedPhase || (lpm.expectedPhase === 'CC Met' && ['CC Met','CG Met','PG Met','Shipped'].includes(signals.phase)) || (lpm.expectedPhase === 'CG Met' && ['CG Met','PG Met','Shipped'].includes(signals.phase)) || (lpm.expectedPhase === 'PG Met' && ['PG Met','Shipped'].includes(signals.phase)) ? 'Gate CLEARED ✓' : 'Gate NOT confirmed — see CRITICAL_RISKS.'}`
+    : null;
 
   const trimmedText = rawStatusText
     ? rawStatusText.length > MAX_STATUS_TEXT_CHARS
@@ -287,7 +332,7 @@ PHASE_RATIONALE: ${signals.phaseRationale}
 PHASE_FOCUS: ${phaseFocusList}
 PHASE_IGNORE: ${phaseIgnoreList}
 TEAM_NA: ${teamNAList}
-${gateGapsLine ? gateGapsLine + '\n' : ''}
+${latestPassedMarkerLine ? latestPassedMarkerLine + '\n' : ''}${gateGapsLine ? gateGapsLine + '\n' : ''}${releaseContextBlock ? releaseContextBlock + '\n\n' : ''}
 ${criticalBlock}
 
 ${ticketContextBlock}
@@ -385,10 +430,161 @@ async function generateExecSummary(signals, narrative = null, rawStatusText = nu
   return trimmed;
 }
 
+// ── Release-level summary ────────────────────────────────────────────────────
+
+const RELEASE_SUMMARY_SYSTEM_PROMPT = `You are a senior technical program manager writing a release health briefing for engineering leadership. Your job is to give a factual, date-grounded status of whether the release will ship on time, name the top blockers with their owners, and provide an action list for the next 7 days.
+
+OUTPUT FORMAT (strict — three sections, no extras):
+
+## Release Health: <GREEN|YELLOW|RED>
+One paragraph, 3–5 sentences. Open with the overall RAG verdict and the specific evidence (gate dates, P0 count, must-fix count, gate-lagging features). State the dominant risk pattern. Close with projected trajectory if nothing changes.
+
+## Top Blockers
+Bullet list of up to 8 entries. Entries come from three sources in priority order:
+  1. P0 blockers — copy each entry from OPEN P0 BLOCKERS verbatim, format: "- [KEY] <summary> — P0 Blocker (Owner: <name>)"
+  2. Must-fix open tickets — copy from OPEN MUST-FIX TICKETS verbatim, format: "- [KEY] <summary> — Must-fix [status] (Owner: <name>)"
+  3. Gate-lagging / blocked features — from FEATURE BUCKETS
+If genuinely none, say "*No current blockers.*"
+
+## 7-Day Action List
+Numbered list of up to 5 concrete asks. Format: "N. Ask <owner or role> to <specific action> on <key or set of keys> by <date or timeframe>."
+Prioritise resolving P0s and must-fix tickets first, then gate-lagging features. Do not use generic language like "monitor" or "follow up".
+
+RAG VERDICT RULES (all conditions checked in order — first match wins):
+1. RED if OPEN_P0_BLOCKERS > 0.
+2. RED if OPEN_MUSTFIX_TICKETS > 0 AND fewer than 14 days to PG.
+3. RED if gate-lagging > 2 features.
+4. YELLOW if OPEN_MUSTFIX_TICKETS > 0.
+5. YELLOW if gate-lagging 1–2 OR dark > 20% of committed count OR compliance-at-risk > 0.
+6. GREEN only if: OPEN_P0_BLOCKERS = 0, OPEN_MUSTFIX_TICKETS = 0, gate-lagging = 0, dark ≤ 20%.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- You MUST copy ticket keys character-for-character from the data provided. Example: if the data says "ERA-66381", write "ERA-66381". Do NOT write "ERA-66217" or any other key not explicitly present in the prompt.
+- NEVER generate, invent, approximate, or reconstruct ticket keys. You are not recalling tickets from memory — you are transcribing keys that are given to you in this prompt.
+- If you are unsure of a key, omit that entry entirely. A missing entry is far less damaging than a fabricated one.
+- Before writing any ticket key in your response, confirm it appears verbatim in OPEN P0 BLOCKERS, OPEN MUST-FIX TICKETS, or FEATURE BUCKETS above.
+
+Never fabricate owner names or dates not present in the data. Under 400 words total.`;
+
+/**
+ * Build the user prompt for a release-level AI summary.
+ * @param {object} intelligence - Output of releaseAiSummaryService.buildReleaseIntelligence
+ */
+function buildReleaseSummaryPrompt(intelligence) {
+  const { version, totalFeatures, p0Bugs = [], mustFixTickets = [],
+          phaseDist, selfReportedRisk, dateMetrics, buckets } = intelligence;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const dm = dateMetrics || {};
+  const headerLines = [
+    `TODAY: ${today}`,
+    `RELEASE: ${version}`,
+    `TOTAL_COMMITTED_FEATURES: ${totalFeatures}`,
+    `OPEN_P0_BLOCKERS: ${p0Bugs.length}`,
+    `OPEN_MUSTFIX_TICKETS: ${mustFixTickets.length}`,
+    dm.daysFromCutoff != null ? `DAYS_TO_PG: ${dm.daysFromCutoff}` : null,
+    dm.currentCGDate ? `CG_DATE: ${dm.currentCGDate}` : null,
+    dm.currentPGDate ? `PG_DATE: ${dm.currentPGDate}` : null,
+  ].filter(Boolean).join('\n');
+
+  const phaseBlock = Object.entries(phaseDist)
+    .sort((a, b) => b[1] - a[1])
+    .map(([phase, count]) => `  ${phase}: ${count}`)
+    .join('\n');
+
+  const selfRisk = selfReportedRisk;
+  const selfBlock = `  RED (self-reported): ${selfRisk.red}  YELLOW: ${selfRisk.yellow}  GREEN: ${selfRisk.green}  Not set: ${selfRisk.notSet}`;
+
+  const renderBucket = (label, features) => {
+    if (!features || features.length === 0) return `${label}: none`;
+    const lines = features.map(f => {
+      const owner = f.tpmOwner || f.assignee || 'Unassigned';
+      const risks = (f.criticalRisks || []).slice(0, 2).join(' | ');
+      const stale = f.statusUpdateAgeDays != null ? ` [status ${f.statusUpdateAgeDays}d old]` : '';
+      const lpm = f.latestPassedMarker
+        ? ` [${f.latestPassedMarker.label} passed ${f.latestPassedMarker.daysAgo}d ago, expected ${f.latestPassedMarker.expectedPhase}, actual ${f.phase}]`
+        : '';
+      return `  - ${f.key}: ${f.summary}${lpm}${stale}${risks ? ' | RISKS: ' + risks : ''} (Owner: ${owner})`;
+    });
+    return `${label} (${features.length}):\n${lines.join('\n')}`;
+  };
+
+  const allProvidedKeys = [
+    ...p0Bugs.map(b => b.key),
+    ...mustFixTickets.map(t => t.key),
+  ];
+  const keyReferenceBlock = allProvidedKeys.length > 0
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n` +
+      allProvidedKeys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')
+    : 'VALID TICKET KEYS: none provided';
+
+  const p0Block = p0Bugs.length > 0
+    ? `OPEN P0 BLOCKERS (${p0Bugs.length}) — release-blocking bugs:\n` +
+      p0Bugs.map(b => `  - ${b.key}: ${b.summary} [Status: ${b.status}] (Owner: ${b.assignee})`).join('\n')
+    : 'OPEN P0 BLOCKERS: none';
+
+  const mustFixBlock = mustFixTickets.length > 0
+    ? `OPEN MUST-FIX TICKETS label="${version.toLowerCase()}-mustfix" (${mustFixTickets.length}) — open items regardless of feature hierarchy:\n` +
+      mustFixTickets.slice(0, 20).map(t =>
+        `  - ${t.key} [${t.issueType}/${t.priority}]: ${t.summary} [Status: ${t.status}] (Owner: ${t.assignee})`
+      ).join('\n') +
+      (mustFixTickets.length > 20 ? `\n  ... and ${mustFixTickets.length - 20} more` : '')
+    : `OPEN MUST-FIX TICKETS label="${version.toLowerCase()}-mustfix": none`;
+
+  const bucketsBlock = [
+    renderBucket('GATE-LAGGING', buckets['gate-lagging']),
+    renderBucket('BLOCKED', buckets['blocked']),
+    renderBucket('COMPLIANCE-AT-RISK', buckets['compliance']),
+    renderBucket('DARK (stale status)', buckets['dark']),
+    `WATCHING: ${buckets['watching']?.length ?? 0} features on track`,
+    `CLEAR (PG Met / Shipped): ${buckets['clear']?.length ?? 0} features`,
+  ].join('\n\n');
+
+  return `${headerLines}
+
+${keyReferenceBlock}
+
+PHASE DISTRIBUTION:
+${phaseBlock}
+
+SELF-REPORTED RISK (JIRA indicator — often stale, use as secondary signal only):
+${selfBlock}
+
+${p0Block}
+
+${mustFixBlock}
+
+FEATURE BUCKETS (primary signal — grounded in release calendar dates):
+${bucketsBlock}
+
+Write the three-section release briefing now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+/**
+ * Generate a release-level AI summary.
+ *
+ * @param {object} intelligence - Output of releaseAiSummaryService.buildReleaseIntelligence
+ * @returns {Promise<string>} Formatted three-section briefing
+ */
+async function generateReleaseSummary(intelligence) {
+  const messages = [
+    { role: 'system', content: RELEASE_SUMMARY_SYSTEM_PROMPT },
+    { role: 'user', content: buildReleaseSummaryPrompt(intelligence) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25, maxTokens: 1200 });
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error('NAI returned an empty release summary after trim');
+  }
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
+  generateReleaseSummary,
   EXEC_SUMMARY_SYSTEM_PROMPT,
+  RELEASE_SUMMARY_SYSTEM_PROMPT,
   // Exposed for testing
-  _internals: { buildUserPrompt, buildTicketContext, buildGateGapsLine },
+  _internals: { buildUserPrompt, buildTicketContext, buildGateGapsLine, buildReleaseContextBlock, buildReleaseSummaryPrompt },
 };

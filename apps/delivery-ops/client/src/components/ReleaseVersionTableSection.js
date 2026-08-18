@@ -166,7 +166,8 @@ function ReleaseVersionTableSection({
   jiraBaseUrl,
   ganttConfig,
   breakdownDataMap,
-  loadingBreakdowns
+  loadingBreakdowns,
+  releaseContext = null,
 }) {
   const itemCount = items?.length || 0;
   
@@ -204,6 +205,7 @@ function ReleaseVersionTableSection({
                   ganttConfig={ganttConfig}
                   breakdownDataMap={breakdownDataMap}
                   loadingBreakdowns={loadingBreakdowns}
+                  releaseContext={releaseContext}
                 />
               ))}
             </tbody>

@@ -1,892 +1,581 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Toast } from '../shared/components/Toast';
+import ReleaseGantt from './ReleaseGantt';
 
-const ReleaseConfigPage = () => {
-  const [releases, setReleases] = useState({});
-  const [selectedVersion, setSelectedVersion] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [showNewReleaseForm, setShowNewReleaseForm] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  // Form state for release configuration
-  const [releaseData, setReleaseData] = useState({
-    version: '',
-    ecDate: '',
-    ccm1Gate: [{ label: 'Code Complete 1', date: '', color: '#de350b', style: 'dotted' }],
-    ccm2Gate: [{ label: 'Code Complete 2', date: '', color: '#de350b', style: 'solid' }],
-    codeFreeze: { label: 'Code Freeze (Soft Guidance)', date: '', color: '#607d8b', style: 'dashed' },
-    commitGate1: { label: 'Commit Gate 1', date: '', color: '#ff9800', style: 'dotted' },
-    commitGate2: { label: 'Commit Gate 2', date: '', color: '#ff9800', style: 'solid' },
-    promotionGate1: { label: 'Promotion Gate 1', date: '', color: '#9c27b0', style: 'dotted' },
-    promotionGate2: { label: 'Promotion Gate 2', date: '', color: '#9c27b0', style: 'solid' },
-    ga1: { label: 'General Availability 1', date: '', color: '#28a745', style: 'dotted' },
-    ga2: { label: 'General Availability 2', date: '', color: '#28a745', style: 'solid' }
-  });
-
-  const loadReleaseData = useCallback((version, releasesData = releases) => {
-    const releaseConfig = releasesData[version];
-    if (releaseConfig) {
-      setReleaseData({
-        version,
-        ecDate: releaseConfig.ecDate || '',
-        ccm1Gate: releaseConfig.ccm1Gate || [{ label: 'Concept Commit 1 (CC 1)', date: '', color: '#de350b', style: 'dotted' }],
-        ccm2Gate: releaseConfig.ccm2Gate || [{ label: 'Concept Commit 2 (CC 2)', date: '', color: '#de350b', style: 'solid' }],
-        codeFreeze: releaseConfig.codeFreeze || { label: 'Code Freeze (Soft Guidance)', date: '', color: '#607d8b', style: 'dashed' },
-        commitGate1: releaseConfig.commitGate1 || null,
-        commitGate2: releaseConfig.commitGate2 || null,
-        promotionGate1: releaseConfig.promotionGate1 || null,
-        promotionGate2: releaseConfig.promotionGate2 || null,
-        ga1: releaseConfig.ga1 || null,
-        ga2: releaseConfig.ga2 || null
-      });
-    }
-  }, [releases]);
-
-  const loadReleaseConfigs = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/config/release-dates');
-      
-      if (!response.ok) {
-        throw new Error('Failed to load release configurations');
+/**
+ * Gate column definitions.
+ *
+ * getAll(cfg)         → [{ date, reason? }, …] in chronological order
+ * getCurrent(cfg)     → current date string
+ * setCurrent(cfg, v)  → new config with v appended as the latest revision
+ * stampReason(cfg, r) → new config with r written onto the latest slot
+ */
+const GATE_COLUMNS = [
+  {
+    key: 'ec',
+    label: 'EC',
+    isGA: false,
+    getAll:     cfg => cfg?.ecDate ? [{ date: cfg.ecDate, reason: cfg.ecDateReason }] : [],
+    getCurrent: cfg => cfg?.ecDate || '',
+    setCurrent: (cfg, v) => ({ ...cfg, ecDate: v || null }),
+    stampReason:(cfg, r) => ({ ...cfg, ecDateReason: r }),
+  },
+  {
+    key: 'ccm',
+    label: 'CCM',
+    isGA: false,
+    getAll: cfg => [
+      ...(cfg?.ccm1Gate || []),
+      ...(cfg?.ccm2Gate || []),
+    ].filter(x => x?.date),
+    getCurrent: cfg => {
+      const all = [...(cfg?.ccm1Gate || []), ...(cfg?.ccm2Gate || [])].filter(x => x?.date);
+      return all[all.length - 1]?.date || '';
+    },
+    setCurrent: (cfg, v) => ({
+      ...cfg,
+      ccm2Gate: v ? [{ label: 'Code Complete Met', date: v, color: '#de350b', style: 'solid' }] : [],
+    }),
+    stampReason: (cfg, r) => {
+      const arr = cfg?.ccm2Gate?.length
+        ? cfg.ccm2Gate
+        : cfg?.ccm1Gate;
+      if (!arr?.length) return cfg;
+      const which = cfg?.ccm2Gate?.length ? 'ccm2Gate' : 'ccm1Gate';
+      const updated = [...cfg[which]];
+      updated[updated.length - 1] = { ...updated[updated.length - 1], reason: r };
+      return { ...cfg, [which]: updated };
+    },
+  },
+  {
+    key: 'cg',
+    label: 'CG',
+    isGA: false,
+    getAll: cfg => [cfg?.commitGate1, cfg?.commitGate2].filter(x => x?.date),
+    getCurrent: cfg => cfg?.commitGate2?.date || cfg?.commitGate1?.date || '',
+    setCurrent: (cfg, v) => {
+      if (!cfg?.commitGate1?.date && !cfg?.commitGate2?.date) {
+        return { ...cfg, commitGate1: v ? { label: 'Commit Gate', date: v, color: '#ff9800', style: 'solid' } : null };
       }
-      
-      const data = await response.json();
-      setReleases(data.releases || {});
-      
-      // Select first release if available and none selected
-      const releaseVersions = Object.keys(data.releases || {});
-      if (releaseVersions.length > 0 && !selectedVersion) {
-        setSelectedVersion(releaseVersions[0]);
-        loadReleaseData(releaseVersions[0], data.releases);
+      if (cfg?.commitGate2?.date) {
+        return { ...cfg, commitGate1: cfg.commitGate2, commitGate2: v ? { ...cfg.commitGate2, date: v, reason: undefined } : null };
       }
-    } catch (err) {
-      setError('Failed to load release configurations: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedVersion, loadReleaseData]);
-
-  // Load release configurations on component mount
-  useEffect(() => {
-    loadReleaseConfigs();
-  }, [loadReleaseConfigs]);
-
-  const handleVersionSelect = (version) => {
-    setSelectedVersion(version);
-    setIsEditing(false);
-    setShowNewReleaseForm(false);
-    loadReleaseData(version);
-  };
-
-  const handleNewRelease = () => {
-    setReleaseData({
-      version: '',
-      ecDate: '',
-      ccm1Gate: [{ label: 'Concept Commit 1 (CC 1)', date: '', color: '#de350b', style: 'dotted' }],
-      ccm2Gate: [{ label: 'Concept Commit 2 (CC 2)', date: '', color: '#de350b', style: 'solid' }],
-      codeFreeze: { label: 'Code Freeze (Soft Guidance)', date: '', color: '#607d8b', style: 'dashed' },
-      commitGate1: null,
-      commitGate2: null,
-      promotionGate1: null,
-      promotionGate2: null,
-      ga1: null,
-      ga2: null
-    });
-    setSelectedVersion('');
-    setIsEditing(true);
-    setShowNewReleaseForm(true);
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setShowNewReleaseForm(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setShowNewReleaseForm(false);
-    if (selectedVersion) {
-      loadReleaseData(selectedVersion);
-    }
-  };
-
-  const updateGateDate = (gateKey, date) => {
-    if (Array.isArray(releaseData[gateKey])) {
-      // Handle array gates (ccm1Gate, ccm2Gate)
-      const updatedGate = [...releaseData[gateKey]];
-      updatedGate[0] = { ...updatedGate[0], date };
-      setReleaseData({
-        ...releaseData,
-        [gateKey]: updatedGate
-      });
-    } else if (releaseData[gateKey]) {
-      // Handle existing object gates
-      setReleaseData({
-        ...releaseData,
-        [gateKey]: { ...releaseData[gateKey], date }
-      });
-    } else {
-      // Create new gate if it doesn't exist
-      const gateLabels = {
-        commitGate1: 'Commit Gate',
-        commitGate2: 'Commit Gate 2',
-        promotionGate1: 'Promotion Gate',
-        promotionGate2: 'Promotion Gate 2', 
-        ga1: 'GA Target Date',
-        ga2: 'General Availability 2'
-      };
-      const gateColors = {
-        commitGate1: '#ff9800',
-        commitGate2: '#ff9800',
-        promotionGate1: '#9c27b0',
-        promotionGate2: '#9c27b0',
-        ga1: '#28a745',
-        ga2: '#28a745'
-      };
-      setReleaseData({
-        ...releaseData,
-        [gateKey]: {
-          label: gateLabels[gateKey] || 'Gate',
-          date,
-          color: gateColors[gateKey] || '#6c757d',
-          style: 'solid'
-        }
-      });
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError('');
-      
-      // Validate required fields
-      if (!releaseData.version.trim()) {
-        setError('Release version is required');
-        return;
+      return { ...cfg, commitGate2: v ? { label: 'Commit Gate', date: v, color: '#ff9800', style: 'solid' } : null };
+    },
+    stampReason: (cfg, r) => {
+      const slot = cfg?.commitGate2?.date ? 'commitGate2' : 'commitGate1';
+      return cfg?.[slot] ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
+    },
+  },
+  {
+    key: 'pg',
+    label: 'PG',
+    isGA: false,
+    getAll: cfg => [
+      ...(cfg?.promotionGateOverflow || []),
+      cfg?.promotionGate1,
+      cfg?.promotionGate2,
+      cfg?.promotionGate3,
+    ].filter(x => x?.date),
+    getCurrent: cfg => cfg?.promotionGate3?.date || cfg?.promotionGate2?.date || cfg?.promotionGate1?.date || '',
+    setCurrent: (cfg, v) => {
+      const slots = ['promotionGate1', 'promotionGate2', 'promotionGate3'];
+      const last  = [...slots].reverse().find(k => cfg?.[k]?.date);
+      if (!last) return { ...cfg, promotionGate1: v ? { label: 'Promotion Gate', date: v, color: '#9c27b0', style: 'solid' } : null };
+      const idx  = slots.indexOf(last);
+      const next = slots[Math.min(idx + 1, slots.length - 1)];
+      if (next === last) {
+        // All named slots full — push oldest into overflow (unlimited history), rotate, set newest
+        const overflow = [...(cfg.promotionGateOverflow || []), cfg.promotionGate1].filter(x => x?.date);
+        return {
+          ...cfg,
+          promotionGateOverflow: overflow,
+          promotionGate1: cfg.promotionGate2,
+          promotionGate2: cfg.promotionGate3,
+          promotionGate3: v ? { ...(cfg.promotionGate3 || {}), date: v, reason: undefined } : null,
+        };
       }
-
-      const saveData = {
-        version: releaseData.version.trim(),
-        ecDate: releaseData.ecDate.trim(),
-        ccm1Gate: releaseData.ccm1Gate.filter(cc => cc.date.trim()),
-        ccm2Gate: releaseData.ccm2Gate.filter(cc => cc.date.trim()),
-        codeFreeze: releaseData.codeFreeze.date.trim() ? releaseData.codeFreeze : null,
-        commitGate1: releaseData.commitGate1 && releaseData.commitGate1.date.trim() ? releaseData.commitGate1 : null,
-        commitGate2: releaseData.commitGate2 && releaseData.commitGate2.date.trim() ? releaseData.commitGate2 : null,
-        promotionGate1: releaseData.promotionGate1 && releaseData.promotionGate1.date.trim() ? releaseData.promotionGate1 : null,
-        promotionGate2: releaseData.promotionGate2 && releaseData.promotionGate2.date.trim() ? releaseData.promotionGate2 : null,
-        ga1: releaseData.ga1 && releaseData.ga1.date.trim() ? releaseData.ga1 : null,
-        ga2: releaseData.ga2 && releaseData.ga2.date.trim() ? releaseData.ga2 : null
-      };
-
-      const response = await fetch('/api/config/release-dates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Username': localStorage.getItem('username') || ''
-        },
-        body: JSON.stringify(saveData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save release configuration');
+      return { ...cfg, [next]: v ? { label: 'Promotion Gate', date: v, color: '#9c27b0', style: 'solid' } : null };
+    },
+    stampReason: (cfg, r) => {
+      const slot = ['promotionGate3','promotionGate2','promotionGate1'].find(k => cfg?.[k]?.date);
+      return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
+    },
+  },
+  {
+    key: 'ga',
+    label: 'GA',
+    isGA: true,
+    getAll: cfg => [
+      ...(cfg?.gaOverflow || []),
+      cfg?.ga1,
+      cfg?.ga2,
+      cfg?.ga3,
+    ].filter(x => x?.date),
+    getCurrent: cfg => cfg?.ga3?.date || cfg?.ga2?.date || cfg?.ga1?.date || '',
+    setCurrent: (cfg, v) => {
+      const slots = ['ga1', 'ga2', 'ga3'];
+      const last  = [...slots].reverse().find(k => cfg?.[k]?.date);
+      if (!last) return { ...cfg, ga1: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
+      const idx  = slots.indexOf(last);
+      const next = slots[Math.min(idx + 1, slots.length - 1)];
+      if (next === last) {
+        // All named slots full — push oldest into overflow (unlimited history), rotate, set newest
+        const overflow = [...(cfg.gaOverflow || []), cfg.ga1].filter(x => x?.date);
+        return {
+          ...cfg,
+          gaOverflow: overflow,
+          ga1: cfg.ga2,
+          ga2: cfg.ga3,
+          ga3: v ? { ...(cfg.ga3 || {}), date: v, reason: undefined } : null,
+        };
       }
+      return { ...cfg, [next]: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
+    },
+    stampReason: (cfg, r) => {
+      const slot = ['ga3','ga2','ga1'].find(k => cfg?.[k]?.date);
+      return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
+    },
+  },
+];
 
-      // Reload configurations
-      await loadReleaseConfigs();
-      setSelectedVersion(saveData.version);
-      setIsEditing(false);
-      setShowNewReleaseForm(false);
-      setSuccess(`Release configuration for ${saveData.version} saved successfully`);
-      
-    } catch (err) {
-      setError('Failed to save release configuration: ' + err.message);
-    } finally {
-      setSaving(false);
+function fmt(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${m}/${d}/${y?.slice(2)}`;
+}
+
+// ── Quick inline date entry for empty cells ───────────────────────────────────
+function QuickDateInput({ onCommit }) {
+  const [open, setOpen] = useState(false);
+  const inputRef = React.useRef(null);
+
+  function handleOpen() {
+    setOpen(true);
+    setTimeout(() => inputRef.current?.showPicker?.(), 50);
+  }
+
+  function handleChange(e) {
+    if (e.target.value) {
+      onCommit(e.target.value);
+      setOpen(false);
     }
-  };
+  }
 
-  const handleDelete = async () => {
-    if (!selectedVersion) return;
-    
-    if (!window.confirm(`Are you sure you want to delete the release configuration for ${selectedVersion}?`)) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError('');
-
-      const response = await fetch(`/api/config/release-dates/${selectedVersion}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Username': localStorage.getItem('username') || ''
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete release configuration');
-      }
-
-      // Reload configurations
-      await loadReleaseConfigs();
-      setSelectedVersion('');
-      setIsEditing(false);
-      setSuccess(`Release configuration for ${selectedVersion} deleted successfully`);
-      
-    } catch (err) {
-      setError('Failed to delete release configuration: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
+  if (open) {
     return (
-      <div className="release-config-loading">
-        <div className="loading-spinner">⏳</div>
-        <p>Loading release configurations...</p>
-      </div>
+      <input
+        ref={inputRef}
+        type="date"
+        className="quick-date-input"
+        autoFocus
+        onChange={handleChange}
+        onBlur={() => setOpen(false)}
+      />
     );
   }
 
-  const releaseVersions = Object.keys(releases);
+  return (
+    <button className="quick-date-btn" onClick={handleOpen} title="Add date">
+      +
+    </button>
+  );
+}
+
+// ── Reasoning modal ───────────────────────────────────────────────────────────
+function ReasonModal({ version, changedCols, onConfirm, onCancel }) {
+  const [reason, setReason] = useState('');
+  const hasGA = changedCols.some(c => c.isGA);
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-box">
+        <h3>Why are these dates changing? — {version}</h3>
+        <p className="modal-subtitle">Changed: {changedCols.map(c => c.label).join(', ')}.</p>
+        {hasGA && (
+          <p className="modal-warning">
+            GA change will update JIRA (FEAT + ERA) and notify the team by email.
+          </p>
+        )}
+        <textarea
+          className="reason-textarea"
+          placeholder="Explain why (e.g. dependency slip, scope change, QA bandwidth)…"
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={4}
+          autoFocus
+        />
+        <div className="modal-actions">
+          <button className="btn-primary" onClick={() => onConfirm(reason)} disabled={!reason.trim()}>Save</button>
+          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+const ReleaseConfigPage = () => {
+  const [releases, setReleases]         = useState({});
+  const [editingRow, setEditingRow]     = useState(null);
+  const [pendingEdits, setPendingEdits] = useState({});
+  const [showModal, setShowModal]       = useState(null);
+  const [showNewForm, setShowNewForm]   = useState(false);
+  const [newVersion, setNewVersion]     = useState('');
+  const [loading, setLoading]           = useState(true);
+  const [saving, setSaving]             = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState('');
+
+  const loadConfigs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/config/release-dates');
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      setReleases(data.releases || {});
+    } catch (e) {
+      setError('Failed to load: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadConfigs(); }, [loadConfigs]);
+
+  function startEdit(version) {
+    setEditingRow(version);
+    setPendingEdits(prev => ({ ...prev, [version]: JSON.parse(JSON.stringify(releases[version] || {})) }));
+  }
+
+  function cancelEdit(version) {
+    setEditingRow(null);
+    setPendingEdits(prev => { const n = { ...prev }; delete n[version]; return n; });
+  }
+
+  function updateCell(version, col, value) {
+    setPendingEdits(prev => ({
+      ...prev,
+      [version]: col.setCurrent(prev[version] || JSON.parse(JSON.stringify(releases[version] || {})), value),
+    }));
+  }
+
+  function detectChangedCols(version) {
+    const original = releases[version] || {};
+    const edited   = pendingEdits[version] || {};
+    return GATE_COLUMNS.filter(col => col.getCurrent(edited) !== col.getCurrent(original));
+  }
+
+  function requestSave(version) {
+    const changed = detectChangedCols(version);
+    if (!changed.length) { cancelEdit(version); return; }
+    setShowModal({ version, changedCols: changed });
+  }
+
+  async function confirmSave(reason) {
+    const { version, changedCols } = showModal;
+    setShowModal(null);
+
+    // Stamp the reason onto every gate that changed
+    let cfg = pendingEdits[version] || releases[version] || {};
+    for (const col of changedCols) {
+      cfg = col.stampReason(cfg, reason);
+    }
+
+    await doSave(version, cfg, reason);
+  }
+
+  async function doSave(version, cfg, reason) {
+    try {
+      setSaving(true);
+      const body = { version, reason, ...cfg };
+      const res = await fetch('/api/config/release-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Username': localStorage.getItem('username') || '' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      await loadConfigs();
+      cancelEdit(version);
+      setSuccess(`${version} saved.`);
+    } catch (e) {
+      setError('Save failed: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveNewRelease() {
+    if (!newVersion.trim()) { setError('Version is required'); return; }
+    await doSave(newVersion.trim(), {}, '');
+    setShowNewForm(false);
+    setNewVersion('');
+  }
+
+  async function handleDelete(version) {
+    if (!window.confirm(`Delete config for ${version}?`)) return;
+    try {
+      setSaving(true);
+      const res = await fetch(`/api/config/release-dates/${encodeURIComponent(version)}`, {
+        method: 'DELETE',
+        headers: { 'X-Username': localStorage.getItem('username') || '' },
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
+      await loadConfigs();
+      setSuccess(`${version} deleted.`);
+    } catch (e) {
+      setError('Delete failed: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="rc-loading">Loading…</div>;
+
+  const versions = Object.keys(releases);
 
   return (
-    <div className="release-config-page">
-      <div className="page-header">
-        <div className="header-content">
+    <div className="rc-page">
+      <div className="rc-header">
+        <div>
           <h1>Release Configuration</h1>
-          <p>Manage release dates and milestones for different versions</p>
+          <p>Struck-out dates show previous revisions with their reasons. GA changes update JIRA and notify the team.</p>
         </div>
-        <div className="header-actions">
-          <button 
-            onClick={handleNewRelease}
-            className="btn-primary"
-            disabled={saving}
-          >
-            📅 New Release
-          </button>
-        </div>
+        <button className="btn-primary" onClick={() => setShowNewForm(true)} disabled={saving}>
+          + New Release
+        </button>
       </div>
 
-      <div className="config-content">
-        {/* Release Version Selector */}
-        {releaseVersions.length > 0 && (
-          <div className="version-selector">
-            <label>Select Release Version:</label>
-            <div className="version-tabs">
-              {releaseVersions.map((version) => (
-                <button
-                  key={version}
-                  onClick={() => handleVersionSelect(version)}
-                  className={`version-tab ${selectedVersion === version ? 'active' : ''}`}
-                >
-                  {version}
-                </button>
-              ))}
-            </div>
+      {showNewForm && (
+        <div className="new-release-bar">
+          <input
+            className="new-release-input"
+            placeholder="e.g. NDB-2.13"
+            value={newVersion}
+            onChange={e => setNewVersion(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && saveNewRelease()}
+            autoFocus
+          />
+          <button className="btn-primary" onClick={saveNewRelease} disabled={saving}>Add</button>
+          <button className="btn-secondary" onClick={() => { setShowNewForm(false); setNewVersion(''); }}>Cancel</button>
+        </div>
+      )}
+
+      {versions.length === 0 && !showNewForm ? (
+        <div className="rc-empty">
+          <p>No releases configured yet.</p>
+          <button className="btn-primary" onClick={() => setShowNewForm(true)}>Create First Release</button>
+        </div>
+      ) : (
+        <>
+          <ReleaseGantt releases={releases} />
+          <div className="rc-table-wrap">
+          <table className="rc-table">
+            <thead>
+              <tr>
+                <th className="col-version">Release</th>
+                {GATE_COLUMNS.map(col => (
+                  <th key={col.key} className={col.isGA ? 'col-ga' : ''}>{col.label}</th>
+                ))}
+                <th className="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {versions.map(version => {
+                const cfg     = releases[version] || {};
+                const draft   = pendingEdits[version] || cfg;
+                const editing = editingRow === version;
+
+                return (
+                  <tr key={version} className={editing ? 'row-editing' : ''}>
+                    <td className="col-version">{version}</td>
+
+                    {GATE_COLUMNS.map(col => {
+                      const allEntries = col.getAll(cfg);   // [{ date, reason? }, …]
+                      const prevEntries = allEntries.slice(0, -1);
+                      const currentEntry = allEntries[allEntries.length - 1];
+
+                      return (
+                        <td key={col.key} className={`date-cell${col.isGA ? ' col-ga' : ''}`}>
+                          {editing ? (
+                            <input
+                              type="date"
+                              className="cell-input"
+                              value={col.getCurrent(draft)}
+                              onChange={e => updateCell(version, col, e.target.value)}
+                            />
+                          ) : (
+                            <div className="date-stack">
+                              {prevEntries.map((entry, i) => (
+                                <div key={i} className="date-entry">
+                                  <s className="date-prev">{fmt(entry.date)}</s>
+                                  {entry.reason && <s className="date-reason">{entry.reason}</s>}
+                                </div>
+                              ))}
+                              {currentEntry ? (
+                                <div className="date-entry">
+                                  <span className="date-current">{fmt(currentEntry.date)}</span>
+                                  {currentEntry.reason && (
+                                    <span className="date-reason current-reason">{currentEntry.reason}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <QuickDateInput
+                                  onCommit={v => {
+                                    startEdit(version);
+                                    updateCell(version, col, v);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    <td className="col-actions">
+                      {editing ? (
+                        <>
+                          <button className="btn-save"   onClick={() => requestSave(version)} disabled={saving}>Save</button>
+                          <button className="btn-cancel" onClick={() => cancelEdit(version)}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="btn-edit"   onClick={() => startEdit(version)}>Edit</button>
+                          <button className="btn-delete" onClick={() => handleDelete(version)} disabled={saving}>Del</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
           </div>
-        )}
+        </>
+      )}
 
-        {/* Release Configuration Form */}
-        {(selectedVersion || showNewReleaseForm) && (
-          <div className="release-form">
-            <div className="form-header">
-              <h2>
-                {showNewReleaseForm ? 'New Release Configuration' : `Release ${selectedVersion}`}
-              </h2>
-              <div className="form-actions">
-                {!isEditing ? (
-                  <>
-                    <button onClick={handleEdit} className="btn-secondary">
-                      ✏️ Edit
-                    </button>
-                    {selectedVersion && (
-                      <button 
-                        onClick={handleDelete} 
-                        className="btn-danger"
-                        disabled={saving}
-                      >
-                        🗑️ Delete
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button 
-                      onClick={handleSave} 
-                      className="btn-primary"
-                      disabled={saving}
-                    >
-                      {saving ? '💾 Saving...' : '💾 Save'}
-                    </button>
-                    <button onClick={handleCancel} className="btn-secondary">
-                      ❌ Cancel
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="form-content">
-              {/* Release Version Input */}
-              {(showNewReleaseForm || isEditing) && (
-                <div className="form-group">
-                  <label>Release Version:</label>
-                  <input
-                    type="text"
-                    value={releaseData.version}
-                    onChange={(e) => setReleaseData({...releaseData, version: e.target.value})}
-                    placeholder="e.g., NDB-2.12"
-                    disabled={!showNewReleaseForm && selectedVersion}
-                  />
-                </div>
-              )}
-
-              {/* Execute Commit Date */}
-              <div className="form-group">
-                <label>Execute Commit (EC):</label>
-                <input
-                  type="date"
-                  value={releaseData.ecDate}
-                  onChange={(e) => setReleaseData({...releaseData, ecDate: e.target.value})}
-                  disabled={!isEditing}
-                />
-              </div>
-
-              {/* Concept Commits */}
-              <div className="gate-section">
-                <h3>Concept Commits</h3>
-                <div className="gate-group">
-                  <div className="form-group">
-                    <label>Concept Commit 1 (CC 1):</label>
-                    <input
-                      type="date"
-                      value={releaseData.ccm1Gate[0]?.date || ''}
-                      onChange={(e) => updateGateDate('ccm1Gate', e.target.value)}
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Concept Commit 2 (CC 2):</label>
-                    <input
-                      type="date"
-                      value={releaseData.ccm2Gate[0]?.date || ''}
-                      onChange={(e) => updateGateDate('ccm2Gate', e.target.value)}
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Code Freeze */}
-              <div className="gate-section">
-                <h3>Code Freeze</h3>
-                <div className="form-group">
-                  <label>Code Freeze (Soft Guidance):</label>
-                  <input
-                    type="date"
-                    value={releaseData.codeFreeze.date}
-                    onChange={(e) => updateGateDate('codeFreeze', e.target.value)}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-
-              {/* Commit Gates */}
-              <div className="gate-section">
-                <h3>Commit Gates</h3>
-                <div className="gate-group">
-                  {releaseData.commitGate1 && (
-                    <div className="form-group">
-                      <label>{releaseData.commitGate1.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.commitGate1.date}
-                        onChange={(e) => updateGateDate('commitGate1', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {releaseData.commitGate2 && (
-                    <div className="form-group">
-                      <label>{releaseData.commitGate2.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.commitGate2.date}
-                        onChange={(e) => updateGateDate('commitGate2', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {isEditing && !releaseData.commitGate1 && (
-                    <button
-                      onClick={() => updateGateDate('commitGate1', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add Commit Gate
-                    </button>
-                  )}
-                  {isEditing && releaseData.commitGate1 && !releaseData.commitGate2 && (
-                    <button
-                      onClick={() => updateGateDate('commitGate2', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add Commit Gate 2
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Promotion Gates */}
-              <div className="gate-section">
-                <h3>Promotion Gates</h3>
-                <div className="gate-group">
-                  {releaseData.promotionGate1 && (
-                    <div className="form-group">
-                      <label>{releaseData.promotionGate1.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.promotionGate1.date}
-                        onChange={(e) => updateGateDate('promotionGate1', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {releaseData.promotionGate2 && (
-                    <div className="form-group">
-                      <label>{releaseData.promotionGate2.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.promotionGate2.date}
-                        onChange={(e) => updateGateDate('promotionGate2', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {isEditing && !releaseData.promotionGate1 && (
-                    <button
-                      onClick={() => updateGateDate('promotionGate1', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add Promotion Gate
-                    </button>
-                  )}
-                  {isEditing && releaseData.promotionGate1 && !releaseData.promotionGate2 && (
-                    <button
-                      onClick={() => updateGateDate('promotionGate2', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add Promotion Gate 2
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* General Availability */}
-              <div className="gate-section">
-                <h3>General Availability</h3>
-                <div className="gate-group">
-                  {releaseData.ga1 && (
-                    <div className="form-group">
-                      <label>{releaseData.ga1.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.ga1.date}
-                        onChange={(e) => updateGateDate('ga1', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {releaseData.ga2 && (
-                    <div className="form-group">
-                      <label>{releaseData.ga2.label}:</label>
-                      <input
-                        type="date"
-                        value={releaseData.ga2.date}
-                        onChange={(e) => updateGateDate('ga2', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  )}
-                  {isEditing && !releaseData.ga1 && (
-                    <button
-                      onClick={() => updateGateDate('ga1', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add GA Target Date
-                    </button>
-                  )}
-                  {isEditing && releaseData.ga1 && !releaseData.ga2 && (
-                    <button
-                      onClick={() => updateGateDate('ga2', '')}
-                      className="btn-add-gate"
-                    >
-                      ➕ Add GA 2
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {releaseVersions.length === 0 && !showNewReleaseForm && (
-          <div className="empty-state">
-            <div className="empty-icon">📅</div>
-            <h3>No Release Configurations</h3>
-            <p>Create your first release configuration to get started</p>
-            <button onClick={handleNewRelease} className="btn-primary">
-              📅 Create New Release
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Toast Messages */}
-      {error && (
-        <Toast
-          message={error}
-          type="error"
-          onClose={() => setError('')}
+      {showModal && (
+        <ReasonModal
+          version={showModal.version}
+          changedCols={showModal.changedCols}
+          onConfirm={confirmSave}
+          onCancel={() => setShowModal(null)}
         />
       )}
-      {success && (
-        <Toast
-          message={success}
-          type="success"
-          onClose={() => setSuccess('')}
-        />
-      )}
+
+      {error   && <Toast message={error}   type="error"   onClose={() => setError('')}   />}
+      {success && <Toast message={success} type="success" onClose={() => setSuccess('')} />}
 
       <style>{`
-        .release-config-page {
-          padding: 24px;
-          max-width: 1200px;
-          margin: 0 auto;
+        .rc-page { padding: 20px 24px; }
+
+        .rc-header {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e9ecef;
+        }
+        .rc-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; color: #222; }
+        .rc-header p  { margin: 0; color: #6c757d; font-size: 12px; }
+
+        .rc-loading, .rc-empty { padding: 60px; text-align: center; color: #6c757d; }
+
+        .new-release-bar {
+          display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+          padding: 10px 12px; background: #f0f7ff; border: 1px solid #b8d9f8; border-radius: 6px;
+        }
+        .new-release-input {
+          padding: 6px 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; width: 200px;
         }
 
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 32px;
-          padding-bottom: 16px;
-          border-bottom: 2px solid #e9ecef;
+        .rc-table-wrap { overflow-x: auto; }
+        .rc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .rc-table th {
+          padding: 8px 12px; background: #f8f9fa; border: 1px solid #dee2e6;
+          font-weight: 600; color: #495057; text-align: left;
+          font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+        .rc-table td { padding: 6px 12px; border: 1px solid #dee2e6; vertical-align: top; }
+        .rc-table tbody tr:hover { background: #fafafa; }
+        .rc-table tbody tr.row-editing { background: #fffbea; }
+
+        .col-version { font-weight: 600; min-width: 90px; white-space: nowrap; }
+        .col-ga      { background: rgba(40,167,69,0.04); }
+        .col-actions { min-width: 104px; white-space: nowrap; }
+        .date-cell   { min-width: 80px; }
+
+        /* Date stack */
+        .date-stack   { display: flex; flex-direction: column; gap: 3px; }
+        .date-entry   { display: flex; flex-direction: column; gap: 1px; }
+
+        .date-prev    { color: #adb5bd; font-size: 11px; text-decoration: line-through; }
+        .date-reason  { font-size: 10px; font-style: italic; color: #bbb; text-decoration: line-through; }
+        .date-current { color: #212529; font-weight: 500; font-size: 12px; }
+        .current-reason {
+          font-size: 10px; font-style: italic; color: #6c757d;
+          text-decoration: none; /* not struck through */
+        }
+        .date-empty   { color: #dee2e6; }
+
+        /* Quick date entry for empty cells */
+        .quick-date-btn {
+          background: none; border: 1px dashed #ced4da; border-radius: 3px;
+          color: #ced4da; font-size: 11px; width: 20px; height: 18px;
+          cursor: pointer; padding: 0; line-height: 1;
+          transition: all 0.15s;
+        }
+        .quick-date-btn:hover { border-color: #007bff; color: #007bff; background: #f0f7ff; }
+        .quick-date-input {
+          padding: 2px 4px; border: 1px solid #007bff; border-radius: 3px;
+          font-size: 10px; width: 108px; color: #333;
         }
 
-        .header-content h1 {
-          margin: 0 0 8px 0;
-          color: #333;
-          font-size: 32px;
-          font-weight: 600;
+        .cell-input {
+          padding: 3px 6px; border: 1px solid #007bff; border-radius: 3px;
+          font-size: 11px; width: 116px;
         }
 
-        .header-content p {
-          margin: 0;
-          color: #6c757d;
-          font-size: 16px;
+        .btn-edit, .btn-delete, .btn-save, .btn-cancel {
+          padding: 3px 9px; border: none; border-radius: 3px;
+          font-size: 11px; font-weight: 500; cursor: pointer; margin-right: 3px;
         }
-
-        .header-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .version-selector {
-          margin-bottom: 24px;
-        }
-
-        .version-selector label {
-          display: block;
-          margin-bottom: 12px;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .version-tabs {
-          display: flex;
-          gap: 4px;
-          flex-wrap: wrap;
-        }
-
-        .version-tab {
-          padding: 8px 16px;
-          border: 2px solid #dee2e6;
-          background: white;
-          color: #6c757d;
-          border-radius: 6px 6px 0 0;
-          cursor: pointer;
-          font-weight: 500;
-          transition: all 0.2s ease;
-        }
-
-        .version-tab:hover {
-          border-color: #007bff;
-          color: #007bff;
-        }
-
-        .version-tab.active {
-          border-color: #007bff;
-          background: #007bff;
-          color: white;
-        }
-
-        .release-form {
-          background: white;
-          border: 2px solid #dee2e6;
-          border-radius: 0 8px 8px 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .form-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px 24px;
-          border-bottom: 1px solid #dee2e6;
-          background: #f8f9fa;
-        }
-
-        .form-header h2 {
-          margin: 0;
-          color: #333;
-          font-size: 20px;
-          font-weight: 600;
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .form-content {
-          padding: 24px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 6px;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .group-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-
-
-        .gate-section {
-          margin-bottom: 32px;
-          padding: 20px;
-          background: #f8f9fa;
-          border-radius: 8px;
-          border-left: 4px solid #007bff;
-        }
-
-        .gate-section h3 {
-          margin: 0 0 16px 0;
-          color: #333;
-          font-size: 18px;
-          font-weight: 600;
-        }
-
-        .gate-group {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
-        }
-
-        .form-group input {
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #ced4da;
-          border-radius: 4px;
-          font-size: 14px;
-          transition: border-color 0.2s ease;
-        }
-
-        .form-group input:focus {
-          outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-        }
-
-        .form-group input:disabled {
-          background: #f8f9fa;
-          color: #6c757d;
-        }
-
-        .btn-primary, .btn-secondary, .btn-danger, .btn-add, .btn-remove, .btn-add-gate {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
+        .btn-edit   { background: #e9ecef; color: #495057; }
+        .btn-delete { background: #fff0f0; color: #dc3545; }
+        .btn-save   { background: #007bff; color: #fff; }
+        .btn-cancel { background: #e9ecef; color: #495057; }
+        .btn-edit:hover   { background: #dee2e6; }
+        .btn-delete:hover { background: #ffd5d5; }
+        .btn-save:hover   { background: #0056b3; }
+        button:disabled   { opacity: 0.55; cursor: not-allowed; }
 
         .btn-primary {
-          background: #007bff;
-          color: white;
+          padding: 7px 14px; background: #007bff; color: #fff;
+          border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer;
         }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #0056b3;
-        }
-
+        .btn-primary:hover:not(:disabled) { background: #0056b3; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary {
-          background: #6c757d;
-          color: white;
+          padding: 7px 14px; background: #6c757d; color: #fff;
+          border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer;
         }
+        .btn-secondary:hover { background: #545b62; }
 
-        .btn-secondary:hover {
-          background: #545b62;
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,.45);
+          display: flex; align-items: center; justify-content: center; z-index: 1000;
         }
-
-        .btn-danger {
-          background: #dc3545;
-          color: white;
+        .modal-box {
+          background: #fff; border-radius: 8px; padding: 28px 32px;
+          width: 480px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,.2);
         }
-
-        .btn-danger:hover:not(:disabled) {
-          background: #c82333;
+        .modal-box h3   { margin: 0 0 8px; font-size: 17px; color: #222; }
+        .modal-subtitle { font-size: 13px; color: #6c757d; margin: 0 0 8px; }
+        .modal-warning  { font-size: 13px; color: #e65100; font-weight: 600; margin: 0 0 12px; }
+        .reason-textarea {
+          width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px;
+          font-size: 14px; resize: vertical; box-sizing: border-box;
         }
-
-        .btn-add {
-          background: #28a745;
-          color: white;
-          padding: 6px 12px;
-          font-size: 12px;
-        }
-
-        .btn-add:hover {
-          background: #218838;
-        }
-
-        .btn-remove {
-          background: #dc3545;
-          color: white;
-          padding: 4px 8px;
-          font-size: 12px;
-          flex-shrink: 0;
-        }
-
-        .btn-remove:hover {
-          background: #c82333;
-        }
-
-        .btn-add-gate {
-          background: #17a2b8;
-          color: white;
-          padding: 8px 12px;
-          font-size: 13px;
-        }
-
-        .btn-add-gate:hover {
-          background: #138496;
-        }
-
-        button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 60px 24px;
-          color: #6c757d;
-        }
-
-        .empty-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 12px 0;
-          font-size: 24px;
-          color: #333;
-        }
-
-        .empty-state p {
-          margin: 0 0 24px 0;
-          font-size: 16px;
-        }
-
-        .release-config-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 24px;
-          color: #6c757d;
-        }
-
-        .loading-spinner {
-          font-size: 32px;
-          margin-bottom: 16px;
-          animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.1); }
-        }
-
-        @media (max-width: 768px) {
-          .release-config-page {
-            padding: 16px;
-          }
-
-          .page-header {
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-          }
-
-          .form-header {
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-          }
-
-          .form-actions {
-            justify-content: stretch;
-          }
-
-          .form-actions button {
-            flex: 1;
-          }
-
-          .gate-group {
-            grid-template-columns: 1fr;
-          }
-
-          .version-tabs {
-            flex-direction: column;
-          }
-        }
+        .reason-textarea:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,.2); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
       `}</style>
     </div>
   );

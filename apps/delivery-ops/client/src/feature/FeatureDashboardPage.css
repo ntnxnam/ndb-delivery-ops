@@ -23,7 +23,7 @@
 
 .fd-pickers {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .fd-pickers label {
@@ -34,9 +34,43 @@
   gap: 4px;
 }
 
+.fd-picker-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .fd-pickers select {
   min-width: 250px;
   height: 32px;
+}
+
+.fd-picker-row select {
+  min-width: 250px;
+  height: 32px;
+}
+
+.fd-choose-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fd-choose-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.fd-choose-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .fd-section {
@@ -63,10 +97,83 @@
 .fd-gate {
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   min-width: 80px;
+  gap: 2px;
+}
+
+.fd-gate-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.fd-gate-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.fd-gate-row-key {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  width: 56px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fd-gate-planned {
+  font-size: 0.82rem;
+  color: #111827;
+}
+
+.fd-gate-actual {
+  font-size: 0.82rem;
+  color: #374151;
+}
+
+.fd-gate-actual--none {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+.fd-gate-delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.fd-gate-exception-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-bottom: 4px;
+}
+
+.fd-gate-exception-icon {
+  font-size: 0.7rem;
+}
+
+.fd-gate-actual--original {
+  color: #9ca3af;
+  text-decoration: line-through;
+  font-size: 0.75rem;
 }
 
 .fd-kpis {
@@ -91,6 +198,21 @@
 .fd-kpi-count {
   font-size: 24px;
   font-weight: 700;
+}
+
+.fd-kpi-total {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.fd-kpi-total-link {
+  color: #6b7280;
+  text-decoration: underline dotted;
+}
+
+.fd-kpi-total-link:hover {
+  color: #374151;
 }
 
 .fd-red { border-left: 4px solid #dc2626; }

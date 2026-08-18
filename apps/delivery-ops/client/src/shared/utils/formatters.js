@@ -50,7 +50,7 @@ export const formatters = {
         return formatters.relativeTime(date);
       }
       default:
-        return date.toLocaleDateString();
+        return formatters.date(date, 'dd/mmm/yyyy');
     }
   },
 
