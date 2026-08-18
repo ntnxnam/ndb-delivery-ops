@@ -125,6 +125,40 @@
         "order": 4
       }
     ],
+    "ndb-all-sos": [
+      {
+        "id": "kpi_sos_blockers",
+        "name": "Open P0 Blockers",
+        "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
+        "displayType": "count",
+        "order": 0,
+        "excludeDeferred": false
+      },
+      {
+        "id": "kpi_sos_mustfix",
+        "name": "Must-Fix Tickets",
+        "baseQuery": "project=ERA and type=Bug and labels is not EMPTY",
+        "displayType": "list",
+        "order": 1,
+        "excludeDeferred": true
+      },
+      {
+        "id": "kpi_sos_at_risk",
+        "name": "At-Risk Features",
+        "baseQuery": "issuetype in (Feature, Initiative) and \"Risk Indicator\" = Red",
+        "displayType": "count",
+        "order": 2,
+        "excludeDeferred": false
+      },
+      {
+        "id": "kpi_sos_criticals",
+        "name": "Open Criticals",
+        "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
+        "displayType": "count",
+        "order": 3,
+        "excludeDeferred": true
+      }
+    ],
     "ncm": [
       {
         "id": "kpi_ncm_all",
