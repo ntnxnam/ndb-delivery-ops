@@ -8,8 +8,7 @@
  * A compose panel at the bottom handles drafting and sending the SoS email.
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useReleaseVersions } from '../hooks/useReleaseVersions';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAllVersionsConfig } from '../hooks/useGanttConfig';
 import { useSosItems } from '../hooks/useSosItems';
 import { useJiraConfig } from '../utils/jiraConfig';
@@ -65,7 +64,7 @@ function getReleaseGanttConfig(allVersionsConfig, version) {
    Sub-component: release header gate-date strip
 ───────────────────────────────────────────────────────────── */
 
-function GateDateStrip({ version, ganttConfig }) {
+function GateDateStrip({ ganttConfig }) {
   if (!ganttConfig) return null;
   const gates = [];
   const addGate = (label, key) => {
@@ -177,23 +176,7 @@ function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl 
    Sub-component: items table (Features or Initiatives)
 ───────────────────────────────────────────────────────────── */
 
-function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBaseUrl, loading, error, onRetry }) {
-  if (loading) {
-    return <p style={{ color: '#888', fontSize: '12px', padding: '8px 0' }}>Loading…</p>;
-  }
-  if (error) {
-    return (
-      <p style={{ color: '#d32f2f', fontSize: '12px', padding: '8px 0' }}>
-        {error}&nbsp;
-        <button
-          onClick={onRetry}
-          style={{ fontSize: '11px', border: 'none', background: 'none', color: '#1565c0', cursor: 'pointer', textDecoration: 'underline' }}
-        >
-          Retry
-        </button>
-      </p>
-    );
-  }
+function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBaseUrl }) {
   if (!items || items.length === 0) {
     return <p style={{ color: '#aaa', fontSize: '12px', padding: '8px 0' }}>No tickets found.</p>;
   }
@@ -263,15 +246,11 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({ version, allVersionsConfig, itemsByRelease, loadingByRelease, errorByRelease, breakdownDataMap, jiraBaseUrl, onRetry }) {
-  const items = itemsByRelease[version] || [];
-  const loading = !!loadingByRelease[version];
-  const error = errorByRelease[version] || null;
-
+function ReleaseSection({ version, allVersionsConfig, items, breakdownDataMap, jiraBaseUrl, onRefresh }) {
   const ganttConfig = useMemo(() => getReleaseGanttConfig(allVersionsConfig, version), [allVersionsConfig, version]);
 
-  const features = useMemo(() => items.filter((i) => i.issuetype?.toLowerCase() === 'feature'), [items]);
-  const initiatives = useMemo(() => items.filter((i) => i.issuetype?.toLowerCase() === 'initiative'), [items]);
+  const features = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'feature'), [items]);
+  const initiatives = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'initiative'), [items]);
 
   // Derive a rough RAG from items
   const ragCounts = useMemo(() => {
@@ -296,7 +275,7 @@ function ReleaseSection({ version, allVersionsConfig, itemsByRelease, loadingByR
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '15px', color: '#1a1a2e', fontWeight: 700 }}>{version}</h3>
-            {!loading && items.length > 0 && (
+            {items.length > 0 && (
               <span style={{
                 background: ragColor, color: '#fff', borderRadius: '4px',
                 padding: '1px 8px', fontSize: '11px', fontWeight: 700,
@@ -305,10 +284,10 @@ function ReleaseSection({ version, allVersionsConfig, itemsByRelease, loadingByR
               </span>
             )}
           </div>
-          <GateDateStrip version={version} ganttConfig={ganttConfig} />
+          <GateDateStrip ganttConfig={ganttConfig} />
         </div>
         <button
-          onClick={() => onRetry(version)}
+          onClick={onRefresh}
           title="Refresh from JIRA"
           style={{
             fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
@@ -320,30 +299,24 @@ function ReleaseSection({ version, allVersionsConfig, itemsByRelease, loadingByR
       </div>
 
       {/* Features */}
-      <CollapsibleSection title="Features" count={loading ? null : features.length} accentColor="#1565c0">
+      <CollapsibleSection title="Features" count={features.length} accentColor="#1565c0">
         <SosItemsTable
           items={features}
           version={version}
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
           jiraBaseUrl={jiraBaseUrl}
-          loading={loading}
-          error={error}
-          onRetry={() => onRetry(version)}
         />
       </CollapsibleSection>
 
       {/* Initiatives */}
-      <CollapsibleSection title="Initiatives" count={loading ? null : initiatives.length} defaultOpen={false} accentColor="#6a1b9a">
+      <CollapsibleSection title="Initiatives" count={initiatives.length} defaultOpen={false} accentColor="#6a1b9a">
         <SosItemsTable
           items={initiatives}
           version={version}
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
           jiraBaseUrl={jiraBaseUrl}
-          loading={loading}
-          error={error}
-          onRetry={() => onRetry(version)}
         />
       </CollapsibleSection>
     </div>
@@ -355,46 +328,30 @@ function ReleaseSection({ version, allVersionsConfig, itemsByRelease, loadingByR
 ───────────────────────────────────────────────────────────── */
 
 function SosSummaryPage() {
-  const { activeVersions, loadingVersions } = useReleaseVersions();
   const { allVersionsConfig } = useAllVersionsConfig();
   const { jiraBaseUrl } = useJiraConfig();
 
   const {
-    itemsByRelease,
-    loadingByRelease,
-    errorByRelease,
+    byVersion,
+    loading,
+    error,
     breakdownDataMap,
     fetchAll,
-    refreshRelease,
   } = useSosItems();
 
-  // Filter to real release versions (skip catch-all like "master", "Era Future")
-  const releaseVersions = useMemo(
-    () => (activeVersions || []).filter((v) => /^[A-Z]+-\d/.test(v)),
-    [activeVersions]
-  );
-
-  // Fetch all on mount (and when the version list changes)
+  // Fetch on mount
   useEffect(() => {
-    if (releaseVersions.length > 0) {
-      fetchAll(releaseVersions, 'ndb');
-    }
-  }, [releaseVersions, fetchAll]);
+    fetchAll('ndb');
+  }, [fetchAll]);
 
-  const handleRefresh = useCallback(async (version) => {
-    await refreshRelease(version, 'ndb');
-  }, [refreshRelease]);
-
-  const handleRefreshAll = useCallback(() => {
-    if (releaseVersions.length > 0) {
-      fetchAll(releaseVersions, 'ndb');
-    }
-  }, [releaseVersions, fetchAll]);
-
-  const anyLoading = useMemo(
-    () => loadingVersions || releaseVersions.some((v) => !!loadingByRelease[v]),
-    [loadingVersions, releaseVersions, loadingByRelease]
-  );
+  // Sort versions: NDB-2.12 before NDB-2.11 etc, Unversioned last
+  const sortedVersions = useMemo(() => {
+    return Object.keys(byVersion).sort((a, b) => {
+      if (a === 'Unversioned') return 1;
+      if (b === 'Unversioned') return -1;
+      return b.localeCompare(a, undefined, { numeric: true });
+    });
+  }, [byVersion]);
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -409,38 +366,47 @@ function SosSummaryPage() {
           </p>
         </div>
         <button
-          onClick={handleRefreshAll}
-          disabled={anyLoading}
+          onClick={() => fetchAll('ndb')}
+          disabled={loading}
           style={{
             padding: '6px 14px', fontSize: '12px', borderRadius: '5px',
             border: '1px solid #1565c0', background: '#1565c0', color: '#fff',
-            cursor: anyLoading ? 'not-allowed' : 'pointer', opacity: anyLoading ? 0.6 : 1,
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
-          {anyLoading ? 'Loading…' : '↻ Refresh All'}
+          {loading ? 'Loading…' : '↻ Refresh All'}
         </button>
       </div>
 
-      {/* Versions list */}
-      {loadingVersions ? (
-        <p style={{ color: '#888', fontSize: '13px' }}>Loading release versions…</p>
-      ) : releaseVersions.length === 0 ? (
-        <p style={{ color: '#aaa', fontSize: '13px' }}>No active release versions found.</p>
-      ) : (
-        releaseVersions.map((version) => (
-          <ReleaseSection
-            key={version}
-            version={version}
-            allVersionsConfig={allVersionsConfig}
-            itemsByRelease={itemsByRelease}
-            loadingByRelease={loadingByRelease}
-            errorByRelease={errorByRelease}
-            breakdownDataMap={breakdownDataMap}
-            jiraBaseUrl={jiraBaseUrl}
-            onRetry={handleRefresh}
-          />
-        ))
+      {loading && <p style={{ color: '#888', fontSize: '13px' }}>Fetching from JIRA…</p>}
+
+      {error && !loading && (
+        <p style={{ color: '#d32f2f', fontSize: '13px' }}>
+          {error}&nbsp;
+          <button
+            onClick={() => fetchAll('ndb')}
+            style={{ fontSize: '12px', border: 'none', background: 'none', color: '#1565c0', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Retry
+          </button>
+        </p>
       )}
+
+      {!loading && !error && sortedVersions.length === 0 && (
+        <p style={{ color: '#aaa', fontSize: '13px' }}>No items found. Click ↻ Refresh All to load from JIRA.</p>
+      )}
+
+      {sortedVersions.map((version) => (
+        <ReleaseSection
+          key={version}
+          version={version}
+          allVersionsConfig={allVersionsConfig}
+          items={byVersion[version] || []}
+          breakdownDataMap={breakdownDataMap}
+          jiraBaseUrl={jiraBaseUrl}
+          onRefresh={() => fetchAll('ndb')}
+        />
+      ))}
     </div>
   );
 }
