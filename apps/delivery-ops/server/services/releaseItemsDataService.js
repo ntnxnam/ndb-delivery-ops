@@ -91,7 +91,10 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
   }
 
   return allIssues.map((issue) => {
-    const riskIndicator = formatRiskIndicator(issue.fields.customfield_23560);
+    // Extract the risk indicator value properly for SoS page compatibility
+    const rawRiskIndicator = issue.fields.customfield_23560;
+    const riskIndicator = rawRiskIndicator?.value || rawRiskIndicator;
+    
     const sprintInfo = boardId
       ? resolveSprintState(issue.fields.customfield_10360, sprintMap)
       : { state: null, name: null };
@@ -159,7 +162,7 @@ function mapCachedTicketToItem(t) {
     customfield_14465: t['Test Plan Link'] || null,
     customfield_23073: t['Status Update'] || null,
     customfield_45660: t['Status Update Date'] || null,
-    customfield_23560: formatRiskIndicator(t['Risk Indicator'] || null),
+    customfield_23560: t['Risk Indicator'] || null,
     customfield_38460: t['Executive Status Update'] || null,
   };
 }
