@@ -83,6 +83,7 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
   // Longer timeouts for release-items and sprint report: server may paginate (multiple JIRA calls + delays)
   let timeout = 60000;
   if (url.includes('/release-items-history')) timeout = 300000; // 5 min
+  else if (url.includes('/sos-items-history')) timeout = 180000; // 3 min (JIRA changelog fetch for multiple items)
   else if (url.includes('/release-items-commit') || url.includes('/release-items-long-term')) timeout = 180000; // 3 min each
   else if (url.includes('/sprint-report') || url.includes('/sprint-report-trends')) timeout = 300000; // 5 min (matches server)
   else if (url.includes('/api/jira/sprints')) timeout = 90000; // 90s for sprints list (paginated Jira Agile API; cold cache + many sprints)

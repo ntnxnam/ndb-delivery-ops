@@ -97,9 +97,11 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
     const sosFilter = rawSosFilter || fallback;
     const resolvedFilter = await resolveKpiJql(sosFilter, req.jiraToken, httpsAgent);
 
-    // Fetch just the keys — no need for full field processing
+    // Fetch just the keys — no need for full field processing.
+    // The SoS base filter can be a large JIRA saved filter; raise the timeout
+    // from the 6s default to 30s so the search doesn't time out before returning keys.
     const jql = `(${resolvedFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
-    const fetchIssues = makeJiraSearchFetcher(req.jiraToken);
+    const fetchIssues = makeJiraSearchFetcher(req.jiraToken, { timeoutMs: 30000 });
     const issues = await fetchIssues(jql, 'key');
     const itemKeys = issues.map((i) => i.key).filter(Boolean);
 
@@ -107,7 +109,11 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
       return res.json({ success: true, data: { history: {}, itemCount: 0 } });
     }
 
-    const rawHistory = await fetchFieldHistoryForMultiple(itemKeys, req.jiraToken);
+    // Restrict to the three checkpoint fields the SoS page renders (CC, CG, PG).
+    // Fetching all six date fields per ticket is unnecessary and slows down the
+    // changelog walk for a large SoS filter.
+    const SOS_FIELDS = ['codeComplete', 'commitGate', 'promotionGate'];
+    const rawHistory = await fetchFieldHistoryForMultiple(itemKeys, req.jiraToken, { fields: SOS_FIELDS });
     const history = transformFieldHistoryToCheckpointHistory(rawHistory);
 
     return res.json({ success: true, data: { history, itemCount: itemKeys.length } });

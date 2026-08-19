@@ -39,20 +39,18 @@
   "releaseGateDates": {
     "NDB-2.10": {
       "ecDate": "2025-03-31",
-      "ccm1Gate": [
-        {
-          "label": "Code Complete 1",
-          "date": "2025-02-18",
-          "color": "#de350b",
-          "style": "dotted"
-        },
-        {
-          "label": "Code Complete 2",
-          "date": "2025-03-06",
-          "color": "#de350b",
-          "style": "solid"
-        }
-      ],
+      "ccm1Gate": {
+        "label": "Code Complete 1",
+        "date": "2025-02-18",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "ccm2Gate": {
+        "label": "Code Complete 2",
+        "date": "2025-03-06",
+        "color": "#de350b",
+        "style": "solid"
+      },
       "commitGate1": {
         "label": "Commit Gate 1",
         "date": "2025-09-09",
@@ -92,14 +90,12 @@
     },
     "NDB-2.10.1": {
       "ecDate": "2025-11-12",
-      "ccm1Gate": [
-        {
-          "label": "Code Complete 1",
-          "date": "2026-01-30",
-          "color": "#de350b",
-          "style": "solid"
-        }
-      ],
+      "ccm1Gate": {
+        "label": "Code Complete 1",
+        "date": "2026-01-30",
+        "color": "#de350b",
+        "style": "solid"
+      },
       "commitGate1": {
         "label": "Commit Gate 1",
         "date": "2026-02-10",
@@ -121,22 +117,18 @@
     },
     "NDB-2.11": {
       "ecDate": "2025-12-09",
-      "ccm1Gate": [
-        {
-          "label": "Code Complete 1",
-          "date": "2026-01-30",
-          "color": "#de350b",
-          "style": "dotted"
-        }
-      ],
-      "ccm2Gate": [
-        {
-          "label": "Code Complete 2",
-          "date": "2026-02-27",
-          "color": "#de350b",
-          "style": "solid"
-        }
-      ],
+      "ccm1Gate": {
+        "label": "Code Complete 1",
+        "date": "2026-01-30",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "ccm2Gate": {
+        "label": "Code Complete 2",
+        "date": "2026-02-27",
+        "color": "#de350b",
+        "style": "solid"
+      },
       "commitGate1": {
         "label": "Commit Gate 1",
         "date": "2026-03-15",
@@ -199,30 +191,130 @@
         "color": "#6c757d",
         "style": "dotted"
       },
-      "ecDate": "2026-05-12",
-      "ccm1Gate": [
-        {
-          "label": "Code Complete 1",
-          "date": "2026-06-30",
-          "color": "#de350b",
-          "style": "solid"
-        }
-      ],
+      "ecDate": "2026-05-14",
+      "ccm1Gate": {
+        "label": "Code Complete 1",
+        "date": "2026-06-30",
+        "color": "#de350b",
+        "style": "solid"
+      },
       "commitGate1": {
         "label": "Commit Gate 1",
-        "date": "2026-08-18",
+        "date": "2026-09-15",
         "color": "#ff9800",
         "style": "solid"
       },
       "promotionGate1": {
         "label": "Promotion Gate 1",
-        "date": "2026-09-29",
+        "date": "2026-10-15",
         "color": "#9c27b0",
         "style": "solid"
       },
       "ga1": {
         "label": "General Availability 1",
-        "date": "2026-11-10",
+        "date": "2026-11-30",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    },
+    "NDB-3.0": {
+      "ecDate": "2026-06-30",
+      "conceptCommit1": {
+        "label": "Concept Commit 1 (CC 1)",
+        "date": "2026-06-04",
+        "color": "#6c757d",
+        "style": "solid"
+      },
+      "ccm1Gate": {
+        "label": "Code Complete 1 (old)",
+        "date": "2026-07-28",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "ccm2Gate": {
+        "label": "Code Complete 2",
+        "date": "2026-08-04",
+        "color": "#de350b",
+        "style": "solid"
+      },
+      "codeFreeze": {
+        "label": "Code Freeze",
+        "date": "2026-08-11",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "commitGate1": {
+        "label": "Commit Gate 1 (old)",
+        "date": "2026-10-13",
+        "color": "#ff9800",
+        "style": "dotted"
+      },
+      "commitGate2": {
+        "label": "Commit Gate 2",
+        "date": "2026-11-17",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "promotionGate1": {
+        "label": "Promotion Gate 1 (old)",
+        "date": "2026-12-08",
+        "color": "#9c27b0",
+        "style": "dotted"
+      },
+      "promotionGate2": {
+        "label": "Promotion Gate 2",
+        "date": "2026-12-15",
+        "color": "#9c27b0",
+        "style": "solid"
+      },
+      "deferralComplete": {
+        "label": "Deferral Complete",
+        "date": "2027-02-23",
+        "color": "#6c757d",
+        "style": "dotted"
+      },
+      "ga1": {
+        "label": "General Availability 1 (old)",
+        "date": "2027-02-09",
+        "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga2": {
+        "label": "General Availability 2",
+        "date": "2027-03-09",
+        "color": "#28a745",
+        "style": "solid"
+      }
+    },
+    "NDB-3.0-EA": {
+      "ecDate": "2026-05-15",
+      "ccm1Gate": {
+        "label": "Code Complete 1 (Pre-CC 1)",
+        "date": "2026-06-15",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "ccm2Gate": {
+        "label": "Code Complete 2 (Pre-CC 2)",
+        "date": "2026-07-15",
+        "color": "#de350b",
+        "style": "dotted"
+      },
+      "ccm3Gate": {
+        "label": "Code Complete 3 (Code Freeze)",
+        "date": "2026-08-11",
+        "color": "#de350b",
+        "style": "solid"
+      },
+      "commitGate1": {
+        "label": "Commit Gate 1 (EA1)",
+        "date": "2026-08-31",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "General Availability 1 (EA1)",
+        "date": "2026-08-31",
         "color": "#28a745",
         "style": "solid"
       }
@@ -285,4 +377,3 @@
     }
   }
 }
-

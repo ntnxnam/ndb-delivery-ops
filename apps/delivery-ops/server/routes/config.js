@@ -681,19 +681,27 @@ router.post('/release-dates', express.json(), (req, res) => {
     const config = loadReleaseDatesConfig();
     const previousConfig = config.releases[version] || {};
 
+    // Normalise a gate value: accept either an object or a single-element array from legacy callers.
+    function normaliseGate(val) {
+      if (!val) return null;
+      if (Array.isArray(val)) {
+        const filtered = val.filter(x => x?.date);
+        return filtered.length > 0 ? filtered[filtered.length - 1] : null;
+      }
+      return val.date ? val : null;
+    }
+
     // Create release configuration object
     const releaseConfig = {
       ecDate: ecDate || null,
-      ccm1Gate: Array.isArray(ccm1Gate) ? ccm1Gate.filter(cc => cc.date) : [],
-      ccm2Gate: Array.isArray(ccm2Gate) ? ccm2Gate.filter(cc => cc.date) : [],
+      ccm1Gate: normaliseGate(ccm1Gate),
+      ccm2Gate: normaliseGate(ccm2Gate),
       codeFreeze: codeFreeze || null,
       commitGate1: commitGate1 || null,
       commitGate2: commitGate2 || null,
-      promotionGateOverflow: Array.isArray(promotionGateOverflow) ? promotionGateOverflow.filter(x => x?.date) : [],
       promotionGate1: promotionGate1 || null,
       promotionGate2: promotionGate2 || null,
       promotionGate3: promotionGate3 || null,
-      gaOverflow: Array.isArray(gaOverflow) ? gaOverflow.filter(x => x?.date) : [],
       ga1: ga1 || null,
       ga2: ga2 || null,
       ga3: ga3 || null
@@ -714,15 +722,8 @@ router.post('/release-dates', express.json(), (req, res) => {
 
     // Simple date fields
     recordHistory('ecDate', previousConfig.ecDate, ecDate);
-    // Array gate fields (ccm1Gate, ccm2Gate)
-    ['ccm1Gate', 'ccm2Gate'].forEach(key => {
-      (releaseConfig[key] || []).forEach((entry, i) => {
-        const prevEntry = (previousConfig[key] || [])[i];
-        recordHistory(`${key}[${i}]`, prevEntry?.date, entry?.date);
-      });
-    });
-    // Object gate fields
-    ['codeFreeze','commitGate1','commitGate2','promotionGate1','promotionGate2','promotionGate3','ga1','ga2','ga3'].forEach(key => {  // eslint-disable-line
+    // Object gate fields (ccm1Gate, ccm2Gate are now objects like all other gates)
+    ['codeFreeze','ccm1Gate','ccm2Gate','commitGate1','commitGate2','promotionGate1','promotionGate2','promotionGate3','ga1','ga2','ga3'].forEach(key => {  // eslint-disable-line
       recordHistory(key, previousConfig[key]?.date, releaseConfig[key]?.date);
     });
 
