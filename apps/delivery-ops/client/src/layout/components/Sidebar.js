@@ -128,6 +128,12 @@ export const Sidebar = () => {
       description: 'Manage the centralised JIRA data cache'
     },
     {
+      path: '/sos-summary',
+      label: 'SoS Summary',
+      icon: '📡',
+      description: 'Scrum of Scrums — live Feature/Initiative status across all active releases'
+    },
+    {
       path: '/component-report',
       label: 'Component Report',
       icon: '📊',

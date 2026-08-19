@@ -11,8 +11,9 @@ echo "Starting servers..."
 # Start backend (Express)
 echo "Starting backend on port 8001..."
 cd "$PROJECT_ROOT/apps/delivery-ops/server"
-PORT=8001 node index.js > /tmp/server.log 2>&1 &
+PORT=8001 nohup node index.js > /tmp/server.log 2>&1 &
 BACKEND_PID=$!
+disown $BACKEND_PID
 echo "Backend started (PID: $BACKEND_PID)"
 
 # Wait for backend to be ready
@@ -29,6 +30,7 @@ cd "$PROJECT_ROOT/apps/delivery-ops/client"
 PORT=8899 \
 npm start > /tmp/client.log 2>&1 &
 CLIENT_PID=$!
+disown $CLIENT_PID
 echo "Client started (PID: $CLIENT_PID)"
 
 sleep 2

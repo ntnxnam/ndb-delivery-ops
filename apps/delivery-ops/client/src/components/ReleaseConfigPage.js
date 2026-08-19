@@ -2,6 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Toast } from '../shared/components/Toast';
 import ReleaseGantt from './ReleaseGantt';
 
+// Normalise a ccmXGate value: config may store it as an object (new) or array (legacy).
+function toGateArray(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val : [val];
+}
+
 /**
  * Gate column definitions.
  *
@@ -25,26 +31,31 @@ const GATE_COLUMNS = [
     label: 'CCM',
     isGA: false,
     getAll: cfg => [
-      ...(cfg?.ccm1Gate || []),
-      ...(cfg?.ccm2Gate || []),
+      ...toGateArray(cfg?.ccm1Gate),
+      ...toGateArray(cfg?.ccm2Gate),
     ].filter(x => x?.date),
     getCurrent: cfg => {
-      const all = [...(cfg?.ccm1Gate || []), ...(cfg?.ccm2Gate || [])].filter(x => x?.date);
+      const all = [...toGateArray(cfg?.ccm1Gate), ...toGateArray(cfg?.ccm2Gate)].filter(x => x?.date);
       return all[all.length - 1]?.date || '';
     },
     setCurrent: (cfg, v) => ({
       ...cfg,
-      ccm2Gate: v ? [{ label: 'Code Complete Met', date: v, color: '#de350b', style: 'solid' }] : [],
+      ccm2Gate: v ? { label: 'Code Complete Met', date: v, color: '#de350b', style: 'solid' } : null,
     }),
     stampReason: (cfg, r) => {
-      const arr = cfg?.ccm2Gate?.length
-        ? cfg.ccm2Gate
-        : cfg?.ccm1Gate;
-      if (!arr?.length) return cfg;
-      const which = cfg?.ccm2Gate?.length ? 'ccm2Gate' : 'ccm1Gate';
-      const updated = [...cfg[which]];
-      updated[updated.length - 1] = { ...updated[updated.length - 1], reason: r };
-      return { ...cfg, [which]: updated };
+      const arr = toGateArray(cfg?.ccm2Gate).length
+        ? toGateArray(cfg?.ccm2Gate)
+        : toGateArray(cfg?.ccm1Gate);
+      if (!arr.length) return cfg;
+      const which = toGateArray(cfg?.ccm2Gate).length ? 'ccm2Gate' : 'ccm1Gate';
+      const currentVal = cfg[which];
+      // For object format, update the object directly; for array format, update last element
+      if (Array.isArray(currentVal)) {
+        const updated = [...currentVal];
+        updated[updated.length - 1] = { ...updated[updated.length - 1], reason: r };
+        return { ...cfg, [which]: updated };
+      }
+      return { ...cfg, [which]: { ...currentVal, reason: r } };
     },
   },
   {

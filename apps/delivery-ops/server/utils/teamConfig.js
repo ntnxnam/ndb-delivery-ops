@@ -105,10 +105,25 @@ function getTeamSprintBaseFilter(teamId) {
   return sprintBase || null;
 }
 
+/**
+ * SoS-specific base filter (used by the SoS Summary page — always live JIRA, no cache).
+ * @param {string} teamId
+ * @returns {string|null}
+ */
+function getTeamSosBaseFilter(teamId) {
+  const config = loadTeamBoardConfig();
+  if (!config) return null;
+  const teams = config.teams || [];
+  const team = teams.find((t) => t.id === teamId);
+  const sosBase = (team && team.sosBaseFilter) ? String(team.sosBaseFilter).trim() : '';
+  return sosBase || null;
+}
+
 module.exports = {
   normalizeTeamId,
   loadKpiConfigSync,
   getKpisForTeam,
   getTeamBaseFilter,
   getTeamSprintBaseFilter,
+  getTeamSosBaseFilter,
 };

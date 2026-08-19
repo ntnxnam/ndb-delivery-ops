@@ -192,10 +192,18 @@ function calculateDateStatistics(dates) {
  * @returns {Promise<Object>} Formatted field history data
  */
 async function fetchFieldHistory(jiraKey, token, options = {}) {
-  const { saveRawResponse = false } = options;
+  const { saveRawResponse = false, fields: fieldFilter = null } = options;
   const baseUrl = JIRA_API_V2.BASE_URL;
   const httpsAgent = createHttpsAgent();
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+
+  // When the caller passes `fields: ['commitGate', 'promotionGate', ...]` we
+  // restrict both the JIRA fields param and changelog processing to only those
+  // logical keys.  This halves the per-call payload for the SoS endpoint which
+  // only cares about CC / CG / PG.
+  const activeFields = fieldFilter
+    ? Object.fromEntries(Object.entries(DATE_FIELDS).filter(([k]) => fieldFilter.includes(k)))
+    : DATE_FIELDS;
   
   const issueUrl = `${baseUrl}/rest/api/2/issue/${jiraKey}`;
   
@@ -211,7 +219,7 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       timeout: 30000,
       params: {
         expand: 'changelog',
-        fields: Object.values(DATE_FIELDS).join(',')
+        fields: Object.values(activeFields).join(',')
       }
     }));
     
@@ -223,10 +231,10 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
     } : null;
     const fields = issue.fields || {};
     
-    // Get current field values
+    // Get current field values (restricted to activeFields)
     const currentValues = {};
-    Object.keys(DATE_FIELDS).forEach(key => {
-      currentValues[key] = fields[DATE_FIELDS[key]] || null;
+    Object.keys(activeFields).forEach(key => {
+      currentValues[key] = fields[activeFields[key]] || null;
     });
     
     // Fetch all changelog histories using pagination utility
@@ -243,12 +251,15 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
     
     const histories = paginationResult.histories;
     
-    // Track historical dates for each field
+    // Track historical dates for each active field only
     const historyData = {};
-    Object.keys(DATE_FIELDS).forEach(key => {
+    Object.keys(activeFields).forEach(key => {
       historyData[key] = [];
     });
     
+    // Build a fast lookup set of active field IDs for changelog filtering
+    const activeFieldIds = new Set(Object.values(activeFields));
+
     // Process changelog to find field changes
     histories.forEach(history => {
       const items = history.items || [];
@@ -265,6 +276,8 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
         
         // Try matching by fieldId first using config
         if (fieldId) {
+          // Skip immediately if this fieldId isn't in our active set
+          if (!activeFieldIds.has(fieldId)) return;
           const fieldConfig = getFieldConfigById(fieldId);
           if (fieldConfig && fieldConfig.category === 'checkpoint' && fieldConfig.type === 'date') {
             matchingFieldKey = fieldConfig.logicalKey;
@@ -276,12 +289,16 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
           const fieldNameLower = fieldName.toLowerCase().trim();
           
           // Try exact match first
-          matchingFieldKey = getFieldKeyByName(fieldNameLower);
+          const candidate = getFieldKeyByName(fieldNameLower);
+          if (candidate && activeFields[candidate]) {
+            matchingFieldKey = candidate;
+          }
           
-          // If no exact match, try partial match
+          // If no exact match, try partial match against active fields only
           if (!matchingFieldKey) {
             const mappings = FIELD_NAME_MAPPINGS;
             for (const [namePattern, key] of Object.entries(mappings)) {
+              if (!activeFields[key]) continue;
               if (fieldNameLower.includes(namePattern) || namePattern.includes(fieldNameLower)) {
                 matchingFieldKey = key;
                 break;
@@ -291,7 +308,7 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
         }
         
         // If we found a matching field, track the date values
-        if (matchingFieldKey) {
+        if (matchingFieldKey && historyData[matchingFieldKey] !== undefined) {
           // Track both from and to values if they are valid dates
           // This captures all dates that have been set (both old and new values)
           if (fromValue && fromValue !== 'null' && fromValue !== '' && fromValue !== null) {
@@ -306,11 +323,10 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
               historyData[matchingFieldKey].push(date);
             }
           }
-        } else if (fieldId || fieldName) {
+        } else if (!matchingFieldKey && (fieldId || fieldName)) {
           // Debug: log items we're not matching (only for date-like fields)
           const looksLikeDate = (val) => {
             if (!val || val === 'null' || val === '') return false;
-            // Check if it looks like a date string
             return /^\d{4}-\d{2}-\d{2}/.test(val) || /^\d{2}\/\d{2}\/\d{4}/.test(val);
           };
           if (looksLikeDate(fromValue) || looksLikeDate(toValue)) {
@@ -320,8 +336,8 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       });
     });
     
-    // Add current values if they exist and are dates
-    Object.keys(DATE_FIELDS).forEach(key => {
+    // Add current values for active fields if they exist and are dates
+    Object.keys(activeFields).forEach(key => {
       if (currentValues[key]) {
         const date = formatDate(currentValues[key]);
         if (date) {
@@ -330,10 +346,13 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       }
     });
     
-    // Calculate statistics for each field
+    // Calculate statistics for each active field; default empty stats for inactive ones
+    const emptyStats = { dates: [], numberOfTimesMoved: 0, weeksDiffBetweenOldestAndLatest: 0 };
     const statistics = {};
     Object.keys(DATE_FIELDS).forEach(key => {
-      statistics[key] = calculateDateStatistics(historyData[key]);
+      statistics[key] = activeFields[key]
+        ? calculateDateStatistics(historyData[key] || [])
+        : { ...emptyStats };
     });
     
     // Build result object with the requested format
@@ -378,37 +397,42 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
 }
 
 /**
- * Fetch field history for multiple JIRA issues
- * 
+ * Fetch field history for multiple JIRA issues.
+ *
+ * Processes keys sequentially with a 300ms inter-item delay to stay within
+ * JIRA changelog API rate limits. Parallel batching caused timeout bursts
+ * when the SoS filter returns many tickets.
+ *
  * @param {string[]} jiraKeys - Array of JIRA issue keys
  * @param {string} token - JIRA authentication token
+ * @param {object} [options]
+ * @param {string[]} [options.fields] - Restrict to specific field keys (e.g. ['commitGate','promotionGate','codeComplete'])
  * @returns {Promise<Object[]>} Array of formatted field history data
  */
 async function fetchFieldHistoryForMultiple(jiraKeys, token, options = {}) {
-  // Process in parallel batches to avoid overwhelming the JIRA API
-  const CONCURRENCY = 5;
-  const results = new Array(jiraKeys.length);
+  const INTER_ITEM_DELAY_MS = 300;
+  const results = [];
 
-  for (let i = 0; i < jiraKeys.length; i += CONCURRENCY) {
-    const batch = jiraKeys.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.all(
-      batch.map(async (jiraKey) => {
-        try {
-          return await fetchFieldHistory(jiraKey, token, options);
-        } catch (error) {
-          console.error(`Error fetching history for ${jiraKey}:`, error);
-          return {
-            key: jiraKey,
-            error: error.message,
-            codeCompleteDate: [],
-            numberofTimesCCMDateMoved: 0,
-            WeeksDiffbwOldestandLatestCCMDate: 0,
-            PGCompleteDate: []
-          };
-        }
-      })
-    );
-    batchResults.forEach((r, j) => { results[i + j] = r; });
+  for (let i = 0; i < jiraKeys.length; i++) {
+    const jiraKey = jiraKeys[i];
+    try {
+      const result = await fetchFieldHistory(jiraKey, token, options);
+      results.push(result);
+    } catch (error) {
+      console.error(`Error fetching history for ${jiraKey}:`, error);
+      results.push({
+        key: jiraKey,
+        error: error.message,
+        codeCompleteDate: [],
+        numberofTimesCCMDateMoved: 0,
+        WeeksDiffbwOldestandLatestCCMDate: 0,
+        PGCompleteDate: []
+      });
+    }
+
+    if (i < jiraKeys.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, INTER_ITEM_DELAY_MS));
+    }
   }
 
   return results;

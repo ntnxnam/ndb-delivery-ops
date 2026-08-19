@@ -28,6 +28,7 @@ import SyncHubPage from './release/SyncHubPage';
 import ChatbotPage from './release/ChatbotPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
+import SosSummaryPage from './components/SosSummaryPage';
 
 import './App.css';
 
@@ -111,205 +112,223 @@ const AuthenticatedApp = () => {
     <TeamProvider>
       <TeamDatasetProvider>
       <SelectedReleaseProvider>
-      <ReleaseDataProvider>
       <Routes>
-      <Route 
-        path="/login" 
-        element={<Navigate to="/" replace />} 
-      />
-      
-      <Route 
-        path="/" 
-        element={
-          <Layout>
-            <EmailSender />
-          </Layout>
-        } 
-      />
-      
-      <Route
-        path="/project-status"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <ReleaseVersionTab />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        <Route 
+          path="/login" 
+          element={<Navigate to="/" replace />} 
+        />
+        
+        {/* SoS Summary page - isolated from ReleaseDataProvider to avoid unwanted API calls */}
+        <Route
+          path="/sos-summary"
+          element={
+            <ProtectedRoute permissions={['release_versions_view']}>
+              <SosSummaryPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* All other routes wrapped in ReleaseDataProvider */}
+        <Route 
+          path="/*" 
+          element={
+            <ReleaseDataProvider>
+              <Routes>
+                <Route 
+                  path="/" 
+                  element={
+                    <Layout>
+                      <EmailSender />
+                    </Layout>
+                  } 
+                />
+                
+                <Route
+                  path="/project-status"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <ReleaseVersionTab />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      {/* Back-compat: old /all-status URLs (bookmarks, emails) redirect to /project-status */}
-      <Route path="/all-status" element={<Navigate to="/project-status" replace />} />
-      
-      <Route 
-        path="/release-setup" 
-        element={
-          <ProtectedRoute permissions={['release_setup_manage']}>
-            <Layout>
-              <ReleaseSetup />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/release-config" 
-        element={
-          <ProtectedRoute permissions={['release_config_manage']}>
-            <Layout>
-              <ReleaseConfigPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/generic-emailer" 
-        element={
-          <ProtectedRoute permissions={['email_send_generic']}>
-            <Layout>
-              <GenericEmailer />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/email-history" 
-        element={
-          <ProtectedRoute permissions={['email_history_view']}>
-            <Layout>
-              <EmailHistoryTab />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/sprint-report" 
-        element={
-          <ProtectedRoute permissions={['sprint_reports_view']}>
-            <Layout>
-              <SprintReportPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/kpis" 
-        element={
-          <ProtectedRoute permissions={['kpi_view']}>
-            <Layout>
-              <KPIPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute permissions={['admin_panel_access']}>
-            <Layout>
-              <AdminPanel />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route
-        path="/design"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <DesignSystemDemo />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                {/* Back-compat: old /all-status URLs (bookmarks, emails) redirect to /project-status */}
+                <Route path="/all-status" element={<Navigate to="/project-status" replace />} />
+                
+                <Route 
+                  path="/release-setup" 
+                  element={
+                    <ProtectedRoute permissions={['release_setup_manage']}>
+                      <Layout>
+                        <ReleaseSetup />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/release-config" 
+                  element={
+                    <ProtectedRoute permissions={['release_config_manage']}>
+                      <Layout>
+                        <ReleaseConfigPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/generic-emailer" 
+                  element={
+                    <ProtectedRoute permissions={['email_send_generic']}>
+                      <Layout>
+                        <GenericEmailer />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/email-history" 
+                  element={
+                    <ProtectedRoute permissions={['email_history_view']}>
+                      <Layout>
+                        <EmailHistoryTab />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/sprint-report" 
+                  element={
+                    <ProtectedRoute permissions={['sprint_reports_view']}>
+                      <Layout>
+                        <SprintReportPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/kpis" 
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout>
+                        <KPIPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute permissions={['admin_panel_access']}>
+                      <Layout>
+                        <AdminPanel />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route
+                  path="/design"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <DesignSystemDemo />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/release/brief"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <ReleaseBriefPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/release/brief"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <ReleaseBriefPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/release/:name/brief"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <ReleaseBriefPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/release/:name/brief"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <ReleaseBriefPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/release/retrospective"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <RetrospectivePage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/release/retrospective"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <RetrospectivePage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/feature-dashboard"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <FeatureDashboardPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/feature-dashboard"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <FeatureDashboardPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/component-report"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <ComponentReport />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/component-report"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <ComponentReport />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/sync-hub"
-        element={
-          <ProtectedRoute permissions={['release_versions_view']}>
-            <Layout>
-              <SyncHubPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/sync-hub"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <SyncHubPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-      <Route
-        path="/chatbot"
-        element={
-          <ProtectedRoute permissions={['ai_insights_view']}>
-            <Layout>
-              <ChatbotPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+                <Route
+                  path="/chatbot"
+                  element={
+                    <ProtectedRoute permissions={['ai_insights_view']}>
+                      <Layout>
+                        <ChatbotPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
 
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+                {/* Catch-all redirect */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </ReleaseDataProvider>
+          }
+        />
       </Routes>
-      </ReleaseDataProvider>
       </SelectedReleaseProvider>
       </TeamDatasetProvider>
     </TeamProvider>

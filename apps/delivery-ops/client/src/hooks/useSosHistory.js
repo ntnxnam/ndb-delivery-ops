@@ -1,0 +1,48 @@
+/**
+ * useSosHistory — fetches checkpoint-field date history for all SoS items.
+ *
+ * Calls POST /api/jira/sos-items-history (which resolves the ndb-all-sos filter
+ * server-side and returns CC/CG/PG change history per item key).
+ *
+ * No fixVersion or item keys needed from the client — the server owns the
+ * filter resolution the same way /sos-items does.
+ */
+
+import { useState, useCallback } from 'react';
+import { authenticatedPost } from '../utils/api';
+
+export function useSosHistory() {
+  const [checkpointHistory, setCheckpointHistory] = useState({});
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+
+  const fetchHistory = useCallback(async (teamId = 'ndb') => {
+    const jiraToken = localStorage.getItem('jiraToken') || '';
+    const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+
+    setLoadingHistory(true);
+    setHistoryError(null);
+
+    try {
+      const resp = await authenticatedPost(
+        '/api/jira/sos-items-history',
+        { teamId },
+        { jiraToken, username }
+      );
+
+      if (!resp.data.success) {
+        throw new Error(resp.data.error || 'Failed to fetch history');
+      }
+
+      setCheckpointHistory(resp.data.data?.history || {});
+    } catch (err) {
+      console.warn('[useSosHistory] History fetch failed (non-fatal):', err.message);
+      setHistoryError(err.message);
+      // Leave checkpointHistory as {} — dates will render without history overlay
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  return { checkpointHistory, loadingHistory, historyError, fetchHistory };
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { authenticatedPost, authenticatedPut } from '../utils/api';
 
 const STALE_DAYS = 7;
@@ -49,6 +49,8 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
   const summaryIsFresh = summaryAgeDays !== null && summaryAgeDays < STALE_DAYS;
 
   const [generatedSummary, setGeneratedSummary] = useState('');
+  // Local display state — avoids mutating item directly (prevents full tree re-render)
+  const [displaySummary, setDisplaySummary] = useState(existingText);
   const [generating, setGenerating] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pushSuccess, setPushSuccess] = useState(false);
@@ -101,7 +103,9 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
     try {
       await authenticatedPut(`/api/ai/exec-summary/${item.key}`, { summary: generatedSummary });
       setPushSuccess(true);
-      item.customfield_38460 = generatedSummary;
+      // Update local display state instead of mutating item directly
+      const { text } = parseStampedSummary(generatedSummary);
+      setDisplaySummary(text);
       setGeneratedSummary('');
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Push to JIRA failed';
@@ -135,24 +139,37 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
     <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '200px' }}>
 
       {/* ── Existing summary from JIRA ── */}
-      {hasExisting && !generatedSummary && (
-        <div style={{ color: '#333', lineHeight: '1.5', maxHeight: '80px', overflow: 'hidden',
-          maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }}>
-          {existingText}
+      {displaySummary && !generatedSummary && (
+        <div>
+          <div style={{ color: '#333', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+            {displaySummary}
+          </div>
+          {generatedDate && (
+            <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
+              AI summary from {generatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
         </div>
       )}
 
       {/* ── Freshly generated (not yet pushed) ── */}
-      {generatedSummary && (
-        <div style={{ backgroundColor: '#f0f7ff', border: '1px solid #b3d7ff', borderRadius: '4px',
-          padding: '6px 8px', lineHeight: '1.5', color: '#1a1a2e' }}>
-          <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: 600 }}>
-            ✨ AI Generated — review before pushing
+      {generatedSummary && (() => {
+        const { text: genText, generatedDate: genDate } = parseStampedSummary(generatedSummary);
+        return (
+          <div style={{ backgroundColor: '#f0f7ff', border: '1px solid #b3d7ff', borderRadius: '4px',
+            padding: '6px 8px', lineHeight: '1.5', color: '#1a1a2e' }}>
+            <div style={{ fontSize: '10px', color: '#555', marginBottom: '4px', fontWeight: 600 }}>
+              ✨ AI Generated — review before pushing
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{genText}</div>
+            {genDate && (
+              <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
+                Generated {genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
           </div>
-          {generatedSummary.replace(DATE_PREFIX_REGEX, '')}
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Push success ── */}
       {pushSuccess && (
@@ -215,4 +232,4 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
   );
 }
 
-export default ExecSummaryCell;
+export default memo(ExecSummaryCell);

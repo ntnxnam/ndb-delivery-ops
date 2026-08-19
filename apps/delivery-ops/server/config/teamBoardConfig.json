@@ -15,6 +15,7 @@
       "featureProjectKey": "FEAT",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
       "sprintBaseFilter": "filter=NDB-All-Base-Filter",
+      "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb",
       "releasePrefix": "NDB-",
       "activeVersionNames": ["master", "Era Future"],

@@ -2,6 +2,13 @@ import React, { useRef } from 'react';
 import { formatters } from '../shared/utils/formatters';
 
 // ── Gate extractors — handles both old and new config field shapes ────────────
+
+// Normalise a ccmXGate value: config may store it as an object (new) or array (legacy).
+function toGateArray(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val : [val];
+}
+
 function getDate(cfg, key) {
   if (!cfg) return null;
   switch (key) {
@@ -9,8 +16,8 @@ function getDate(cfg, key) {
     case 'ec':    return cfg.ecDate || null;
     case 'cc': {
       const slots = [
-        ...(cfg.ccm2Gate || []),
-        ...(cfg.ccm1Gate || []),
+        ...toGateArray(cfg.ccm2Gate),
+        ...toGateArray(cfg.ccm1Gate),
       ].filter(x => x?.date);
       return cfg.codeComplete?.date || slots[slots.length - 1]?.date || null;
     }
