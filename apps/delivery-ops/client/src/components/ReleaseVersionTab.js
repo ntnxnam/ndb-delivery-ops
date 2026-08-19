@@ -1350,6 +1350,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     } finally {
       setRefreshingLive(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jiraToken, refreshVersions, selectedTeam?.productId, selectedVersion, username]);
 
   const lastSyncLabel = useMemo(() => {
