@@ -4,7 +4,7 @@
 
 The SoS Summary page is the Scrum-of-Scrums control surface for engineering leadership. It collates all Feature and Initiative tickets across every active release, synthesises each ticket's status into an AI-generated executive summary, surfaces per-release KPI health, and lets the Portfolio Manager compose and send a structured SoS briefing email to VPs and directors.
 
-Unlike the Project Status page (which reads from the on-disk cache), this page always hits JIRA live to ensure currency at the moment of leadership review.
+The page loads from the on-disk release dataset so it stays usable when JIRA is rate-limited. Refresh All pulls live JIRA and falls back to cache if JIRA returns 429.
 
 ## Audiences
 
@@ -17,7 +17,7 @@ Secondary: `tpm`, `rm` (compose and review flow)
 2. As a Portfolio Manager, I can see Features and Initiatives for each release with an AI-generated executive summary (RAG + prose) per ticket, so I do not have to read raw status update text.
 3. As a Portfolio Manager, I can see task breakdown per Feature/Initiative (done vs remaining vs in-progress) to understand delivery progress at a glance.
 4. As a Portfolio Manager, I can see configured KPI widgets per release (open P0s, must-fix tickets, etc.) so I have quantitative risk signals alongside qualitative status.
-5. As a Portfolio Manager, I can click Email SoS and send an HTML snapshot of the already-loaded page via SMTP to the status-sender recipient list, without refetching JIRA.
+5. As a Portfolio Manager, I can click Email SoS and send an HTML snapshot of the already-loaded page (including CC/CG/PG date history) via SMTP to the status-sender recipient list, without refetching JIRA.
 6. As a Portfolio Manager, I can refresh data per-release without reloading the entire page.
 
 ## UI Behaviour
@@ -35,6 +35,7 @@ SoS Summary
         ├── Release header: name + gate date strip (CCM / CG / PG / GA) + RAG chip
         ├── Features subsection (collapsible, default open)
         │   └── Table: Key | Summary | Status | Risk | CC Date | CG Date | PG Date | Assignee | AI Exec Summary | Task Breakdown
+        │       CC/CG/PG use formatDateWithHistory (current date, then each earlier hop struck through)
         ├── Initiatives subsection (collapsible, default open)
         │   └── Same table columns as Features
         └── KPIs subsection (lazy-loaded on section expand)
@@ -45,7 +46,7 @@ SoS Summary
 
 ### Loading states
 
-- Each release section shows a spinner while its JIRA fetch is in flight.
+- Page load shows a spinner while the dataset cache (or live JIRA on Refresh All) is in flight.
 - Task breakdowns load independently after the main items load (same pattern as Project Status).
 - KPI widgets load lazily when the KPI subsection is first expanded.
 - AI exec summaries are generated on demand (click Generate on each row) or auto-generated in bulk (toolbar button).

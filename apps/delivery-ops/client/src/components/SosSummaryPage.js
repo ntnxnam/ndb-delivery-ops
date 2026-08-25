@@ -483,7 +483,7 @@ function GateDateStrip({ ganttConfig }) {
    Sub-component: single item row
 ───────────────────────────────────────────────────────────── */
 
-const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, breakdownDataMap, jiraBaseUrl, checkpointHistory = {} }) {
+const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, checkpointHistory = {} }) {
   const breakdown = breakdownDataMap[item.key] || null;
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
@@ -555,7 +555,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
         <TaskBreakdownCell
           jiraKey={item.key}
           breakdownData={breakdown}
-          loading={!breakdown}
+          loading={loadingBreakdowns && !breakdown}
           compact={true}
         />
       </td>
@@ -567,7 +567,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
    Sub-component: items table (Features or Initiatives)
 ───────────────────────────────────────────────────────────── */
 
-function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBaseUrl, checkpointHistory = {} }) {
+function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, checkpointHistory = {} }) {
   if (!items || items.length === 0) {
     return <p style={{ color: '#aaa', fontSize: '12px', padding: '8px 0' }}>No tickets found.</p>;
   }
@@ -592,6 +592,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBase
               version={version}
               ganttConfig={ganttConfig}
               breakdownDataMap={breakdownDataMap}
+              loadingBreakdowns={loadingBreakdowns}
               jiraBaseUrl={jiraBaseUrl}
               checkpointHistory={checkpointHistory}
             />
@@ -638,7 +639,7 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({ version, items, breakdownDataMap, jiraBaseUrl, onRefresh, checkpointHistory = {}, gateData = null }) {
+function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, onRefresh, checkpointHistory = {}, gateData = null }) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
     if (!gateData || !gateData.gates || !Array.isArray(gateData.gates)) return null;
@@ -730,6 +731,7 @@ function ReleaseSection({ version, items, breakdownDataMap, jiraBaseUrl, onRefre
           version={version}
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
+          loadingBreakdowns={loadingBreakdowns}
           jiraBaseUrl={jiraBaseUrl}
           checkpointHistory={checkpointHistory}
         />
@@ -742,6 +744,7 @@ function ReleaseSection({ version, items, breakdownDataMap, jiraBaseUrl, onRefre
           version={version}
           ganttConfig={ganttConfig}
           breakdownDataMap={breakdownDataMap}
+          loadingBreakdowns={loadingBreakdowns}
           jiraBaseUrl={jiraBaseUrl}
           checkpointHistory={checkpointHistory}
         />
@@ -761,7 +764,11 @@ function SosSummaryPage() {
     byVersion,
     loading,
     error,
+    source,
+    degraded,
+    lastSyncIso,
     breakdownDataMap,
+    loadingBreakdowns,
     fetchAll,
   } = useSosItems();
 
@@ -781,17 +788,19 @@ function SosSummaryPage() {
   // Fetch gate data for all active releases
   const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
 
-  // Fetch on mount
+  // Fetch on mount — cache-first (forceLive only on Refresh All)
   useEffect(() => {
     fetchAll('ndb');
   }, [fetchAll]);
 
-  // Fire-and-forget: load checkpoint history once items are present
+  // History overlay is independent of live vs cache items. Skip only when
+  // JIRA is already rate-limited so we do not immediately re-trip it.
   useEffect(() => {
+    if (degraded) return;
     if (Object.keys(byVersion).length > 0) {
       fetchHistory('ndb');
     }
-  }, [byVersion, fetchHistory]);
+  }, [degraded, byVersion, fetchHistory]);
 
   // All items that need a summary (for batch button label)
   const needsCount = useMemo(() => {
@@ -814,7 +823,12 @@ function SosSummaryPage() {
               📡 SoS Summary
             </h2>
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#888' }}>
-              Live Feature &amp; Initiative status across all active releases · data fetched directly from JIRA
+              Feature &amp; Initiative status across active releases
+              {source === 'cache' && lastSyncIso
+                ? ` · showing cached dataset (synced ${new Date(lastSyncIso).toLocaleString()})`
+                : source === 'jira'
+                  ? ' · live from JIRA'
+                  : ''}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -843,12 +857,13 @@ function SosSummaryPage() {
               byVersion={byVersion}
               breakdownDataMap={breakdownDataMap}
               gateDataMap={gateDataMap}
+              checkpointHistory={checkpointHistory}
               jiraBaseUrl={jiraBaseUrl}
               sortedVersions={sortedVersions}
               disabled={loading || sortedVersions.length === 0}
             />
             <button
-              onClick={() => fetchAll('ndb')}
+              onClick={() => fetchAll('ndb', { forceLive: true })}
               disabled={loading}
               style={{
                 padding: '6px 14px', fontSize: '12px', borderRadius: '5px',
@@ -861,8 +876,24 @@ function SosSummaryPage() {
           </div>
         </div>
 
-        {loading && <p style={{ color: '#888', fontSize: '13px' }}>Fetching from JIRA…</p>}
+        {loading && <p style={{ color: '#888', fontSize: '13px' }}>Loading SoS items…</p>}
       {loadingGates && !loading && <p style={{ color: '#888', fontSize: '13px' }}>Loading gate data…</p>}
+
+        {!loading && source === 'cache' && (
+          <p style={{
+            color: degraded ? '#856404' : '#555',
+            background: degraded ? '#fff3cd' : '#f1f3f5',
+            border: `1px solid ${degraded ? '#ffc107' : '#dee2e6'}`,
+            borderRadius: '4px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            marginBottom: '16px',
+          }}>
+            {degraded
+              ? 'JIRA is rate-limited, so this view is from the last synced dataset. Wait a minute, then click Refresh All for live data.'
+              : 'Showing the last synced dataset. Click Refresh All to pull live JIRA.'}
+          </p>
+        )}
 
         {error && !loading && (
           <p style={{ color: '#d32f2f', fontSize: '13px' }}>
@@ -899,6 +930,7 @@ function SosSummaryPage() {
             version={version}
             items={byVersion[version] || []}
             breakdownDataMap={breakdownDataMap}
+            loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}
             onRefresh={() => fetchAll('ndb')}
             checkpointHistory={checkpointHistory}

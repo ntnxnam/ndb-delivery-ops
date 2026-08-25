@@ -4,15 +4,15 @@
 
 ### 1. `POST /api/jira/sos-items`
 
-**Purpose**: Fetch all Feature and Initiative tickets for a single release from JIRA live (no cache).
+**Purpose**: Fetch Feature and Initiative tickets grouped by release. Cache-first from the on-disk dataset; live JIRA only on Refresh All (`forceLive: true`) or when the cache is empty.
 
-**When called**: Once per active release on page load, and on per-release Refresh.
+**When called**: Once on page load (cache), and on Refresh All (live, with cache fallback on 429).
 
 **Request**:
 ```json
 {
-  "fixVersion": "NDB-2.12",
-  "teamId": "ndb"
+  "teamId": "ndb",
+  "forceLive": false
 }
 ```
 
@@ -44,14 +44,28 @@
 ```
 
 **Server flow**:
-`sos.js` → `teamConfig.getTeamSosBaseFilter(teamId)` → resolve filter name via JIRA Filter API → build JQL → `releaseItemsDataService.fetchReleaseItemsFromJira` (bypasses cache) → `releaseItemsDataService.processReleaseItems` → respond
+`sos.js` → `releaseItemsDataService.fetchSosItems()` → on-disk cache first → live JIRA only if cache empty or `forceLive` → on 429 fall back to cache
 
-**JQL built**:
+**JQL built** (live path only):
 ```
-filter=ndb-all-sos AND fixVersion = "NDB-2.12" AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC
+(${resolvedSosFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY fixVersion ASC, key ASC
 ```
 
-**Caching**: None. Always live.
+**Caching**: Yes — release dataset on disk. Live JIRA on Refresh All.
+
+---
+
+### 1b. `POST /api/jira/sos-items-history`
+
+**Purpose**: Fetch CC / CG / PG changelog history so `formatDateWithHistory` can show struck-out previous dates and net delay.
+
+**When called**: After items are on screen (cache or live). Skipped only when `degraded` is true (JIRA already rate-limited).
+
+**Request**: `{ "teamId": "ndb" }`
+
+**Response**: `{ success: true, data: { history: { [key]: { codeComplete, commitGate, promotionGate } } } }`
+
+**Server flow**: `sos.js` → SoS filter keys → `fetchFieldHistoryForMultiple` → `transformFieldHistoryToCheckpointHistory`
 
 ---
 
@@ -59,7 +73,7 @@ filter=ndb-all-sos AND fixVersion = "NDB-2.12" AND issuetype in (Feature, Initia
 
 **Purpose**: Fetch child ticket breakdown (done / in-progress / remaining) per Feature/Initiative key.
 
-**When called**: Bulk batch after `sos-items` resolves. Batched 5 keys at a time.
+**When called**: After a live `sos-items` fetch only (Refresh All). Skipped on cache load so a 429 recovery does not immediately re-trip JIRA.
 
 **Reused as-is** from Project Status — no changes.
 
@@ -166,12 +180,10 @@ filter=ndb-all-sos AND fixVersion = "NDB-2.12" AND issuetype in (Feature, Initia
 
 ```
 POST /api/jira/sos-items
-  └── server/routes/jira/sos.js              (new, < 40 lines)
-      └── teamConfig.getTeamSosBaseFilter()  (reads teamBoardConfig.json sosBaseFilter field)
-      └── kpiService.resolveKpiJql()         (resolves filter= name to JQL via JIRA Filter API)
-      └── releaseItemsDataService
-          .fetchReleaseItemsFromJira()       (reused — paginated JIRA search, no cache)
-          .processReleaseItems()             (reused — maps raw fields to item shape)
+  └── server/routes/jira/sos.js
+      └── releaseItemsDataService.fetchSosItems()
+          ├── loadSosItemsFromCache()        (default — no JIRA)
+          └── fetchSosItemsFromJira()        (Refresh All / cache miss; 429 → cache)
 
 POST /api/email/send-sos
   └── server/routes/email/sendSos.js
@@ -197,11 +209,12 @@ Key fields used by the UI:
 
 ## Caching Strategy
 
-The page is routed through the shared `Layout` / `ReleaseDataProvider` (same chrome as other tabs). That provider may also call `/api/release-dataset/releases` and a per-release cache load for the currently selected release. Those calls are for layout/banner connectivity only — they do **not** feed the SoS tables. Feature/Initiative rows still come from live `sos-items`.
+The page is routed through the shared `Layout` / `ReleaseDataProvider` (same chrome as other tabs). Feature/Initiative rows come from `sos-items`, which reads the on-disk dataset by default.
 
 | Data | Cache | TTL |
 |---|---|---|
-| sos-items (Features/Initiatives) | **None — always live JIRA** | — |
+| sos-items (Features/Initiatives) | On-disk release dataset; live JIRA on Refresh All | Until next Sync Hub run / Refresh All |
+| sos-items-history (CC/CG/PG hops) | In-memory in `useSosHistory`; fetched after items load unless degraded | Until page refresh |
 | Task breakdowns | In-memory Map in `useSosItems` hook | 5 min (same as Project Status) |
 | KPI widget results | In-memory state in component | Until page refresh |
 | AI exec summaries | None client-side (result written to JIRA `customfield_38460`) | — |
@@ -212,6 +225,8 @@ The page is routed through the shared `Layout` / `ReleaseDataProvider` (same chr
 
 | Error | Behaviour |
 |---|---|
+| JIRA 429 with warm cache | Page renders from cache + banner to wait, then Refresh All |
+| JIRA 429 with empty cache | Friendly wait-60–90s message + Retry |
 | JIRA unreachable for a release | Inline error in release section + Retry button |
 | `sosBaseFilter` not configured | Warning banner; fallback to `sprintBaseFilter` |
 | Task breakdown fetch fails for a key | `TaskBreakdownCell` shows "Breakdown unavailable" (existing behaviour) |
