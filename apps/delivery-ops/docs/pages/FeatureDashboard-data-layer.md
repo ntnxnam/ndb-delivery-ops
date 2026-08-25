@@ -19,7 +19,29 @@ Same as Project Status — shared call, result cached in context.
 
 ---
 
-### 2. Fetch feature payload
+### 2. Fetch release features (picker + overall Gantt)
+
+```
+GET /api/feature/list?release=NDB-2.11
+Headers: x-jira-token, x-username
+```
+
+**Server flow**: `feature.js` → `JiraConnector.searchAll` + `parseReleaseGateTimeline`
+
+**JIRA query**: `fixVersion = "{release}" AND issuetype in (Feature, Initiative) AND status not in (Cancelled, Backlog) ORDER BY summary ASC`
+
+**Fields fetched**: `summary, issuetype, status, assignee, codeComplete, commitGate, promotionGate, riskIndicator`
+
+**Response extras used by the overall Gantt**:
+- `features[].ccDate` / `cgDate` / `pgDate` — feature gate dates
+- `features[].risk` — Risk Indicator (`Green` / `Yellow` / `Red`)
+- `gates` — release EC / CC / CG / PG / GA ISO dates for vertical rulers
+
+Bar colour is derived client-side from `risk`. Bar span is EC → latest of CC/CG/PG (or GA if the feature is Done).
+
+---
+
+### 3. Fetch feature payload
 
 ```
 GET /api/feature/payload?featKey=ERA-XXXX&release=NDB-2.11&productId=ndb
@@ -43,7 +65,7 @@ Headers: x-jira-token, x-username
 
 ---
 
-### 3. JIRA URL construction for clickable counts
+### 4. JIRA URL construction for clickable counts
 
 Handled client-side via `featureDashboardService.jiraSearchUrl(jiraBaseUrl, jql)`:
 
@@ -98,6 +120,7 @@ All of the following run in the component/hook — no additional API calls:
 | Bug phase counts | Scan each bug's `labels` for `regression`, `system-test`, `longevity`, `performance`, `stress`, `unit-test` |
 | Reconciliation | Children where `fixVersions` does not include selected release |
 | Epic completion trend | Closed epics grouped by ISO week of `resolutiondate` |
+| Overall Gantt bar | Span EC → latest of feature `ccDate` / `cgDate` / `pgDate` (GA if status is Done); colour from `risk` |
 
 ---
 
@@ -106,6 +129,7 @@ All of the following run in the component/hook — no additional API calls:
 | Data | Cache | TTL |
 |------|-------|-----|
 | Release versions | In-memory (shared context) | 5 min |
+| Feature list + gates | `useState` in `useFeatureDashboard` | Session; cleared on release change |
 | Feature payload | `useState` in `useFeatureDashboard` | Session; cleared on featKey or release change |
 | Reconciliation overrides | `localStorage` keyed by `featKey + release` | Persistent |
 

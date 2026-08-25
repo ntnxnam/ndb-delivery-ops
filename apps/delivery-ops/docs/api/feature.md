@@ -8,25 +8,65 @@
 
 ### GET /api/feature/list
 
-**Purpose**: Return a list of FEAT-tier tickets (Features, X-FEATs) for a release — used to populate the Feature Dashboard picker.
+**Purpose**: Return FEAT-tier tickets (Feature, Initiative) for a release, plus that release's gate dates — used to populate the Feature Dashboard picker and the overall completion Gantt.
 
 **Auth**: required
 
 **Request**
-- Query: `release` (string, required), `productId` (string, required)
+- Method + path: `GET /api/feature/list`
+- Query params:
+  - `release` (string, required) — fixVersion name, e.g. `NDB-2.11`
+- Required headers: `x-jira-token`, `x-username`
 
-**Server flow**  
-`feature.js → jiraConnector.search`
+**Server flow**
+`feature.js` → `JiraConnector.searchAll` (list tickets) + `parseReleaseGateTimeline` (gate rulers from `releaseVersionsEmailConfig.json`)
 
-**JQL**:
+**JQL** (unchanged):
 ```
-fixVersion={release} AND issueType in (Feature, X-FEAT, Initiative, Capability) AND status not in (Cancelled, Backlog)
+fixVersion = "{release}" AND issuetype in (Feature, Initiative) AND status not in (Cancelled, Backlog) ORDER BY summary ASC
 ```
 
-**Response**
+**Fields fetched**: `summary, issuetype, status, assignee`, plus Code Complete / Commit Gate / Promotion Gate / Risk Indicator via `getFieldId`.
+
+**Response shape**
 ```json
-{ "success": true, "data": [{ "key": "ERA-100", "summary": "Storage Write Throughput", "status": "In Progress" }] }
+{
+  "success": true,
+  "data": {
+    "release": "NDB-2.11",
+    "jql": "fixVersion = \"NDB-2.11\" AND issuetype in (Feature, Initiative) AND status not in (Cancelled, Backlog) ORDER BY summary ASC",
+    "features": [
+      {
+        "key": "ERA-100",
+        "summary": "Storage Write Throughput",
+        "issueType": "Feature",
+        "status": "In Progress",
+        "assignee": "Jane Doe",
+        "ccDate": "2026-05-15",
+        "cgDate": "2026-06-01",
+        "pgDate": "2026-07-01",
+        "risk": "Green"
+      }
+    ],
+    "gates": {
+      "ec": "2025-12-09",
+      "cc": "2026-03-04",
+      "cg": "2026-04-15",
+      "pg": "2026-06-10",
+      "ga": "2026-08-12"
+    }
+  }
+}
 ```
+
+> Additive in Aug 2026: each feature now includes `ccDate` / `cgDate` / `pgDate` / `risk`, and the payload includes `gates` for the overall Gantt. Existing picker fields are unchanged.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | `release` missing | Show inline error |
+| 401 | JIRA token missing/expired | Prompt re-auth |
+| 5xx | JIRA search failed | Show error + keep previous list if any |
 
 **Caching**: No cache.
 

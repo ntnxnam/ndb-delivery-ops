@@ -12,6 +12,7 @@ export function useFeatureDashboard({
   username,
 }) {
   const [features, setFeatures] = useState([]);
+  const [gates, setGates] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loadingFeatures, setLoadingFeatures] = useState(false);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
@@ -21,6 +22,7 @@ export function useFeatureDashboard({
   const loadFeatures = useCallback(async () => {
     if (!release || !jiraToken) {
       setFeatures([]);
+      setGates(null);
       return;
     }
     setLoadingFeatures(true);
@@ -28,9 +30,11 @@ export function useFeatureDashboard({
     try {
       const data = await listReleaseFeatures({ release, jiraToken, username });
       setFeatures(data.features || []);
+      setGates(data.gates || null);
     } catch (e) {
       setError(e.message || 'Failed to load features');
       setFeatures([]);
+      setGates(null);
     } finally {
       setLoadingFeatures(false);
     }
@@ -92,6 +96,7 @@ export function useFeatureDashboard({
   return useMemo(
     () => ({
       features,
+      gates,
       dashboard,
       loadingFeatures,
       loadingDashboard,
@@ -102,6 +107,7 @@ export function useFeatureDashboard({
     }),
     [
       features,
+      gates,
       dashboard,
       loadingFeatures,
       loadingDashboard,

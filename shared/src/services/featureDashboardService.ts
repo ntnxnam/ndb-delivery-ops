@@ -6,6 +6,22 @@ export interface FeatureListItem {
   issueType: string;
   status: string;
   assignee: string | null;
+  /** Feature Code Complete date (ISO day), when fetched for the overview Gantt. */
+  ccDate?: string | null;
+  /** Feature Commit Gate date (ISO day). */
+  cgDate?: string | null;
+  /** Feature Promotion Gate date (ISO day). */
+  pgDate?: string | null;
+  /** Risk Indicator value (Green / Yellow / Red). */
+  risk?: string | null;
+}
+
+export interface FeatureOverviewGates {
+  ec: string | null;
+  cc: string | null;
+  cg: string | null;
+  pg: string | null;
+  ga: string | null;
 }
 
 export interface FeatureDashboardIssue {

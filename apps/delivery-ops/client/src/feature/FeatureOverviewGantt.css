@@ -1,0 +1,197 @@
+.fd-og {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.fd-og-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.fd-og-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.fd-og-head span {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.fd-og-empty {
+  font-size: 13px;
+  color: #6b7280;
+  padding: 8px 0;
+}
+
+.fd-og-chart {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow: hidden;
+  border: 1px solid #eef0f3;
+  border-radius: 6px;
+}
+
+.fd-og-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.fd-og-body {
+  position: relative;
+}
+
+.fd-og-rulers {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 176px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fd-og-ruler {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #e5e7eb;
+}
+
+.fd-og-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dc2626;
+  z-index: 2;
+}
+
+.fd-og-row,
+.fd-og-axis {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  text-align: left;
+}
+
+.fd-og-row:nth-of-type(odd) {
+  background: #f8fafc;
+}
+
+.fd-og-row {
+  cursor: pointer;
+  position: relative;
+  z-index: 3;
+  font: inherit;
+  color: inherit;
+}
+
+.fd-og-row:hover {
+  background: #eef4ff;
+}
+
+.fd-og-row--selected {
+  background: #e0edff;
+}
+
+.fd-og-row--selected:hover {
+  background: #d4e4ff;
+}
+
+.fd-og-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.fd-og-label a,
+.fd-og-label strong {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.fd-og-label a:hover {
+  text-decoration: underline;
+}
+
+.fd-og-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #374151;
+}
+
+.fd-og-track {
+  position: relative;
+  min-height: 32px;
+}
+
+.fd-og-bar {
+  position: absolute;
+  top: 10px;
+  height: 12px;
+  border-radius: 4px;
+}
+
+.fd-og-bar--green { background: #22c55e; }
+.fd-og-bar--amber { background: #f59e0b; }
+.fd-og-bar--red { background: #ef4444; }
+.fd-og-bar--blue { background: #3b82f6; }
+
+.fd-og-bar--empty {
+  left: 0;
+  right: 0;
+  width: auto;
+  background: transparent;
+  border: 1px dashed #d1d5db;
+}
+
+.fd-og-axis {
+  flex-shrink: 0;
+  z-index: 4;
+  min-height: 22px;
+  background: #fff;
+  border-top: 1px solid #eef0f3;
+  pointer-events: none;
+}
+
+.fd-og-axis-track {
+  min-height: 22px;
+}
+
+.fd-og-axis-label {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.fd-og-foot {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}

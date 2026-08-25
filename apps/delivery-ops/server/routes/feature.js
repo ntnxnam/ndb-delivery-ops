@@ -93,13 +93,50 @@ function issueFromJira(issue) {
   };
 }
 
+function asIsoDay(value) {
+  return typeof value === 'string' && value ? value.slice(0, 10) : null;
+}
+
+function asRisk(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return value.value || value.name || null;
+  return null;
+}
+
 function toFeatureListItem(issue) {
+  const mapped = issueFromJira(issue);
+  const fields = issue?.fields || {};
   return {
-    key: issue.key,
-    summary: issue.summary,
-    issueType: issue.issueType,
-    status: issue.status,
-    assignee: issue.assignee,
+    key: mapped.key,
+    summary: mapped.summary,
+    issueType: mapped.issueType,
+    status: mapped.status,
+    assignee: mapped.assignee,
+    ccDate: asIsoDay(getFieldValue(fields, 'codeComplete')),
+    cgDate: asIsoDay(getFieldValue(fields, 'commitGate')),
+    pgDate: asIsoDay(getFieldValue(fields, 'promotionGate')),
+    risk: asRisk(getFieldValue(fields, 'riskIndicator')),
+  };
+}
+
+function pickReleaseGates(release, parseReleaseGateTimeline) {
+  const gateConfig = loadReleaseGateConfig();
+  const timeline = parseReleaseGateTimeline(release, {
+    versionConfig: gateConfig[release] || null,
+  });
+  const lastOf = (kind) => {
+    const ofKind = timeline.gates.filter((g) => g.kind === kind);
+    const solid = ofKind.filter((g) => g.style === 'solid');
+    const pool = solid.length ? solid : ofKind;
+    return pool.length ? pool[pool.length - 1].iso : null;
+  };
+  return {
+    ec: lastOf('EC'),
+    cc: lastOf('CCM'),
+    cg: lastOf('CG'),
+    pg: lastOf('PG'),
+    ga: lastOf('GA'),
   };
 }
 
@@ -262,18 +299,31 @@ router.get('/list', auth, async (req, res) => {
     }
 
     const shared = await getShared();
-    const { JiraConnector, loadEnv } = shared;
+    const { JiraConnector, loadEnv, parseReleaseGateTimeline } = shared;
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
     const jql = buildFeatureListJql(release);
-    const issues = await jira.searchAll(jql, 'summary,issuetype,status,assignee', {
+    const fields = [
+      'summary',
+      'issuetype',
+      'status',
+      'assignee',
+      getFieldId('codeComplete'),
+      getFieldId('commitGate'),
+      getFieldId('promotionGate'),
+      getFieldId('riskIndicator'),
+    ]
+      .filter(Boolean)
+      .join(',');
+    const issues = await jira.searchAll(jql, fields, {
       pageSize: 200,
       perPageDelayMs: 100,
     });
-    const features = issues.map(issueFromJira).map(toFeatureListItem);
+    const features = issues.map(toFeatureListItem);
+    const gates = pickReleaseGates(release, parseReleaseGateTimeline);
 
-    return res.json({ success: true, data: { release, jql, features } });
+    return res.json({ success: true, data: { release, jql, features, gates } });
   } catch (e) {
     console.error('[feature] /list error:', e?.response?.data || e?.message || e);
     const status = e?.response?.status || 500;

@@ -14,6 +14,7 @@ import { useJiraConfig } from '../utils/jiraConfig';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 import { useFeatureDashboard } from './hooks/useFeatureDashboard';
 import { jiraSearchUrl } from './services/featureDashboardService';
+import FeatureOverviewGantt from './FeatureOverviewGantt';
 import './FeatureDashboardPage.css';
 
 const DONE_STATUSES = new Set(['done', 'resolved', 'closed', 'complete', 'fixed']);
@@ -72,6 +73,7 @@ export default function FeatureDashboardPage() {
 
   const {
     features,
+    gates,
     dashboard,
     loadingFeatures,
     loadingDashboard,
@@ -129,6 +131,12 @@ export default function FeatureDashboardPage() {
   const handleChooseFeature = useCallback(() => {
     if (pendingFeatureKey) setCommittedFeatureKey(pendingFeatureKey);
   }, [pendingFeatureKey]);
+
+  const handleSelectFromGantt = useCallback((key) => {
+    if (!key) return;
+    setPendingFeatureKey(key);
+    setCommittedFeatureKey(key);
+  }, []);
 
   const handleReparent = async (ticketKey) => {
     const reason = String(reasonByKey[ticketKey] || '').trim();
@@ -190,6 +198,17 @@ export default function FeatureDashboardPage() {
           </label>
         </div>
       </header>
+
+      {release && (
+        <FeatureOverviewGantt
+          release={release}
+          features={features}
+          gates={gates}
+          selectedKey={committedFeatureKey || pendingFeatureKey}
+          onSelectFeature={handleSelectFromGantt}
+          loading={loadingFeatures}
+        />
+      )}
 
       {error && <div className="fd-error">{error}</div>}
       {loadingDashboard && <div className="fd-loading">Loading feature dashboard...</div>}
