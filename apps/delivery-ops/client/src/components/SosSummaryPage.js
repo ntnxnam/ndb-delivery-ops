@@ -259,6 +259,39 @@ function useReleaseDatesConfig() {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Helper: convert /api/release-dataset/gates response into the
+   ganttConfig shape that execSummarySignals.js expects.
+
+   /gates returns: { gates: [{ kind: 'CG', iso: '2026-09-15', style: 'solid', label: 'CG' }] }
+   execSummarySignals expects keys like: commitGate1, promotionGate1, ga1, ccm1
+   where each value is { date: 'YYYY-MM-DD', style: 'solid', label: '...' }
+───────────────────────────────────────────────────────────── */
+
+function gatesResponseToGanttConfig(gatesData) {
+  if (!gatesData?.gates?.length) return null;
+  const config = {};
+  const counters = {};
+  for (const gate of gatesData.gates) {
+    if (!gate.iso) continue;
+    const kind = (gate.kind || '').toUpperCase();
+    let prefix;
+    if (kind === 'CG') prefix = 'commitGate';
+    else if (kind === 'PG') prefix = 'promotionGate';
+    else if (kind === 'GA') prefix = 'ga';
+    else if (kind === 'CC' || kind === 'CCM') prefix = 'ccm';
+    else if (kind === 'EC') {
+      // EC goes directly as ecDate (flat field, not array)
+      config.ecDate = gate.iso;
+      continue;
+    } else continue;
+    counters[prefix] = (counters[prefix] || 0) + 1;
+    const key = `${prefix}${counters[prefix]}`;
+    config[key] = { date: gate.iso, style: gate.style || 'solid', label: gate.label || kind };
+  }
+  return Object.keys(config).length > 0 ? config : null;
+}
+
+/* ─────────────────────────────────────────────────────────────
    Hook: useBatchExecSummary
 ───────────────────────────────────────────────────────────── */
 
@@ -266,6 +299,8 @@ function useBatchExecSummary() {
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState(null); // { done, total, current }
   const [batchError, setBatchError] = useState(null);
+  // Map of itemKey → { item, summary } awaiting user review before push
+  const [pendingReviews, setPendingReviews] = useState({});
 
   const runBatch = useCallback(async (allItems, gateDataByVersion) => {
     const toGenerate = allItems.filter(needsSummary);
@@ -274,27 +309,28 @@ function useBatchExecSummary() {
     setBatchRunning(true);
     setBatchError(null);
     setBatchProgress({ done: 0, total: toGenerate.length, current: null });
+    setPendingReviews({});
 
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
+    const collected = {};
     let done = 0;
     for (const item of toGenerate) {
       setBatchProgress({ done, total: toGenerate.length, current: item.key });
       try {
         const release = item.fixVersions?.split(',')[0]?.trim() || '';
-        const gateData = gateDataByVersion?.[release] || null;
+        const rawGateData = gateDataByVersion?.[release] || null;
+        // Convert /gates response shape → ganttConfig shape expected by the AI signals util
+        const ganttConfig = gatesResponseToGanttConfig(rawGateData);
         const resp = await authenticatedPost(
           '/api/ai/exec-summary',
-          { item, ganttConfig: gateData, breakdownData: null, release, releaseContext: null },
+          { item, ganttConfig, breakdownData: null, release, releaseContext: null },
           { jiraToken, username }
         );
         const summary = resp.data?.summary || '';
         if (summary.replace(DATE_PREFIX_REGEX, '').trim()) {
-          // Auto-push to JIRA
-          await authenticatedPut(`/api/ai/exec-summary/${item.key}`, { summary }, { jiraToken, username });
-          // Update in-memory so the cell shows "Generated today"
-          item.customfield_38460 = summary;
+          collected[item.key] = { item, summary, release, ganttConfig };
         }
       } catch (err) {
         console.warn(`[batchExecSummary] Failed for ${item.key}:`, err.message);
@@ -304,9 +340,196 @@ function useBatchExecSummary() {
 
     setBatchProgress({ done, total: toGenerate.length, current: null });
     setBatchRunning(false);
+    // Surface all results for user review — do NOT auto-push
+    setPendingReviews(collected);
   }, []);
 
-  return { batchRunning, batchProgress, batchError, runBatch };
+  const regenerateOne = useCallback(async (key) => {
+    const entry = pendingReviews[key];
+    if (!entry) return;
+    const jiraToken = localStorage.getItem('jiraToken') || '';
+    const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+    // Mark as regenerating in state
+    setPendingReviews(prev => ({ ...prev, [key]: { ...prev[key], regenerating: true, regenerateError: null } }));
+    try {
+      const resp = await authenticatedPost(
+        '/api/ai/exec-summary',
+        { item: entry.item, ganttConfig: entry.ganttConfig || null, breakdownData: null, release: entry.release || '', releaseContext: null },
+        { jiraToken, username }
+      );
+      const summary = resp.data?.summary || '';
+      if (!summary.replace(DATE_PREFIX_REGEX, '').trim()) {
+        setPendingReviews(prev => ({ ...prev, [key]: { ...prev[key], regenerating: false, regenerateError: 'AI returned empty summary' } }));
+        return;
+      }
+      setPendingReviews(prev => ({ ...prev, [key]: { ...prev[key], summary, regenerating: false, regenerateError: null } }));
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Regeneration failed';
+      setPendingReviews(prev => ({ ...prev, [key]: { ...prev[key], regenerating: false, regenerateError: msg } }));
+    }
+  }, [pendingReviews]);
+
+  const pushOne = useCallback(async (key) => {    const entry = pendingReviews[key];
+    if (!entry) return;
+    const jiraToken = localStorage.getItem('jiraToken') || '';
+    const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+    await authenticatedPut(`/api/ai/exec-summary/${key}`, { summary: entry.summary }, { jiraToken, username });
+    // Update in-memory so the cell shows "Generated today"
+    entry.item.customfield_38460 = entry.summary;
+    setPendingReviews(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, [pendingReviews]);
+
+  const discardOne = useCallback((key) => {
+    setPendingReviews(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const pushAll = useCallback(async () => {
+    const keys = Object.keys(pendingReviews);
+    for (const key of keys) {
+      try { await pushOne(key); } catch (err) {
+        console.warn(`[batchExecSummary] Push failed for ${key}:`, err.message);
+      }
+    }
+  }, [pendingReviews, pushOne]);
+
+  const discardAll = useCallback(() => setPendingReviews({}), []);
+
+  return { batchRunning, batchProgress, batchError, pendingReviews, runBatch, regenerateOne, pushOne, discardOne, pushAll, discardAll };
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Sub-component: bulk review panel (shown after Generate All)
+───────────────────────────────────────────────────────────── */
+
+function BulkReviewPanel({ pendingReviews, onPushOne, onDiscardOne, onPushAll, onDiscardAll, onRegenerateOne }) {
+  const entries = Object.entries(pendingReviews);
+  if (entries.length === 0) return null;
+
+  return (
+    <div style={{
+      border: '2px solid #6a1b9a',
+      borderRadius: '8px',
+      padding: '16px',
+      marginBottom: '20px',
+      backgroundColor: '#fdf8ff',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div>
+          <span style={{ fontWeight: 700, fontSize: '13px', color: '#6a1b9a' }}>
+            ✨ AI Generated — Review before pushing ({entries.length} item{entries.length !== 1 ? 's' : ''})
+          </span>
+          <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#888' }}>
+            Review each summary below. Regenerate if needed, then push individually or push all at once.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={onPushAll}
+            style={{
+              padding: '5px 12px', fontSize: '12px', borderRadius: '4px',
+              border: 'none', background: '#28a745', color: '#fff',
+              cursor: 'pointer', fontWeight: 600,
+            }}
+          >
+            📤 Push All ({entries.length})
+          </button>
+          <button
+            onClick={onDiscardAll}
+            style={{
+              padding: '5px 12px', fontSize: '12px', borderRadius: '4px',
+              border: '1px solid #ccc', background: '#fff', color: '#666',
+              cursor: 'pointer',
+            }}
+          >
+            Discard All
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {entries.map(([key, { item, summary, regenerating, regenerateError }]) => {
+          const displayText = (summary || '').replace(/^\[\d{4}-\d{2}-\d{2}\]\s*/, '').trim();
+          return (
+            <div key={key} style={{
+              backgroundColor: '#f0f7ff',
+              border: '1px solid #b3d7ff',
+              borderRadius: '5px',
+              padding: '10px 12px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              opacity: regenerating ? 0.7 : 1,
+            }}>
+              <div style={{ flexShrink: 0, width: '80px' }}>
+                <a
+                  href={`#${key}`}
+                  style={{ fontSize: '12px', fontWeight: 600, color: '#1565c0' }}
+                >
+                  {key}
+                </a>
+                <div style={{ fontSize: '10px', color: '#888', marginTop: '2px', wordBreak: 'break-word' }}>
+                  {item.summary?.slice(0, 50)}{item.summary?.length > 50 ? '…' : ''}
+                </div>
+              </div>
+              <div style={{ flex: 1, fontSize: '12px', color: '#1a1a2e', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                {regenerating
+                  ? <span style={{ color: '#888', fontStyle: 'italic' }}>⏳ Regenerating…</span>
+                  : displayText
+                }
+                {regenerateError && (
+                  <div style={{ color: '#dc3545', fontSize: '10px', marginTop: '4px' }}>⚠ {regenerateError}</div>
+                )}
+              </div>
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button
+                  onClick={() => onPushOne(key)}
+                  disabled={regenerating}
+                  style={{
+                    padding: '4px 10px', fontSize: '11px', borderRadius: '3px',
+                    border: 'none', background: regenerating ? '#ccc' : '#28a745', color: '#fff',
+                    cursor: regenerating ? 'not-allowed' : 'pointer', fontWeight: 600, whiteSpace: 'nowrap',
+                  }}
+                >
+                  📤 Push
+                </button>
+                <button
+                  onClick={() => onRegenerateOne(key)}
+                  disabled={regenerating}
+                  style={{
+                    padding: '4px 10px', fontSize: '11px', borderRadius: '3px',
+                    border: '1px solid #6a1b9a', background: regenerating ? '#f3e5f5' : '#fff',
+                    color: regenerating ? '#aaa' : '#6a1b9a',
+                    cursor: regenerating ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  ↺ Regenerate
+                </button>
+                <button
+                  onClick={() => onDiscardOne(key)}
+                  disabled={regenerating}
+                  style={{
+                    padding: '4px 10px', fontSize: '11px', borderRadius: '3px',
+                    border: '1px solid #ccc', background: '#fff', color: '#666',
+                    cursor: regenerating ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 const SOS_COLUMNS = [
@@ -662,7 +885,7 @@ function SosSummaryPage() {
     fetchAll,
   } = useSosItems();
 
-  const { batchRunning, batchProgress, runBatch } = useBatchExecSummary();
+  const { batchRunning, batchProgress, pendingReviews, runBatch, regenerateOne, pushOne, discardOne, pushAll, discardAll } = useBatchExecSummary();
 
   const { checkpointHistory, fetchHistory } = useSosHistory();
 
@@ -773,6 +996,15 @@ function SosSummaryPage() {
         {Object.keys(releaseDatesConfig).length > 0 && (
           <ReleaseGantt releases={releaseDatesConfig} />
         )}
+
+        <BulkReviewPanel
+          pendingReviews={pendingReviews}
+          onPushOne={pushOne}
+          onDiscardOne={discardOne}
+          onPushAll={pushAll}
+          onDiscardAll={discardAll}
+          onRegenerateOne={regenerateOne}
+        />
 
         {sortedVersions.map((version) => (
           <ReleaseSection

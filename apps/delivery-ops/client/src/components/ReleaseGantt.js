@@ -32,40 +32,53 @@ function getDate(cfg, key) {
 const GATE_KEYS   = ['ccReq', 'ec', 'cc', 'cg', 'bc', 'pg', 'ga'];
 const GATE_LABELS = { ccReq: 'CC / Payload Req', ec: 'EC / Commit', cc: 'Code Complete', cg: 'CG / Manual Testing', bc: 'Branch Cut', pg: 'PG / Automation', ga: 'GA' };
 
-const T_START = new Date('2025-11-01');
-const T_END   = new Date('2026-12-31');
-const SPAN    = (T_END - T_START) / 864e5;
-
-function pct(dateStr) {
-  if (!dateStr) return null;
-  const days = (new Date(dateStr + 'T00:00:00') - T_START) / 864e5;
-  return Math.max(0, Math.min(100, (days / SPAN) * 100));
-}
-
 function fmtTip(key, dateStr) {
   if (!dateStr) return '';
   const label = formatters.date(dateStr) || dateStr;
   return `${GATE_LABELS[key]}  ·  ${label}`;
 }
 
-function todayPct() {
-  return pct(new Date().toISOString().slice(0, 10));
-}
+// Build axis helpers from the actual data extent
+function buildAxis(sortedReleases) {
+  const allDates = [];
+  for (const { cfg } of sortedReleases) {
+    for (const k of GATE_KEYS) {
+      const d = getDate(cfg, k);
+      if (d) allDates.push(new Date(d + 'T00:00:00'));
+    }
+  }
+  const today = new Date();
+  allDates.push(today);
 
-// Month labels for the ruler
-function buildMonths() {
+  const minDate = new Date(Math.min(...allDates));
+  const maxDate = new Date(Math.max(...allDates));
+
+  // Pad: 1 month before earliest gate, 1 month after latest
+  minDate.setMonth(minDate.getMonth() - 1);
+  minDate.setDate(1);
+  maxDate.setMonth(maxDate.getMonth() + 1);
+  maxDate.setDate(1);
+
+  const span = (maxDate - minDate) / 864e5;
+
+  const pct = (dateStr) => {
+    if (!dateStr) return null;
+    const days = (new Date(dateStr + 'T00:00:00') - minDate) / 864e5;
+    return Math.max(0, Math.min(100, (days / span) * 100));
+  };
+
+  const todayPct = pct(today.toISOString().slice(0, 10));
+
   const months = [];
-  const cur = new Date(T_START);
-  cur.setDate(1);
-  while (cur <= T_END) {
-    const p = ((cur - T_START) / 864e5 / SPAN) * 100;
+  const cur = new Date(minDate);
+  while (cur <= maxDate) {
+    const p = ((cur - minDate) / 864e5 / span) * 100;
     months.push({ label: cur.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), pct: p });
     cur.setMonth(cur.getMonth() + 1);
   }
-  return months;
-}
 
-const MONTHS = buildMonths();
+  return { pct, todayPct, months };
+}
 
 // Dot style per gate
 const DOT_STYLE = {
@@ -84,14 +97,18 @@ export default function ReleaseGantt({ releases }) {
   const containerRef = useRef(null);
 
   // Sort by GA date
+  const graceDate = new Date();
+  graceDate.setDate(graceDate.getDate() - 7);
+
   const sorted = Object.entries(releases)
     .map(([version, cfg]) => ({ version, cfg, ga: getDate(cfg, 'ga') }))
-    .filter(r => r.ga)
+    .filter(r => r.ga && new Date(r.ga + 'T00:00:00') >= graceDate)
     .sort((a, b) => a.ga.localeCompare(b.ga));
 
   if (!sorted.length) return null;
 
-  const tp = todayPct();
+  const { pct, todayPct, months } = buildAxis(sorted);
+  const tp = todayPct;
 
   return (
     <div ref={containerRef} style={styles.wrap}>
@@ -122,7 +139,7 @@ export default function ReleaseGantt({ releases }) {
       {/* Month ruler */}
       <div style={{ ...styles.ruler, paddingLeft: LABEL_W }}>
         <div style={{ position: 'relative', flex: 1, height: 20 }}>
-          {MONTHS.map(m => (
+          {months.map(m => (
             <span key={m.label} style={{ ...styles.monthTick, left: m.pct + '%' }}>{m.label}</span>
           ))}
           {/* Today tick on ruler */}

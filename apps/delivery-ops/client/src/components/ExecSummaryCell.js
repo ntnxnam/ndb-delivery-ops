@@ -183,8 +183,9 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
 
       {/* ── Buttons ── */}
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Show generate button only when: no generated summary in-flight,
-            AND (no existing summary OR existing summary is stale ≥ 7 days) */}
+        {/* When no in-flight draft: show Generate/Regenerate button unless summary is fresh.
+            When fresh: show age label + a small force-regenerate link so the user can always
+            override even when the summary is < 7 days old. */}
         {!generatedSummary && !summaryIsFresh && (
           <button onClick={handleGenerate} disabled={generating} style={{
             fontSize: '10px', padding: '3px 8px',
@@ -197,13 +198,23 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
             {buttonLabel}
           </button>
         )}
-        {/* Fresh summary: show age label instead of button */}
+        {/* Fresh summary: show age label + force-regenerate button */}
         {!generatedSummary && summaryIsFresh && (
-          <span style={{
-            fontSize: '10px', color: '#6c757d', fontStyle: 'italic',
-          }}>
-            {summaryAgeDays === 0 ? 'Generated today' : `Generated ${summaryAgeDays}d ago`}
-          </span>
+          <>
+            <span style={{ fontSize: '10px', color: '#6c757d', fontStyle: 'italic' }}>
+              {summaryAgeDays === 0 ? 'Generated today' : `Generated ${summaryAgeDays}d ago`}
+            </span>
+            <button onClick={handleGenerate} disabled={generating} style={{
+              fontSize: '10px', padding: '2px 6px',
+              backgroundColor: 'transparent',
+              color: generating ? '#aaa' : '#6a1b9a',
+              border: '1px solid currentColor', borderRadius: '3px',
+              cursor: generating ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}>
+              {generating ? '⏳' : '↺ Regenerate'}
+            </button>
+          </>
         )}
 
         {generatedSummary && !pushSuccess && (

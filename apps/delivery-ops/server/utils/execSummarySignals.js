@@ -753,8 +753,9 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
   // tickets (preferred, via narrative) with parent labels as a fallback hint.
   const compliance = detectCompliance(item, narrative?.compliance || null);
   const daysToLastCG = daysBetween(now, latestCGMarker || commitGateDate);
-  // Required if within 21 days of last CG (future) OR last CG has already passed
-  const complianceRequired = daysToLastCG != null && (daysToLastCG <= 21);
+  // Required only when CG is still upcoming (daysToLastCG > 0) and within 21 days.
+  // A negative value means CG has already passed — compliance window is closed.
+  const complianceRequired = daysToLastCG != null && daysToLastCG >= 0 && daysToLastCG <= 21;
 
   // --- Latest passed release-level marker (objective calendar anchor)
   // This tells us which gate the release calendar says should already be cleared.
@@ -900,7 +901,7 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
       const state = compliance[key];
       if (!state.filed) {
         criticalRisks.push(
-          `${label} not filed: no linked ${project}-* ticket found and Commit Gate is ${daysToLastCG <= 0 ? 'already past' : `${daysToLastCG} days away`}.`
+          `${label} not filed: no linked ${project}-* ticket found and Commit Gate is ${daysToLastCG} days away.`
         );
       } else if (state.labelOnly) {
         criticalRisks.push(
