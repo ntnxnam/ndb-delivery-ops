@@ -2,7 +2,7 @@
 
 ## POST /api/jira/sos-items
 
-**Purpose**: Fetch ALL Feature and Initiative tickets in scope of the team's SoS base filter, grouped by `fixVersion`. No version input required — the server resolves the filter, fetches all matching issues, and returns them bucketed by release so the client renders one section per release.
+**Purpose**: Fetch Feature and Initiative tickets grouped by `fixVersion`. Default path reads the on-disk release dataset (no JIRA). Live JIRA is used only when the cache is empty or the client sends `forceLive: true`.
 
 **Auth**: Required (`validateJiraTokenMiddleware`)
 
@@ -15,16 +15,16 @@
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `teamId` | string | no | Team id to resolve `sosBaseFilter` from `teamBoardConfig.json`. Defaults to `"ndb"`. |
+| `forceLive` | boolean | no | If `true`, try live JIRA first (Refresh All). Falls back to cache on JIRA 429. |
 
 **Server flow**
 
-1. Read `sosBaseFilter` for `teamId` from `teamBoardConfig.json` via `teamConfig.getTeamSosBaseFilter()`
-2. Resolve JIRA filter → JQL via `kpiService.resolveKpiJql()`
-3. Build final JQL: `(${resolvedSosFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`
-4. Call `releaseItemsDataService.fetchReleaseItemsFromJira()` — paginated, max 500 results
-5. Call `releaseItemsDataService.processReleaseItems()` — maps raw JIRA fields to canonical item shape
-6. Group results by `fixVersions` (comma-separated string split on server). Items with no fixVersion go under `"Unversioned"`
-7. Respond with `{ success: true, data: { byVersion, usedFallbackFilter } }`
+1. `sos.js` → `releaseItemsDataService.fetchSosItems()`
+2. Load Feature/Initiative rows from the on-disk release dataset cache (no JIRA)
+3. If cache has rows and `forceLive` is false → respond from cache (`source: "cache"`)
+4. Otherwise resolve `sosBaseFilter` → JQL via `kpiService.resolveKpiJql()` and fetch live
+5. On JIRA 429 with a warm cache → respond from cache (`source: "cache"`, `degraded: true`)
+6. Group live results by `fixVersions`. Items with no fixVersion go under `"Unversioned"`
 
 **Response shape**
 
@@ -50,7 +50,10 @@
       ],
       "NDB-2.11": []
     },
-    "usedFallbackFilter": false
+    "usedFallbackFilter": false,
+    "source": "cache",
+    "degraded": false,
+    "lastSyncIso": "2026-07-07T19:35:12.066Z"
   }
 }
 ```
@@ -60,10 +63,11 @@
 | HTTP code | When | Client should |
 |---|---|---|
 | 401 | JIRA token missing or invalid | Redirect to login |
+| 429 | JIRA rate-limited and cache empty | Wait 60–90s, then Retry |
 | 503 | JIRA unreachable | Show inline retry |
 | 500 | Unexpected server error | Show generic error toast |
 
-**Caching**: None. Always fetches live from JIRA.
+**Caching**: Yes — on-disk release dataset. Live JIRA only on cache miss or `forceLive`.
 
 ---
 

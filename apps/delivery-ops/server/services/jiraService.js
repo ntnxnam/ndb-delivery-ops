@@ -68,7 +68,9 @@ async function retryJiraCall(apiCall, maxRetries = 5) {
       }
       // If it's a 429 error on the last attempt, throw a more helpful error
       if (error.response?.status === 429) {
-        throw new Error('JIRA rate limit exceeded. Please wait 60-90 seconds and try again.');
+        const err = new Error('JIRA rate limit exceeded. Please wait 60-90 seconds and try again.');
+        err.statusCode = 429;
+        throw err;
       }
       throw error;
     }

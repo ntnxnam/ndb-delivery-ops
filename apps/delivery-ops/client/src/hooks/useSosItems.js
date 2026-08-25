@@ -1,9 +1,8 @@
 /**
  * useSosItems — data hook for the SoS Summary page.
  *
- * Makes a single POST /api/jira/sos-items call (no fixVersion needed —
- * the server uses the team's sosBaseFilter to fetch everything and groups
- * by fixVersion). Returns { byVersion: { [version]: Item[] } }.
+ * Makes a single POST /api/jira/sos-items call (cache-first; forceLive
+ * on Refresh All). Returns { byVersion, source, degraded, lastSyncIso }.
  *
  * No release version list required from the client — zero dependency on
  * useReleaseVersions / SelectedReleaseContext.
@@ -12,6 +11,7 @@
 import { useState, useCallback } from 'react';
 import { authenticatedPost } from '../utils/api';
 import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
+import { getUserFacingMessage } from '../utils/errorMessages';
 
 const BREAKDOWN_BATCH_SIZE = 5;
 
@@ -19,6 +19,9 @@ export function useSosItems() {
   const [byVersion, setByVersion] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [source, setSource] = useState(null);
+  const [degraded, setDegraded] = useState(false);
+  const [lastSyncIso, setLastSyncIso] = useState(null);
 
   const [breakdownDataMap, setBreakdownDataMap] = useState({});
   const [loadingBreakdowns, setLoadingBreakdowns] = useState(false);
@@ -45,7 +48,7 @@ export function useSosItems() {
     }
   }, []);
 
-  const fetchAll = useCallback(async (teamId = 'ndb') => {
+  const fetchAll = useCallback(async (teamId = 'ndb', { forceLive = false } = {}) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
@@ -55,7 +58,7 @@ export function useSosItems() {
     try {
       const resp = await authenticatedPost(
         '/api/jira/sos-items',
-        { teamId },
+        { teamId, forceLive },
         { jiraToken, username }
       );
 
@@ -63,16 +66,24 @@ export function useSosItems() {
         throw new Error(resp.data.error || 'Failed to fetch SoS items');
       }
 
-      const data = resp.data.data?.byVersion || {};
+      const payload = resp.data.data || {};
+      const data = payload.byVersion || {};
       setByVersion(data);
+      setSource(payload.source || null);
+      setDegraded(Boolean(payload.degraded));
+      setLastSyncIso(payload.lastSyncIso || null);
 
-      // Fire-and-forget breakdowns for all keys across all versions
+      // Live JIRA follow-on calls (breakdowns) only after a live fetch.
+      // After a 429, firing them immediately re-trips the rate limit.
       const allKeys = Object.values(data).flat().map((i) => i.key).filter(Boolean);
-      if (allKeys.length > 0) {
+      if (forceLive && payload.source === 'jira' && allKeys.length > 0) {
         fetchBreakdowns(allKeys, jiraToken, username);
       }
     } catch (err) {
-      setError(err.message || 'Failed to load SoS items');
+      setError(getUserFacingMessage(err, {
+        context: 'sos-items',
+        fallback: err.response?.data?.error || err.message || 'Failed to load SoS items',
+      }));
     } finally {
       setLoading(false);
     }
@@ -82,6 +93,9 @@ export function useSosItems() {
     byVersion,
     loading,
     error,
+    source,
+    degraded,
+    lastSyncIso,
     breakdownDataMap,
     loadingBreakdowns,
     fetchAll,

@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
@@ -13,10 +14,13 @@ const { getCached, setCached } = require('../utils/simpleCache');
 const { extractTextFieldValue } = require('../utils/adfText');
 const { getSprintsForBoard, resolveSprintState } = require('../utils/sprintCache');
 const { resolveTeam } = require('../utils/jiraRouteHelpers');
-const { getTeamSprintBaseFilter } = require('../utils/teamConfig');
+const { getTeamSprintBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
 
 const RELEASE_DATASET_CACHE_DIR = path.resolve(
   __dirname, '..', '..', '..', '..', 'shared', '.cache', 'release-dataset'
+);
+const RELEASE_GATE_CONFIG_PATH = path.resolve(
+  __dirname, '..', 'config', 'releaseVersionsEmailConfig.json'
 );
 
 // Lazy ESM import — mirrors releaseDataset.js pattern
@@ -202,6 +206,150 @@ async function loadItemsFromCache(fixVersion, productId = 'ndb') {
   }
 }
 
+/** Release names that are not real SoS versions (catch-all JIRA versions). */
+function isVersionedRelease(name) {
+  return typeof name === 'string' && /\d/.test(name);
+}
+
+function listConfiguredReleaseNames() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(RELEASE_GATE_CONFIG_PATH, 'utf8'));
+    return Object.keys(raw.releaseGateDates || {}).filter(isVersionedRelease);
+  } catch (_e) {
+    return [];
+  }
+}
+
+function listCachedReleaseNames(productId = 'ndb') {
+  const dir = path.join(RELEASE_DATASET_CACHE_DIR, productId, 'per_release');
+  if (!fs.existsSync(dir)) return [];
+  const onDisk = fs.readdirSync(dir)
+    .filter((f) => f.endsWith('.json') && !f.endsWith('.meta.json'))
+    .map((f) => f.slice(0, -'.json'.length))
+    .filter(isVersionedRelease);
+  const configured = listConfiguredReleaseNames();
+  if (configured.length === 0) return onDisk;
+  const allow = new Set(configured);
+  return onDisk.filter((name) => allow.has(name));
+}
+
+function readBundleLastSyncIso(productId = 'ndb') {
+  try {
+    const metaPath = path.join(RELEASE_DATASET_CACHE_DIR, productId, 'bundle.meta.json');
+    const raw = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    return raw.lastSyncIso || null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function isRateLimitError(err) {
+  return err?.statusCode === 429 || err?.response?.status === 429 || /rate limit/i.test(err?.message || '');
+}
+
+/**
+ * Load Feature/Initiative rows for every versioned release present in the
+ * on-disk dataset cache. No JIRA calls.
+ */
+async function loadSosItemsFromCache(productId = 'ndb') {
+  const byVersion = {};
+  const releases = listCachedReleaseNames(productId);
+  for (const release of releases) {
+    const items = await loadItemsFromCache(release, productId);
+    if (items && items.length > 0) {
+      byVersion[release] = sortByRiskIndicator(items);
+    }
+  }
+  return {
+    byVersion,
+    lastSyncIso: readBundleLastSyncIso(productId),
+    itemCount: Object.values(byVersion).reduce((n, items) => n + items.length, 0),
+  };
+}
+
+function groupItemsByVersion(items) {
+  const byVersion = {};
+  for (const item of items) {
+    const raw = item.fixVersions || item.fixVersion || '';
+    const versions = raw && raw !== 'N/A'
+      ? raw.split(',').map((v) => v.trim()).filter(Boolean)
+      : ['Unversioned'];
+
+    for (const v of versions) {
+      if (!byVersion[v]) byVersion[v] = [];
+      byVersion[v].push(item);
+    }
+  }
+  for (const v of Object.keys(byVersion)) {
+    byVersion[v] = sortByRiskIndicator(byVersion[v]);
+  }
+  return byVersion;
+}
+
+async function fetchSosItemsFromJira(teamId, jiraToken, httpsAgent) {
+  const { resolveKpiJql } = require('./kpiService');
+  const rawSosFilter = getTeamSosBaseFilter(teamId);
+  const fallback = 'filter=NDB-All-Base-Filter';
+  const sosFilter = rawSosFilter || fallback;
+  const resolvedFilter = await resolveKpiJql(sosFilter, jiraToken, httpsAgent);
+  const jql = `(${resolvedFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY fixVersion ASC, key ASC`;
+  const issues = await fetchReleaseItemsFromJira(jql, jiraToken, httpsAgent, 'sos-items-all');
+  const items = await processReleaseItems(issues, jiraToken, httpsAgent, 'sos-items-all');
+  return {
+    byVersion: groupItemsByVersion(items),
+    usedFallbackFilter: !rawSosFilter,
+  };
+}
+
+/**
+ * SoS Feature/Initiative payload. Cache-first so a JIRA 429 (or a
+ * post-restart token revalidation) does not blank the page.
+ *
+ * @param {object} opts
+ * @param {string} [opts.teamId='ndb']
+ * @param {string} opts.jiraToken
+ * @param {object} opts.httpsAgent
+ * @param {boolean} [opts.forceLive=false] — Refresh All: try JIRA first
+ */
+async function fetchSosItems({ teamId = 'ndb', jiraToken, httpsAgent, forceLive = false } = {}) {
+  const productId = String(teamId || 'ndb').toLowerCase();
+  const cached = await loadSosItemsFromCache(productId);
+
+  if (!forceLive && cached.itemCount > 0) {
+    console.log(`[sos-items] Serving ${cached.itemCount} items from dataset cache (${Object.keys(cached.byVersion).length} releases)`);
+    return {
+      byVersion: cached.byVersion,
+      source: 'cache',
+      usedFallbackFilter: false,
+      lastSyncIso: cached.lastSyncIso,
+      degraded: false,
+    };
+  }
+
+  try {
+    const live = await fetchSosItemsFromJira(teamId, jiraToken, httpsAgent);
+    return {
+      ...live,
+      source: 'jira',
+      lastSyncIso: new Date().toISOString(),
+      degraded: false,
+    };
+  } catch (err) {
+    if (cached.itemCount > 0 && isRateLimitError(err)) {
+      console.warn(`[sos-items] JIRA rate-limited; falling back to cache (${cached.itemCount} items)`);
+      return {
+        byVersion: cached.byVersion,
+        source: 'cache',
+        usedFallbackFilter: false,
+        lastSyncIso: cached.lastSyncIso,
+        degraded: true,
+      };
+    }
+    if (isRateLimitError(err) && !err.statusCode) err.statusCode = 429;
+    throw err;
+  }
+}
+
 async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions } = {}) {
   if (!fixVersions || !Array.isArray(fixVersions) || fixVersions.length === 0) {
     const err = new Error('At least one fixVersion is required');
@@ -235,12 +383,17 @@ async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions } = {}) {
 
 module.exports = {
   fetchAllItemsAcrossVersions,
+  fetchSosItems,
+  loadSosItemsFromCache,
   _internals: {
     fetchReleaseItemsFromJira,
     processReleaseItems,
     RELEASE_ITEMS_CONFIG,
     getCached,
     setCached,
+    isVersionedRelease,
+    listCachedReleaseNames,
+    groupItemsByVersion,
   },
 };
 

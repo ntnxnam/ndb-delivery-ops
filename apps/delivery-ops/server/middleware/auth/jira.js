@@ -161,6 +161,23 @@ async function validateJiraToken(token, username) {
       };
     }
     
+    // JIRA 429 on /myself is common after a server restart: the in-memory
+    // token cache is empty, so every request re-validates, and JIRA is
+    // often still rate-limiting the previous session. Allow a short grace
+    // session so cache-backed pages (SoS, dataset) can load without
+    // hammering /myself again.
+    if (apiError.response?.status === 429) {
+      console.warn(`[JIRA Auth] Rate limited validating token for ${username}; allowing a short grace session`);
+      const grace = {
+        valid: true,
+        userData: { name: username },
+        skipUserValidation: true,
+        degraded: true,
+      };
+      tokenCache.set(cleanToken, username, grace);
+      return grace;
+    }
+
     // Use centralized error extraction for other errors
     const errorResponse = extractApiError(apiError, 'JIRA', { baseUrl: JIRA_API_V2.BASE_URL });
     return {
