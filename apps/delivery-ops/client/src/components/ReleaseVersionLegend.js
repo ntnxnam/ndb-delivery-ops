@@ -175,13 +175,21 @@ function ReleaseVersionLegend({ columnsConfig }) {
             </div>
             <div style={{ marginBottom: '4px' }}>
               <span>Historical dates shown as: </span>
-              <span style={{ color: '#28a745', fontWeight: 600 }}>30/Jan/2026</span>
-              <span style={{ margin: '0 4px', color: '#666' }}>←</span>
-              <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '11px' }}>15/Jan/2026</span>
-              <span style={{ marginLeft: '4px', color: '#666', fontSize: '10px' }}>(+15 days)</span>
+              <div style={{ marginLeft: '10px', marginTop: '2px', lineHeight: 1.35 }}>
+                <div><span style={{ color: '#de350b', fontWeight: 600 }}>11/Sep/2026</span></div>
+                <div>
+                  <span style={{ marginRight: '4px', color: '#666' }}>←</span>
+                  <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '11px' }}>13/Jul/2026</span>
+                </div>
+                <div>
+                  <span style={{ marginRight: '4px', color: '#666' }}>←</span>
+                  <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '11px' }}>30/Jun/2026</span>
+                  <span style={{ marginLeft: '4px', color: '#de350b', fontSize: '10px' }}>(+10.5 weeks)</span>
+                </div>
+              </div>
             </div>
             <div style={{ marginBottom: '4px', fontSize: '10px', color: '#666', marginLeft: '10px' }}>
-              Current date (newest) shown first, then left arrow ← to oldest historical date
+              Current date first, then each earlier unique date on a new line. Net delay is on the oldest date.
             </div>
           </div>
         </div>

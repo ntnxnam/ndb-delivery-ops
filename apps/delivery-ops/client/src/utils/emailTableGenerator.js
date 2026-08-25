@@ -4,6 +4,8 @@
  * Reuses the same formatting logic as the UI but outputs HTML strings
  */
 
+import { getAllUniqueDates, getHistoryForField } from './dateHistoryProcessing';
+
 /**
  * Generate HTML table for email from release version items
  * @param {object} items - Items object with commit, longTermFunded, exploratory, etc. arrays
@@ -97,71 +99,8 @@ export function generateTableHTMLForEmail(
 
   // Helper to format date with history as HTML string
   const formatDateWithHistoryHTML = (itemKey, fieldName, currentDate) => {
-    const normalizedKey = itemKey ? itemKey.trim() : '';
-    const history = checkpointHistory[normalizedKey]?.[fieldName] || [];
-    
-    // Helper to normalize date string to YYYY-MM-DD format
-    const normalizeDateStr = (dateValue) => {
-      if (!dateValue) return null;
-      
-      let dateStr;
-      if (typeof dateValue === 'string') {
-        if (dateValue.includes('T')) {
-          dateStr = dateValue.split('T')[0];
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-          dateStr = dateValue;
-        } else {
-          const parsed = new Date(dateValue);
-          if (!isNaN(parsed.getTime())) {
-            dateStr = parsed.toISOString().split('T')[0];
-          } else {
-            return null;
-          }
-        }
-      } else if (dateValue instanceof Date) {
-        if (!isNaN(dateValue.getTime())) {
-          dateStr = dateValue.toISOString().split('T')[0];
-        } else {
-          return null;
-        }
-      } else {
-        return null;
-      }
-      
-      return dateStr && dateStr !== 'null' && dateStr !== '' ? dateStr : null;
-    };
-    
-    // Get all unique dates from history
-    const allDates = new Set();
-    history.forEach(entry => {
-      if (entry && entry.date) {
-        const dateStr = normalizeDateStr(entry.date);
-        if (dateStr) {
-          allDates.add(dateStr);
-        }
-      }
-    });
-    
-    // Add current date if it exists
-    if (currentDate) {
-      const currentDateStr = normalizeDateStr(currentDate);
-      if (currentDateStr) {
-        allDates.add(currentDateStr);
-      }
-    }
-    
-    // Convert to array and sort in reverse chronological order (newest first)
-    const sortedDates = Array.from(allDates)
-      .map(dateStr => {
-        try {
-          const [year, month, day] = dateStr.split('-').map(Number);
-          return new Date(year, month - 1, day);
-        } catch (e) {
-          return null;
-        }
-      })
-      .filter(date => date !== null && !isNaN(date.getTime()))
-      .sort((a, b) => b - a);
+    const history = getHistoryForField(itemKey, fieldName, checkpointHistory);
+    const sortedDates = getAllUniqueDates(history, currentDate);
     
     if (sortedDates.length === 0) {
       if (!currentDate) {
@@ -216,25 +155,25 @@ export function generateTableHTMLForEmail(
       }
     }
     
-    // Build HTML string: latestDate <- oldestDate (differenceText)
-    // Always show latest (most recent) first, then oldest (earliest)
-    let dateHTML = '';
-    
-    // Latest date - highlight based on direction
+    // Newest (current) first, then every earlier unique date. Net delta on the oldest.
     const dateColor = isDelayed ? '#de350b' : movedForward ? '#0066cc' : '#28a745';
+    const deltaColor = isDelayed ? '#de350b' : movedForward ? '#0066cc' : '#666';
     const formattedLatestDate = formatDateHTML(latestDate);
-    dateHTML += `<span style="color: ${dateColor}; font-weight: 600;">${escapeHtml(formattedLatestDate)}</span>`;
-    
-    if (sortedDates.length > 1) {
-      dateHTML += '<span style="margin: 0 4px; color: #666;">←</span>';
-      const formattedOldestDate = formatDateHTML(oldestDate);
-      dateHTML += `<span style="text-decoration: line-through; color: #999; font-size: 11px;">${escapeHtml(formattedOldestDate)}</span>`;
-      if (differenceText) {
-        const diffColor = isDelayed ? '#de350b' : movedForward ? '#0066cc' : '#666';
-        dateHTML += `<span style="color: ${diffColor}; font-size: 10px; margin-left: 4px; font-weight: 500;">(${escapeHtml(differenceText)})</span>`;
+    const historicalDatesNewestFirst = sortedDates.slice(1);
+
+    let dateHTML = `<span style="color: ${dateColor}; font-weight: 600;">${escapeHtml(formattedLatestDate)}</span>`;
+
+    historicalDatesNewestFirst.forEach((date, index) => {
+      const isOldest = index === historicalDatesNewestFirst.length - 1;
+      const formatted = formatDateHTML(date);
+      dateHTML += '<br/>';
+      dateHTML += '<span style="color: #666;">←</span> ';
+      dateHTML += `<span style="text-decoration: line-through; color: #999; font-size: 11px;">${escapeHtml(formatted)}</span>`;
+      if (isOldest && differenceText) {
+        dateHTML += `<span style="color: ${deltaColor}; font-size: 10px; margin-left: 4px; font-weight: 500;">(${escapeHtml(differenceText)})</span>`;
       }
-    }
-    
+    });
+
     return dateHTML;
   };
 
