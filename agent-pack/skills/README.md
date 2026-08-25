@@ -1,8 +1,8 @@
 # Project skills
 
 Project-specific skills. Each is invoked by a specialist sub-agent under
-`ops-assistant`. See `.cursor/agents/specialists/*.md` for which skill each
-specialist owns.
+`ops-assistant`. See `agent-pack/identity/specialists/` for which skill each
+specialist owns. Canonical home is this directory (D38), not `.cursor/`.
 
 ## Skills in this project
 
@@ -31,8 +31,8 @@ templates.
 
 For each skill, the layers it touches:
 
-- **Agent** — `ops-assistant.md` routes the user request
-- **Specialist** — one of `.cursor/agents/specialists/*.md` owns the
+- **Agent** — `agent-pack/identity/ops-assistant.md` routes the user request
+- **Specialist** — one of `agent-pack/identity/specialists/*.md` owns the
   skill's domain
 - **Skill** — the file in this directory describes the workflow
 - **Tool** — usually an API endpoint in

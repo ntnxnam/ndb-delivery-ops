@@ -1,5 +1,8 @@
 # Workflows
 
+Portable playbooks (D38). This directory is the source of truth.
+`.cursor/workflows` is a symlink for the Cursor adapter.
+
 A **workflow** is a multi-step orchestration that chains MCP tools and skills.
 Each workflow is a markdown file with:
 

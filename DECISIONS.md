@@ -818,6 +818,34 @@ because the target is outside the React app boundary.
 
 ---
 
+### D38 — Agent pack is portable; Cursor is one adapter
+
+**Statement.** Identity, skills, workflows, constitutional rules, and
+the memory schema live in `agent-pack/`. That pack is the source of
+truth for every runtime. Cursor (`.cursor/` symlinks), the delivery-ops
+web agent, MCP, and any future host are **adapters**. The product must
+be liftable to another agent host without rewriting SOPs.
+
+**Implications.**
+- Never add a new skill, identity, or workflow only under `.cursor/`
+- Any host loads the pack via `loadAgentPack()` in
+  `@portfolio-delivery-ops/shared` (or `AGENT_PACK_ROOT`)
+- Tools stay MCP + Layer 3 services — already host-agnostic
+- Builder-only Cursor rules (`minimal-architecture`, API/page doc
+  gates, Gerrit push) stay in `.cursor/rules/` and do **not** ship
+  with a lifted agent
+- A new host = a new file under `agent-pack/adapters/`, not a fork
+  of skills
+- Capability type (`deterministic` / `generative` / `agent` /
+  `agentic`) and tool class (`read` / `draft` / `mutate`) are
+  declared in `agent-pack/manifest.json`
+
+**What this is NOT.** Replacing Cursor as a builder. Developers may
+still edit markdown in the IDE. The IDE is not allowed to be the only
+place those files can run.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
@@ -850,3 +878,5 @@ These are non-negotiables baked into all future design:
 6. **Single connector per external system** — no parallel implementations (D3).
 7. **Role lens is a presenter, not a filter** — never hide capability from a
    user; only re-frame the output (D6).
+8. **Agent pack is portable** — cookbook lives in `agent-pack/`; every host
+   is an adapter (D38). Do not lock SOPs to Cursor.

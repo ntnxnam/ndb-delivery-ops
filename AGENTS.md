@@ -43,11 +43,11 @@ adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Arch
 
 ## AI layer — orchestrator-workers pattern (D16)
 
-**One user-facing orchestrator agent**: `.cursor/agents/ops-assistant.md`.
-This is what every user (Portfolio Manager, Team Executive, RM, TPM, EM, FEAT, IC)
-interacts with. Specialists are internal sub-agents the orchestrator delegates to.
+**One user-facing orchestrator agent**: `agent-pack/identity/ops-assistant.md`
+(D38). Every host — Cursor, web chat, future Slack — loads this pack.
+Specialists are internal sub-agents the orchestrator delegates to.
 
-**Specialist sub-agents** (in `.cursor/agents/specialists/`):
+**Specialist sub-agents** (in `agent-pack/identity/specialists/`, D38):
 
 - `team-exec-specialist` — Team Executive protocol (D15: compound question, risk register, citations)
 - `tpm-specialist` — weekly status (D17), cross-team deps (D18), 4 triage flavours (D19)
@@ -58,7 +58,7 @@ interacts with. Specialists are internal sub-agents the orchestrator delegates t
 
 The orchestrator decides delegation; users never address a specialist by name.
 
-## Skills (`.cursor/skills/`)
+## Skills (`agent-pack/skills/`)
 
 Reusable capabilities the agent reads on demand. Each one is task-specific
 and references the specialist that owns it.
@@ -69,7 +69,7 @@ and references the specialist that owns it.
 - `dependency-walk/` — D18
 - `confluence-width-cleanup/` — pre-existing, kept
 
-## Rules (`.cursor/rules/`)
+## Rules (`agent-pack/rules/` + builder-only `.cursor/rules/`)
 
 Recovered + new:
 
@@ -100,6 +100,7 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 - **Workflows for recurring artefacts; agents for ad-hoc questions** (D8, D9)
 - **Single React runtime** on `:8888` — no Streamlit in user-facing path
 - **Web chat panel** (D7) is the agent surface for non-IDE users
+- **Agent pack is portable** (D38) — cookbook in `agent-pack/`; Cursor is one adapter
 
 ## Phase plan (see `DECISIONS.md` → Round 6)
 

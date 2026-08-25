@@ -1,22 +1,26 @@
-# .cursor/AGENTS.md — project-specific Cursor guidance
+# .cursor/AGENTS.md — Cursor adapter (D38)
+
+This file is **host-specific**. The cookbook lives in `agent-pack/`.
+`.cursor/agents`, `.cursor/skills`, and `.cursor/workflows` are
+symlinks into that pack. Do not add a skill or specialist only here.
 
 Read order when you start a session in this repo:
 
 1. `~/.cursor/AGENTS.md` — user-level persona (Namratha, Portfolio Manager).
 2. `~/.cursor/context/audience.md` — eleven audiences (product-agnostic).
 3. `AGENTS.md` (repo root) — repo-specific deltas.
-4. This file — Cursor-specific guidance.
-5. `DECISIONS.md`, `ARCHITECTURE.md`, `FEATURE_CATALOG.md` — locked decisions, layered architecture, feature inventory.
+4. This file — Cursor-specific bootstrap.
+5. `agent-pack/identity/ops-assistant.md` — orchestrator protocol.
+6. `DECISIONS.md`, `ARCHITECTURE.md`, `FEATURE_CATALOG.md`.
 
 ## The Ops Assistant — single user-facing agent (D16)
 
-This repo follows Anthropic's **orchestrator-workers** pattern. ONE
-user-facing agent (`.cursor/agents/ops-assistant.md`) orchestrates internal
-specialist sub-agents (`.cursor/agents/specialists/*.md`). Users never
-invoke specialists directly.
+ONE user-facing agent (`agent-pack/identity/ops-assistant.md`)
+orchestrates internal specialists (`agent-pack/identity/specialists/`).
+Users never invoke specialists directly.
 
-Invoke the orchestrator with: `@ops-assistant` (in Cursor chat or any
-delivery-ops chat surface).
+Invoke with `@ops-assistant` in Cursor, or any delivery-ops chat
+surface. Both hosts must load the same pack via `loadAgentPack()`.
 
 The orchestrator:
 
@@ -28,43 +32,28 @@ The orchestrator:
 
 ## Skills the orchestrator can dispatch
 
-| Skill file | Specialist | Use when |
+Registry: `agent-pack/manifest.json`. Paths below are pack-relative.
+
+| Skill | Specialist | Use when |
 |---|---|---|
-| `.cursor/skills/team-exec-status-answer/` | `team-exec-specialist` | Team Executive / Director asks about release status |
-| `.cursor/skills/weekly-status-email/` | `tpm-specialist` | Weekly TPM status email (Monday job or on demand) |
-| `.cursor/skills/bug-triage/` | `triage-specialist` | New defects need triage |
-| `.cursor/skills/crisis-triage/` | `triage-specialist` | P0 / escalation |
-| `.cursor/skills/stale-ticket-sweep/` | `triage-specialist` | Periodic backlog hygiene |
-| `.cursor/skills/pending-response-chase/` | `triage-specialist` | Chase un-answered dependency / deferral asks |
-| `.cursor/skills/dependency-walk/` | `dependency-tracker-specialist` | "What blocks my feature?" |
-| `.cursor/skills/move-gate-date/` | `rm-specialist` | RM/TPM wants to move a gate date (CC / CG / PG) — enforces mandatory reason + Confluence audit (D30) |
-| `.cursor/skills/confluence-width-cleanup/` | `confluence-publisher-specialist` | Cleaning Confluence storage XML |
-| `.cursor/skills/release-ai-briefing/` | `tpm-specialist` | "What is the health of NDB-2.11?" / release-level RAG + top blockers + 7-day action list |
+| `skills/team-exec-status-answer/` | `team-exec-specialist` | Team Executive / Director asks about release status |
+| `skills/weekly-status-email/` | `tpm-specialist` | Weekly TPM status email (Monday job or on demand) |
+| `skills/bug-triage/` | `triage-specialist` | New defects need triage |
+| `skills/crisis-triage/` | `triage-specialist` | P0 / escalation |
+| `skills/stale-ticket-sweep/` | `triage-specialist` | Periodic backlog hygiene |
+| `skills/pending-response-chase/` | `triage-specialist` | Chase un-answered dependency / deferral asks |
+| `skills/dependency-walk/` | `dependency-tracker-specialist` | "What blocks my feature?" |
+| `skills/move-gate-date/` | `rm-specialist` | Gate date move with mandatory reason + audit (D30) |
+| `skills/confluence-width-cleanup/` | `confluence-publisher-specialist` | Cleaning Confluence storage XML |
+| `skills/release-ai-briefing/` | `tpm-specialist` | Release-level RAG + top blockers + 7-day action list |
 
-## Project workflows
+## Workflows
 
-Multi-step playbooks that chain MCP tools + skills. See `.cursor/workflows/`:
+`agent-pack/workflows/` — Monday status, quarterly Team-Exec report,
+release cascade rename.
 
-- `monday-release-status.md` — weekly release status pipeline
-- `quarterly-team-exec-report.md` — predictive Team Executive report + Confluence publish
-- `release-cascade-rename.md` — safe end-to-end version rename
+## Lift-and-shift
 
-## Pillars (Anthropic agentic architecture)
-
-| Pillar | Path | What lives here |
-|---|---|---|
-| MCP server | `mcp-server/src/index.ts` | Single server, every tool + resource |
-| Connectors | `shared/connectors/*.ts` (Phase D) | One module per external system |
-| Rules | `.cursor/rules/` (project) + `~/.cursor/rules/` (inherited) | Must-follow constraints |
-| Skills | `.cursor/skills/` (project) + `~/.cursor/skills/` (user) | Reusable agent capabilities |
-| Workflows | `.cursor/workflows/` | Multi-step playbooks |
-
-## MCP server
-
-Registered via `.cursor/mcp.json`. Implemented in `mcp-server/`. Build with
-`npm run mcp:build`; start with `npm run mcp:start` (stdio transport).
-
-## Layered loading (recap)
-
-Project overrides user; user overrides plugin; plugin overrides Cursor product.
-If a project rule contradicts a user rule, flag it.
+To run this product on another host, implement an adapter
+(`agent-pack/adapters/future-host.md`). Do not copy skills into a
+vendor format as a fork.

@@ -10,13 +10,15 @@
     ".": "./dist/index.js",
     "./types": "./dist/types/index.js",
     "./connectors": "./dist/connectors/index.js",
-    "./services": "./dist/services/index.js"
+    "./services": "./dist/services/index.js",
+    "./agentPack": "./dist/agentPack/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "smoke:agent-pack": "node ./scripts/smoke-agent-pack.mjs"
   },
   "dependencies": {
     "axios": "^1.7.2",

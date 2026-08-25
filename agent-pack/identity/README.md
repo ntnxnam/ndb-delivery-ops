@@ -1,4 +1,8 @@
-# Project agents — orchestrator + specialists (D16)
+# Identity — orchestrator + specialists (D16, D38)
+
+This folder is the portable identity pack (`system.md` equivalent).
+Cursor sees it via `.cursor/agents` → this directory. Any other host
+loads it with `loadAgentPack()`.
 
 Per **D16**, this project follows Anthropic's **orchestrator-workers**
 pattern. ONE user-facing agent (`ops-assistant.md`) is the front door.
@@ -43,11 +47,10 @@ For both the orchestrator and specialists:
 
 When the orchestrator boots a session:
 
-1. `~/.cursor/AGENTS.md` — user-level persona
-2. `~/.cursor/context/audience.md` — eleven audiences
-3. `.cursor/AGENTS.md` (project) — repo-specific guidance
-4. `ops-assistant.md` — orchestrator's own protocol
-5. Per question: read the relevant specialist + skill on demand
+1. Host persona (Cursor: `~/.cursor/AGENTS.md`; web: session role)
+2. Audience presets (`audience.md`)
+3. This pack’s orchestrator (`ops-assistant.md`)
+4. Per question: specialist + skill from `agent-pack/skills/`
 
 ## Deprecated (deleted in Phase A)
 

@@ -13,6 +13,7 @@
 export * as types from './types/index.js';
 export * as connectors from './connectors/index.js';
 export * as services from './services/index.js';
+export * as agentPack from './agentPack/index.js';
 
 // Common re-exports for convenience.
 export { JiraConnector } from './connectors/jiraConnector.js';
@@ -294,3 +295,21 @@ export type {
   FeatureKpiTile,
   StatusUpdateSection,
 } from './services/featureDashboardService.js';
+
+export {
+  loadAgentPack,
+  resolveAgentPackRoot,
+  listSkillsByType,
+  listSkillsByToolClass,
+} from './agentPack/index.js';
+export type {
+  AgentPack,
+  AgentPackManifest,
+  CapabilityType,
+  IdentityRole,
+  LoadedIdentity,
+  LoadedRule,
+  LoadedSkill,
+  LoadedWorkflow,
+  ToolClass,
+} from './agentPack/index.js';

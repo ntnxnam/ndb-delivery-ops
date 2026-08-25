@@ -1,0 +1,209 @@
+{
+  "name": "portfolio-delivery-ops",
+  "version": "1.0.0",
+  "decision": "D38",
+  "description": "Portable agent cookbook. Hosts are adapters; this pack is the source of truth.",
+  "orchestrator": "ops-assistant",
+  "identity": {
+    "orchestrator": "identity/ops-assistant.md",
+    "specialistsDir": "identity/specialists"
+  },
+  "constitutionalRules": [
+    "rules/ai-ticket-key-integrity.mdc",
+    "rules/citation-first-output.mdc",
+    "rules/confluence-cleanup-clarification.mdc",
+    "rules/jira-date-hierarchy.mdc",
+    "rules/ndb-gate-status-semantics.mdc",
+    "rules/no-localhost.mdc",
+    "rules/persona-aware-output.mdc",
+    "rules/product-agnostic.mdc",
+    "rules/program-management-pov.mdc",
+    "rules/release-gate-aware-reasoning.mdc"
+  ],
+  "memorySchema": "memory/schema.json",
+  "identities": [
+    {
+      "name": "ops-assistant",
+      "role": "orchestrator",
+      "path": "identity/ops-assistant.md"
+    },
+    {
+      "name": "team-exec-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/team-exec-specialist.md"
+    },
+    {
+      "name": "tpm-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/tpm-specialist.md"
+    },
+    {
+      "name": "rm-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/rm-specialist.md"
+    },
+    {
+      "name": "triage-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/triage-specialist.md"
+    },
+    {
+      "name": "confluence-publisher-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/confluence-publisher-specialist.md"
+    },
+    {
+      "name": "dependency-tracker-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/dependency-tracker-specialist.md"
+    }
+  ],
+  "skills": [
+    {
+      "name": "team-exec-status-answer",
+      "capabilityType": "agent",
+      "toolClass": "read",
+      "owner": "team-exec-specialist",
+      "path": "skills/team-exec-status-answer/SKILL.md"
+    },
+    {
+      "name": "team-exec-release-report",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "owner": "team-exec-specialist",
+      "path": "skills/team-exec-release-report/SKILL.md"
+    },
+    {
+      "name": "predictive-team-exec-analytics",
+      "capabilityType": "generative",
+      "toolClass": "read",
+      "owner": "team-exec-specialist",
+      "path": "skills/predictive-team-exec-analytics/SKILL.md"
+    },
+    {
+      "name": "weekly-status-email",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "owner": "tpm-specialist",
+      "path": "skills/weekly-status-email/SKILL.md"
+    },
+    {
+      "name": "release-ai-briefing",
+      "capabilityType": "generative",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/release-ai-briefing/SKILL.md"
+    },
+    {
+      "name": "release-retrospective",
+      "capabilityType": "generative",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/release-retrospective/SKILL.md"
+    },
+    {
+      "name": "fetch-project-tickets",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/fetch-project-tickets/SKILL.md"
+    },
+    {
+      "name": "issue-type-breakdown",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/issue-type-breakdown/SKILL.md"
+    },
+    {
+      "name": "sprint-gantt-chart",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/sprint-gantt-chart/SKILL.md"
+    },
+    {
+      "name": "bug-triage",
+      "capabilityType": "agent",
+      "toolClass": "draft",
+      "owner": "triage-specialist",
+      "path": "skills/bug-triage/SKILL.md"
+    },
+    {
+      "name": "crisis-triage",
+      "capabilityType": "agent",
+      "toolClass": "draft",
+      "owner": "triage-specialist",
+      "path": "skills/crisis-triage/SKILL.md"
+    },
+    {
+      "name": "stale-ticket-sweep",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "owner": "triage-specialist",
+      "path": "skills/stale-ticket-sweep/SKILL.md"
+    },
+    {
+      "name": "pending-response-chase",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "owner": "triage-specialist",
+      "path": "skills/pending-response-chase/SKILL.md"
+    },
+    {
+      "name": "dependency-walk",
+      "capabilityType": "agent",
+      "toolClass": "read",
+      "owner": "dependency-tracker-specialist",
+      "path": "skills/dependency-walk/SKILL.md"
+    },
+    {
+      "name": "move-gate-date",
+      "capabilityType": "deterministic",
+      "toolClass": "mutate",
+      "owner": "rm-specialist",
+      "path": "skills/move-gate-date/SKILL.md"
+    },
+    {
+      "name": "update-release-date",
+      "capabilityType": "deterministic",
+      "toolClass": "mutate",
+      "owner": "rm-specialist",
+      "path": "skills/update-release-date/SKILL.md"
+    },
+    {
+      "name": "confluence-width-cleanup",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "confluence-publisher-specialist",
+      "path": "skills/confluence-width-cleanup/SKILL.md"
+    },
+    {
+      "name": "release-dataset-sync",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "rm-specialist",
+      "path": "skills/release-dataset-sync/SKILL.md"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "monday-release-status",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "path": "workflows/monday-release-status.md"
+    },
+    {
+      "name": "quarterly-team-exec-report",
+      "capabilityType": "agentic",
+      "toolClass": "draft",
+      "path": "workflows/quarterly-team-exec-report.md"
+    },
+    {
+      "name": "release-cascade-rename",
+      "capabilityType": "deterministic",
+      "toolClass": "mutate",
+      "path": "workflows/release-cascade-rename.md"
+    }
+  ]
+}

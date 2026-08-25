@@ -1,7 +1,12 @@
-# Project rules
+# Project rules (Cursor adapter)
 
-This folder is intentionally light. Most rules live at the **user level** so
-they apply across every NDB-Ops repo:
+Constitutional product-agent rules live in `agent-pack/rules/` and are
+symlinked here (D38). Builder-only rules for this repo stay as real files
+in this folder (`minimal-architecture`, `api-docs-required`,
+`page-docs-required`, `documentation-consistency`, `gerrit-push-for-review`).
+
+Most other rules live at the **user level** so they apply across every
+NDB-Ops repo:
 
 - `~/.cursor/rules/minimal-architecture.mdc`
 - `~/.cursor/rules/no-localhost.mdc`

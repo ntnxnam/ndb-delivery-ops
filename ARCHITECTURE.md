@@ -142,6 +142,7 @@ status.
 | `statusService`, `predictabilityService`, `chartService`, `dependencyService` | ○ | Original scaffolds — retired pending real ports (see CONSOLIDATION.md "Speculative stubs"). Throw on use. | none today |
 | Future ports (CONSOLIDATION.md #2, #4–#9, #11–#16, #18) | ○ | Velocity, landing forecast, chart catalog, NAI chatbot, team-exec report service, predictive analytics, capacity, outstanding-work, Confluence template engine, release timeline, bin packing (algo extraction), say-vs-do, story points, sprint Gantt. | various |
 | `nlpQueryService` *(new, D4)* | ○ | Natural language → tool-call plan. Routes team-exec/RM questions to the right MCP tools + connectors. | Ops Assistant agent (primary), any chat surface |
+| `agentPack` (`loadAgentPack`, D38) | ● | Load portable identity / skills / workflows / constitutional rules from `agent-pack/`. Host-agnostic. | web chat, Cursor adapter, future hosts |
 
 ### Layer 4 — API + MCP tools
 
@@ -174,17 +175,13 @@ Two parallel surfaces over the services:
 - **Product picker** (D1, D5): top-level dropdown selects active product set
   (NDB / DataLens / NCM / …) for the user's view.
 
-**Cursor agents & workflows** (`.cursor/`)
-- One user-facing orchestrator (`ops-assistant.md`) delegates to 6 specialist
-  sub-agents (`team-exec-specialist`, `tpm-specialist`, `rm-specialist`,
-  `triage-specialist`, `confluence-publisher-specialist`,
-  `dependency-tracker-specialist`) — D16 orchestrator-workers pattern.
-- Workflows chain MCP tools for recurring playbooks (Monday status, quarterly
-  team-exec report, release cascade rename).
-- Skills are reusable procedures (`team-exec-release-report`,
-  `move-gate-date`, `confluence-width-cleanup`, `fetch-project-tickets`, …).
-- Rules are global constraints (`persona-aware-output`, `no-localhost`,
-  `product-agnostic`, `jira-date-hierarchy`, `citation-first-output`, …).
+**Agent pack** (`agent-pack/`, D38) — portable cookbook
+- Source of truth for identity, skills, workflows, constitutional rules,
+  and memory schema. Loaded by `loadAgentPack()` in `shared/`.
+- One orchestrator (`ops-assistant`) delegates to 6 specialists — D16.
+- Cursor is an adapter: `.cursor/agents|skills|workflows` are symlinks
+  into this pack. Web chat and any future host must load the same pack.
+- Capability type + tool class live in `agent-pack/manifest.json`.
 - "VP" terminology is dropped everywhere per D33 — use "team-exec".
 
 **Static-mounted legacy apps (D37).** Mature standalone web apps that
@@ -280,13 +277,22 @@ blanket project filter on the fetch.
 │
 ├── crystalball-i/                       AI prediction engine (used by predictabilityService)
 │
-├── .cursor/
-│   ├── AGENTS.md                        project AI guidance
-│   ├── agents/                          one per persona
-│   ├── rules/                           global constraints (.mdc)
-│   ├── skills/                          reusable procedures (SKILL.md per dir)
+├── agent-pack/                          portable cookbook (D38) — SoT for every host
+│   ├── identity/                        orchestrator + specialists
+│   ├── skills/                          SKILL.md per capability
 │   ├── workflows/                       multi-step playbooks
-│   └── mcp.json                         registers mcp-server
+│   ├── rules/                           constitutional runtime rules
+│   ├── memory/                          schema only (store is runtime)
+│   ├── adapters/                        cursor / web / future-host notes
+│   └── manifest.json                    types, tool classes, paths
+│
+├── .cursor/                             Cursor adapter only — not the cookbook home
+│   ├── AGENTS.md                        Cursor-specific bootstrap
+│   ├── agents/ → ../agent-pack/identity
+│   ├── skills/ → ../agent-pack/skills
+│   ├── workflows/ → ../agent-pack/workflows
+│   ├── rules/                           builder rules + symlinks to pack rules
+│   └── mcp.json                         host MCP registration
 │
 └── _archive/  ← actually at ~/NDB-Ops-Tools/_archive/   17 tarballs of decommissioned originals
 ```
