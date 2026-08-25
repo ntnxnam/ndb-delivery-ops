@@ -118,17 +118,7 @@ const AuthenticatedApp = () => {
           element={<Navigate to="/" replace />} 
         />
         
-        {/* SoS Summary page - isolated from ReleaseDataProvider to avoid unwanted API calls */}
-        <Route
-          path="/sos-summary"
-          element={
-            <ProtectedRoute permissions={['release_versions_view']}>
-              <SosSummaryPage />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* All other routes wrapped in ReleaseDataProvider */}
+        {/* All routes wrapped in ReleaseDataProvider */}
         <Route 
           path="/*" 
           element={
@@ -306,6 +296,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout>
                         <SyncHubPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/sos-summary"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout wide>
+                        <SosSummaryPage />
                       </Layout>
                     </ProtectedRoute>
                   }

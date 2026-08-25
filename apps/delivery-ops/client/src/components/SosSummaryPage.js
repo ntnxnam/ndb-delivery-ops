@@ -5,7 +5,7 @@
  *   - Features subsection with AI exec summary + task breakdown per row
  *   - Initiatives subsection (same columns)
  *   - KPI widgets subsection (lazy-loaded)
- * A compose panel at the bottom handles drafting and sending the SoS email.
+ * Email SoS sends an HTML snapshot of the already-loaded view via SMTP.
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -17,127 +17,7 @@ import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseGantt from './ReleaseGantt';
-
-// Simple layout wrapper that doesn't depend on ReleaseDataContext
-function SosLayout({ children }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar-collapsed');
-    return saved !== null ? JSON.parse(saved) : false;
-  });
-
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('sidebar-width');
-    return saved ? parseInt(saved) : 280;
-  });
-
-  // Listen for sidebar state changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const savedCollapsed = localStorage.getItem('sidebar-collapsed');
-      const savedWidth = localStorage.getItem('sidebar-width');
-      
-      setSidebarCollapsed(savedCollapsed !== null ? JSON.parse(savedCollapsed) : false);
-      setSidebarWidth(savedWidth ? parseInt(savedWidth) : 280);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 100);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
-
-  return (
-    <div className="app-layout">
-      {/* Import Sidebar component inline to avoid Layout dependency */}
-      <div 
-        className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
-        style={{ width: sidebarCollapsed ? '60px' : `${sidebarWidth}px` }}
-      >
-        {/* Minimal sidebar - user can navigate via browser back/forward */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #dee2e6',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <span style={{ fontSize: '20px' }}>📡</span>
-          {!sidebarCollapsed && (
-            <span style={{ fontWeight: 600, color: '#1a1a2e', fontSize: '14px' }}>
-              SoS Summary
-            </span>
-          )}
-        </div>
-        <div style={{ padding: '16px' }}>
-          <button
-            onClick={() => window.history.back()}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-      
-      <main 
-        className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
-        style={{
-          marginLeft: sidebarCollapsed ? '60px' : `${sidebarWidth}px`
-        }}
-      >
-        {children}
-      </main>
-
-      <style>{`
-        .app-layout {
-          min-height: 100vh;
-          display: flex;
-          background: #f8f9fa;
-        }
-        
-        .sidebar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          height: 100vh;
-          background: #fff;
-          border-right: 1px solid #dee2e6;
-          z-index: 1000;
-          transition: width 0.3s ease;
-        }
-
-        .main-content {
-          flex: 1;
-          padding: 0;
-          transition: margin-left 0.3s ease;
-          min-height: 100vh;
-          box-sizing: border-box;
-        }
-
-        @media (max-width: 768px) {
-          .main-content {
-            margin-left: 0 !important;
-            padding: 16px;
-          }
-          
-          .sidebar {
-            display: none;
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
+import SosEmailBar from './SosEmailBar';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -537,9 +417,9 @@ const SOS_COLUMNS = [
   { key: 'summary',    label: 'Summary',    width: '220px' },
   { key: 'status',     label: 'Status',     width: '100px' },
   { key: 'risk',       label: 'Risk',       width: '70px' },
-  { key: 'ccDate',     label: 'CC',         width: '90px' },
-  { key: 'cgDate',     label: 'CG',         width: '90px' },
-  { key: 'pgDate',     label: 'PG',         width: '90px' },
+  { key: 'ccDate',     label: 'CC',         width: '140px' },
+  { key: 'cgDate',     label: 'CG',         width: '140px' },
+  { key: 'pgDate',     label: 'PG',         width: '140px' },
   { key: 'assignee',   label: 'Assignee',   width: '110px' },
   { key: 'aiSummary',  label: 'AI Summary', width: '260px' },
   { key: 'breakdown',  label: 'Breakdown',  width: '180px' },
@@ -645,15 +525,15 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
         />
       </td>
       {/* CC */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
+      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
         {formatDateWithHistory(item.key, 'codeComplete', item.customfield_11067, checkpointHistory)}
       </td>
       {/* CG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
+      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
         {formatDateWithHistory(item.key, 'commitGate', item.customfield_35863, checkpointHistory)}
       </td>
       {/* PG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#555' }}>
+      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
         {formatDateWithHistory(item.key, 'promotionGate', item.customfield_35864, checkpointHistory)}
       </td>
       {/* Assignee */}
@@ -694,7 +574,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, jiraBase
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '1100px' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '1250px' }}>
         <thead>
           <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
             {SOS_COLUMNS.map((col) => (
@@ -926,8 +806,7 @@ function SosSummaryPage() {
   }, [byVersion, gateDataMap, runBatch]);
 
   return (
-    <SosLayout>
-      <div style={{ padding: '20px 24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div>
         {/* Page header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
@@ -960,6 +839,14 @@ function SosSummaryPage() {
             {!loading && needsCount === 0 && sortedVersions.length > 0 && (
               <span style={{ fontSize: '11px', color: '#388e3c', fontWeight: 600 }}>✓ All summaries fresh</span>
             )}
+            <SosEmailBar
+              byVersion={byVersion}
+              breakdownDataMap={breakdownDataMap}
+              gateDataMap={gateDataMap}
+              jiraBaseUrl={jiraBaseUrl}
+              sortedVersions={sortedVersions}
+              disabled={loading || sortedVersions.length === 0}
+            />
             <button
               onClick={() => fetchAll('ndb')}
               disabled={loading}
@@ -1018,8 +905,7 @@ function SosSummaryPage() {
             gateData={gateDataMap[version] || null}
           />
         ))}
-      </div>
-    </SosLayout>
+    </div>
   );
 }
 

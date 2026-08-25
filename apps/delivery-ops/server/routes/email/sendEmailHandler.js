@@ -769,10 +769,18 @@ module.exports = async function sendEmailHandler(req, res) {
     `;
     
     // Always CC the sender so they get a copy of what they sent.
+    // Also apply the status-sender people list (emailSenderCCConfig.defaultCC).
     // Only add @nutanix.com addresses to avoid relay rejection on external domains.
     const ccEmails = new Set();
     if (userEmail && userEmail.endsWith('@nutanix.com')) {
       ccEmails.add(userEmail.toLowerCase());
+    }
+    const statusSenderCC = Array.isArray(emailSenderCCConfig.defaultCC) ? emailSenderCCConfig.defaultCC : [];
+    for (const addr of statusSenderCC) {
+      const normalized = String(addr || '').trim().toLowerCase();
+      if (normalized.endsWith('@nutanix.com')) {
+        ccEmails.add(normalized);
+      }
     }
 
     // CC the assignee's manager when JIRA data is present (customfield_19262).

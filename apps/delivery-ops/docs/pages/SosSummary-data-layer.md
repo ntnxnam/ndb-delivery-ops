@@ -137,30 +137,28 @@ filter=ndb-all-sos AND fixVersion = "NDB-2.12" AND issuetype in (Feature, Initia
 
 ### 7. `POST /api/email/send-sos`
 
-**Purpose**: Send the composed SoS email via SMTP.
+**Purpose**: Send an HTML snapshot of the already-loaded SoS page via SMTP. Does not call JIRA.
 
-**When called**: User clicks Send in compose panel.
+**When called**: User clicks Email SoS (preview with `previewOnly: true`, then Send).
 
 **Request**:
 ```json
 {
-  "recipients": "vp-eng@nutanix.com; dir-ndb@nutanix.com",
-  "ccRecipients": "namratha.singh@nutanix.com",
-  "subject": "NDB SoS Status — 2026-08-18",
+  "htmlBody": "<!DOCTYPE html>...",
+  "subject": "SoS Summary — 2026-08-25",
   "releases": ["NDB-2.12", "NDB-2.11"],
-  "gateSection": "<HTML string>",
-  "blockers": "<HTML string>",
-  "risks": "<HTML string>",
-  "actionItems": "<plain text, newline-separated>",
-  "tableHTML": "<HTML string of feature/initiative table>",
-  "productId": "ndb"
+  "previewOnly": false
 }
 ```
 
-**Response**: `{ success: true, messageId: "..." }`
+`recipients` / `ccRecipients` are optional. When omitted, the server applies:
+- **To:** `emailConfig.defaultTo` (`ndb-projects-updates@nutanix.com`)
+- **CC:** `emailSenderCCConfig.defaultCC` + sender (`@nutanix.com` only)
+
+**Response**: `{ success: true, messageId: "...", recipientCount, accepted, rejected }`
 
 **Server flow**:
-`sendSos.js` → `validateJiraTokenMiddleware` → `emailLimiter` → `emailService.sendEmailDirect(mailOptions)` → `saveEmailHistory()` → respond
+`sendSos.js` → `validateJiraTokenMiddleware` (auth only, no JIRA search) → `emailLimiter` → merge default To/CC → `emailService.sendEmailDirect(mailOptions)` → `saveEmailHistory()` → respond
 
 ---
 
@@ -176,9 +174,10 @@ POST /api/jira/sos-items
           .processReleaseItems()             (reused — maps raw fields to item shape)
 
 POST /api/email/send-sos
-  └── server/routes/email/sendSos.js        (new, < 40 lines)
-      └── emailService.sendEmailDirect()    (reused)
-      └── saveEmailHistory()                (reused)
+  └── server/routes/email/sendSos.js
+      └── emailConfig.defaultTo + emailSenderCCConfig.defaultCC
+      └── emailService.sendEmailDirect()    (SMTP only — no JIRA)
+      └── saveEmailHistory()
 ```
 
 ## Data Shapes
@@ -197,6 +196,8 @@ Key fields used by the UI:
 - `labels`, `fixVersions`
 
 ## Caching Strategy
+
+The page is routed through the shared `Layout` / `ReleaseDataProvider` (same chrome as other tabs). That provider may also call `/api/release-dataset/releases` and a per-release cache load for the currently selected release. Those calls are for layout/banner connectivity only — they do **not** feed the SoS tables. Feature/Initiative rows still come from live `sos-items`.
 
 | Data | Cache | TTL |
 |---|---|---|

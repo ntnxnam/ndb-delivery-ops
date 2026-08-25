@@ -125,9 +125,9 @@
 
 ## POST /api/email/send-sos
 
-**Purpose**: Send a composed SoS (Scrum of Scrums) briefing email to engineering leadership via the existing SMTP relay. Saves to email history on success.
+**Purpose**: Send an HTML snapshot of the already-loaded SoS page to engineering leadership via the existing SMTP relay. Does not fetch JIRA. Saves to email history on success.
 
-**Auth**: Required (`validateJiraTokenMiddleware`)
+**Auth**: Required (`validateJiraTokenMiddleware`) — token is used only to identify the sender.
 
 **Request**
 
@@ -137,27 +137,30 @@
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `recipients` | string | yes | Semicolon-separated email addresses. Addresses without `@` get `@nutanix.com` appended. |
-| `ccRecipients` | string | no | Semicolon-separated CC addresses. Sender always added to CC. |
+| `htmlBody` | string | yes (or `tableHTML`) | Full HTML snapshot built from in-memory SoS page state. |
 | `subject` | string | yes | Email subject line |
 | `releases` | string[] | yes | List of release names included in this SoS (e.g. `["NDB-2.12", "NDB-2.11"]`) |
-| `gateSection` | string | yes | HTML string for the gate dates section |
-| `blockers` | string | no | HTML string for the blockers section |
-| `risks` | string | no | HTML string for the risks section |
-| `actionItems` | string | no | Plain text action items (newline-separated) |
-| `tableHTML` | string | yes | HTML table of Features/Initiatives |
-| `productId` | string | no | Product identifier. Defaults to `"ndb"`. |
-| `previewOnly` | boolean | no | If `true`, returns rendered HTML without sending |
+| `recipients` | string | no | Extra To addresses (comma-separated). Merged with `emailConfig.defaultTo`. |
+| `ccRecipients` | string | no | Extra CC addresses. Merged with `emailSenderCCConfig.defaultCC` + sender. |
+| `tableHTML` | string | no | Legacy Feature/Initiative table HTML if `htmlBody` is omitted. |
+| `gateSection` | string | no | Legacy gate dates HTML (used only with `tableHTML`) |
+| `blockers` | string | no | Legacy blockers HTML |
+| `risks` | string | no | Legacy risks HTML |
+| `actionItems` | string | no | Legacy plain-text action items |
+| `productId` | string | no | Product identifier. |
+| `previewOnly` | boolean | no | If `true`, returns resolved To/CC/HTML without sending |
 
 **Server flow**
 
-1. `validateJiraTokenMiddleware` — validates JIRA token, extracts sender email
+1. `validateJiraTokenMiddleware` — validates JIRA token, extracts sender email (no JIRA search)
 2. `emailLimiter` — rate limit: 20 sends / 15 minutes
-3. Parse and validate recipients via `emailService.parseEmailRecipients()`
-4. Build email HTML (gate section + blockers + risks + action items + table)
-5. `emailService.sendEmailDirect(mailOptions)` — sends via `mailrelay.dyn.nutanix.com:25`
-6. `saveEmailHistory()` — persists to history DB
-7. Respond with `{ success: true, messageId }`
+3. Resolve To = `emailConfig.defaultTo` + optional `recipients` (`@nutanix.com` only)
+4. Resolve CC = `emailSenderCCConfig.defaultCC` + sender + optional `ccRecipients`
+5. Use client `htmlBody` (or wrap legacy `tableHTML`)
+6. If `previewOnly`, return `{ to, cc, subject, htmlBody }` and stop
+7. `emailService.sendEmailDirect(mailOptions)` — SMTP only
+8. `saveEmailHistory()` — persists to history DB
+9. Respond with `{ success: true, messageId, recipientCount, accepted, rejected }`
 
 **Response shape**
 
@@ -165,7 +168,9 @@
 {
   "success": true,
   "messageId": "<unique-id@nutanix.com>",
-  "recipientCount": 3
+  "recipientCount": 1,
+  "accepted": ["ndb-projects-updates@nutanix.com"],
+  "rejected": []
 }
 ```
 
@@ -173,7 +178,7 @@
 
 | HTTP code | When | Client should |
 |---|---|---|
-| 400 | Missing `recipients`, `subject`, `tableHTML`, or `releases` | Show field validation error |
+| 400 | Missing `subject`, `htmlBody`/`tableHTML`, or `releases`; or no To list after defaults | Show field validation error |
 | 401 | JIRA token missing or invalid | Redirect to login |
 | 429 | Rate limit exceeded (20/15min) | Show "Too many emails" warning with retry time |
 | 500 | SMTP relay unreachable or unexpected error | Show error toast with server message |

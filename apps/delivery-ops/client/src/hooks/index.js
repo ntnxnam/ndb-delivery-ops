@@ -15,6 +15,7 @@ export { useGenericEmailerConfig } from './useGenericEmailerConfig';
 export { useColumnConfig } from './useColumnConfig';
 export { useGanttConfig, useAllVersionsConfig } from './useGanttConfig';
 export { useSosItems } from './useSosItems';
+export { useSosEmail } from './useSosEmail';
 
 // UI / form state
 export { useEmailForm } from './useEmailForm';

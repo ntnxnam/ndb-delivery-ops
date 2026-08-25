@@ -52,7 +52,7 @@ function JiraConnectivityBanner() {
   );
 }
 
-export const Layout = ({ children }) => {
+export const Layout = ({ children, wide = false }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved !== null ? JSON.parse(saved) : false;
@@ -90,7 +90,7 @@ export const Layout = ({ children }) => {
       <Sidebar />
       
       <main 
-        className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
+        className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}${wide ? ' main-content-wide' : ''}`}
         style={{
           marginLeft: sidebarCollapsed ? '60px' : `${sidebarWidth}px`
         }}
@@ -127,6 +127,10 @@ export const Layout = ({ children }) => {
           margin-bottom: 24px;
           width: 100%;
           box-sizing: border-box;
+        }
+
+        .main-content.main-content-wide > * {
+          max-width: 1400px;
         }
 
         .main-content > *:last-child {
