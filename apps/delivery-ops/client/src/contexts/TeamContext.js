@@ -1,7 +1,17 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { getApiBase, getAuthHeaders } from '../utils/api';
+import { STORAGE_KEYS } from '../shared/utils/constants';
+
+const TEAM_STORAGE_KEY = STORAGE_KEYS.SELECTED_TEAM;
+const TEAMS_FETCH_TIMEOUT_MS = 8000;
 
 const TeamContext = createContext(null);
+
+export function findTeamById(teams, teamId) {
+  if (!teamId || !Array.isArray(teams)) return null;
+  const needle = String(teamId).trim().toLowerCase();
+  return teams.find((t) => String(t.id || '').trim().toLowerCase() === needle) || null;
+}
 
 /**
  * Hook to access team context
@@ -17,92 +27,64 @@ export const useTeam = () => {
 
 /**
  * Team context provider that manages team selection and ensures all pages
- * work in the context of the selected team
+ * work in the context of the selected team. One fetch per app session.
  */
 export const TeamProvider = ({ children }) => {
   const [teams, setTeams] = useState([]);
-  const [selectedTeamId, setSelectedTeamId] = useState(() => 
-    localStorage.getItem('releaseVersionSelectedTeamId') || ''
+  const [selectedTeamId, setSelectedTeamId] = useState(() =>
+    localStorage.getItem(TEAM_STORAGE_KEY) || ''
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  // Track active API requests to cancel them on team change
+
   const activeRequestsRef = useRef(new Set());
   const teamChangeCallbacksRef = useRef(new Set());
+  const inFlightRef = useRef(null);
 
-  /**
-   * Register a callback to be called when team changes
-   * Useful for components to cleanup their state
-   */
   const registerTeamChangeCallback = useCallback((callback) => {
     teamChangeCallbacksRef.current.add(callback);
     return () => teamChangeCallbacksRef.current.delete(callback);
   }, []);
 
-  /**
-   * Clear all team-specific cached data and state
-   */
   const clearTeamData = useCallback(() => {
-    // Clear version selections and other team-specific cache
     localStorage.removeItem('selectedVersion');
-    
-    // Cancel active API requests
-    activeRequestsRef.current.forEach(controller => {
+
+    activeRequestsRef.current.forEach((controller) => {
       if (controller && typeof controller.abort === 'function') {
         controller.abort();
       }
     });
     activeRequestsRef.current.clear();
 
-    // Notify all registered components to clear their state
-    teamChangeCallbacksRef.current.forEach(callback => {
+    teamChangeCallbacksRef.current.forEach((callback) => {
       try {
         callback();
-      } catch (error) {
-        console.error('Error in team change callback:', error);
+      } catch (cbError) {
+        console.error('Error in team change callback:', cbError);
       }
     });
-
-    console.log('[TeamContext] Cleared team-specific data and cancelled active requests');
   }, []);
 
-  /**
-   * Change the selected team with proper cleanup
-   */
   const changeTeam = useCallback((newTeamId) => {
-    if (newTeamId === selectedTeamId) {
-      return; // No change needed
-    }
+    if (newTeamId === selectedTeamId) return;
 
-    console.log(`[TeamContext] Changing team from ${selectedTeamId} to ${newTeamId}`);
-    
     setIsTransitioning(true);
-    
-    // Clear all team-specific data first
     clearTeamData();
-    
-    // Update team selection
     setSelectedTeamId(newTeamId);
-    localStorage.setItem('releaseVersionSelectedTeamId', newTeamId || '');
-    
-    // Dispatch custom event for any components listening
-    window.dispatchEvent(new CustomEvent('teamChanged', { 
-      detail: { 
+    localStorage.setItem(TEAM_STORAGE_KEY, newTeamId || '');
+
+    window.dispatchEvent(new CustomEvent('teamChanged', {
+      detail: {
         previousTeamId: selectedTeamId,
-        newTeamId: newTeamId,
-        timestamp: Date.now()
-      } 
+        newTeamId,
+        timestamp: Date.now(),
+      },
     }));
 
-    // Clear transition state after a short delay to allow components to update
     setTimeout(() => setIsTransitioning(false), 100);
   }, [selectedTeamId, clearTeamData]);
 
-  /**
-   * Register an AbortController for team-aware API calls
-   */
   const registerApiRequest = useCallback((controller) => {
     if (controller && typeof controller.abort === 'function') {
       activeRequestsRef.current.add(controller);
@@ -111,105 +93,120 @@ export const TeamProvider = ({ children }) => {
     return () => {};
   }, []);
 
-  /**
-   * Get the currently selected team object
-   */
-  const selectedTeam = teams.find(team => team.id === selectedTeamId) || null;
+  const applyTeamsPayload = useCallback((responseData) => {
+    const list = Array.isArray(responseData?.teams) ? responseData.teams : [];
+    setTeams(list);
 
-  /**
-   * A stored team id counts as selected even if the teams list has not
-   * loaded yet — otherwise a failed /api/config/teams fetch hides every
-   * page that gates on hasTeamSelected, with no picker to recover.
-   */
-  const hasTeamSelected = Boolean(selectedTeamId);
+    const stored = localStorage.getItem(TEAM_STORAGE_KEY);
+    const defaultId = responseData.defaultTeamId || list[0]?.id;
+    const teamExists = stored && findTeamById(list, stored);
+    const effective = teamExists ? stored : defaultId;
 
-  /**
-   * Fetch teams configuration from API
-   */
-  const fetchTeams = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      console.log('[TeamContext] Fetching teams from API...');
-      console.log('[TeamContext] API URL:', `${getApiBase()}/api/config/teams`);
-      
-      const { headers: authHeaders } = getAuthHeaders();
-      const response = await fetch(`${getApiBase()}/api/config/teams`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      
-      console.log('[TeamContext] Teams API response:', responseData);
-      
-      if (responseData && Array.isArray(responseData.teams)) {
-        setTeams(responseData.teams);
-        
-        // Handle team selection logic
-        const stored = localStorage.getItem('releaseVersionSelectedTeamId');
-        const defaultId = responseData.defaultTeamId || responseData.teams[0]?.id;
-        const teamExists = stored && responseData.teams.some(t => t.id === stored);
-        const effective = teamExists ? stored : defaultId;
-        
-        if (effective) {
-          setSelectedTeamId(prev => {
-            if (effective !== prev) {
-              localStorage.setItem('releaseVersionSelectedTeamId', effective);
-              console.log(`[TeamContext] Auto-selected team: ${effective}`);
-            }
-            return effective;
-          });
+    if (effective) {
+      setSelectedTeamId((prev) => {
+        if (effective !== prev) {
+          localStorage.setItem(TEAM_STORAGE_KEY, effective);
         }
-        
-        console.log(`[TeamContext] Loaded ${responseData.teams.length} teams`);
-      } else {
-        console.error('[TeamContext] Invalid response format:', responseData);
-        setError('Invalid teams data received');
-      }
-    } catch (error) {
-      console.error('[TeamContext] Failed to fetch teams config:', error);
-      setError('Failed to load teams configuration: ' + (error?.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
+        return effective;
+      });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return list;
   }, []);
 
-  // Fetch teams once on mount
+  const fetchTeams = useCallback(async (opts = {}) => {
+    const force = opts.force === true;
+    if (inFlightRef.current && !force) {
+      return inFlightRef.current;
+    }
+
+    const run = (async () => {
+      setLoading(true);
+      setError('');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TEAMS_FETCH_TIMEOUT_MS);
+      try {
+        const { headers: authHeaders } = getAuthHeaders();
+        const response = await fetch(`${getApiBase()}/api/config/teams`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const responseData = await response.json();
+        if (!responseData || !Array.isArray(responseData.teams)) {
+          throw new Error('Invalid teams data received');
+        }
+        applyTeamsPayload(responseData);
+      } catch (fetchError) {
+        if (fetchError.name === 'AbortError') {
+          setError('Timed out loading teams. Retry to try again.');
+        } else {
+          setError('Failed to load teams: ' + (fetchError?.message || 'Unknown error'));
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        inFlightRef.current = null;
+      }
+    })();
+
+    inFlightRef.current = run;
+    return run;
+  }, [applyTeamsPayload]);
+
+  const updateTeam = useCallback((teamId, patch) => {
+    setTeams((prev) =>
+      prev.map((team) =>
+        String(team.id || '').trim().toLowerCase() === String(teamId || '').trim().toLowerCase()
+          ? { ...team, ...patch }
+          : team
+      )
+    );
+  }, []);
+
+  const replaceTeams = useCallback((nextTeams) => {
+    if (!Array.isArray(nextTeams)) return;
+    setTeams(nextTeams);
+  }, []);
+
+  const upsertTeam = useCallback((team) => {
+    if (!team || !team.id) return;
+    const id = String(team.id).trim().toLowerCase();
+    setTeams((prev) => {
+      const idx = prev.findIndex((t) => String(t.id || '').trim().toLowerCase() === id);
+      if (idx === -1) return [...prev, team];
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...team };
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     fetchTeams();
   }, [fetchTeams]);
 
-  // Listen for storage changes (team selection from other tabs)
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'releaseVersionSelectedTeamId' && e.newValue !== selectedTeamId) {
-        console.log('[TeamContext] Team changed in another tab');
+      if (e.key === TEAM_STORAGE_KEY && e.newValue !== selectedTeamId) {
         changeTeam(e.newValue || '');
       }
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [selectedTeamId, changeTeam]);
 
-  // Cleanup on unmount
   useEffect(() => {
     const activeRequests = activeRequestsRef.current;
     const teamChangeCallbacks = teamChangeCallbacksRef.current;
-    
     return () => {
-      // Cancel any pending requests
-      activeRequests.forEach(controller => {
+      activeRequests.forEach((controller) => {
         if (controller && typeof controller.abort === 'function') {
           controller.abort();
         }
@@ -219,8 +216,14 @@ export const TeamProvider = ({ children }) => {
     };
   }, []);
 
-  const contextValue = {
-    // Team state
+  const selectedTeam = useMemo(
+    () => findTeamById(teams, selectedTeamId),
+    [teams, selectedTeamId]
+  );
+
+  const hasTeamSelected = Boolean(selectedTeamId);
+
+  const contextValue = useMemo(() => ({
     teams,
     selectedTeamId,
     selectedTeam,
@@ -228,19 +231,32 @@ export const TeamProvider = ({ children }) => {
     loading,
     error,
     isTransitioning,
-    
-    // Actions
     changeTeam,
     fetchTeams,
     clearTeamData,
-    
-    // Utilities for components
+    updateTeam,
+    replaceTeams,
+    upsertTeam,
     registerTeamChangeCallback,
     registerApiRequest,
-    
-    // Computed values
-    showTeamSelector: true
-  };
+    showTeamSelector: true,
+  }), [
+    teams,
+    selectedTeamId,
+    selectedTeam,
+    hasTeamSelected,
+    loading,
+    error,
+    isTransitioning,
+    changeTeam,
+    fetchTeams,
+    clearTeamData,
+    updateTeam,
+    replaceTeams,
+    upsertTeam,
+    registerTeamChangeCallback,
+    registerApiRequest,
+  ]);
 
   return (
     <TeamContext.Provider value={contextValue}>

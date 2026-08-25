@@ -1,24 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { authenticatedGet } from '../../utils/api';
+import { useTeam } from '../../contexts/TeamContext';
 import TeamOnboardingWizard from './TeamOnboardingWizard';
 import TeamList from './TeamList';
 import './AdminPanel.css';
 
+function pickerTeam(team) {
+  if (!team) return team;
+  const { userConfig: _userConfig, kpiCount: _kpiCount, ...rest } = team;
+  return rest;
+}
+
 function AdminPanel() {
+  const { replaceTeams, upsertTeam, updateTeam, changeTeam } = useTeam();
   const [activeView, setActiveView] = useState('teams');
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editingTeam, setEditingTeam] = useState(null);
+  const [syncNotice, setSyncNotice] = useState('');
 
-  useEffect(() => {
-    loadTeams();
-  }, []);
-
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await authenticatedGet('/api/admin/teams', {
         jiraToken: localStorage.getItem('jiraToken'),
@@ -26,25 +31,42 @@ function AdminPanel() {
       });
 
       if (response.data.success) {
-        setTeams(response.data.teams);
+        const list = response.data.teams || [];
+        setTeams(list);
+        replaceTeams(list.map(pickerTeam));
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load teams');
     }
-    
+
     setLoading(false);
-  };
+  }, [replaceTeams]);
+
+  useEffect(() => {
+    loadTeams();
+  }, [loadTeams]);
+
+  useEffect(() => {
+    if (!syncNotice) return undefined;
+    const id = setTimeout(() => setSyncNotice(''), 6000);
+    return () => clearTimeout(id);
+  }, [syncNotice]);
 
   const handleTeamCreated = (newTeam) => {
     setTeams(prev => [...prev, { ...newTeam, userConfig: null, kpiCount: 0 }]);
+    upsertTeam(pickerTeam(newTeam));
+    if (newTeam?.id) changeTeam(newTeam.id);
+    setSyncNotice(`${newTeam?.name || 'New team'} is now in the Team dropdown.`);
     setActiveView('teams');
     setEditingTeam(null);
   };
 
   const handleTeamUpdated = (updatedTeam) => {
-    setTeams(prev => prev.map(team => 
+    setTeams(prev => prev.map(team =>
       team.id === updatedTeam.id ? { ...updatedTeam, userConfig: team.userConfig, kpiCount: team.kpiCount } : team
     ));
+    updateTeam(updatedTeam.id, pickerTeam(updatedTeam));
+    setSyncNotice(`${updatedTeam?.name || 'Team'} was updated in the Team dropdown.`);
     setActiveView('teams');
     setEditingTeam(null);
   };
@@ -151,6 +173,23 @@ function AdminPanel() {
           </button>
         )}
       </div>
+
+      {syncNotice && (
+        <div
+          role="status"
+          style={{
+            marginBottom: '16px',
+            padding: '10px 14px',
+            backgroundColor: '#ecfdf5',
+            border: '1px solid #6ee7b7',
+            borderRadius: '6px',
+            color: '#065f46',
+            fontSize: '14px',
+          }}
+        >
+          {syncNotice}
+        </div>
+      )}
 
       {/* Navigation Tabs & Quick Actions */}
       {activeView === 'teams' && (

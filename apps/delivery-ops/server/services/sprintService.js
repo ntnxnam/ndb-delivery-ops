@@ -1,11 +1,10 @@
 const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
-const teamBoardConfig = require('../config/teamBoardConfig.json');
 const { retryJiraCall, createHttpsAgent } = require('./jiraService');
 const { getSprintsForBoard, classifySprintIssue, getAddedToSprintAt } = require('../utils/sprintCache');
 const { runWithConcurrency } = require('../utils/concurrency');
 const { buildSprintReportJql } = require('../utils/jiraQueryUtils');
-const { loadKpiConfigSync, getKpisForTeam } = require('../utils/teamConfig');
+const { loadKpiConfigSync, getKpisForTeam, getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
 const { fetchAllChangelogHistories } = require('../utils/changelogPagination');
 const logger = require('../utils/logger');
 
@@ -15,9 +14,13 @@ const SPRINT_REPORT_BY_RANGE_MAX_SPRINTS = 20;
 const SPRINT_REPORT_BY_RANGE_MAX_DAYS = 365 * 2;
 
 function getTeam(teamId) {
-  const teams = teamBoardConfig.teams || [];
-  const effectiveTeamId = teamId || teamBoardConfig.defaultTeamId;
-  return { team: teams.find((t) => t.id === effectiveTeamId) || teams[0], effectiveTeamId };
+  const config = loadTeamBoardConfig();
+  const team = getTeamById(teamId) || getTeamById(config.defaultTeamId) || (config.teams || [])[0];
+  return { team, effectiveTeamId: (team && team.id) || teamId || config.defaultTeamId };
+}
+
+function boardConfig() {
+  return loadTeamBoardConfig() || {};
 }
 
 function getSprintMetrics({ totalInSprint, addedAfterStart, inProgress, pendingQA, completedInSprint, removedFromSprint = 0 }) {
@@ -126,13 +129,13 @@ async function buildSprintReport({ token, teamId, sprintId }) {
   const { team, effectiveTeamId } = getTeam(teamId);
   const boardId = team ? team.boardId : null;
   if (!boardId) throw Object.assign(new Error('Team has no board configured'), { statusCode: 400 });
-  const sprintFieldId = teamBoardConfig.sprintFieldId;
-  if (!sprintFieldId) throw Object.assign(new Error('sprintFieldId is not configured in teamBoardConfig.json'), { statusCode: 500 });
+  const sprintFieldId = boardConfig().sprintFieldId;
+  if (!sprintFieldId) throw Object.assign(new Error('sprintFieldId is not configured in boardConfig().json'), { statusCode: 500 });
   const sprintMap = await getSprintsForBoard(boardId, token, createHttpsAgent());
   const sprintInfo = sprintMap.get(Number(sprintId));
   if (!sprintInfo) throw Object.assign(new Error(`Sprint ${sprintId} not found for this board.`), { statusCode: 400 });
 
-  const storyPointsFieldId = teamBoardConfig.storyPointsFieldId || null;
+  const storyPointsFieldId = boardConfig().storyPointsFieldId || null;
   const jql = buildSprintReportJql(sprintId, effectiveTeamId);
   const fieldsList = `key,summary,status,resolution,resolutiondate,issuetype,priority,assignee,${sprintFieldId}${storyPointsFieldId ? `,${storyPointsFieldId}` : ''}`;
   const allIssues = await fetchAllIssues({ token, jql, fieldsList });
@@ -171,7 +174,7 @@ async function buildSprintReport({ token, teamId, sprintId }) {
 
   const totalInSprint = allIssues.length;
   const metrics = getSprintMetrics({ totalInSprint, addedAfterStart, inProgress, pendingQA, completedInSprint, removedFromSprint });
-  const pendingQAStatusName = teamBoardConfig.pendingQAStatusName || 'Resolved';
+  const pendingQAStatusName = boardConfig().pendingQAStatusName || 'Resolved';
   const jqlByMetric = {
     totalInSprint: jql,
     addedAfterStart: addedAfterStartJql,
@@ -209,9 +212,9 @@ async function buildSprintReportByRange({ token, teamId, startDate, endDate, com
   }
   const { team, effectiveTeamId } = getTeam(teamId);
   if (!team?.boardId) throw Object.assign(new Error('Team has no board configured'), { statusCode: 400 });
-  const sprintFieldId = teamBoardConfig.sprintFieldId;
-  if (!sprintFieldId) throw Object.assign(new Error('sprintFieldId is not configured in teamBoardConfig.json'), { statusCode: 500 });
-  const storyPointsFieldId = teamBoardConfig.storyPointsFieldId || null;
+  const sprintFieldId = boardConfig().sprintFieldId;
+  if (!sprintFieldId) throw Object.assign(new Error('sprintFieldId is not configured in boardConfig().json'), { statusCode: 500 });
+  const storyPointsFieldId = boardConfig().storyPointsFieldId || null;
   const fieldsList = `key,summary,status,resolution,resolutiondate,issuetype,priority,assignee,components,created,${sprintFieldId}${storyPointsFieldId ? `,${storyPointsFieldId}` : ''}`;
   const compNames = (Array.isArray(componentNames) ? componentNames.filter(Boolean) : []).slice(0, 5);
   const sprintMap = await getSprintsForBoard(team.boardId, token, createHttpsAgent(), 'closed');
@@ -258,7 +261,7 @@ async function buildSprintReportByRange({ token, teamId, startDate, endDate, com
       removedFromSprint = removedRes.data?.total ?? 0;
     } catch (_) {}
     const metrics = getSprintMetrics({ totalInSprint: allIssues.length, addedAfterStart, inProgress, pendingQA, completedInSprint, removedFromSprint });
-    const pendingQAStatusName = teamBoardConfig.pendingQAStatusName || 'Resolved';
+    const pendingQAStatusName = boardConfig().pendingQAStatusName || 'Resolved';
     reports.push({
       sprintId: sprintInfo.id,
       sprintName: sprintInfo.name,
@@ -307,8 +310,8 @@ async function getSprintKpiBreakdown({ token, teamId, sprintId, sprintName }) {
   if (!team?.boardId) throw Object.assign(new Error('Team has no boardId configured'), { statusCode: 400 });
   const { kpis } = getKpisForTeam(loadKpiConfigSync(), effectiveTeamId);
   if (!kpis || kpis.length === 0) return { success: true, kpiBreakdown: [], note: 'No KPIs configured for this team.' };
-  const pendingQAStatusName = teamBoardConfig.pendingQAStatusName || 'Resolved';
-  const completedStatusName = teamBoardConfig.completedStatusName || 'Closed';
+  const pendingQAStatusName = boardConfig().pendingQAStatusName || 'Resolved';
+  const completedStatusName = boardConfig().completedStatusName || 'Closed';
   const sprintBaseFilter = team.sprintBaseFilter || team.baseFilter || '';
   const trueSprint = sprintBaseFilter ? `(${sprintBaseFilter}) AND sprint in ("${sprintName}")` : `sprint in ("${sprintName}")`;
   const kpiTasks = kpis.map((kpi) => async () => {
@@ -348,7 +351,7 @@ async function getSprintReportTrends({ token, teamId, sprintIds }) {
   if (ids.length === 0) throw Object.assign(new Error('sprintIds array is required'), { statusCode: 400 });
   const { team, effectiveTeamId } = getTeam(teamId);
   const boardId = team ? team.boardId : null;
-  const sprintFieldId = teamBoardConfig.sprintFieldId;
+  const sprintFieldId = boardConfig().sprintFieldId;
   if (!boardId || !sprintFieldId) throw Object.assign(new Error('Team boardId/sprintFieldId not configured'), { statusCode: 400 });
   const sprintMap = await getSprintsForBoard(boardId, token, createHttpsAgent());
   const maxChangelogForTrends = 15;

@@ -1,6 +1,7 @@
 /**
  * Sprint Report page: past sprint report, current sprint report, or trends by team.
- * Team from header; base query from config; user selects sprint(s) and runs report.
+ * Team from the shared sidebar selector; sprint JQL is scoped by the team's
+ * sprintBaseFilter (or baseFilter). User selects sprint(s) and runs the report.
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -11,9 +12,9 @@ import {
 import { formatters } from '../shared/utils/formatters';
 import { useTeam } from '../contexts/TeamContext';
 import { authenticatedPost, authenticatedGet, getApiBase, getAuthHeaders } from '../utils/api';
-import { useTeams } from '../hooks/useTeams';
 import { useTeamDataset } from '../hooks/useTeamDataset';
 import { derivePastSprintReportFromBundle } from '../release/utils/bundleUtils';
+import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 
 const API_BASE = getApiBase();
@@ -57,8 +58,6 @@ export default function SprintReportPage() {
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
   const { selectedTeamId: teamId, hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
   const { bundle, syncMeta } = useTeamDataset();
-
-  const [teams, setTeams] = useState([]);
   const [sprints, setSprints] = useState([]);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [mode, setMode] = useState(MODES.CURRENT);
@@ -87,17 +86,7 @@ export default function SprintReportPage() {
   const [pastValidationError, setPastValidationError] = useState(null);
   const [refreshingLive, setRefreshingLive] = useState(false);
 
-  const team = teams.find((t) => t.id === teamId) || null;
-  const baseFilter = team?.baseFilter || '';
-
-  const { teams: fetchedTeams } = useTeams();
-
-  useEffect(() => {
-    if (fetchedTeams.length) setTeams(fetchedTeams);
-  }, [fetchedTeams]);
-
-  // The team context is now handled by TeamProvider with automatic cleanup
-
+  const baseFilter = selectedTeam?.baseFilter || selectedTeam?.sprintBaseFilter || '';
 
   /**
    * Fetch sprints for the current team. Only used when mode is CURRENT or TRENDS (sprint dropdown / trend picker).
@@ -586,17 +575,10 @@ export default function SprintReportPage() {
 
   if (!hasTeamSelected) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ backgroundColor: '#fff3cd', padding: '2rem', borderRadius: '8px', maxWidth: '600px', margin: '0 auto' }}>
-          <h2 style={{ color: '#856404', margin: '0 0 1rem 0' }}>Select a Team</h2>
-          <p style={{ color: '#856404', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
-            Please select a team from the header to access sprint reports and analytics.
-          </p>
-          <p style={{ color: '#856404', margin: 0, fontSize: '0.9rem' }}>
-            The Sprint Report page provides detailed sprint analytics, progress tracking, and team performance metrics.
-          </p>
-        </div>
-      </div>
+      <TeamRequiredGate
+        selectorId="sprint-report-team-select"
+        description="Sprint reports use this team's sprint base query (sprintBaseFilter, falling back to baseFilter)."
+      />
     );
   }
 
@@ -630,11 +612,11 @@ export default function SprintReportPage() {
         </button>
       </div>
 
-      {team && (
+      {selectedTeam && (
         <p style={{ marginBottom: '1rem', color: '#6c757d', fontSize: '0.875rem' }}>
-          Team: <strong>{team.name}</strong>
-          {team.boardId != null && (
-            <span style={{ marginLeft: '1rem' }}>Board: {team.boardId}</span>
+          Team: <strong>{selectedTeam.name}</strong>
+          {selectedTeam.boardId != null && (
+            <span style={{ marginLeft: '1rem' }}>Board: {selectedTeam.boardId}</span>
           )}
         </p>
       )}

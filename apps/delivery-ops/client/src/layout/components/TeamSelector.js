@@ -25,6 +25,9 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
   } = useTeam();
 
   const isSidebar = variant === 'sidebar';
+  const wrapperStyle = isSidebar
+    ? undefined
+    : { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginRight: '12px' };
   const selectClass = isSidebar
     ? `team-select ${isTransitioning ? 'transitioning' : ''}`
     : 'text-input';
@@ -37,7 +40,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
 
   if (loading && teams.length === 0) {
     return (
-      <div className={isSidebar ? 'team-selector' : undefined} style={isSidebar ? undefined : { display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
         <span style={{ fontSize: '0.85rem', color: isSidebar ? '#ccc' : '#6c757d', fontStyle: 'italic' }}>
           Loading teams…
@@ -48,7 +51,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
 
   if (error && teams.length === 0) {
     return (
-      <div className={isSidebar ? 'team-selector' : undefined} style={isSidebar ? undefined : { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
         <span style={{ fontSize: '0.8rem', color: isSidebar ? '#f8d7da' : '#721c24' }}>
           Couldn’t load teams
@@ -74,7 +77,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
 
   if (teams.length === 0) {
     return (
-      <div className={isSidebar ? 'team-selector' : undefined} style={isSidebar ? undefined : { display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
         <span style={{ fontSize: '0.85rem', color: isSidebar ? '#ccc' : '#6c757d' }}>
           No teams configured
@@ -84,7 +87,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
   }
 
   return (
-    <div className={isSidebar ? 'team-selector' : undefined} style={isSidebar ? undefined : { display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
       {label}
       <select
         id={id}

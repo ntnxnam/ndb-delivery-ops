@@ -13,8 +13,13 @@ const { formatDate } = require('../utils/dateFormatter');
 const jiraConfig = require('../config/jiraConfig.json');
 const releaseVersionsCCConfig = require('../config/releaseVersionsCCConfig.json');
 
+const {
+  loadTeamBoardConfig,
+  saveTeamBoardConfig,
+  getTeamById,
+} = require('../utils/teamConfig');
+
 const KPI_CONFIG_PATH = path.join(__dirname, '../config/kpiConfig.json');
-const TEAM_BOARD_CONFIG_PATH = path.join(__dirname, '../config/teamBoardConfig.json');
 const RELEASE_VERSIONS_COLUMNS_CONFIG_PATH = path.join(__dirname, '../config/releaseVersionsColumnsConfig.json');
 const RELEASE_VERSIONS_EMAIL_CONFIG_PATH = path.join(__dirname, '../config/releaseVersionsEmailConfig.json');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
@@ -74,22 +79,6 @@ function saveKpiConfig(config) {
 
 function getUsername(req) {
   return req.headers['x-username'] || req.body?.username || req.query?.username || '';
-}
-
-function loadTeamBoardConfig() {
-  let config = { teams: [], defaultTeamId: null };
-  try {
-    const raw = fs.readFileSync(TEAM_BOARD_CONFIG_PATH, 'utf8');
-    if (raw && raw.trim()) config = JSON.parse(raw);
-  } catch (e) {
-    // ignore
-  }
-  if (!Array.isArray(config.teams)) config.teams = [];
-  return config;
-}
-
-function saveTeamBoardConfig(config) {
-  fs.writeFileSync(TEAM_BOARD_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
 }
 
 function loadReleaseDatesConfig() {
@@ -342,13 +331,13 @@ router.post('/team-base-filter', express.json(), (req, res) => {
   }
   try {
     const config = loadTeamBoardConfig();
-    const team = config.teams && config.teams.find((t) => t.id === teamId);
+    const team = getTeamById(teamId);
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
     team.baseFilter = baseFilter != null ? String(baseFilter).trim() : '';
-    saveTeamBoardConfig(config);
-    res.json({ success: true, teams: config.teams });
+    const saved = saveTeamBoardConfig(config);
+    res.json({ success: true, teams: saved.teams, team });
   } catch (err) {
     console.error('Error saving team base filter:', err);
     res.status(500).json({ error: 'Failed to save team base filter' });

@@ -79,9 +79,9 @@ Headers: x-jira-token, x-username
 Body: { id, name, displayName, boardId, baseFilterId, kpiConfig? }
 ```
 
-**Server flow**: `admin.js → reads teamBoardConfig.json → appends new team → writes file`  
-**Returns**: `{ success: true, teams: [...updated] }`  
-**Side effect**: in-memory team list cache is invalidated
+**Server flow**: `admin.js → reads teamBoardConfig.json → appends new team → writes file → invalidateTeamBoardCache()`  
+**Returns**: `{ success: true, team: { id, name, ... }, message }`  
+**Side effect**: in-memory `teamBoardConfig` cache is invalidated. The Admin UI immediately `upsertTeam`s into `TeamContext` and `changeTeam`s to the new team so the sidebar/page Team dropdown shows and selects it in the same session — no refresh. Opening Admin also `replaceTeams` from `GET /api/admin/teams` so teams created earlier in the session appear in the picker.
 
 ---
 

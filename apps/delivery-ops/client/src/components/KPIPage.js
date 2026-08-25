@@ -1,13 +1,15 @@
 /**
  * KPIs page: per-team KPI list (name + base query + display type) and admin add/delete.
  * Widget section: trendy cards showing count or list per KPI.
- * Team is taken from the global header selection (same as Release Versions).
+ * Team is taken from the shared sidebar selector (TeamContext).
+ * KPI query = team.baseFilter AND kpi.baseQuery.
  * Only visible to users in kpiTabAllowedUsers.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { authenticatedGet, authenticatedPost, authenticatedDelete, getApiBase } from '../utils/api';
-import { useTeams } from '../hooks/useTeams';
+import { useTeam } from '../contexts/TeamContext';
+import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 
 const API_BASE = getApiBase();
@@ -239,8 +241,7 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
 }
 
 export default function KPIPage() {
-  const [teams, setTeams] = useState([]);
-  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const { selectedTeamId, selectedTeam, replaceTeams, updateTeam, hasTeamSelected } = useTeam();
   const [kpis, setKpis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -257,27 +258,12 @@ export default function KPIPage() {
   const [savingBaseFilter, setSavingBaseFilter] = useState(false);
   const [editingBaseFilter, setEditingBaseFilter] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [currentTeamId, setCurrentTeamId] = useState(() => 
-    selectedTeamId || localStorage.getItem('releaseVersionSelectedTeamId') || ''
-  );
 
-  const teamId = currentTeamId;
+  const teamId = selectedTeamId;
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
-  const currentTeam = teams.find((t) => t.id === teamId);
+  const currentTeam = selectedTeam;
   const currentTeamBaseFilter = (currentTeam && currentTeam.baseFilter) ? String(currentTeam.baseFilter) : '';
-
-  const { teams: fetchedTeams, error: teamsError } = useTeams();
-
-  useEffect(() => {
-    if (!fetchedTeams.length) return;
-    setTeams(fetchedTeams);
-    if (teamsError) setError(teamsError);
-    const stored = localStorage.getItem('releaseVersionSelectedTeamId');
-    const defaultId = fetchedTeams[0]?.id;
-    const effective = stored && fetchedTeams.some((t) => t.id === stored) ? stored : defaultId;
-    setSelectedTeamId(effective || '');
-  }, [fetchedTeams, teamsError]);
 
   const fetchKpis = useCallback(async () => {
     if (!teamId) {
@@ -304,46 +290,9 @@ export default function KPIPage() {
     }
   }, [teamId, jiraToken, username]);
 
-  // Track team changes and clear widget results when team changes
   useEffect(() => {
-    const newTeamId = selectedTeamId || localStorage.getItem('releaseVersionSelectedTeamId') || '';
-    if (newTeamId !== currentTeamId) {
-      setCurrentTeamId(newTeamId);
-      // Clear widget results when team changes to avoid showing stale data
-      setWidgetResults(null);
-    }
-  }, [selectedTeamId, currentTeamId]);
-
-  // Listen for team changes in localStorage (for when user changes team via dropdown)
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'releaseVersionSelectedTeamId') {
-        const newTeamId = e.newValue || '';
-        if (newTeamId !== currentTeamId) {
-          setCurrentTeamId(newTeamId);
-          setWidgetResults(null);
-        }
-      }
-    };
-
-    // Listen for storage changes from other tabs/windows
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also poll periodically for changes within the same tab
-    const pollInterval = setInterval(() => {
-      const newTeamId = selectedTeamId || localStorage.getItem('releaseVersionSelectedTeamId') || '';
-      if (newTeamId !== currentTeamId) {
-        setCurrentTeamId(newTeamId);
-        setWidgetResults(null);
-      }
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(pollInterval);
-    };
-  }, [selectedTeamId, currentTeamId]);
-
+    setWidgetResults(null);
+  }, [teamId]);
 
   useEffect(() => {
     fetchKpis();
@@ -437,15 +386,12 @@ export default function KPIPage() {
     setSavingBaseFilter(true);
     setError('');
     try {
-      await authenticatedPost(`${API_BASE}/api/config/team-base-filter`, { teamId, baseFilter: teamBaseFilterEdit }, { jiraToken, username });
-      // Update the team in local state
-      setTeams(prevTeams => 
-        prevTeams.map(team => 
-          team.id === teamId 
-            ? { ...team, baseFilter: teamBaseFilterEdit }
-            : team
-        )
-      );
+      const res = await authenticatedPost(`${API_BASE}/api/config/team-base-filter`, { teamId, baseFilter: teamBaseFilterEdit }, { jiraToken, username });
+      if (Array.isArray(res.data?.teams)) {
+        replaceTeams(res.data.teams);
+      } else {
+        updateTeam(teamId, { baseFilter: teamBaseFilterEdit });
+      }
       setEditingBaseFilter(false);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to save team base filter');
@@ -494,14 +440,23 @@ export default function KPIPage() {
     }
   };
 
-  const teamName = teams.find((t) => t.id === teamId)?.name || teamId;
+  const teamName = currentTeam?.name || teamId;
+
+  if (!hasTeamSelected) {
+    return (
+      <TeamRequiredGate
+        selectorId="kpi-team-select"
+        description="KPI widgets run as (team base filter) AND (KPI base query) for the selected team."
+      />
+    );
+  }
 
   return (
     <div className="kpi-page" style={{ padding: '1.25rem', maxWidth: '1200px', margin: '0 auto' }}>
       <h2 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 600 }}>Team KPIs</h2>
       <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#6c757d' }}>
         Team: <strong>{teamName || '—'}</strong>
-        {!teamId && ' (select a team in the header)'}
+        {' — KPIs use this team’s base filter'}
       </p>
 
       {teamId && (

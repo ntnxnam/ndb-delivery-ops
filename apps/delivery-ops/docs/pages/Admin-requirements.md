@@ -22,6 +22,7 @@ The Admin Panel provides app configuration and team onboarding management withou
 | AP-03 | As an admin, I can test JIRA connectivity and see which endpoints are reachable. |
 | AP-04 | As an admin, I can view and clear the server-side release dataset cache. |
 | AP-05 | As an admin, I can see the current permission assignments for all users in one view. |
+| AP-06 | As an admin, a team I just created or edited appears in the global Team dropdown without a browser refresh. |
 
 ---
 
@@ -68,6 +69,7 @@ The Admin Panel provides app configuration and team onboarding management withou
 | Onboarding wizard — JIRA board ID doesn't exist | Validation step fails with "Board not found" |
 | Cache clear while sync is running | Server returns 409 Conflict; show "Sync in progress — wait until complete" |
 | `teamBoardConfig.json` write fails (disk full) | Show "Config save failed — check server disk" |
+| New team saved | Team dropdown updates immediately; the new team is selected; Admin shows a short confirmation. Opening Admin also syncs any teams that were added earlier in the session. |
 
 ---
 
@@ -78,3 +80,4 @@ The Admin Panel provides app configuration and team onboarding management withou
 - [ ] Cache metadata shows accurate last-sync timestamp
 - [ ] All destructive actions (delete user, clear cache) require two-step confirmation
 - [ ] Admin panel is completely inaccessible to non-admin users (route guard + server validation)
+- [ ] Creating or editing a team updates the global Team dropdown in the same session

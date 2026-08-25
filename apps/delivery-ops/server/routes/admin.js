@@ -8,6 +8,8 @@ const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { checkFeatureAccess } = require('../services/authService');
 const { createHttpsAgent, retryJiraCall } = require('../services/jiraService');
 
+const { invalidateTeamBoardCache } = require('../utils/teamConfig');
+
 const TEAM_BOARD_CONFIG_PATH = path.join(__dirname, '../config/teamBoardConfig.json');
 const ALLOWED_USERS_CONFIG_PATH = path.join(__dirname, '../config/allowedUsers.json');
 const KPI_CONFIG_PATH = path.join(__dirname, '../config/kpiConfig.json');
@@ -312,6 +314,8 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
       });
     }
 
+    invalidateTeamBoardCache();
+
     return res.json({
       success: true,
       team: newTeam,
@@ -378,6 +382,8 @@ router.put('/teams/:teamId', requireSuperAdmin, (req, res) => {
         error: 'Failed to save team configuration'
       });
     }
+
+    invalidateTeamBoardCache();
 
     return res.json({
       success: true,

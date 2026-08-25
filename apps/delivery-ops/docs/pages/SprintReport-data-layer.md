@@ -2,22 +2,22 @@
 
 **Route**: `/sprint-report`  
 **Server routes used**: `server/routes/jira/index.js` (sprint sub-routes)  
-**Hooks**: `useTeamDataset`, `useTeams` (for team list)  
+**Hooks**: `useTeamDataset`, `useTeam` (shared `TeamContext` — no extra teams fetch)  
 **Bundle utility**: `release/utils/bundleUtils.js → derivePastSprintReportFromBundle`
 
 ---
 
 ## API Calls (client → server)
 
-### 1. Fetch team list
+### 1. Fetch team list (shared)
 
 ```
-GET /api/jira/teams?productId=ndb
-Headers: x-jira-token, x-username
+GET /api/config/teams
 ```
 
-**Server flow**: reads `server/config/teamBoardConfig.json` — no JIRA call  
-**Returns**: `[{ id, name, boardId, baseFilterId }]`
+**Server flow**: `config.js → teamConfig.loadTeamBoardConfig()` — no JIRA call  
+**Returns**: `{ teams: [{ id, name, boardId, baseFilter, sprintBaseFilter, ... }], defaultTeamId }`  
+**Context**: `TeamContext` fetches once on app mount. Sprint JQL is scoped with `sprintBaseFilter` (fallback `baseFilter`) for the selected team.
 
 ---
 

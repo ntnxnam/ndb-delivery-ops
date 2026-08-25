@@ -13,7 +13,21 @@ jest.mock('../../utils/jiraQueryUtils', () => ({
 }));
 jest.mock('../../utils/teamConfig', () => ({
   loadKpiConfigSync: jest.fn(),
-  getKpisForTeam: jest.fn()
+  getKpisForTeam: jest.fn(),
+  loadTeamBoardConfig: jest.fn(() => ({
+    defaultTeamId: 'ndb',
+    sprintFieldId: 'customfield_10360',
+    storyPointsFieldId: 'customfield_10002',
+    pendingQAStatusName: 'Resolved',
+    completedStatusName: 'Closed',
+    teams: [{ id: 'ndb', name: 'NDB', boardId: 2888, sprintBaseFilter: 'filter=NDB-All-Base-Filter' }]
+  })),
+  getTeamById: jest.fn(() => ({
+    id: 'ndb',
+    name: 'NDB',
+    boardId: 2888,
+    sprintBaseFilter: 'filter=NDB-All-Base-Filter'
+  }))
 }));
 jest.mock('../../utils/changelogPagination', () => ({
   fetchAllChangelogHistories: jest.fn()

@@ -6,6 +6,10 @@
  *   - config/kpiConfig.json       — { teams: { [teamId]: KPI[] } }
  *
  * Pulled out of server/routes/jira/index.js during Phase 2a.
+ *
+ * Team lookups are case-insensitive. The board config is cached by file
+ * mtime so getTeamBaseFilter / sprint / SoS paths do not re-parse JSON
+ * on every request; writes call invalidateTeamBoardCache().
  */
 
 const fs = require('fs');
@@ -13,6 +17,10 @@ const path = require('path');
 
 const KPI_CONFIG_PATH = path.join(__dirname, '..', 'config', 'kpiConfig.json');
 const TEAM_CONFIG_PATH = path.join(__dirname, '..', 'config', 'teamBoardConfig.json');
+
+const EMPTY_BOARD_CONFIG = { teams: [], defaultTeamId: null };
+
+let boardCache = { config: null, mtimeMs: -1 };
 
 /**
  * Normalize a teamId for consistent lookup: trim + lowercase.
@@ -22,6 +30,36 @@ const TEAM_CONFIG_PATH = path.join(__dirname, '..', 'config', 'teamBoardConfig.j
 function normalizeTeamId(teamId) {
   if (teamId == null || typeof teamId !== 'string') return '';
   return String(teamId).trim().toLowerCase();
+}
+
+/**
+ * Coerce teams to an array. Older configs stored a map keyed by id.
+ * @param {*} teams
+ * @returns {Array<object>}
+ */
+function normalizeTeamsList(teams) {
+  if (Array.isArray(teams)) return teams;
+  if (teams && typeof teams === 'object') {
+    return Object.entries(teams).map(([id, value]) => {
+      if (value && typeof value === 'object') {
+        return { ...value, id: value.id || id };
+      }
+      return { id };
+    });
+  }
+  return [];
+}
+
+/**
+ * Find a team in a list by id (case-insensitive).
+ * @param {Array|object} teams
+ * @param {string} teamId
+ * @returns {object|null}
+ */
+function findTeamInList(teams, teamId) {
+  const nid = normalizeTeamId(teamId);
+  if (!nid) return null;
+  return normalizeTeamsList(teams).find((t) => normalizeTeamId(t.id) === nid) || null;
 }
 
 /**
@@ -62,32 +100,80 @@ function getKpisForTeam(teams, teamId) {
   };
 }
 
-/**
- * Internal: load teamBoardConfig fresh (bypassing require cache) so live
- * config edits during dev take effect without restart.
- */
-function loadTeamBoardConfig() {
+function bustRequireCache() {
   try {
     delete require.cache[require.resolve(TEAM_CONFIG_PATH)];
-    return require(TEAM_CONFIG_PATH);
   } catch (e) {
-    return null;
+    // not yet required
   }
 }
 
 /**
+ * Load teamBoardConfig. Cached by file mtime so live admin edits are
+ * picked up without re-reading on every JIRA request.
+ * @returns {{ teams: Array, defaultTeamId: string|null }}
+ */
+function loadTeamBoardConfig() {
+  try {
+    // Jest mocks teamBoardConfig.json; skip mtime cache so the mock is always read.
+    const skipCache = process.env.NODE_ENV === 'test';
+    const stat = skipCache ? { mtimeMs: -2 } : fs.statSync(TEAM_CONFIG_PATH);
+    if (!skipCache && boardCache.config && boardCache.mtimeMs === stat.mtimeMs) {
+      return boardCache.config;
+    }
+    bustRequireCache();
+    const parsed = require(TEAM_CONFIG_PATH) || {};
+    const config = {
+      ...parsed,
+      teams: normalizeTeamsList(parsed.teams),
+      defaultTeamId: parsed.defaultTeamId || null,
+    };
+    boardCache = { config, mtimeMs: stat.mtimeMs };
+    return config;
+  } catch (e) {
+    console.warn('teamBoardConfig load failed:', e.message);
+    return boardCache.config || { ...EMPTY_BOARD_CONFIG, teams: [] };
+  }
+}
+
+function invalidateTeamBoardCache() {
+  boardCache = { config: null, mtimeMs: -1 };
+  bustRequireCache();
+}
+
+/**
+ * Persist teamBoardConfig and refresh the in-memory cache so the next
+ * getTeamBaseFilter call sees the new base query without a restart.
+ */
+function saveTeamBoardConfig(config) {
+  const toWrite = {
+    ...config,
+    teams: normalizeTeamsList(config && config.teams),
+  };
+  fs.writeFileSync(TEAM_CONFIG_PATH, JSON.stringify(toWrite, null, 2), 'utf8');
+  invalidateTeamBoardCache();
+  return loadTeamBoardConfig();
+}
+
+function getTeamById(teamId) {
+  const config = loadTeamBoardConfig();
+  return findTeamInList(config.teams, teamId);
+}
+
+function getTeamField(teamId, fieldName) {
+  const team = getTeamById(teamId);
+  const value = team && team[fieldName] ? String(team[fieldName]).trim() : '';
+  return value || null;
+}
+
+/**
  * Return the JQL base filter for a team (e.g. "filter=NDB-All-Base-Filter and statusCategory!=Done").
- * Returns null if the team is not configured or config can't be read.
+ * Returns null if the team is not configured or has no baseFilter.
  * @param {string} teamId
  * @returns {string|null}
  */
 function getTeamBaseFilter(teamId) {
-  const config = loadTeamBoardConfig();
-  if (!config) return null;
-  const teams = config.teams || [];
-  const team = teams.find((t) => t.id === teamId);
-  const base = (team && team.baseFilter) ? String(team.baseFilter).trim() : '';
-  return base || null;
+  return getTeamField(teamId, 'baseFilter');
 }
 
 /**
@@ -97,12 +183,7 @@ function getTeamBaseFilter(teamId) {
  * @returns {string|null}
  */
 function getTeamSprintBaseFilter(teamId) {
-  const config = loadTeamBoardConfig();
-  if (!config) return null;
-  const teams = config.teams || [];
-  const team = teams.find((t) => t.id === teamId);
-  const sprintBase = (team && team.sprintBaseFilter) ? String(team.sprintBaseFilter).trim() : '';
-  return sprintBase || null;
+  return getTeamField(teamId, 'sprintBaseFilter');
 }
 
 /**
@@ -111,18 +192,19 @@ function getTeamSprintBaseFilter(teamId) {
  * @returns {string|null}
  */
 function getTeamSosBaseFilter(teamId) {
-  const config = loadTeamBoardConfig();
-  if (!config) return null;
-  const teams = config.teams || [];
-  const team = teams.find((t) => t.id === teamId);
-  const sosBase = (team && team.sosBaseFilter) ? String(team.sosBaseFilter).trim() : '';
-  return sosBase || null;
+  return getTeamField(teamId, 'sosBaseFilter');
 }
 
 module.exports = {
   normalizeTeamId,
+  normalizeTeamsList,
+  findTeamInList,
   loadKpiConfigSync,
   getKpisForTeam,
+  loadTeamBoardConfig,
+  saveTeamBoardConfig,
+  invalidateTeamBoardCache,
+  getTeamById,
   getTeamBaseFilter,
   getTeamSprintBaseFilter,
   getTeamSosBaseFilter,

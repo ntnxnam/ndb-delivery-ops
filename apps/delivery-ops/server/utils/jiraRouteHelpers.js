@@ -12,7 +12,7 @@
  */
 
 const path = require('path');
-const teamBoardConfig = require('../config/teamBoardConfig.json');
+const { getTeamById, loadTeamBoardConfig } = require('./teamConfig');
 
 const COLUMNS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'releaseVersionsColumnsConfig.json');
 
@@ -34,12 +34,12 @@ function getDefaultReleaseBaseFilter(releaseVersion) {
 }
 
 /**
- * Look up a team object in teamBoardConfig.json by id. Returns null if not found.
+ * Look up a team object in teamBoardConfig.json by id (case-insensitive).
+ * Reads through the mtime-cached loader so a saved baseFilter is visible
+ * on the next request without a process restart.
  */
 function getTeamConfig(teamId) {
-  if (!teamId) return null;
-  const teams = teamBoardConfig.teams || [];
-  return teams.find(t => t.id === teamId) || null;
+  return getTeamById(teamId);
 }
 
 /**
@@ -100,11 +100,11 @@ function getReleaseBaseFilter(releaseVersion, teamId = null) {
  * destructure what it needs without re-loading the config.
  */
 function resolveTeam(teamId) {
-  const teams = teamBoardConfig.teams || [];
-  const effectiveTeamId = teamId || teamBoardConfig.defaultTeamId;
-  const team = teams.find(t => t.id === effectiveTeamId) || teams[0] || null;
+  const config = loadTeamBoardConfig();
+  const teams = config.teams || [];
+  const team = getTeamById(teamId) || getTeamById(config.defaultTeamId) || teams[0] || null;
   return {
-    effectiveTeamId,
+    effectiveTeamId: (team && team.id) || teamId || config.defaultTeamId || null,
     team,
     projectKey: team && team.projectKey ? team.projectKey : null,
   };

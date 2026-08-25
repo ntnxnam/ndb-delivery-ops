@@ -34,11 +34,12 @@ import { useGateTimeline } from '../release/hooks/useGateTimeline';
 import { GateChipStrip } from '../design-system';
 import ReleaseSummaryPanel from './ReleaseSummaryPanel';
 import { TeamSelector } from '../layout/components/TeamSelector';
+import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
 function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
-  const { hasTeamSelected, isTransitioning, selectedTeam, loading: teamsLoading } = useTeam();
+  const { hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
   const { syncMeta } = useTeamDataset();
   
   // Custom hooks for state management
@@ -1368,35 +1369,12 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   // Row rendering moved to ReleaseVersionTableRow component
 
 
-  if (teamsLoading && !hasTeamSelected) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ backgroundColor: '#e7f3ff', padding: '2rem', borderRadius: '8px', maxWidth: '400px', margin: '0 auto' }}>
-          <h3 style={{ color: '#0c5460', margin: '0 0 1rem 0' }}>Loading teams</h3>
-          <p style={{ color: '#0c5460', margin: 0 }}>
-            Fetching the team list…
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (!hasTeamSelected) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ backgroundColor: '#fff3cd', padding: '2rem', borderRadius: '8px', maxWidth: '600px', margin: '0 auto' }}>
-          <h2 style={{ color: '#856404', margin: '0 0 1rem 0' }}>Select a Team</h2>
-          <p style={{ color: '#856404', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
-            Choose a team to load release version data.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-            <TeamSelector variant="page" id="project-status-team-select" />
-          </div>
-          <p style={{ color: '#856404', margin: 0, fontSize: '0.9rem' }}>
-            Project Status shows payload tracking, Gantt charts, and email generation for the selected team.
-          </p>
-        </div>
-      </div>
+      <TeamRequiredGate
+        selectorId="project-status-team-select"
+        description="Project Status shows payload tracking, Gantt charts, and email generation for the selected team's base query."
+      />
     );
   }
 

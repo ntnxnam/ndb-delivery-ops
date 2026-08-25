@@ -57,12 +57,12 @@ import './ReleaseBriefPage.css';
 
 export default function ReleaseBriefPage() {
   const { name: nameFromUrl } = useParams();
-  const { selectedTeamId, teams } = useTeam();
+  const { selectedTeamId, selectedTeam } = useTeam();
   const { jiraBaseUrl } = useJiraConfig();
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || '';
 
-  const team = teams?.find((t) => t.id === selectedTeamId);
+  const team = selectedTeam;
 
   const {
     ready,

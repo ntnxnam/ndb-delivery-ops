@@ -140,6 +140,7 @@ Headers: x-jira-token, x-username
 
 | Scenario | HTTP code | Client behaviour |
 |----------|-----------|-----------------|
+| Teams config fetch failed | 5xx / network | Team dropdown stays visible with Retry; stored team id still counts as selected |
 | JIRA token invalid | 401 | Redirect to login |
 | Release not found in JIRA | 404 | Show "Release not found" empty state |
 | JIRA search timeout (>30 s) | 504 | Show error + "Retry" button |

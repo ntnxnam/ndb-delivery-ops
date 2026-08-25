@@ -1,30 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { useTeam } from '../../contexts/TeamContext';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
+import { TeamSelector } from './TeamSelector';
 
 export const Header = () => {
   const { user, testConnectionAndRefreshPermissions } = useAuth();
-  const { 
-    teams, 
-    selectedTeamId, 
-    changeTeam, 
-    showTeamSelector, 
-    isTransitioning,
-    loading: teamsLoading
-  } = useTeam();
   const { refreshVersionsAndResetDefault } = useSelectedRelease();
-
-  // Debug logging
-  console.log('[Header] Team selector debug:', {
-    teamsCount: teams.length,
-    selectedTeamId,
-    showTeamSelector,
-    teamsLoading,
-    teams: teams.map(t => ({ id: t.id, name: t.name }))
-  });
   const { success: showSuccess, error: showError } = useNotifications();
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
@@ -72,36 +55,7 @@ export const Header = () => {
         </div>
 
         <div className="header-center">
-          {showTeamSelector && teams.length > 0 && (
-            <div className="team-selector">
-              <label htmlFor="team-select">
-                Team:
-              </label>
-              <select
-                id="team-select"
-                value={selectedTeamId}
-                onChange={(e) => changeTeam(e.target.value)}
-                className={`team-select ${isTransitioning ? 'transitioning' : ''}`}
-                disabled={teamsLoading || isTransitioning}
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              {isTransitioning && (
-                <span className="transition-indicator">
-                  ⏳
-                </span>
-              )}
-            </div>
-          )}
-          {teamsLoading && (
-            <div className="teams-loading">
-              Loading teams...
-            </div>
-          )}
+          <TeamSelector variant="page" id="header-team-select" />
         </div>
 
         <div className="header-right">
