@@ -4,7 +4,7 @@
  * Reuses the same formatting logic as the UI but outputs HTML strings
  */
 
-import { getAllUniqueDates, getHistoryForField } from './dateHistoryProcessing';
+import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
 
 /**
  * Generate HTML table for email from release version items
@@ -64,117 +64,6 @@ export function generateTableHTMLForEmail(
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
-  };
-
-  // Helper to format a single date as HTML string (dd/MMM/yyyy)
-  const formatDateHTML = (dateValue) => {
-    if (!dateValue) return 'Not Set';
-
-    let date;
-    if (typeof dateValue === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateValue)) {
-        date = new Date(dateValue);
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-        date = new Date(dateValue + 'T00:00:00');
-      } else {
-        date = new Date(dateValue);
-      }
-    } else if (dateValue instanceof Date) {
-      date = dateValue;
-    } else {
-      return 'Not Set';
-    }
-
-    if (isNaN(date.getTime())) {
-      return 'Not Set';
-    }
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[date.getMonth()];
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
-  };
-
-  // Helper to format date with history as HTML string
-  const formatDateWithHistoryHTML = (itemKey, fieldName, currentDate) => {
-    const history = getHistoryForField(itemKey, fieldName, checkpointHistory);
-    const sortedDates = getAllUniqueDates(history, currentDate);
-    
-    if (sortedDates.length === 0) {
-      if (!currentDate) {
-        return '<span style="color: #999; font-style: italic;">Not Set</span>';
-      }
-      return formatDateHTML(currentDate);
-    }
-    
-    // If only one date, just show it
-    if (sortedDates.length === 1) {
-      return formatDateHTML(sortedDates[0]);
-    }
-    
-    // Always identify latest (most recent) and oldest (earliest) dates
-    // sortedDates is already sorted newest first (reverse chronological)
-    const latestDate = sortedDates[0]; // Most recent date
-    const oldestDate = sortedDates[sortedDates.length - 1]; // Earliest date
-    
-    // Determine if dates moved forward (earlier) or backward (delayed)
-    const isDelayed = latestDate > oldestDate; // Latest is after oldest = delayed
-    const movedForward = latestDate < oldestDate; // Latest is before oldest = moved forward
-    
-    // Calculate the difference (always positive, but show direction)
-    let differenceText = '';
-    if (sortedDates.length > 1) {
-      const diffMs = Math.abs(latestDate.getTime() - oldestDate.getTime());
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 3) {
-        differenceText = isDelayed 
-          ? `+${diffDays} ${diffDays === 1 ? 'day' : 'days'}`
-          : movedForward 
-            ? `-${diffDays} ${diffDays === 1 ? 'day' : 'days'}`
-            : '';
-      } else {
-        const weeks = diffDays / 7;
-        const halfWeeks = Math.round(weeks * 2) / 2;
-        
-        if (halfWeeks === Math.floor(halfWeeks)) {
-          differenceText = isDelayed
-            ? `+${halfWeeks} ${halfWeeks === 1 ? 'week' : 'weeks'}`
-            : movedForward
-              ? `-${halfWeeks} ${halfWeeks === 1 ? 'week' : 'weeks'}`
-              : '';
-        } else {
-          differenceText = isDelayed
-            ? `+${halfWeeks} weeks`
-            : movedForward
-              ? `-${halfWeeks} weeks`
-              : '';
-        }
-      }
-    }
-    
-    // Newest (current) first, then every earlier unique date. Net delta on the oldest.
-    const dateColor = isDelayed ? '#de350b' : movedForward ? '#0066cc' : '#28a745';
-    const deltaColor = isDelayed ? '#de350b' : movedForward ? '#0066cc' : '#666';
-    const formattedLatestDate = formatDateHTML(latestDate);
-    const historicalDatesNewestFirst = sortedDates.slice(1);
-
-    let dateHTML = `<span style="color: ${dateColor}; font-weight: 600;">${escapeHtml(formattedLatestDate)}</span>`;
-
-    historicalDatesNewestFirst.forEach((date, index) => {
-      const isOldest = index === historicalDatesNewestFirst.length - 1;
-      const formatted = formatDateHTML(date);
-      dateHTML += '<br/>';
-      dateHTML += '<span style="color: #666;">←</span> ';
-      dateHTML += `<span style="text-decoration: line-through; color: #999; font-size: 11px;">${escapeHtml(formatted)}</span>`;
-      if (isOldest && differenceText) {
-        dateHTML += `<span style="color: ${deltaColor}; font-size: 10px; margin-left: 4px; font-weight: 500;">(${escapeHtml(differenceText)})</span>`;
-      }
-    });
-
-    return dateHTML;
   };
 
   // Helper to format team contacts in a single column (similar to checkpoint dates)
@@ -291,7 +180,7 @@ export function generateTableHTMLForEmail(
       const styleAttr = combinedStyle ? ` style="${combinedStyle}"` : '';
 
       // Format date with history as HTML
-      const dateHTML = formatDateWithHistoryHTML(item.key, date.field, date.value);
+      const dateHTML = formatDateWithHistoryHTML(item.key, date.field, date.value, checkpointHistory);
 
       datesHTML += `<div${styleAttr} style="margin-bottom: ${index < dates.length - 1 ? '8px' : '0'};${combinedStyle ? '' : ''}">
         <div style="font-weight: 600; color: #495057; margin-bottom: 2px; font-size: 10px;">${escapeHtml(date.label)}:</div>

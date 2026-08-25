@@ -1,11 +1,13 @@
 /**
  * Build an email-safe HTML snapshot from SoS page state already in memory.
- * No JIRA calls — serializes byVersion / breakdowns / gates only.
+ * No JIRA calls — serializes byVersion / breakdowns / gates / date history.
  */
 
-const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
+import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
+
 const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
 const GATE_ORDER = ['CC', 'CCM', 'EC', 'CG', 'PG', 'GA'];
+const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -71,7 +73,7 @@ function ragChip(label) {
   return `<span style="background:${color};color:#fff;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700">${escapeHtml(label || '?')}</span>`;
 }
 
-function buildItemRows(items, breakdownDataMap, jiraBaseUrl) {
+function buildItemRows(items, breakdownDataMap, jiraBaseUrl, checkpointHistory) {
   return items.map((item) => {
     const rag = ragKey(item.customfield_23560) || '?';
     const ragColor = RAG_COLORS[rag] || '#9e9e9e';
@@ -84,9 +86,9 @@ function buildItemRows(items, breakdownDataMap, jiraBaseUrl) {
       <td style="padding:5px 8px;border:1px solid #ddd">${escapeHtml(item.summary || '—')}</td>
       <td style="padding:5px 8px;border:1px solid #ddd;white-space:nowrap">${escapeHtml(item.status || '—')}</td>
       <td style="padding:5px 8px;border:1px solid #ddd;text-align:center;color:${ragColor};font-weight:700">${escapeHtml(rag)}</td>
-      <td style="padding:5px 8px;border:1px solid #ddd">${formatShortDate(item.customfield_11067)}</td>
-      <td style="padding:5px 8px;border:1px solid #ddd">${formatShortDate(item.customfield_35863)}</td>
-      <td style="padding:5px 8px;border:1px solid #ddd">${formatShortDate(item.customfield_35864)}</td>
+      <td style="padding:5px 8px;border:1px solid #ddd">${formatDateWithHistoryHTML(item.key, 'codeComplete', item.customfield_11067, checkpointHistory)}</td>
+      <td style="padding:5px 8px;border:1px solid #ddd">${formatDateWithHistoryHTML(item.key, 'commitGate', item.customfield_35863, checkpointHistory)}</td>
+      <td style="padding:5px 8px;border:1px solid #ddd">${formatDateWithHistoryHTML(item.key, 'promotionGate', item.customfield_35864, checkpointHistory)}</td>
       <td style="padding:5px 8px;border:1px solid #ddd;white-space:nowrap">${escapeHtml(item.assignee || '—')}</td>
       <td style="padding:5px 8px;border:1px solid #ddd">${escapeHtml(execSummaryText(item))}</td>
       <td style="padding:5px 8px;border:1px solid #ddd;white-space:nowrap">${escapeHtml(breakdownLabel(breakdownDataMap[item.key]))}</td>
@@ -94,7 +96,7 @@ function buildItemRows(items, breakdownDataMap, jiraBaseUrl) {
   }).join('');
 }
 
-function buildItemsTable(title, items, breakdownDataMap, jiraBaseUrl) {
+function buildItemsTable(title, items, breakdownDataMap, jiraBaseUrl, checkpointHistory) {
   if (!items.length) {
     return `<p style="color:#888;font-size:12px">No ${escapeHtml(title.toLowerCase())} found.</p>`;
   }
@@ -104,7 +106,7 @@ function buildItemsTable(title, items, breakdownDataMap, jiraBaseUrl) {
   return `<h3 style="color:#333;margin:12px 0 6px;font-size:13px">${escapeHtml(title)} (${items.length})</h3>
 <table style="border-collapse:collapse;width:100%;font-size:12px">
   <thead><tr>${header}</tr></thead>
-  <tbody>${buildItemRows(items, breakdownDataMap, jiraBaseUrl)}</tbody>
+  <tbody>${buildItemRows(items, breakdownDataMap, jiraBaseUrl, checkpointHistory)}</tbody>
 </table>`;
 }
 
@@ -117,7 +119,7 @@ function overallRag(items) {
   return counts.Red > 0 ? 'Red' : counts.Yellow > 0 ? 'Yellow' : 'Green';
 }
 
-function buildReleaseSection(version, items, breakdownDataMap, gateData, jiraBaseUrl) {
+function buildReleaseSection(version, items, breakdownDataMap, gateData, jiraBaseUrl, checkpointHistory) {
   const features = items.filter((i) => issueType(i) === 'feature');
   const initiatives = items.filter((i) => issueType(i) === 'initiative');
   const rag = items.length > 0 ? overallRag(items) : '';
@@ -125,8 +127,8 @@ function buildReleaseSection(version, items, breakdownDataMap, gateData, jiraBas
   return `<div style="margin-bottom:24px;border:1px solid #ddd;border-radius:6px;padding:12px">
     <h2 style="color:#1a1a2e;margin:0 0 6px;font-size:15px">${escapeHtml(version)} ${rag ? ragChip(rag) : ''}</h2>
     ${gates ? `<p style="color:#555;font-size:11px;margin:0 0 10px">${gates}</p>` : ''}
-    ${buildItemsTable('Features', features, breakdownDataMap, jiraBaseUrl)}
-    ${buildItemsTable('Initiatives', initiatives, breakdownDataMap, jiraBaseUrl)}
+    ${buildItemsTable('Features', features, breakdownDataMap, jiraBaseUrl, checkpointHistory)}
+    ${buildItemsTable('Initiatives', initiatives, breakdownDataMap, jiraBaseUrl, checkpointHistory)}
   </div>`;
 }
 
@@ -136,6 +138,7 @@ function buildReleaseSection(version, items, breakdownDataMap, gateData, jiraBas
  * @param {string[]} data.sortedVersions
  * @param {Record<string, object>} data.breakdownDataMap
  * @param {Record<string, object>} data.gateDataMap
+ * @param {Record<string, object>} data.checkpointHistory
  * @param {string} data.jiraBaseUrl
  * @returns {string} full HTML document
  */
@@ -144,6 +147,7 @@ export function buildSosSnapshotHtml({
   sortedVersions = [],
   breakdownDataMap = {},
   gateDataMap = {},
+  checkpointHistory = {},
   jiraBaseUrl = '',
 }) {
   const generatedAt = new Date().toISOString().slice(0, 10);
@@ -155,7 +159,8 @@ export function buildSosSnapshotHtml({
       byVersion[version] || [],
       breakdownDataMap,
       gateDataMap[version] || null,
-      jiraBaseUrl
+      jiraBaseUrl,
+      checkpointHistory
     ))
     .join('');
 

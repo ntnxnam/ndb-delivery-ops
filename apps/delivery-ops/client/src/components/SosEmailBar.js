@@ -17,6 +17,7 @@ export default function SosEmailBar({
   byVersion,
   breakdownDataMap,
   gateDataMap,
+  checkpointHistory,
   jiraBaseUrl,
   sortedVersions,
   disabled,
@@ -30,9 +31,10 @@ export default function SosEmailBar({
     byVersion,
     breakdownDataMap,
     gateDataMap,
+    checkpointHistory,
     jiraBaseUrl,
     sortedVersions,
-  }), [byVersion, breakdownDataMap, gateDataMap, jiraBaseUrl, sortedVersions]);
+  }), [byVersion, breakdownDataMap, gateDataMap, checkpointHistory, jiraBaseUrl, sortedVersions]);
 
   const handleOpen = useCallback(async () => {
     try {
