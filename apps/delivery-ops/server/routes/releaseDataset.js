@@ -122,6 +122,25 @@ function classifySyncFailure(error) {
   };
 }
 
+/**
+ * SSE comment pings so nginx proxy_read_timeout does not kill a quiet
+ * ScriptRunner wait. Clients ignore comment lines (`: ping`).
+ */
+function startSseHeartbeat(res, intervalMs = 15000) {
+  const id = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(id);
+      return;
+    }
+    try {
+      res.write(': ping\n\n');
+    } catch {
+      clearInterval(id);
+    }
+  }, intervalMs);
+  return () => clearInterval(id);
+}
+
 // Human-readable labels + ordering for the synopsis component cards.
 // Keep ordering identical to PAYLOAD_BUCKET_KEYS (parents-first) so the
 // cards on the page read in the same logical order as the dedup.
@@ -1787,6 +1806,7 @@ router.post('/sync', auth, async (req, res) => {
   // even if an error throws immediately.
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering
   res.flushHeaders();
@@ -1802,6 +1822,7 @@ router.post('/sync', auth, async (req, res) => {
     if (!res.writableEnded) res.end();
   }
   const acquiredLocks = [];
+  const stopHeartbeat = startSseHeartbeat(res);
 
   try {
     const userJiraPat = extractToken(req);
@@ -1931,10 +1952,10 @@ router.post('/sync', auth, async (req, res) => {
       message: `Starting sync for ${releasesToSync.length} releases (${activeCount} active, ${pastCount} past, ${futureCount} future)`,
     });
 
-    // Pre-announce every release so the client chip grid pre-populates as
-    // "queued" before any per-release work begins.  Without this the chips
-    // stay empty for the entire first-release fetch window.
-    for (const rel of releasesToSync) {
+    // Pre-announce only the releases that will actually run (force list).
+    // Queuing every release made the UI paint every row as syncing during
+    // a single-release refresh.
+    for (const rel of forceReleases) {
       sendEvent({ release: rel, status: 'queued', detail: releaseStates[rel] });
     }
 
@@ -1947,6 +1968,8 @@ router.post('/sync', auth, async (req, res) => {
       forceReleases,
       skipChangelog,
       includeLongTermFunded: true,
+      changelogConcurrency: 1,
+      fetchOptions: { concurrency: 1 },
       onProgress: (event) => sendEvent(event),
     });
 
@@ -1984,6 +2007,7 @@ router.post('/sync', auth, async (req, res) => {
     });
     sendEvent({ type: 'error', release: '_global', status: 'error', detail });
   } finally {
+    stopHeartbeat();
     syncLocking.releaseMany(acquiredLocks);
     if (!res.writableEnded) res.end();
   }
@@ -2014,6 +2038,7 @@ router.post('/sync/bucket', auth, async (req, res) => {
 
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
@@ -2026,6 +2051,7 @@ router.post('/sync/bucket', auth, async (req, res) => {
     if (!res.writableEnded) res.end();
   }
   const acquiredLocks = [];
+  const stopHeartbeat = startSseHeartbeat(res);
 
   try {
     if (!release) return sendError('release query parameter is required');
@@ -2098,6 +2124,7 @@ router.post('/sync/bucket', auth, async (req, res) => {
     });
     sendEvent({ type: 'error', release, bucket: bucketName, detail });
   } finally {
+    stopHeartbeat();
     syncLocking.releaseMany(acquiredLocks);
     if (!res.writableEnded) res.end();
   }

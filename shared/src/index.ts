@@ -37,6 +37,11 @@ export {
   getDeferredQuery,
   getLongTermFundedQuery,
   getExtensionQuery,
+  chunkKeys,
+  jqlEpicsByParentKeys,
+  jqlWorkByEpicKeys,
+  FETCH_STRATEGY,
+  JQL_IN_CHUNK_SIZE,
   PAYLOAD_BUCKET_KEYS,
   PORTFOLIO_ROOT_TYPES,
   PORTFOLIO_CONTAINER_TYPES,
@@ -73,6 +78,8 @@ export {
   DEFAULT_PAGE_SIZE,
   DEFAULT_MAX_ISSUES_PER_BUCKET,
   DEFAULT_FETCH_CONCURRENCY,
+  SLOW_BUCKETS,
+  SLOW_BUCKET_TIMEOUT_MS,
 } from './services/releaseDatasetService.js';
 export type {
   ProcessedTicket,
@@ -281,6 +288,7 @@ export {
 } from './services/featureDashboardService.js';
 export type {
   FeatureListItem,
+  FeatureOverviewGates,
   FeatureDashboardIssue,
   FeatureFlowPoint,
   FeatureKpiTile,

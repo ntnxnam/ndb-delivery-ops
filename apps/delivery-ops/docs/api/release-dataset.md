@@ -376,6 +376,7 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk rea
 
 > ⚠️ Breaking change 2026-06-16: added `releaseMeta` map with per-release fetch timestamps, ticket counts, and cache validity flags. Added `hasBundleOnDisk` and `isSyncInProgress` fields.
 > ⚠️ Breaking change 2026-06-17: `releaseMeta[rel]` now includes `buckets: Record<string, { count: number, fetchedAtIso: string }> | null` — per-bucket ticket counts and last-fetch timestamps for the 7-column SyncHub UI.
+> ⚠️ Behaviour change 2026-08-25: cell sync (`saveRelease` with `stampBuckets`) updates only the fetched bucket's `fetchedAtIso`. Sibling bucket ages and release-level `fetchedAtIso` (History column) stay as they were. Empty Group-1 buckets persist as `count: 0` instead of being omitted.
 
 **Caching**: Reads `bundle.meta.json` and `per_release/*.meta.json` from disk — no JIRA calls.
 
@@ -404,17 +405,27 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk rea
 
 ### POST /api/release-dataset/sync
 
-**Purpose**: Trigger a full release dataset sync for a product. Returns a Server-Sent Events stream with progress.
+**Purpose**: Trigger a full or scoped release dataset sync for a product. Returns a Server-Sent Events stream with progress.
 
 **Auth**: required
 
 **Request**
-- Body: `{ productId: string, releases?: string[] }` — `releases` is optional; omit to sync all
+- Query: `productId` (string, required)
+- Query: `forceAll` (boolean, optional) — re-fetch every current (non-past) release
+- Query: `forceReleases` (comma-separated names, optional) — scoped refetch
+- Query: `skipChangelog` (`true`/`false`, optional) — skip Closed Date / gate-history enrichment. Sync Hub sends `true` unless the user checks Include changelog.
+
+**Server flow**  
+`releaseDataset.js` → lock → `syncReleaseDataset` → `fetchReleaseData` → optional changelog → `saveRelease` → `processMaster` → `saveBundle`
+
+SSE comments (`: ping`) are written every 15s so nginx `proxy_read_timeout 300s` does not abort a quiet wait. `queued` events are emitted only for releases in the force list.
 
 **Response**: SSE stream  
 ```
-data: {"step": "fetch", "release": "NDB-2.11", "pct": 20}
-data: {"step": "done", "pct": 100, "duration": 45000}
+data: {"type":"preflight","message":"Authenticated — fetching JIRA release list…"}
+data: {"release":"NDB-2.11","status":"queued","detail":"active"}
+data: {"release":"NDB-2.11","status":"fetching","detail":"work_toward_project: 412 tickets"}
+data: {"type":"done","releases":["NDB-2.11"],"numTickets":1253,"timingMs":45000}
 ```
 
 **Error responses**
@@ -423,12 +434,15 @@ data: {"step": "done", "pct": 100, "duration": 45000}
 | 409 | Sync already running | Show "Already syncing" |
 
 > ⚠️ Behaviour change 2026-06-17: when `forceAll=true`, past releases are now excluded from the force list. Only active/future releases are re-fetched. Use `POST /sync/bucket` for targeted past-release cell updates.
+> ⚠️ Behaviour change 2026-08-25: `queued` SSE is limited to `forceReleases`. Failed buckets keep prior cache tickets instead of saving an empty slice. `moved_out` uses a 120s page timeout with one retry.
+> ⚠️ Behaviour change 2026-08-25: fetch no longer executes ScriptRunner `portfolioChildrenOf` / `issuesInEpics`. Epics and work are loaded via indexed `"Parent Link"` / `"Epic Link"` IN-clauses (chunked 75). Direct Tickets dropped `fixVersion was` (Group 2 already owns that history); counts for that cell will go down. Click-through JQL in the UI may still use ScriptRunner.
+> ⚠️ Behaviour change 2026-08-25: JIRA `/search` and changelog fetches run one at a time (no parallel fan-out) to avoid HTTP 429. `forceAll` still excludes past releases. Sync Hub labels this **Sync current & upcoming**.
 
 ---
 
 ### POST /api/release-dataset/refresh-now
 
-**Purpose**: Trigger an immediate scheduler-backed live refresh of release dataset cache (JSON response, no SSE stream). Used by dashboard-level "Refresh Now" actions.
+**Purpose**: Trigger an immediate scheduler-backed live refresh of release dataset cache (JSON response, no SSE stream). Used by dashboard-level "Refresh Now" actions on Project Status and Sprint Report. **Not used by Sync Hub** (use Full Sync / cell sync instead — those stream progress).
 
 **Auth**: required
 
@@ -482,7 +496,7 @@ No response cache; operation refreshes on-disk cache.
 - Query: `bucket` (string, required) — one of: `top_level_projects`, `epics_of_projects`, `work_toward_project`, `standalone_epics`, `work_toward_standalone_epic`, `direct_tickets`, `moved_out`
 
 **Server flow**  
-`releaseDataset.js → syncReleaseBucket() → fetchReleaseData(bucketFilter=[bucket]) → merge into per-release cache → saveRelease → loadAllReleases → processMaster → saveBundle`
+`releaseDataset.js → syncReleaseBucket() → fetchReleaseData(bucketFilter=[bucket]) → on fetch error return without merge → else merge into per-release cache → saveRelease({ stampBuckets: [bucket] }) → loadAllReleases → processMaster → saveBundle`
 
 **Response**: SSE stream  
 ```
@@ -491,6 +505,10 @@ data: {"release":"NDB-2.11","status":"fetching","detail":"cell sync: fetching to
 data: {"release":"NDB-2.11","status":"done","detail":"cell sync top_level_projects: 47 tickets"}
 data: {"type":"done","release":"NDB-2.11","bucket":"top_level_projects","count":47,"error":null,"timingMs":3210,"message":"Cell sync complete — 47 tickets in 3.2s"}
 ```
+
+SSE comments (`: ping`) every 15s. A fetch error does **not** replace cached tickets for that bucket with an empty list.
+
+> ⚠️ Behaviour change 2026-08-25: cell sync stamps only the requested bucket's `fetchedAtIso`. History / sibling cells keep their previous ages.
 
 **Error responses**
 | Code | When | Client should |

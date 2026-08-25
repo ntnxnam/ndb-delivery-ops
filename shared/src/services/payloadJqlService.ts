@@ -189,9 +189,12 @@ function jqlWorkTowardStandaloneEpicCatchAll(release: string): string {
 }
 
 function jqlDirectTickets(release: string): string {
+  // `fixVersion was` is a changelog history scan and times out on large
+  // releases. Group 2 `moved_out` already owns "was in this version, isn't
+  // now". Direct tickets are current orphans only.
   return (
-    `(fixVersion was ${q(release)} OR fixVersion = ${q(release)} ` +
-    `OR affectedVersion = ${q(release)}) AND "Epic Link" is EMPTY ` +
+    `(fixVersion = ${q(release)} OR affectedVersion = ${q(release)}) ` +
+    `AND "Epic Link" is EMPTY ` +
     `AND issueType not in ${PORTFOLIO_CONTAINER_TYPES}`
   );
 }
@@ -215,10 +218,56 @@ function jqlDirectTicketsCatchAll(release: string): string {
   );
 }
 
-// ── Public surface ─────────────────────────────────────────────────────────
+export const JQL_IN_CHUNK_SIZE = 75;
 
 /**
- * The 6 disjoint Group 1 bucket queries keyed by canonical Components tag.
+ * Split issue keys into JQL-safe IN-clause chunks. JIRA URL / parser
+ * limits make a single 500-key IN clause unreliable.
+ */
+export function chunkKeys(keys: string[], size = JQL_IN_CHUNK_SIZE): string[][] {
+  const unique = [...new Set(keys.filter(Boolean))];
+  const out: string[][] = [];
+  for (let i = 0; i < unique.length; i += size) {
+    out.push(unique.slice(i, i + size));
+  }
+  return out;
+}
+
+/**
+ * Indexed fetch for epics of features/initiatives.
+ * Replaces ScriptRunner `portfolioChildrenOf` at fetch time.
+ */
+export function jqlEpicsByParentKeys(parentKeys: string[]): string {
+  if (parentKeys.length === 0) return '';
+  return `issuetype = Epic AND "Parent Link" in (${parentKeys.join(', ')})`;
+}
+
+/**
+ * Indexed fetch for work under epics.
+ * Replaces ScriptRunner `issuesInEpics` at fetch time.
+ * @param extraAnd optional extra clause without a leading AND, e.g.
+ *   `updated >= startOfYear(-1)` for catch-all versions.
+ */
+export function jqlWorkByEpicKeys(epicKeys: string[], extraAnd = ''): string {
+  if (epicKeys.length === 0) return '';
+  const extra = extraAnd ? ` AND ${extraAnd.replace(/^AND\s+/i, '')}` : '';
+  return `"Epic Link" in (${epicKeys.join(', ')})${extra}`;
+}
+
+/**
+ * Fetch-strategy tag folded into the per-release jqlHash so switching
+ * from ScriptRunner nested JQL to indexed Parent Link / Epic Link
+ * invalidates stale caches. Click-through JQL in getComponentQueries
+ * may still use ScriptRunner (JIRA UI, not axios).
+ */
+export const FETCH_STRATEGY = 'indexed-parent-epic-v1';
+
+/**
+ * Click-through / synopsis JQL for the 6 Group 1 buckets. Nested
+ * ScriptRunner functions remain here so a JIRA hyperlink can run without
+ * us first collecting parent keys. **Fetch** does not execute these
+ * nested functions — see `jqlEpicsByParentKeys` / `jqlWorkByEpicKeys`
+ * and `FETCH_STRATEGY` in fetchReleaseData.
  *
  * Order is the iteration order used by the within-release dedup in the
  * dataset assembler: when a ticket matches multiple buckets, it's tagged
@@ -482,6 +531,8 @@ export function getLongTermProjectsQuery(options: LongTermOptions): string {
 
 /**
  * Group 3, Bucket 1B: Epics that are portfolio children of long-term projects.
+ * Click-through / synopsis JQL only — fetch uses `jqlEpicsByParentKeys`
+ * against keys from `getLongTermProjectsQuery`.
  */
 export function getLongTermEpicsQuery(options: LongTermOptions): string {
   if (options.futureReleases.length === 0) return '';
@@ -500,6 +551,7 @@ export function getLongTermEpicsQuery(options: LongTermOptions): string {
 
 /**
  * Group 3, Bucket 2: Tasks/Bugs/Tests under long-term funded Epics.
+ * Click-through JQL only — fetch uses `jqlWorkByEpicKeys`.
  */
 export function getLongTermWorkQuery(options: LongTermOptions): string {
   if (options.futureReleases.length === 0) return '';

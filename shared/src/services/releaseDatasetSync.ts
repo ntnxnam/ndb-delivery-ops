@@ -61,8 +61,38 @@ export const CHANGELOG_REQUIRED_TYPES = new Set(['Bug', 'Improvement', 'Test']);
  */
 export const GATE_HISTORY_TYPES = new Set(['Feature', 'Initiative', 'X-FEAT', 'Capability']);
 
-/** Default concurrency for the changelog enrichment fan-out. */
-export const DEFAULT_CHANGELOG_CONCURRENCY = 8;
+/** Default concurrency for changelog enrichment. 1 — parallel getIssue trips JIRA 429. */
+export const DEFAULT_CHANGELOG_CONCURRENCY = 1;
+
+/**
+ * When some buckets fail, keep the previously-cached tickets for those
+ * buckets so a timeout does not wipe a slice of the release cache.
+ */
+function mergePreservingFailedBuckets(
+  fresh: ProcessedTicket[],
+  existing: ProcessedTicket[] | null | undefined,
+  failedBuckets: string[]
+): ProcessedTicket[] {
+  if (!failedBuckets.length || !existing?.length) return fresh;
+  const failed = new Set(failedBuckets);
+  const ticketTags = (t: ProcessedTicket): string[] => {
+    const components = (t as unknown as Record<string, unknown>)['Components'];
+    if (typeof components !== 'string') return [];
+    return components.split(',').map((p) => p.trim()).filter(Boolean);
+  };
+  const freshKeys = new Set(fresh.map((t) => t['Issue Key']));
+  const retained = existing.filter((t) => {
+    if (freshKeys.has(t['Issue Key'])) return false;
+    return ticketTags(t).some((tag) => failed.has(tag));
+  });
+  return [...fresh, ...retained];
+}
+
+function ticketHasBucket(t: ProcessedTicket, bucketName: string): boolean {
+  const components = (t as unknown as Record<string, unknown>)['Components'];
+  if (typeof components !== 'string') return false;
+  return components.split(',').map((p) => p.trim()).includes(bucketName);
+}
 
 // ── Changelog enrichment ──────────────────────────────────────────────────
 
@@ -598,7 +628,8 @@ export async function syncReleaseDataset(
       }
 
       if (result.error) {
-        // Partial fetch — keep the tickets we did get, surface the error.
+        // Partial fetch — keep tickets we did get, restore failed buckets
+        // from disk so a timeout does not wipe that slice of the cache.
         // eslint-disable-next-line no-console
         console.warn(`[releaseDatasetSync] ${release}: partial fetch error — ${result.error}`);
         errors[release] = result.error;
@@ -673,15 +704,36 @@ export async function syncReleaseDataset(
         }
       }
 
-      perRelease[release] = result.tickets;
+      const failedBuckets = Object.keys(result.bucketErrors || {});
+      let ticketsToSave = result.tickets;
+      if (failedBuckets.length > 0) {
+        const { tickets: existing } = cache.loadReleaseLenient(release);
+        ticketsToSave = mergePreservingFailedBuckets(
+          result.tickets,
+          existing,
+          failedBuckets
+        );
+      }
+
+      perRelease[release] = ticketsToSave;
       source[release] = errors[release] ? 'error' : 'fetched';
-      cache.saveRelease(release, result.tickets, { projectKey, labelPrefix });
+      cache.saveRelease(release, ticketsToSave, {
+        projectKey,
+        labelPrefix,
+        ...(failedBuckets.length > 0
+          ? {
+              stampBuckets: Object.keys(result.bucketCounts).filter(
+                (k) => !failedBuckets.includes(k)
+              ),
+            }
+          : {}),
+      });
       emit({
         release,
         status: errors[release] ? 'error' : 'done',
         detail: errors[release]
-          ? errors[release]!
-          : `${result.tickets.length} tickets`,
+          ? `${ticketsToSave.length} tickets (partial: ${errors[release]})`
+          : `${ticketsToSave.length} tickets`,
       });
       cache.touchSyncLock();
     }
@@ -788,6 +840,10 @@ export async function syncReleaseBucket(
       labelPrefix,
       bucketFilter: [bucketName],
     });
+    if (result.error) {
+      emit({ release, status: 'error', detail: `cell sync ${bucketName}: ${result.error}` });
+      return { bucketName, release, count: 0, error: result.error };
+    }
     freshTickets = result.tickets;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -800,15 +856,15 @@ export async function syncReleaseBucket(
   const base = Array.isArray(existing) ? existing : [];
 
   // Remove stale tickets for this bucket, then append fresh ones.
-  const retained = base.filter((t) => {
-    const components = (t as unknown as Record<string, unknown>)['Components'];
-    if (typeof components !== 'string') return true;
-    return !components.split(',').map((p) => p.trim()).includes(bucketName);
-  });
+  const retained = base.filter((t) => !ticketHasBucket(t, bucketName));
   const merged = [...retained, ...freshTickets];
 
-  // Persist merged list + update bucket meta entry.
-  cache.saveRelease(release, merged, { projectKey, labelPrefix });
+  // Persist merged list; stamp only the synced bucket's freshness.
+  cache.saveRelease(release, merged, {
+    projectKey,
+    labelPrefix,
+    stampBuckets: [bucketName],
+  });
 
   // Rebuild the bundle so downstream pages read fresh data.
   const allReleases = cache.loadAllReleases({ projectKey, labelPrefix });

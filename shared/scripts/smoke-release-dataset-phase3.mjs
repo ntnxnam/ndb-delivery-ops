@@ -83,6 +83,9 @@ const ISSUE_LIBRARY = {
     standalone_epics: [
       mkIssue('ERA-1200', { type: 'Epic', status: 'In Progress', resolution: null, release: 'NDB-2.11' }),
     ],
+    epics_of_projects: [
+      mkIssue('ERA-1050', { type: 'Epic', status: 'In Progress', resolution: null, release: 'NDB-2.11' }),
+    ],
     work_toward_standalone_epic: [
       mkIssue('ERA-1300', { type: 'Task', status: 'Done', resolution: 'Done', release: 'NDB-2.11' }),
     ],
@@ -139,6 +142,7 @@ const ISSUE_LIBRARY = {
     ],
     work_toward_project: [],
     standalone_epics: [],
+    epics_of_projects: [],
     work_toward_standalone_epic: [],
     direct_tickets: [
       mkIssue('ERA-2100', {
@@ -179,12 +183,40 @@ function mkIssue(key, opts) {
   };
 }
 
+function keysInInClause(jql) {
+  const m = /in \(([^)]+)\)/.exec(jql);
+  if (!m) return [];
+  return m[1].split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function releaseOwningKey(key) {
+  for (const [rel, buckets] of Object.entries(ISSUE_LIBRARY)) {
+    for (const issues of Object.values(buckets)) {
+      if (issues.some((i) => i.key === key)) return rel;
+    }
+  }
+  return null;
+}
+
 function classifyJql(jql) {
-  // Return [release, bucket] for any JQL we recognise; throw otherwise.
-  // Release name appears in two forms in the JQL family:
-  //   - bucket JQL uses the canonical fixVersion form `NDB-2.11`
-  //   - sidecar JQL uses the lower-cased label form `"ndb-2.11-wishlist"`
-  // Match both and normalise back to the canonical form.
+  // Indexed fetch JQLs have no fixVersion — infer release from keys in the IN clause.
+  if (/issuetype = Epic AND "Parent Link" in/i.test(jql)) {
+    const keys = keysInInClause(jql);
+    const release = keys.map(releaseOwningKey).find(Boolean);
+    if (!release) throw new Error(`mock JIRA: Parent Link JQL with unknown keys: ${jql}`);
+    return [release, 'epics_of_projects'];
+  }
+  if (/"Epic Link" in/.test(jql) && !/"Epic Link" is EMPTY/.test(jql)) {
+    const keys = keysInInClause(jql);
+    const release = keys.map(releaseOwningKey).find(Boolean);
+    if (!release) throw new Error(`mock JIRA: Epic Link JQL with unknown keys: ${jql}`);
+    const saKeys = new Set(
+      (ISSUE_LIBRARY[release].standalone_epics || []).map((i) => i.key)
+    );
+    if (keys.some((k) => saKeys.has(k))) return [release, 'work_toward_standalone_epic'];
+    return [release, 'work_toward_project'];
+  }
+
   const relMatch = /(?:ndb|NDB)-([0-9]+\.[0-9]+(?:\.[0-9]+){0,2})(?:-[A-Za-z]+)?/.exec(
     jql
   );
@@ -192,13 +224,14 @@ function classifyJql(jql) {
   if (relMatch) {
     const m = relMatch[0];
     release = m.startsWith('ndb-') ? `NDB-${m.slice(4)}` : m;
-    // Strip a trailing sidecar suffix (`-wishlist`/`-deferred`) if the
-    // regex consumed it from the lowercase label form.
     release = release.replace(/-(wishlist|deferred)$/, '');
   }
   if (!release) throw new Error(`mock JIRA: no release in JQL: ${jql}`);
   if (/labels = "[^"]+-wishlist"/.test(jql)) return [release, 'wishlist'];
   if (/labels = "[^"]+-deferred"/.test(jql)) return [release, 'deferred'];
+  if (/labels = "[^"]+-long-term-funded"/.test(jql)) return [release, 'long_term_funded'];
+  if (/code-complete-exten/.test(jql)) return [release, 'extension'];
+  if (/fixVersion was/.test(jql)) return [release, 'moved_out'];
   if (/issueFunction in issuesInEpics\("issuefunction in portfolioChildrenOf/.test(jql)) {
     return [release, 'work_toward_project'];
   }
@@ -225,18 +258,13 @@ class StubJira {
   }
   async searchAll(jql /* , fields, options */) {
     this.searchCalls += 1;
-    // The full JQL has `project = ERA AND (BUCKET_JQL)` — sanity-check
-    // that the D36 Engineering Payload scope is still present.
-    if (!jql.startsWith(`project = ${projectKey} AND `)) {
-      throw new Error(
-        `StubJira.searchAll: expected D36 Engineering Payload scope, got: ${jql.slice(0, 60)}...`
-      );
-    }
     const [release, bucket] = classifyJql(jql);
     return this.library[release]?.[bucket] ?? [];
   }
+  async getProjectVersions() {
+    return [];
+  }
   async getIssue(key /* , options */) {
-    // Not used directly — sync uses fetchChangelog override below.
     this.getIssueCalls += 1;
     return { key, fields: {} };
   }
@@ -431,6 +459,8 @@ try {
 
   // ── enrichClosedDates (direct) ─────────────────────────────────────────
   console.log('\n4. enrichClosedDates targets the right tickets:');
+  // All Bug/Improvement/Test tickets are changelog-checked (Reopen Count);
+  // Closed Date is filled only for Done-resolution tickets that lack it.
   const ticketsForEnrichment = [
     {
       'Issue Key': 'A-1',
@@ -468,8 +498,8 @@ try {
     fetchChangelog: stubFetchChangelog,
     concurrency: 2,
   });
-  assert(enriched.checked === 2, `only 2 tickets needed enrichment (got ${enriched.checked})`);
-  assert(enriched.enriched === 2, `all 2 needing tickets were enriched (got ${enriched.enriched})`);
+  assert(enriched.checked === 4, `4 Bug/Improvement tickets need changelog (got ${enriched.checked})`);
+  assert(enriched.enriched === 2, `all 2 needing Closed Date were enriched (got ${enriched.enriched})`);
   assert(enriched.errors === 0, 'no errors during enrichment');
   assert(
     ticketsForEnrichment[0]['Closed Date'] === '2026-04-10T15:30:00.000+0000',
@@ -526,12 +556,13 @@ try {
     'every release in cold sync went through JIRA'
   );
 
-  // Verify D36 Engineering Payload scoping happened: the stub asserts that
-  // every JQL starts with `project = ERA AND `. If the assertion failed
-  // earlier, searchCalls would have thrown.
+  // Wave 1 (indexed): top_level, standalone_epics, direct_tickets, moved_out,
+  //   + 4 sidecars = 8. Wave 2: Parent Link epics (+ standalone Epic Link if
+  //   keys exist). Wave 3: Epic Link work if epic keys exist.
+  // NDB-2.11: 8 + 2 + 1 = 11. NDB-2.10: 8 + 1 + 0 = 9. Total 20.
   assert(
-    syncStub.searchCalls === RELEASES.length * 7,
-    `searchAll fired 7 times per release (5 buckets + 2 sidecars); got ${syncStub.searchCalls}`
+    syncStub.searchCalls === 20,
+    `searchAll fired 20 times across both releases (got ${syncStub.searchCalls})`
   );
 
   // Verify QA Verification rows landed: at least one Bug/Improvement
@@ -584,8 +615,8 @@ try {
     fetchChangelog: stubFetchChangelog,
   });
   assert(
-    scopedStub.searchCalls === 7,
-    `scoped refetch fires 7 searches for the one forced release (got ${scopedStub.searchCalls})`
+    scopedStub.searchCalls === 11,
+    `scoped refetch fires 11 searches for the one forced release (got ${scopedStub.searchCalls})`
   );
   assert(
     result3.source['NDB-2.11'] === 'fetched',

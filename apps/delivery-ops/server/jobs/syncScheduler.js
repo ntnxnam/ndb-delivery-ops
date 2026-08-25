@@ -134,6 +134,8 @@ class SyncScheduler {
         forceReleases,
         skipChangelog: false,
         includeLongTermFunded: true,
+        changelogConcurrency: 1,
+        fetchOptions: { concurrency: 1 },
         onProgress: () => {},
       });
 

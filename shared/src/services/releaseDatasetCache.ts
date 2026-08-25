@@ -67,7 +67,9 @@ import { join } from 'node:path';
 import {
   DEFERRED_COMPONENT,
   EXTENSION_COMPONENT,
+  FETCH_STRATEGY,
   LONG_TERM_COMPONENT,
+  PAYLOAD_BUCKET_KEYS,
   WISHLIST_COMPONENT,
   getComponentQueries,
   getDeferredQuery,
@@ -203,6 +205,10 @@ export function computeReleaseJqlHash(
   parts.push(`${DEFERRED_COMPONENT}::${deferred}`);
   parts.push(`${LONG_TERM_COMPONENT}::${longTerm}`);
   parts.push(`${EXTENSION_COMPONENT}::${extension}`);
+  // Fetch-path strategy (indexed Parent Link / Epic Link vs ScriptRunner).
+  // Click-through JQL in getComponentQueries may still use ScriptRunner, so
+  // this tag is what invalidates caches when the axios fetch path changes.
+  parts.push(`fetch::${FETCH_STRATEGY}`);
   return createHash('md5').update(parts.join('|')).digest('hex').slice(0, 8);
 }
 
@@ -291,7 +297,19 @@ export class ReleaseDatasetCache {
   saveRelease(
     release: string,
     tickets: ProcessedTicket[],
-    options: { projectKey: string; labelPrefix: string }
+    options: {
+      projectKey: string;
+      labelPrefix: string;
+      /**
+       * Cell-sync: only these buckets get a fresh `fetchedAtIso`. Sibling
+       * buckets keep their previous timestamps so the Sync Hub UI does not
+       * look like the whole row was refreshed. Release-level `fetchedAtIso`
+       * is also left unchanged.
+       *
+       * Omit on a full-release save — every bucket is stamped to now.
+       */
+      stampBuckets?: string[];
+    }
   ): boolean {
     if (!options?.projectKey) {
       throw new Error('ReleaseDatasetCache.saveRelease: projectKey is required');
@@ -301,8 +319,10 @@ export class ReleaseDatasetCache {
     }
     const { data, meta } = this.releasePaths(release);
     const nowIso = new Date().toISOString();
+    const existing = safeReadJson<ReleaseCacheMeta>(meta);
+    const existingBuckets = existing?.buckets ?? {};
+    const stampSet = options.stampBuckets ? new Set(options.stampBuckets) : null;
 
-    // Compute per-bucket counts from the Components field on each ticket.
     const bucketCounts: Record<string, number> = {};
     for (const ticket of tickets) {
       const components = (ticket as unknown as Record<string, unknown>)['Components'];
@@ -313,9 +333,30 @@ export class ReleaseDatasetCache {
         }
       }
     }
+
+    const keys = new Set<string>([
+      ...PAYLOAD_BUCKET_KEYS,
+      ...Object.keys(bucketCounts),
+      ...Object.keys(existingBuckets),
+      ...(options.stampBuckets ?? []),
+    ]);
+
     const buckets: Record<string, BucketCacheMeta> = {};
-    for (const [k, count] of Object.entries(bucketCounts)) {
-      buckets[k] = { count, fetchedAtIso: nowIso };
+    for (const k of keys) {
+      const count = bucketCounts[k] ?? 0;
+      const isGroup1 = (PAYLOAD_BUCKET_KEYS as readonly string[]).includes(k);
+      if (!isGroup1 && count === 0 && !stampSet?.has(k) && !existingBuckets[k]) {
+        continue;
+      }
+      let fetchedAtIso: string;
+      if (!stampSet) {
+        fetchedAtIso = nowIso;
+      } else if (stampSet.has(k)) {
+        fetchedAtIso = nowIso;
+      } else {
+        fetchedAtIso = existingBuckets[k]?.fetchedAtIso ?? nowIso;
+      }
+      buckets[k] = { count, fetchedAtIso };
     }
 
     const md: ReleaseCacheMeta = {
@@ -323,7 +364,7 @@ export class ReleaseDatasetCache {
       jqlHash: computeReleaseJqlHash(release, options.labelPrefix),
       projectKey: options.projectKey,
       labelPrefix: options.labelPrefix,
-      fetchedAtIso: nowIso,
+      fetchedAtIso: stampSet && existing?.fetchedAtIso ? existing.fetchedAtIso : nowIso,
       ticketCount: tickets.length,
       buckets,
     };

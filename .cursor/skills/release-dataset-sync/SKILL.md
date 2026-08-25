@@ -22,9 +22,11 @@ description: Manage the JIRA release dataset sync pipeline — 3-group/6-bucket 
 2. **Every field must be named** — no field ID in `RELEASE_DATASET_FIELDS` without a comment naming it. Cross-reference with `jiraFieldsConfig.json`.
 3. **Validate before assuming** — if hierarchy fields return null, verify the field IDs against JIRA's `/rest/api/2/field` endpoint before changing code.
 4. **No `project = ERA` scope on any bucket fetch** — Features/Initiatives live in FEAT, docs in TECHPUBS, engineering in ERA. All bucket JQLs run cross-project (Release Payload, D36).
-5. **JQL-only for hyperlinks** — hierarchy reconstruction (epics→features, tasks→epics) is done in-memory from the flat cache. JQL strings are only generated for click-through URLs, never executed at serve time.
-6. **Group 2 "hygienic vs needs cleanup" is in-memory** — the `moved_out` bucket is a single broad JQL. The distinction between a correctly-moved ticket and an orphaned one is computed from `Portfolio Parent Key` / `Epic Link Key` after the flat dump lands.
-7. **Group 3 is non-fatal** — if the JIRA versions API fails, sync proceeds with Group 1 + 2 only. Never block a sync because future releases couldn't be determined.
+5. **Fetch uses indexed Parent Link / Epic Link** — `fetchReleaseData` does **not** execute ScriptRunner `portfolioChildrenOf` / `issuesInEpics`. Wave 1 loads features/standalone epics; Wave 2 is `"Parent Link" in (...)`; Wave 3 is `"Epic Link" in (...)`, chunked 75 keys. Click-through URLs in `getComponentQueries` may still use ScriptRunner.
+6. **One JIRA search at a time** — never fan out `/search` or changelog `getIssue`. Parallel calls trip HTTP 429. Sequential with a short pause between searches.
+7. **JQL-only for hyperlinks** — hierarchy reconstruction (epics→features, tasks→epics) is done in-memory from the flat cache. JQL strings are only generated for click-through URLs, never executed at serve time.
+8. **Group 2 "hygienic vs needs cleanup" is in-memory** — the `moved_out` bucket is a single broad JQL. The distinction between a correctly-moved ticket and an orphaned one is computed from `Portfolio Parent Key` / `Epic Link Key` after the flat dump lands.
+9. **Group 3 is non-fatal** — if the JIRA versions API fails, sync proceeds with Group 1 + 2 only. Never block a sync because future releases couldn't be determined.
 
 ## Complete Required Field List
 
@@ -114,18 +116,22 @@ Pick an Epic you know has a parent Feature. Check what field carries the parent 
 
 ## Fetch Model — 3 Groups, 6 Buckets
 
-Every sync runs a flat parallel fetch across this plan:
+Every sync walks three waves (`FETCH_STRATEGY` = `indexed-parent-epic-v1`). Nested ScriptRunner is **not** executed at fetch time.
 
 ### Group 1 — Currently in release (6 disjoint buckets, no project filter)
 
-| Bucket | `Components` tag | JQL pattern |
+| Bucket | `Components` tag | Fetch JQL (axios) |
 |---|---|---|
 | 1A | `top_level_projects` | `fixVersion={release} AND status not in (Cancelled,Backlog) AND issuetype in (Feature, Initiative)` |
-| 1B | `epics_of_projects` | `portfolioChildrenOf(1A) AND issuetype = Epic` |
-| 2 | `work_toward_project` | `issuesInEpics(portfolioChildrenOf(1A))` |
+| 1B | `epics_of_projects` | `issuetype = Epic AND "Parent Link" in (1A keys)` (chunked 75) |
+| 2 | `work_toward_project` | `"Epic Link" in (1B keys)` (chunked 75) |
 | 3 | `standalone_epics` | `type=Epic AND fixVersion={release} AND "Parent Link" is EMPTY` |
-| 4 | `work_toward_standalone_epic` | `issuesInEpics(bucket 3)` |
-| 5 | `direct_tickets` | `(fixVersion was OR = OR affectedVersion=) AND "Epic Link" is EMPTY AND not container` |
+| 4 | `work_toward_standalone_epic` | `"Epic Link" in (3 keys)` (chunked 75) |
+| 5 | `direct_tickets` | `(fixVersion = OR affectedVersion=) AND "Epic Link" is EMPTY AND not container` |
+
+Direct Tickets no longer include `fixVersion was` — Group 2 `moved_out` owns that history. Counts for bucket 5 will drop vs the old catch-all; historical orphans appear only in Group 2.
+
+Click-through URLs in `getComponentQueries` still use ScriptRunner `portfolioChildrenOf` / `issuesInEpics` for 1B / 2 / 4 so a JIRA hyperlink can run without collecting parent keys first.
 
 ### Group 2 — Moved out (1 broad query, classified in-memory)
 
@@ -137,11 +143,11 @@ Every sync runs a flat parallel fetch across this plan:
 
 ### Group 3 — Long-term funded (3 buckets, requires `futureReleases`)
 
-| Bucket | `Components` tag | JQL pattern |
+| Bucket | `Components` tag | Fetch JQL (axios) |
 |---|---|---|
 | 3A | `long_term_projects` | `issuetype in (Feature, Initiative) AND fixVersion in ({futureReleases}) AND status not in (Cancelled)` |
-| 3B | `long_term_epics` | `portfolioChildrenOf(3A) AND issuetype = Epic` |
-| 3C | `long_term_work` | `issuesInEpics(portfolioChildrenOf(3A))` |
+| 3B | `long_term_epics` | `issuetype = Epic AND "Parent Link" in (3A keys)` (chunked 75) |
+| 3C | `long_term_work` | `"Epic Link" in (3B keys)` (chunked 75) |
 
 `futureReleases` is determined at sync time by calling `jira.getProjectVersions(projectKey)` and filtering to unreleased, non-archived versions not in the active release set.
 
@@ -156,7 +162,11 @@ Every sync runs a flat parallel fetch across this plan:
 ```
 1. Call jira.getProjectVersions(projectKey) → determine futureReleases for Group 3
 2. Delete existing per-release cache files for target releases
-3. Fan out parallel fetch: 6 Group-1 buckets + 1 Group-2 + 3 Group-3 + 4 sidecars
+3. Wave 1 (sequential, indexed): top_level_projects, standalone_epics, direct_tickets,
+   moved_out, long_term_projects, sidecars
+   Wave 2: epics_of_projects + work_toward_standalone_epic + long_term_epics
+           via "Parent Link" / "Epic Link" IN (parent keys), chunked 75
+   Wave 3: work_toward_project + long_term_work via "Epic Link" IN (epic keys)
    — no project scope on any bucket (Release Payload mode)
 4. Within-release dedup: parents before children; Group 1 wins over Group 2/3
 5. Changelog enrichment for Bug/Improvement/Test tickets (Closed Date, Last Resolved, Reopen Count)

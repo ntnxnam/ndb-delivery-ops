@@ -50,15 +50,16 @@ import {
   MOVED_OUT_COMPONENT,
   PAYLOAD_BUCKET_KEYS,
   WISHLIST_COMPONENT,
+  chunkKeys,
   getComponentQueries,
   getDeferredQuery,
   getExtensionQuery,
-  getLongTermEpicsQuery,
   getLongTermFundedQuery,
   getLongTermProjectsQuery,
-  getLongTermWorkQuery,
   getMovedOutQuery,
   getWishlistQuery,
+  jqlEpicsByParentKeys,
+  jqlWorkByEpicKeys,
   type PayloadBucketKey,
 } from './payloadJqlService.js';
 import {
@@ -175,8 +176,27 @@ export const DEFAULT_PAGE_SIZE = 500;
 /** Default per-component max issue cap. */
 export const DEFAULT_MAX_ISSUES_PER_BUCKET = 20_000;
 
-/** Concurrency for the 5-bucket + 4-sidecar parallel fetch. */
-export const DEFAULT_FETCH_CONCURRENCY = 9;
+/** Concurrency for the bucket fetch. Always 1 — parallel /search trips JIRA 429. */
+export const DEFAULT_FETCH_CONCURRENCY = 1;
+
+/** Pause between sequential JIRA searches so a wave does not burst the rate limit. */
+const BETWEEN_SEARCH_MS = 250;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * History-scan buckets whose first /search page routinely exceeds the
+ * connector default of 30s. Used by fetchReleaseData unless the caller
+ * passes an explicit perPageTimeoutMs.
+ */
+export const SLOW_BUCKETS = new Set<string>([
+  MOVED_OUT_COMPONENT,
+]);
+
+/** Per-page timeout for SLOW_BUCKETS. Still under nginx's 300s proxy window. */
+export const SLOW_BUCKET_TIMEOUT_MS = 120_000;
 
 // ── Gate date history types ────────────────────────────────────────────────
 
@@ -353,6 +373,8 @@ export interface FetchReleaseResult {
   tickets: ProcessedTicket[];
   bucketCounts: Record<string, number>;
   error: string | null;
+  /** Per-bucket fetch failures. Empty when every bucket succeeded. */
+  bucketErrors: Record<string, string>;
 }
 
 // ── Helpers — pure transforms ──────────────────────────────────────────────
@@ -564,10 +586,15 @@ export interface FetchBucketOptions {
   onProgress?: (bucketName: string, status: string, detail: string) => void;
   /**
    * Per-page HTTP timeout passed directly to jiraConnector.searchAll.
-   * Defaults to jiraConnector's own default (30 s). Slow buckets
-   * (portfolioChildrenOf, issuesInEpics) should pass a larger value.
+   * Defaults to jiraConnector's own default (30 s). History-scan buckets
+   * (`moved_out` / `fixVersion was`) should pass a larger value.
    */
   perPageTimeoutMs?: number;
+  /**
+   * Comma-separated field list for /search. Defaults to RELEASE_DATASET_FIELDS.
+   * Pass `'key'` for precursor key-only fetches.
+   */
+  fields?: string;
 }
 
 /**
@@ -588,26 +615,147 @@ export async function fetchBucket(
   const fullJql = options.projectKey
     ? `project = ${options.projectKey} AND (${bucketJql})`
     : bucketJql;
+  const fieldList = options.fields ?? RELEASE_DATASET_FIELDS.join(',');
   options.onProgress?.(bucketName, 'fetching', 'page 1');
-  try {
-    const issues = await jira.searchAll(fullJql, RELEASE_DATASET_FIELDS.join(','), {
+  const searchOnce = () =>
+    jira.searchAll(fullJql, fieldList, {
       pageSize: options.pageSize ?? DEFAULT_PAGE_SIZE,
       maxIssues: options.maxIssues ?? DEFAULT_MAX_ISSUES_PER_BUCKET,
       perPageTimeoutMs: options.perPageTimeoutMs,
     });
+  try {
+    const issues = await searchOnce();
     options.onProgress?.(bucketName, 'done', `${issues.length} fetched`);
     return { bucketName, issues, error: null };
   } catch (err) {
-    // Use JiraConnector.wrapError to extract the actual JIRA error message
-    // (e.g. "Function portfolioChildrenOf not available" is far more
-    // actionable than the raw axios status string).
-    const wrapped = JiraConnector.wrapError(err);
-    const msg = `[${bucketName}] ${wrapped.message} (HTTP ${wrapped.statusCode})`;
-    // eslint-disable-next-line no-console
-    console.error(`[releaseDatasetService] fetchBucket error for ${release}/${bucketName}:`, wrapped.message, wrapped.details ?? '');
-    options.onProgress?.(bucketName, 'error', msg);
-    return { bucketName, issues: [], error: msg };
+    if (isJiraTimeout(err)) {
+      options.onProgress?.(bucketName, 'fetching', 'retry after timeout');
+      try {
+        const issues = await searchOnce();
+        options.onProgress?.(bucketName, 'done', `${issues.length} fetched (retry)`);
+        return { bucketName, issues, error: null };
+      } catch (retryErr) {
+        return failBucket(bucketName, release, retryErr, options.onProgress);
+      }
+    }
+    return failBucket(bucketName, release, err, options.onProgress);
   }
+}
+
+function isJiraTimeout(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code = (err as { code?: string })?.code;
+  return (
+    /timeout|timed out|ETIMEDOUT|ECONNABORTED/i.test(msg) ||
+    code === 'ECONNABORTED' ||
+    code === 'ETIMEDOUT'
+  );
+}
+
+function failBucket(
+  bucketName: string,
+  release: string,
+  err: unknown,
+  onProgress: FetchBucketOptions['onProgress']
+): FetchBucketResult {
+  const wrapped = JiraConnector.wrapError(err);
+  const msg = `[${bucketName}] ${wrapped.message} (HTTP ${wrapped.statusCode})`;
+  // eslint-disable-next-line no-console
+  console.error(
+    `[releaseDatasetService] fetchBucket error for ${release}/${bucketName}:`,
+    wrapped.message,
+    wrapped.details ?? ''
+  );
+  onProgress?.(bucketName, 'error', msg);
+  return { bucketName, issues: [], error: msg };
+}
+
+const KEY_ONLY_FIELDS = 'key';
+
+function keysFromIssues(issues: JiraIssue[]): string[] {
+  return issues.map((i) => i.key).filter(Boolean);
+}
+
+function emptyBucket(bucketName: string): FetchBucketResult {
+  return { bucketName, issues: [], error: null };
+}
+
+async function runNamedFetches(
+  jira: JiraConnector,
+  release: string,
+  plans: Array<{ name: string; jql: string; fields?: string }>,
+  options: FetchBucketOptions,
+  concurrencyCap: number
+): Promise<FetchBucketResult[]> {
+  if (plans.length === 0) return [];
+  const concurrency = Math.min(Math.max(concurrencyCap, 1), plans.length);
+  const results: FetchBucketResult[] = new Array(plans.length);
+  let nextIdx = 0;
+  async function worker(): Promise<void> {
+    for (;;) {
+      const i = nextIdx++;
+      if (i >= plans.length) return;
+      const plan = plans[i]!;
+      const timeout =
+        options.perPageTimeoutMs ??
+        (SLOW_BUCKETS.has(plan.name) ? SLOW_BUCKET_TIMEOUT_MS : undefined);
+      results[i] = await fetchBucket(jira, release, plan.name, plan.jql, {
+        ...options,
+        perPageTimeoutMs: timeout,
+        fields: plan.fields,
+      });
+      if (BETWEEN_SEARCH_MS > 0 && i + 1 < plans.length) {
+        await sleep(BETWEEN_SEARCH_MS);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return results;
+}
+
+async function fetchKeyedChunks(
+  jira: JiraConnector,
+  release: string,
+  bucketName: string,
+  keys: string[],
+  buildJql: (chunk: string[]) => string,
+  options: FetchBucketOptions
+): Promise<FetchBucketResult> {
+  if (keys.length === 0) return emptyBucket(bucketName);
+  const chunks = chunkKeys(keys);
+  const all: JiraIssue[] = [];
+  let firstErr: string | null = null;
+  for (let c = 0; c < chunks.length; c++) {
+    const chunk = chunks[c]!;
+    const jql = buildJql(chunk);
+    if (!jql) continue;
+    options.onProgress?.(
+      bucketName,
+      'fetching',
+      `chunk ${c + 1}/${chunks.length} (${chunk.length} keys)`
+    );
+    const r = await fetchBucket(jira, release, bucketName, jql, options);
+    all.push(...r.issues);
+    if (r.error && !firstErr) firstErr = r.error;
+    if (BETWEEN_SEARCH_MS > 0 && c + 1 < chunks.length) {
+      await sleep(BETWEEN_SEARCH_MS);
+    }
+  }
+  const seen = new Set<string>();
+  const issues: JiraIssue[] = [];
+  for (const issue of all) {
+    if (seen.has(issue.key)) continue;
+    seen.add(issue.key);
+    issues.push(issue);
+  }
+  return { bucketName, issues, error: firstErr };
+}
+
+function recordResult(
+  map: Map<string, FetchBucketResult>,
+  result: FetchBucketResult
+): void {
+  map.set(result.bucketName, result);
 }
 
 // ── Release-level orchestration ────────────────────────────────────────────
@@ -639,8 +787,8 @@ export interface FetchReleaseOptions {
   /** Max issues per bucket safety cap. Default 20,000. */
   maxIssuesPerBucket?: number;
   /**
-   * Max concurrent bucket fetches. Defaults to fetch-plan length (bounded
-   * internally). Lower if JIRA rate-limits kick in.
+   * Ignored — fetches always run one JIRA search at a time. Parallel
+   * /search trips HTTP 429. Kept on the options type so callers don't break.
    */
   concurrency?: number;
   /** Progress hook, see `FetchBucketOptions.onProgress`. */
@@ -671,11 +819,8 @@ export interface FetchReleaseOptions {
   bucketFilter?: string[];
   /**
    * Per-request timeout override for all buckets (milliseconds).
-   * When omitted the connector default (30 s) is used for most buckets,
-   * but `epics_of_projects` and `work_toward_project` automatically
-   * receive a higher default (90 s) because they use portfolio JQL
-   * functions (`portfolioChildrenOf`, `issuesInEpics`) that are
-   * inherently slower.
+   * When omitted the connector default (30 s) is used for cheap buckets;
+   * history-scan buckets in SLOW_BUCKETS (`moved_out`) get 120 s.
    */
   perPageTimeoutMs?: number;
 }
@@ -685,20 +830,22 @@ export interface FetchReleaseOptions {
  * long-term funded) plus label sidecars for one release, dedup
  * within-release, and emit the processed ticket rows.
  *
- * Order of operations:
+ * Fetch strategy (`FETCH_STRATEGY` = indexed-parent-epic-v1):
  *
- *   1. Build the fetch plan:
- *        Group 1 — 6 bucket JQLs (no project scope; covers ERA, FEAT, TECHPUBS)
- *        Group 2 — 1 broad moved-out JQL (classified in-memory post-fetch)
- *        Group 3 — 3 JQLs for long-term funded work (only when futureReleases given)
- *        Sidecars — wishlist, deferred, extension (label-based, not in the union)
- *   2. Fan out all fetches with bounded concurrency.
- *   3. Within-release dedup by `Issue Key`, preserving fetch order so
- *      parents win over children in the `Components` tag composition.
+ *   Wave 1 — indexed / cheap JQL, one search at a time:
+ *     top_level_projects, standalone_epics, direct_tickets,
+ *     moved_out, long_term_projects, sidecars
+ *   Wave 2 — Parent Link IN (feature keys), chunked:
+ *     epics_of_projects, work_toward_standalone_epic, long_term_epics
+ *   Wave 3 — Epic Link IN (epic keys), chunked:
+ *     work_toward_project, long_term_work
  *
- * Group 2 "hygienic vs needs cleanup" is derived in-memory from the
- * ticket's `Portfolio Parent Key` / `Epic Link Key` fields after the
- * flat dump lands — not at fetch time.
+ * Nested ScriptRunner `portfolioChildrenOf` / `issuesInEpics` are NOT
+ * executed at fetch time. Click-through JQL in getComponentQueries still
+ * uses them for JIRA hyperlinks.
+ *
+ * Cell sync (`bucketFilter`) still walks the parent chain as key-only
+ * precursor fetches so a Work cell does not need a full Projects refetch.
  */
 export async function fetchReleaseData(
   jira: JiraConnector,
@@ -713,117 +860,230 @@ export async function fetchReleaseData(
   const catchAll = options.isCatchAllVersion ?? false;
   const buckets = getComponentQueries(release, catchAll);
   const sidecarOpts = { labelPrefix: options.labelPrefix };
-
-  // Jira labels cannot contain spaces. Releases like "Era Future" or "master"
-  // generate suffixes with spaces (e.g. "era future"), making label queries
-  // like `labels = "ndb-era future-deferred"` invalid (HTTP 400). Skip all
-  // label-anchored sidecar queries for those releases.
   const labelSuffix = deriveReleaseSuffix(release, options.labelPrefix);
   const sidecarsSafe = !/\s/.test(labelSuffix);
-
-  // ── Fetch plan (order matters for the within-release dedup) ───────────────
-  // Group 1: parents before children — when a ticket matches both a
-  //   parent bucket (epics_of_projects) and a child bucket (work_toward_project)
-  //   it's tagged with the parent (first seen).
-  // Group 2: after Group 1 so Group-1 tickets that still show up via
-  //   `fixVersion was` keep their Group-1 Component tag and are only
-  //   annotated with `moved_out` as an additional tag.
-  // Group 3: after Group 1 + 2 for the same dedup reason.
-  // Sidecars: last so the payload tag always wins.
   const allowBucket = options.bucketFilter && options.bucketFilter.length > 0
     ? new Set(options.bucketFilter)
-    : null; // null = allow all
+    : null;
+  const wants = (name: string): boolean => allowBucket === null || allowBucket.has(name);
+  const hasFuture = !!(options.futureReleases && options.futureReleases.length > 0);
+  const concurrency = 1;
+  const baseOpts: FetchBucketOptions = {
+    projectKey: options.projectKey,
+    pageSize: options.pageSize,
+    maxIssues: options.maxIssuesPerBucket,
+    onProgress: options.onProgress,
+    perPageTimeoutMs: options.perPageTimeoutMs,
+  };
 
-  const fetchPlan: Array<{ name: string; jql: string }> = [
-    // Group 1 — 6 disjoint buckets, no project filter
-    ...PAYLOAD_BUCKET_KEYS.map((k) => ({ name: k, jql: buckets[k] })),
-    // Group 2 — moved-out (single broad query).
-    // Skipped for catch-all versions (master / Era Future): `fixVersion was
-    // master` scans all JIRA history, times out at 30s, and is semantically
-    // meaningless for a planning bucket.
-    ...(catchAll
-      ? []
-      : [{ name: MOVED_OUT_COMPONENT, jql: getMovedOutQuery(release) }]),
-    // Group 3 — long-term funded (only when caller provides future releases)
-    ...(options.futureReleases && options.futureReleases.length > 0
-      ? [
-          {
-            name: LONG_TERM_PROJECTS_COMPONENT,
-            jql: getLongTermProjectsQuery({ futureReleases: options.futureReleases }),
-          },
-          {
-            name: LONG_TERM_EPICS_COMPONENT,
-            jql: getLongTermEpicsQuery({ futureReleases: options.futureReleases }),
-          },
-          {
-            name: LONG_TERM_WORK_COMPONENT,
-            jql: getLongTermWorkQuery({ futureReleases: options.futureReleases }),
-          },
-        ]
-      : []),
-    // Sidecars — label-anchored, NOT in the Group 1 union.
-    // Skipped when the release name generates a label suffix with spaces
-    // (e.g. "Era Future" → "era future") because Jira rejects such labels.
-    ...(sidecarsSafe
-      ? [
-          { name: WISHLIST_COMPONENT, jql: getWishlistQuery(release, sidecarOpts) },
-          { name: DEFERRED_COMPONENT, jql: getDeferredQuery(release, sidecarOpts) },
-          { name: LONG_TERM_COMPONENT, jql: getLongTermFundedQuery(release, sidecarOpts) },
-          { name: EXTENSION_COMPONENT, jql: getExtensionQuery(release, sidecarOpts) },
-        ]
-      : []),
-  // Cell-sync filter: when bucketFilter is set, only run those buckets.
-  ].filter(({ name }) => allowBucket === null || allowBucket.has(name));
+  const resultMap = new Map<string, FetchBucketResult>();
+  const failedChild = (name: string, err: string): FetchBucketResult => ({
+    bucketName: name,
+    issues: [],
+    error: err,
+  });
 
-  // Bounded-concurrency fan-out.
-  const concurrency = Math.min(
-    options.concurrency ?? DEFAULT_FETCH_CONCURRENCY,
-    fetchPlan.length
-  );
-  const results: FetchBucketResult[] = new Array(fetchPlan.length);
-  let nextIdx = 0;
-  async function worker(): Promise<void> {
-    for (;;) {
-      const i = nextIdx++;
-      if (i >= fetchPlan.length) return;
-      const plan = fetchPlan[i]!;
-      // Heavy portfolio-function buckets routinely take 60–90 s on large
-      // releases. Use the caller override if set, otherwise default to
-      // 90 s for those two buckets and the connector default for the rest.
-      const SLOW_BUCKETS = new Set(['epics_of_projects', 'work_toward_project']);
-      const bucketTimeout =
-        options.perPageTimeoutMs ??
-        (SLOW_BUCKETS.has(plan.name) ? 90_000 : undefined);
-      results[i] = await fetchBucket(jira, release, plan.name, plan.jql, {
-        projectKey: options.projectKey,
-        pageSize: options.pageSize,
-        maxIssues: options.maxIssuesPerBucket,
-        onProgress: options.onProgress,
-        perPageTimeoutMs: bucketTimeout,
-      });
+  const wantTop = wants('top_level_projects');
+  const wantEpics = wants('epics_of_projects');
+  const wantWork = wants('work_toward_project');
+  const wantSaEpics = wants('standalone_epics');
+  const wantSaWork = wants('work_toward_standalone_epic');
+  const wantDirect = wants('direct_tickets');
+  const wantMoved = wants(MOVED_OUT_COMPONENT) && !catchAll;
+  const wantLtProjects = wants(LONG_TERM_PROJECTS_COMPONENT) && hasFuture;
+  const wantLtEpics = wants(LONG_TERM_EPICS_COMPONENT) && hasFuture;
+  const wantLtWork = wants(LONG_TERM_WORK_COMPONENT) && hasFuture;
+
+  // Precursors: a child cell still needs parent keys even if the parent
+  // bucket is not being persisted this run.
+  const needTopKeys = wantTop || wantEpics || wantWork;
+  const needSaEpicKeys = wantSaEpics || wantSaWork;
+  const needLtProjectKeys = wantLtProjects || wantLtEpics || wantLtWork;
+
+  // ── Wave 1: independent indexed queries ─────────────────────────────────
+  const wave1: Array<{ name: string; jql: string; fields?: string }> = [];
+  if (needTopKeys) {
+    wave1.push({
+      name: 'top_level_projects',
+      jql: buckets.top_level_projects,
+      fields: wantTop ? undefined : KEY_ONLY_FIELDS,
+    });
+  }
+  if (needSaEpicKeys) {
+    wave1.push({
+      name: 'standalone_epics',
+      jql: buckets.standalone_epics,
+      fields: wantSaEpics ? undefined : KEY_ONLY_FIELDS,
+    });
+  }
+  if (wantDirect) {
+    wave1.push({ name: 'direct_tickets', jql: buckets.direct_tickets });
+  }
+  if (wantMoved) {
+    wave1.push({ name: MOVED_OUT_COMPONENT, jql: getMovedOutQuery(release) });
+  }
+  if (needLtProjectKeys) {
+    wave1.push({
+      name: LONG_TERM_PROJECTS_COMPONENT,
+      jql: getLongTermProjectsQuery({ futureReleases: options.futureReleases! }),
+      fields: wantLtProjects ? undefined : KEY_ONLY_FIELDS,
+    });
+  }
+  if (sidecarsSafe) {
+    const sidecars = [
+      { name: WISHLIST_COMPONENT, jql: getWishlistQuery(release, sidecarOpts) },
+      { name: DEFERRED_COMPONENT, jql: getDeferredQuery(release, sidecarOpts) },
+      { name: LONG_TERM_COMPONENT, jql: getLongTermFundedQuery(release, sidecarOpts) },
+      { name: EXTENSION_COMPONENT, jql: getExtensionQuery(release, sidecarOpts) },
+    ];
+    for (const s of sidecars) {
+      if (wants(s.name)) wave1.push(s);
     }
   }
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
-  // First-error capture (partial results still land).
-  let firstErr: string | null = null;
-  const bucketCounts: Record<string, number> = {};
-  for (const r of results) {
-    bucketCounts[r.bucketName] = r.issues.length;
-    if (r.error && !firstErr) firstErr = r.error;
+  const wave1Results = await runNamedFetches(jira, release, wave1, baseOpts, concurrency);
+  for (const r of wave1Results) {
+    if (wants(r.bucketName)) recordResult(resultMap, r);
   }
 
-  // Within-release dedup. Iterate the plan order: buckets first
-  // (parents → children → standalone), then wishlist, then deferred.
-  // The first time we see an Issue Key, seed the row with that
-  // bucket as the Components tag. Subsequent appearances *append*
-  // (comma-join) so a deferred-and-in-payload ticket ends up as
-  // `"direct_tickets,deferred"`, a promoted wishlist as
-  // `"top_level_projects,wishlist"`, etc.
+  const topWave = wave1Results.find((r) => r.bucketName === 'top_level_projects');
+  const saWave = wave1Results.find((r) => r.bucketName === 'standalone_epics');
+  const ltWave = wave1Results.find((r) => r.bucketName === LONG_TERM_PROJECTS_COMPONENT);
+  const topLevelKeys = keysFromIssues(topWave?.issues ?? []);
+  const standaloneEpicKeys = keysFromIssues(saWave?.issues ?? []);
+  const longTermProjectKeys = keysFromIssues(ltWave?.issues ?? []);
+  const topErr = topWave?.error ?? null;
+  const saErr = saWave?.error ?? null;
+  const ltErr = ltWave?.error ?? null;
+
+  // ── Wave 2: Parent Link / standalone-epic children (one search at a time)
+  let projectEpicKeys: string[] = [];
+  let longTermEpicKeys: string[] = [];
+
+  if (wantEpics || wantWork) {
+    if (topErr) {
+      if (wantEpics) recordResult(resultMap, failedChild('epics_of_projects', topErr));
+      if (wantWork) recordResult(resultMap, failedChild('work_toward_project', topErr));
+    } else {
+      const r = await fetchKeyedChunks(
+        jira,
+        release,
+        'epics_of_projects',
+        topLevelKeys,
+        (chunk) => jqlEpicsByParentKeys(chunk),
+        { ...baseOpts, fields: wantEpics ? undefined : KEY_ONLY_FIELDS }
+      );
+      projectEpicKeys = keysFromIssues(r.issues);
+      if (wantEpics) recordResult(resultMap, r);
+      else if (r.error && wantWork) {
+        recordResult(resultMap, failedChild('work_toward_project', r.error));
+      }
+    }
+  }
+
+  if (wantSaWork) {
+    if (saErr) {
+      recordResult(resultMap, failedChild('work_toward_standalone_epic', saErr));
+    } else {
+      const extra = catchAll ? 'updated >= startOfYear(-1)' : '';
+      const r = await fetchKeyedChunks(
+        jira,
+        release,
+        'work_toward_standalone_epic',
+        standaloneEpicKeys,
+        (chunk) => jqlWorkByEpicKeys(chunk, extra),
+        baseOpts
+      );
+      recordResult(resultMap, r);
+    }
+  }
+
+  if (wantLtEpics || wantLtWork) {
+    if (ltErr) {
+      if (wantLtEpics) recordResult(resultMap, failedChild(LONG_TERM_EPICS_COMPONENT, ltErr));
+      if (wantLtWork) recordResult(resultMap, failedChild(LONG_TERM_WORK_COMPONENT, ltErr));
+    } else {
+      const r = await fetchKeyedChunks(
+        jira,
+        release,
+        LONG_TERM_EPICS_COMPONENT,
+        longTermProjectKeys,
+        (chunk) => jqlEpicsByParentKeys(chunk),
+        { ...baseOpts, fields: wantLtEpics ? undefined : KEY_ONLY_FIELDS }
+      );
+      longTermEpicKeys = keysFromIssues(r.issues);
+      if (wantLtEpics) recordResult(resultMap, r);
+      else if (r.error && wantLtWork) {
+        recordResult(resultMap, failedChild(LONG_TERM_WORK_COMPONENT, r.error));
+      }
+    }
+  }
+
+  if (wantEpics && !resultMap.has('epics_of_projects')) {
+    recordResult(resultMap, emptyBucket('epics_of_projects'));
+  }
+  if (wantSaWork && !resultMap.has('work_toward_standalone_epic')) {
+    recordResult(resultMap, emptyBucket('work_toward_standalone_epic'));
+  }
+  if (wantLtEpics && !resultMap.has(LONG_TERM_EPICS_COMPONENT)) {
+    recordResult(resultMap, emptyBucket(LONG_TERM_EPICS_COMPONENT));
+  }
+
+  // ── Wave 3: work under project epics (one search at a time) ─────────────
+  if (wantWork && !resultMap.has('work_toward_project')) {
+    const r = await fetchKeyedChunks(
+      jira,
+      release,
+      'work_toward_project',
+      projectEpicKeys,
+      (chunk) => jqlWorkByEpicKeys(chunk),
+      baseOpts
+    );
+    recordResult(resultMap, r);
+  }
+  if (wantLtWork && !resultMap.has(LONG_TERM_WORK_COMPONENT)) {
+    const r = await fetchKeyedChunks(
+      jira,
+      release,
+      LONG_TERM_WORK_COMPONENT,
+      longTermEpicKeys,
+      (chunk) => jqlWorkByEpicKeys(chunk),
+      baseOpts
+    );
+    recordResult(resultMap, r);
+  }
+
+  if (wantWork && !resultMap.has('work_toward_project')) {
+    recordResult(resultMap, emptyBucket('work_toward_project'));
+  }
+  if (wantDirect && !resultMap.has('direct_tickets')) {
+    recordResult(resultMap, emptyBucket('direct_tickets'));
+  }
+
+  const fetchOrder = [
+    ...PAYLOAD_BUCKET_KEYS,
+    MOVED_OUT_COMPONENT,
+    LONG_TERM_PROJECTS_COMPONENT,
+    LONG_TERM_EPICS_COMPONENT,
+    LONG_TERM_WORK_COMPONENT,
+    WISHLIST_COMPONENT,
+    DEFERRED_COMPONENT,
+    LONG_TERM_COMPONENT,
+    EXTENSION_COMPONENT,
+  ];
+
+  let firstErr: string | null = null;
+  const bucketCounts: Record<string, number> = {};
+  const bucketErrors: Record<string, string> = {};
   const byKey = new Map<string, ProcessedTicket>();
-  for (const { name: bucketName } of fetchPlan) {
-    const bucketResult = results.find((r) => r.bucketName === bucketName);
+  for (const bucketName of fetchOrder) {
+    const bucketResult = resultMap.get(bucketName);
     if (!bucketResult) continue;
+    bucketCounts[bucketName] = bucketResult.issues.length;
+    if (bucketResult.error) {
+      bucketErrors[bucketName] = bucketResult.error;
+      if (!firstErr) firstErr = bucketResult.error;
+    }
     for (const issue of bucketResult.issues) {
       const existing = byKey.get(issue.key);
       if (existing) {
@@ -842,6 +1102,7 @@ export async function fetchReleaseData(
     tickets: Array.from(byKey.values()),
     bucketCounts,
     error: firstErr,
+    bucketErrors,
   };
 }
 
