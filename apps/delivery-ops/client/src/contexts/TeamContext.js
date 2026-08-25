@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { getApiBase } from '../utils/api';
+import { getApiBase, getAuthHeaders } from '../utils/api';
 
 const TeamContext = createContext(null);
 
@@ -117,9 +117,11 @@ export const TeamProvider = ({ children }) => {
   const selectedTeam = teams.find(team => team.id === selectedTeamId) || null;
 
   /**
-   * Check if a team is selected
+   * A stored team id counts as selected even if the teams list has not
+   * loaded yet — otherwise a failed /api/config/teams fetch hides every
+   * page that gates on hasTeamSelected, with no picker to recover.
    */
-  const hasTeamSelected = Boolean(selectedTeamId && selectedTeam);
+  const hasTeamSelected = Boolean(selectedTeamId);
 
   /**
    * Fetch teams configuration from API
@@ -132,11 +134,12 @@ export const TeamProvider = ({ children }) => {
       console.log('[TeamContext] Fetching teams from API...');
       console.log('[TeamContext] API URL:', `${getApiBase()}/api/config/teams`);
       
-      // Use fetch instead of axios for more reliable proxy handling
+      const { headers: authHeaders } = getAuthHeaders();
       const response = await fetch(`${getApiBase()}/api/config/teams`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
       });
       
@@ -236,7 +239,7 @@ export const TeamProvider = ({ children }) => {
     registerApiRequest,
     
     // Computed values
-    showTeamSelector: teams.length > 0 && !loading
+    showTeamSelector: true
   };
 
   return (

@@ -18,6 +18,7 @@ import React, { useRef, useState, useEffect } from 'react';
  *   hasGanttChart    {boolean} - true when ganttConfig is present
  *   downloading      {boolean} - set by parent while any download is in progress
  *   onDownload       {function(type)} - called with 'gantt'|'excel'|'html'|'both'
+ *   teamSelector     {node}    - optional Team dropdown rendered before the version picker
  */
 function ReleaseVersionSelector({
   activeVersions: activeVersionsProp,
@@ -37,6 +38,7 @@ function ReleaseVersionSelector({
   onDownload,
   onGenerateBriefing,
   briefingState = 'idle', // idle | loading | done | error
+  teamSelector = null,
 }) {
   // When the parent passes pre-split lists (new API), use them directly.
   // Fall back to splitting the flat `versions` prop with the same rule for
@@ -96,10 +98,12 @@ function ReleaseVersionSelector({
 
   return (
     <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-      {loadingVersions ? (
-        <p style={{ margin: 0, fontSize: '0.875rem' }}>Loading release versions...</p>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {teamSelector}
+        {loadingVersions ? (
+          <p style={{ margin: 0, fontSize: '0.875rem' }}>Loading release versions...</p>
+        ) : (
+          <>
           {/* Version label */}
           <label
             htmlFor="release-version"
@@ -311,8 +315,9 @@ function ReleaseVersionSelector({
               </div>
             )}
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

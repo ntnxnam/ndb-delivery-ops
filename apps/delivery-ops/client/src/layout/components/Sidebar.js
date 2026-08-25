@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { useTeam } from '../../contexts/TeamContext';
 import { usePermissions } from '../../auth/hooks/usePermissions';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
 import { TAB_PERMISSIONS } from '../../auth/constants/permissions';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
+import { TeamSelector } from './TeamSelector';
 
 /**
  * URL for the bin-packing app. The app is static-served by the backend
@@ -30,14 +30,6 @@ export const Sidebar = () => {
   const location = useLocation();
   const { user, testConnectionAndRefreshPermissions } = useAuth();
   const { canAccessTab } = usePermissions();
-  const { 
-    teams, 
-    selectedTeamId, 
-    changeTeam, 
-    showTeamSelector, 
-    isTransitioning,
-    loading: teamsLoading
-  } = useTeam();
   const { refreshVersionsAndResetDefault } = useSelectedRelease();
   const { success: showSuccess, error: showError } = useNotifications();
 
@@ -326,34 +318,9 @@ export const Sidebar = () => {
           )}
         </div>
 
-        {/* Team Selector */}
-        {!isCollapsed && showTeamSelector && teams.length > 0 && (
+        {!isCollapsed && (
           <div className="team-selector-section">
-            <div className="team-selector">
-              <label htmlFor="sidebar-team-select">Team:</label>
-              <select
-                id="sidebar-team-select"
-                value={selectedTeamId}
-                onChange={(e) => changeTeam(e.target.value)}
-                className={`team-select ${isTransitioning ? 'transitioning' : ''}`}
-                disabled={teamsLoading || isTransitioning}
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              {isTransitioning && (
-                <span className="transition-indicator">⏳</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!isCollapsed && teamsLoading && (
-          <div className="teams-loading-section">
-            <div className="teams-loading">Loading teams...</div>
+            <TeamSelector variant="sidebar" id="sidebar-team-select" />
           </div>
         )}
 

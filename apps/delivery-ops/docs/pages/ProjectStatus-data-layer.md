@@ -3,11 +3,25 @@
 **Route**: `/project-status`  
 **Server routes used**: `server/routes/jira/index.js`, `server/routes/releaseDataset.js`  
 **Hooks**: `useReleaseItems`, `useReleaseVersions`, `useGateTimeline`  
-**Contexts consumed**: `SelectedReleaseContext`, `ReleaseDataContext`, `TeamDatasetContext`
+**Contexts consumed**: `SelectedReleaseContext`, `ReleaseDataContext`, `TeamDatasetContext`, `TeamContext`
 
 ---
 
 ## API Calls (client → server)
+
+### 0. Fetch teams (populates team picker)
+
+```
+GET /api/config/teams
+Headers: Authorization, X-Username (optional; endpoint is unauthenticated)
+```
+
+**Server flow**: `config.js → loadTeamBoardConfig()` reads `server/config/teamBoardConfig.json`  
+**Returns**: `{ teams: [{ id, name, boardId, ... }], defaultTeamId }`  
+**Context**: `TeamContext` fetches once on app mount; auto-selects stored or default team  
+**Fallback**: if the request fails, the Team dropdown stays visible with a Retry button; a stored `releaseVersionSelectedTeamId` is still treated as selected so the page is not a dead-end
+
+---
 
 ### 1. Fetch release versions (populates picker)
 

@@ -25,18 +25,20 @@ The Project Status page is the central release payload dashboard. It shows the f
 | PS-06 | As a user, every count is a clickable link that opens the corresponding JIRA query. |
 | PS-07 | As an RM, I can see gate dates (CCM, CG, PG, GA) as vertical rulers on the Gantt. |
 | PS-08 | As a user, changes to the release selector persist to localStorage so my selection survives a refresh. |
+| PS-09 | As a user, I can pick a team from a dropdown on the page (same control as other pages), not only from a hidden header. |
 
 ---
 
 ## UI Behaviour
 
-1. **Release picker** — dropdown at top; populated from JIRA; selection persists in localStorage
-2. **Payload summary row** — shows total issues, open bugs, P0/P1 count, closed % as clickable KPI chips
-3. **Filter bar** — team, component, status, priority, issue type; all client-side after initial load
-4. **Payload table** — columns: Key, Summary, Type, Status, Priority, Assignee, Fix Version, Gate Date; sortable
-5. **Gantt section** — horizontal bars per issue using JIRA date hierarchy (gate dates for FEAT tier, dueDate for Epics, sprint end for lower-level); gate rulers as vertical lines
-6. **Email generation button** — opens EmailSender pre-filled with current view's data
-7. **Legend** — colour coding for issue types and RAG statuses
+1. **Team picker** — dropdown at top of the toolbar (and in the sidebar); selection persists in localStorage as `releaseVersionSelectedTeamId`. Shown even when the teams API fails, with a Retry control.
+2. **Release picker** — dropdown next to the team picker; populated from JIRA; selection persists in localStorage
+3. **Payload summary row** — shows total issues, open bugs, P0/P1 count, closed % as clickable KPI chips
+4. **Filter bar** — team, component, status, priority, issue type; all client-side after initial load
+5. **Payload table** — columns: Key, Summary, Type, Status, Priority, Assignee, Fix Version, Gate Date; sortable
+6. **Gantt section** — horizontal bars per issue using JIRA date hierarchy (gate dates for FEAT tier, dueDate for Epics, sprint end for lower-level); gate rulers as vertical lines
+7. **Email generation button** — opens EmailSender pre-filled with current view's data
+8. **Legend** — colour coding for issue types and RAG statuses
 
 ---
 
@@ -68,3 +70,4 @@ The Project Status page is the central release payload dashboard. It shows the f
 - [ ] Gantt gate rulers align with dates from `releaseVersionsEmailConfig.json`
 - [ ] Filter combinations produce correct subsets without a server round-trip
 - [ ] Selected release survives browser refresh (localStorage)
+- [ ] Team dropdown is visible on the page toolbar and in the sidebar; Retry appears if `/api/config/teams` fails
