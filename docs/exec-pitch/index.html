@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Portfolio Delivery Ops — Executive Pitch</title>
+  <style>
+    @page { size: 13.333in 7.5in; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: #0b1016;
+      color: #e6edf3;
+      font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .slide {
+      width: 13.333in;
+      height: 7.5in;
+      padding: 0.62in 0.72in;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      overflow: hidden;
+      background: #0f1419;
+    }
+    .slide:last-child { page-break-after: auto; break-after: auto; }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #58a6ff;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 42px;
+      font-weight: 600;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      color: #f0f6fc;
+    }
+    h2 {
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: #f0f6fc;
+    }
+    .lede {
+      font-size: 17px;
+      line-height: 1.45;
+      color: #8b949e;
+      max-width: 8.4in;
+      margin-top: 16px;
+    }
+    .foot {
+      position: absolute;
+      left: 0.72in;
+      right: 0.72in;
+      bottom: 0.38in;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6e7681;
+    }
+    .accent-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: #58a6ff;
+    }
+
+    /* Cover */
+    .cover { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 1.15in; }
+    .cover h1 { font-size: 56px; max-width: 11in; }
+    .cover .brand {
+      position: absolute;
+      top: 0.62in;
+      left: 0.72in;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #8b949e;
+      font-weight: 600;
+    }
+    .quote {
+      margin-top: 28px;
+      font-size: 22px;
+      color: #c9d1d9;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    /* Layouts */
+    .split { display: grid; grid-template-columns: 4.35in 1fr; gap: 0.42in; height: 5.95in; }
+    .split-wide { display: grid; grid-template-columns: 3.7in 1fr; gap: 0.4in; height: 5.95in; }
+    .copy p { color: #8b949e; font-size: 15px; line-height: 1.5; margin-top: 14px; }
+    .copy ul { margin-top: 18px; list-style: none; }
+    .copy li {
+      font-size: 14.5px;
+      color: #c9d1d9;
+      padding: 7px 0 7px 16px;
+      position: relative;
+      line-height: 1.35;
+    }
+    .copy li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 14px;
+      width: 7px;
+      height: 7px;
+      background: #58a6ff;
+    }
+
+    /* Product frame */
+    .frame {
+      background: #1a2332;
+      border: 1px solid #2d3a4d;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .chrome {
+      background: #151c27;
+      border-bottom: 1px solid #2d3a4d;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .dots { display: flex; gap: 5px; }
+    .dots i { width: 8px; height: 8px; border-radius: 50%; display: block; background: #3a4a60; }
+    .url {
+      flex: 1;
+      background: #0f1419;
+      border: 1px solid #2d3a4d;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 10px;
+      color: #8b949e;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    .screen { flex: 1; overflow: hidden; position: relative; }
+    .screen img.live {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 28% 0;
+      display: block;
+    }
+    .caption {
+      font-size: 10px;
+      color: #6e7681;
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    /* App chrome inside frames */
+    .app { display: flex; height: 100%; background: #f4f6f8; color: #1f2328; }
+    .side {
+      width: 132px;
+      background: #1b1f24;
+      color: #c9d1d9;
+      padding: 12px 8px;
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+    .side .logo { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #58a6ff; margin-bottom: 12px; }
+    .nav-item { padding: 5px 7px; border-radius: 4px; margin-bottom: 2px; color: #8b949e; }
+    .nav-item.on { background: #21262d; color: #f0f6fc; }
+    .main { flex: 1; padding: 12px 14px; min-width: 0; }
+    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .ph h3 { font-size: 13px; font-weight: 650; color: #1f2328; }
+    .btn {
+      background: #1565c0;
+      color: #fff;
+      font-size: 9px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .gates { display: flex; gap: 10px; font-size: 9px; color: #555; margin-bottom: 8px; }
+    .gates b { color: #222; }
+    table.mini { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+    table.mini th {
+      text-align: left;
+      background: #eef1f4;
+      padding: 4px 5px;
+      font-size: 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #555;
+      border-bottom: 1px solid #d0d7de;
+    }
+    table.mini td { padding: 5px 5px; border-bottom: 1px solid #eee; vertical-align: top; color: #333; }
+    .key { color: #1565c0; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+    .rag { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .g { background: #388e3c; }
+    .y { background: #f57c00; }
+    .r { background: #d32f2f; }
+    .ai { color: #444; font-size: 8px; line-height: 1.35; max-width: 160px; }
+    .barwrap { display: flex; height: 6px; width: 72px; border-radius: 3px; overflow: hidden; background: #e5e7eb; }
+    .barwrap span { display: block; height: 100%; }
+    .b-done { background: #388e3c; }
+    .b-wip { background: #1565c0; }
+    .b-open { background: #cfd8dc; }
+
+    /* Dark product (Release Brief) */
+    .app-dark { background: #0f1419; color: #e6edf3; }
+    .side-dark { background: #0b1016; border-right: 1px solid #2d3a4d; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 8px; }
+    .kpi {
+      background: #1a2332;
+      border: 1px solid #2d3a4d;
+      border-radius: 6px;
+      padding: 8px 9px;
+    }
+    .kpi .l { font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #8b949e; }
+    .kpi .n { font-size: 20px; font-weight: 600; color: #f0f6fc; margin-top: 2px; }
+    .kpi .s { font-size: 8px; color: #8b949e; margin-top: 2px; }
+    .kpi.warn .n { color: #d29922; }
+    .kpi.bad .n { color: #f85149; }
+    .kpi.ok .n { color: #3fb950; }
+    .panel {
+      background: #1a2332;
+      border: 1px solid #2d3a4d;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 7px;
+    }
+    .panel h4 { font-size: 9px; color: #8b949e; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .risk-row { display: flex; gap: 8px; align-items: flex-start; font-size: 9px; margin-bottom: 5px; color: #c9d1d9; }
+    .pill {
+      font-size: 8px;
+      padding: 1px 6px;
+      border-radius: 99px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    .pill-red { background: rgba(248,81,73,.15); color: #f85149; }
+    .pill-yel { background: rgba(210,153,34,.15); color: #d29922; }
+    .pill-grn { background: rgba(63,185,80,.15); color: #3fb950; }
+    .tl { display: flex; align-items: center; gap: 0; margin: 8px 0 4px; }
+    .tl .gchip {
+      flex: 1;
+      text-align: center;
+      font-size: 8px;
+      padding: 5px 0;
+      border: 1px solid #2d3a4d;
+      color: #8b949e;
+    }
+    .tl .gchip:first-child { border-radius: 4px 0 0 4px; }
+    .tl .gchip:last-child { border-radius: 0 4px 4px 0; }
+    .tl .gchip.met { background: rgba(63,185,80,.12); color: #3fb950; border-color: rgba(63,185,80,.35); }
+    .tl .gchip.next { background: rgba(88,166,255,.12); color: #58a6ff; border-color: rgba(88,166,255,.4); }
+
+    /* Gantt */
+    .gantt { margin-top: 6px; }
+    .grow { display: grid; grid-template-columns: 118px 1fr; gap: 6px; align-items: center; margin-bottom: 5px; }
+    .glab { font-size: 8px; color: #555; white-space: nowrap; overflow: hidden; }
+    .gtrack { height: 10px; background: #e8ecf0; border-radius: 3px; position: relative; }
+    .gbar { position: absolute; top: 0; height: 100%; border-radius: 3px; }
+    .vline { position: absolute; top: -4px; bottom: -4px; width: 1px; background: #f85149; }
+
+    /* Chat */
+    .chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
+    .bubble { max-width: 88%; font-size: 9.5px; line-height: 1.4; padding: 7px 9px; border-radius: 8px; margin-bottom: 7px; }
+    .me { align-self: flex-end; background: #1565c0; color: #fff; }
+    .bot { align-self: flex-start; background: #eef2f6; color: #222; }
+    .bot a { color: #1565c0; font-weight: 700; text-decoration: none; }
+
+    /* Toolbox */
+    .grid6 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 22px; }
+    .card {
+      border: 1px solid #2d3a4d;
+      background: #1a2332;
+      border-radius: 8px;
+      padding: 16px 16px 18px;
+      min-height: 1.55in;
+    }
+    .card .num {
+      font-size: 11px;
+      color: #58a6ff;
+      letter-spacing: 0.12em;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+    .card h3 { font-size: 16px; font-weight: 600; color: #f0f6fc; margin-bottom: 8px; }
+    .card p { font-size: 13px; color: #8b949e; line-height: 1.4; }
+
+    /* Audiences */
+    .aud { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 28px; }
+    .aud-card {
+      border-top: 2px solid #58a6ff;
+      padding-top: 12px;
+    }
+    .aud-card h3 { font-size: 15px; margin-bottom: 6px; }
+    .aud-card p { font-size: 12.5px; color: #8b949e; line-height: 1.4; }
+    .note {
+      margin-top: 28px;
+      font-size: 14px;
+      color: #c9d1d9;
+      border-left: 2px solid #58a6ff;
+      padding-left: 14px;
+    }
+
+    /* Close */
+    .close { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+    .close h1 { font-size: 40px; max-width: 11in; }
+    .stats { display: flex; gap: 36px; margin-top: 40px; }
+    .stat .n { font-size: 28px; font-weight: 600; color: #58a6ff; }
+    .stat .l { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.32in; height: 4.85in; margin-top: 10px; }
+    .tiny-h { font-size: 12px; color: #8b949e; margin-bottom: 8px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 650; }
+  </style>
+</head>
+<body>
+
+  <!-- 1 COVER -->
+  <section class="slide cover">
+    <div class="accent-bar"></div>
+    <div class="brand">Portfolio Delivery Ops</div>
+    <div class="eyebrow">Executive briefing</div>
+    <h1>The 30-second answer<br>to “how’s the release?”</h1>
+    <p class="quote">JIRA is the system of record. This is the system of understanding.</p>
+    <div class="foot">
+      <span>Nutanix Engineering · Portfolio operations</span>
+      <span>01 / 08</span>
+    </div>
+  </section>
+
+  <!-- 2 THE JOB -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="eyebrow">The job</div>
+    <h2>Leadership should not have to assemble the story.</h2>
+    <p class="lede">Today, a status question means a JIRA filter, a Confluence page, a Slack thread, and a spreadsheet. Tomorrow, it is one login — and a view already shaped for the person in the room.</p>
+    <div class="grid6" style="margin-top:32px; grid-template-columns: 1fr 1fr 1fr 1fr;">
+      <div class="card">
+        <div class="num">01</div>
+        <h3>See</h3>
+        <p>Every committed Feature, across every active release, with RAG and remaining work.</p>
+      </div>
+      <div class="card">
+        <div class="num">02</div>
+        <h3>Judge</h3>
+        <p>A health verdict with named blockers — not a green badge with no receipts.</p>
+      </div>
+      <div class="card">
+        <div class="num">03</div>
+        <h3>Ask</h3>
+        <p>Plain English. Grounded in the release dataset. Ticket keys you can click.</p>
+      </div>
+      <div class="card">
+        <div class="num">04</div>
+        <h3>Send</h3>
+        <p>SoS, status email, brief — out the door from the same screen, not a copy-paste ritual.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>One product surface · many personas</span>
+      <span>02 / 08</span>
+    </div>
+  </section>
+
+  <!-- 3 SOS -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="split-wide">
+      <div class="copy">
+        <div class="eyebrow">Scrum of Scrums</div>
+        <h2>The staff-meeting screen.</h2>
+        <p>All active releases in one scroll. Features and Initiatives with AI exec summaries, gate dates, and done / remaining work — then Email SoS.</p>
+        <ul>
+          <li>No more walking the room Feature by Feature</li>
+          <li>Risk is a color you can see from the back row</li>
+          <li>The briefing you just reviewed is the briefing you send</li>
+        </ul>
+      </div>
+      <div>
+        <div class="frame" style="height: 5.55in;">
+          <div class="chrome">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="url">/sos-summary</div>
+          </div>
+          <div class="screen">
+            <img class="live" src="shots/sos-summary.png" alt="Live SoS Summary — features, initiatives, and Email SoS" />
+          </div>
+        </div>
+        <div class="caption">Live product — SoS Summary. Timeline plus Feature / Initiative rows. Email SoS from this screen.</div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>SoS Summary</span>
+      <span>03 / 08</span>
+    </div>
+  </section>
+
+  <!-- 4 RELEASE BRIEF -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="split-wide">
+      <div class="copy">
+        <div class="eyebrow">Release Brief</div>
+        <h2>Health with receipts.</h2>
+        <p>A one-pager for the release: payload, gates, outstanding work, landing forecast. The verdict is RAG. The evidence is ticket keys — never invented, always clickable.</p>
+        <ul>
+          <li>Open P0s and must-fix items named, not counted in the dark</li>
+          <li>Green only when the board is actually clean</li>
+          <li>Built for the person who will forward it upward</li>
+        </ul>
+      </div>
+      <div>
+        <div class="frame" style="height: 5.55in;">
+          <div class="chrome">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="url">/release/brief</div>
+          </div>
+          <div class="screen">
+            <img class="live" src="shots/release-brief.png" alt="Live Release Brief — created vs resolved and landing forecast" />
+          </div>
+        </div>
+        <div class="caption">Live product — Release Brief for NDB-2.11. Burn-down, landing forecast, outstanding work.</div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Release Brief</span>
+      <span>04 / 08</span>
+    </div>
+  </section>
+
+  <!-- 5 GANTT + CHAT -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="eyebrow">Plan and probe</div>
+    <h2>See the timeline. Then ask the question.</h2>
+    <div class="two">
+      <div>
+        <div class="tiny-h">Project Status · gates</div>
+        <div class="frame" style="height: 4.45in;">
+          <div class="chrome">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="url">/project-status</div>
+          </div>
+          <div class="screen">
+            <img class="live" src="shots/project-status.png" alt="Live Project Status — gate timeline for NDB-2.11" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="tiny-h">AI Chatbot</div>
+        <div class="frame" style="height: 4.45in;">
+          <div class="chrome">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="url">/chatbot</div>
+          </div>
+          <div class="screen">
+            <img class="live" src="shots/chatbot.png" style="object-position: 70% 80%;" alt="Live AI chatbot answering a release-risk question" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Project Status · AI Chatbot</span>
+      <span>05 / 08</span>
+    </div>
+  </section>
+
+  <!-- 6 TOOLBOX -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="eyebrow">The rest of the toolbox</div>
+    <h2>Same dataset. Six more jobs.</h2>
+    <div class="grid6">
+      <div class="card">
+        <div class="num">Sprint</div>
+        <h3>Sprint Report</h3>
+        <p>Dev velocity, QA verification, and test work as three streams — not one misleading total.</p>
+      </div>
+      <div class="card">
+        <div class="num">Heat</div>
+        <h3>Component Report</h3>
+        <p>Which surface is on fire: P0/P1 age, deferrals, health per component.</p>
+      </div>
+      <div class="card">
+        <div class="num">Focus</div>
+        <h3>Feature Dashboard</h3>
+        <p>One FEAT. All children. Gate progress. Reconciliation against the release tag.</p>
+      </div>
+      <div class="card">
+        <div class="num">Honesty</div>
+        <h3>Retrospective</h3>
+        <p>Did teams honor CC / CG / PG / GA — or did the date move and the work follow later?</p>
+      </div>
+      <div class="card">
+        <div class="num">Outbox</div>
+        <h3>Status Email</h3>
+        <p>Confluence in, JIRA context in, SMTP out. History kept. No second tool.</p>
+      </div>
+      <div class="card">
+        <div class="num">Fresh</div>
+        <h3>Sync Hub</h3>
+        <p>The meeting starts with a dataset that was pulled on purpose — not last Thursday’s cache by accident.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Also: Release Setup · Gate Config · KPIs · JIRA Emailer · Admin</span>
+      <span>06 / 08</span>
+    </div>
+  </section>
+
+  <!-- 7 AUDIENCES -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="eyebrow">Who it is for</div>
+    <h2>One truth. The density changes. The facts do not.</h2>
+    <div class="aud">
+      <div class="aud-card">
+        <h3>VP / Director</h3>
+        <p>RAG first. Risk register. Charts, not JQL. Counts that click.</p>
+      </div>
+      <div class="aud-card">
+        <h3>TPM / RM</h3>
+        <p>Gates, payload, must-fix, the email that leaves after the SoS.</p>
+      </div>
+      <div class="aud-card">
+        <h3>FEAT / EM</h3>
+        <p>One feature or one team. Remaining work. Sprint pulse.</p>
+      </div>
+      <div class="aud-card">
+        <h3>Ops</h3>
+        <p>Releases, permissions, sync — the machine behind the meeting.</p>
+      </div>
+    </div>
+    <p class="note">Product-agnostic by design. NDB is the first tenant. The same surface is built to carry the next product without a fork.</p>
+    <div class="foot">
+      <span>Role lens is a presenter, not a filter</span>
+      <span>07 / 08</span>
+    </div>
+  </section>
+
+  <!-- 8 CLOSE -->
+  <section class="slide">
+    <div class="accent-bar"></div>
+    <div class="close">
+      <div class="eyebrow">The ask</div>
+      <h1>Walk into the next staff meeting<br>with one URL.</h1>
+      <p class="lede">See the release. Name the risk. Send the brief. Ask a follow-up in English. That is the whole pitch.</p>
+      <div class="stats">
+        <div class="stat"><div class="n">1</div><div class="l">login · JIRA token</div></div>
+        <div class="stat"><div class="n">1</div><div class="l">source of truth</div></div>
+        <div class="stat"><div class="n">4</div><div class="l">jobs: see · judge · ask · send</div></div>
+        <div class="stat"><div class="n">0</div><div class="l">invented ticket keys</div></div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Portfolio Delivery Ops</span>
+      <span>08 / 08</span>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var m = /(?:\?|&)s=(\d+)/.exec(location.search || '');
+      if (!m) return;
+      var n = parseInt(m[1], 10);
+      document.querySelectorAll('.slide').forEach(function (el, i) {
+        el.style.display = (i + 1 === n) ? 'block' : 'none';
+        el.style.pageBreakAfter = 'auto';
+      });
+    })();
+  </script>
+</body>
+</html>
