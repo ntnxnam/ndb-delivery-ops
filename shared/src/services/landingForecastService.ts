@@ -1,37 +1,14 @@
 /**
  * landingForecastService — VP-friendly landing-date forecast for a release.
  *
- * MVP port of the Streamlit chatbot-app `landing_forecast.py` (961 LOC). This
- * file ships the marquee feature — predicted GA date, confidence verdict, and
- * one-line explanation — so it can render on `/release/:name/brief` today.
+ * Two count sources, one assemble path (`landingForecastAssemble.ts`):
  *
- * Two of the six "must survive verbatim" algorithms from STREAMLIT_PARITY.md
- * are ported faithfully here:
+ *   - `computeLandingForecast`            live JIRA `searchCount` fallback
+ *   - `computeLandingForecastFromTickets` release-dataset trunk (cached rows)
  *
- *   - `classifyConfidence(elapsed, velocityCv)`  — Streamlit `_classify_confidence`
- *   - `classifyVerdict(burnStatus, gapSprints)`  — Streamlit `_classify_verdict`
- *
- * Faithfully ported narrative:
- *
- *   - `gapPhrase(gapSprints)`         — Streamlit `_gap_phrase`
- *   - `buildForecastOneLiner(fc, burnStatus)`  — Streamlit `_build_one_liner`
- *
- * Forecast math (MVP):
- *
- *   - recent velocity = trailing 3 sprints, summed across Dev + 0.33*QA-V + QA-T
- *   - forecast_sprint = today_sprint + ceil(unresolved / recent_velocity)
- *   - gap_sprints     = forecast_sprint - sprint_for(plannedGaIso)
- *
- * What's MISSING vs. full Streamlit (tracked in STREAMLIT_PARITY.md):
- *
- *   - `historical_tail_forecast` — curve-based forecast using baseline median tail share
- *   - `project_inflow_to_ga`     — phase-aware new-ticket inflow projection
- *   - `phase_normalized_cycle_timing` — pre-BC share normalization for headline narrative
- *   - per-release comparison cards + sparkline timing curves
- *
- * These remain TODO(parity) — the simple forecast we ship here matches the
- * Streamlit "fallback" path that runs when no baseline data is available, so
- * the user-facing answer is correct in shape and degrades gracefully.
+ * Click-through JQL is the same on both paths (existing extras, unchanged).
+ * Inflow stays 0 — see assemble. TODO(parity): curve tail, scoped inflow,
+ * phase-normalized timing.
  */
 
 import type { JiraConnector } from '../connectors/jiraConnector.js';
@@ -39,54 +16,39 @@ import {
   NDB_SPRINT_CALENDAR,
   type SprintCalendar,
   currentSprint as currentSprintNumber,
-  sprintFor,
-  sprintWindow,
 } from './sprintsService.js';
 import {
-  QA_VERIFICATION_EFFORT_RATIO,
   computeRecentSprintVelocity,
+  computeRecentSprintVelocityFromTickets,
   type SprintVelocityResult,
 } from './velocityService.js';
 import { buildEngineeringPayloadJql } from './payloadJqlService.js';
+import {
+  assembleLandingForecast,
+  type LandingForecastCounts,
+  type LandingForecastResult,
+} from './landingForecastAssemble.js';
+import { categorizeResolution } from './resolutionCategoriesService.js';
+import { PROJECT_HIERARCHY } from './issueGroupsService.js';
+import { isDeferredLabel } from './releaseDatasetService.js';
+import type { ProcessedTicket } from './releaseDatasetService.js';
 
-// ── Constants kept identical to Streamlit so UI colors/labels match ──────
-
-export const FORECAST_VERDICT_COLORS: Record<ForecastVerdict, string> = {
-  on_time: '#15803D',
-  slipping: '#D97706',
-  at_risk: '#B91C1C',
-  shipped: '#6B7280',
-  not_started: '#1F4E79',
-  unknown: '#6B7280',
-};
-
-export const FORECAST_VERDICT_LABELS: Record<ForecastVerdict, string> = {
-  on_time: 'ON TIME',
-  slipping: 'SLIPPING',
-  at_risk: 'AT RISK',
-  shipped: 'SHIPPED',
-  not_started: 'NOT STARTED',
-  unknown: 'UNKNOWN',
-};
-
-export const FORECAST_CONFIDENCE_LABELS: Record<ForecastConfidence, string> = {
-  high: 'High confidence',
-  medium: 'Medium confidence',
-  low: 'Low confidence',
-  insufficient: 'Not enough data yet',
-};
-
-// ── Types ────────────────────────────────────────────────────────────────
-
-export type ForecastVerdict =
-  | 'on_time'
-  | 'slipping'
-  | 'at_risk'
-  | 'shipped'
-  | 'not_started'
-  | 'unknown';
-
-export type ForecastConfidence = 'high' | 'medium' | 'low' | 'insufficient';
+export type {
+  ForecastVerdict,
+  ForecastConfidence,
+  LandingForecastResult,
+  LandingForecastCounts,
+} from './landingForecastAssemble.js';
+export {
+  classifyConfidence,
+  classifyVerdict,
+  gapPhrase,
+  buildForecastOneLiner,
+  assembleLandingForecast,
+  FORECAST_VERDICT_COLORS,
+  FORECAST_VERDICT_LABELS,
+  FORECAST_CONFIDENCE_LABELS,
+} from './landingForecastAssemble.js';
 
 export interface ComputeLandingForecastOptions {
   jira: JiraConnector;
@@ -94,261 +56,151 @@ export interface ComputeLandingForecastOptions {
   release: string;
   /** Planned GA date (ISO string). When omitted, gap/verdict can't be computed. */
   plannedGaIso?: string | null;
-  /**
-   * Number of recent sprints used for the rolling velocity average. The Streamlit
-   * original uses 3; keep the default consistent.
-   */
   recentSprintsWindow?: number;
   sprintCalendar?: SprintCalendar;
-  /** Override "today" for tests. */
   now?: Date;
 }
 
-export interface LandingForecastResult {
+export interface ComputeLandingForecastFromTicketsOptions {
+  tickets: ProcessedTicket[];
+  projectKey: string;
   release: string;
-  plannedGaDate: string | null;
-  plannedGaSprint: number | null;
-  forecastGaDate: string | null;
-  forecastGaSprint: number | null;
-  gapSprints: number | null;
-  gapWeeks: number | null;
-
-  unresolved: number;
-  pendingVerification: number;
-  recentVelocity: number;
-  elapsedSprints: number;
-  velocityCv: number | null;
-
-  verdict: ForecastVerdict;
-  confidence: ForecastConfidence;
-  oneLiner: string;
-  recommendedAction: string;
-
-  /** JQL that produced the `unresolved` count, so the UI can link it. */
-  jqlUnresolved: string;
-  /** JQL that produced the `pendingVerification` count. */
-  jqlPendingVerification: string;
-  /** Method used (matches Streamlit field name). MVP only emits `'fallback_running'`. */
-  forecastMethod: 'fallback_running' | 'curve_based' | 'curve_with_inflow';
-
-  /** Average net inflow (discovered - closed) per sprint of Bug/Improvement items. */
-  netInflowPerSprint: number;
-  /** Effective velocity accounting for net inflow (velocity - inflow). */
-  effectiveVelocity: number;
-  /** Days remaining in today's sprint. */
-  daysRemainingToday: number;
-  /** Available work capacity in today's remaining days. */
-  todayCapacityItems: number;
-
-  /** 3-stream outstanding breakdown (per sprint-velocity-types.mdc). */
-  devUnresolved: number;
-  jqlDevUnresolved: string;
-  qaVerificationPending: number;
-  jqlQaVerificationPending: string;
-  qaTestTasksUnresolved: number;
-  jqlQaTestTasksUnresolved: string;
-
-  /** TODO(parity) — populated when baseline/curve port lands. */
-  baselineVelocity: number;
-  velocityVsBaselinePct: number | null;
-  payloadTotal: number;
-
-  /**
-   * Weighted outstanding = devUnresolved + qaVerificationPending×0.33 + qaTestTasksUnresolved.
-   * Used as the forecast numerator so units match the weighted velocity denominator.
-   */
-  weightedOutstanding: number;
-  /** Average weighted inflow per sprint (dev + 0.33×bugImpr + test created per sprint). */
-  weightedInflowPerSprint: number;
-  /** plannedGaSprint - todaySprint (null when no GA date configured). */
-  sprintsRemaining: number | null;
-  /** weightedOutstanding / sprintsRemaining — pace needed to land on planned GA. */
-  requiredVelocity: number | null;
-
-  /** Stream-level errors so the UI can render partial. */
-  errors: string[];
-}
-
-// ── Verbatim algorithm ports ─────────────────────────────────────────────
-
-/**
- * Streamlit `_classify_confidence` — VERBATIM.
- *
- * High when we have ≥4 sprints of data and pace is steady (CV < 0.25);
- * medium with ≥2 sprints; low after the first sprint; insufficient before
- * any data.
- */
-export function classifyConfidence(
-  elapsed: number,
-  velocityCv: number | null
-): ForecastConfidence {
-  if (elapsed <= 0) return 'insufficient';
-  if (elapsed === 1) return 'low';
-  // Streamlit treats `NaN` as 1.0 to stay conservative; we do the same.
-  const cv =
-    velocityCv !== null && Number.isFinite(velocityCv) ? velocityCv : 1.0;
-  if (elapsed >= 4 && cv < 0.25) return 'high';
-  return 'medium';
+  /** D1: product label prefix for deferred-label matching. */
+  labelPrefix: string;
+  plannedGaIso?: string | null;
+  recentSprintsWindow?: number;
+  sprintCalendar?: SprintCalendar;
+  now?: Date;
 }
 
 /**
- * Streamlit `_classify_verdict` — VERBATIM.
- *
- * Map (burn status, gap) → a single VP-facing verdict. When `gapSprints` is
- * null we can't make a call, so it's "unknown" — never "on_time" by default.
+ * Click-through JQL for the forecast tiles. Extras match the live path
+ * that shipped with this service — do not edit without JQL approval.
  */
-export function classifyVerdict(
-  burnStatus: string,
-  gapSprints: number | null
-): ForecastVerdict {
-  if (burnStatus === 'Shipped') return 'shipped';
-  if (
-    burnStatus === 'Not started' ||
-    burnStatus === 'Missing EC' ||
-    burnStatus === 'Missing GA'
-  ) {
-    return 'not_started';
-  }
-  if (gapSprints === null) return 'unknown';
-  if (gapSprints <= 0) return 'on_time';
-  if (gapSprints === 1) return 'slipping';
-  return 'at_risk';
+function forecastClickthroughJqls(
+  release: string,
+  projectKey: string
+): Pick<
+  LandingForecastCounts,
+  | 'jqlUnresolved'
+  | 'jqlPendingVerification'
+  | 'jqlDevUnresolved'
+  | 'jqlQaVerificationPending'
+  | 'jqlQaTestTasksUnresolved'
+> {
+  const relLower = release.toLowerCase().replace(/^ndb-/, '');
+  const deferredLabel = `ndb-${relLower}-deferred`;
+  return {
+    jqlUnresolved: buildEngineeringPayloadJql(release, {
+      projectKey,
+      extras: [
+        'resolution = Unresolved',
+        `(labels != "${deferredLabel}" OR labels is EMPTY)`,
+      ],
+    }),
+    jqlPendingVerification: buildEngineeringPayloadJql(release, {
+      projectKey,
+      extras: ['issuetype in (Bug, Improvement)', 'status = Resolved'],
+    }),
+    jqlDevUnresolved: buildEngineeringPayloadJql(release, {
+      projectKey,
+      extras: [
+        'issueType not in (Feature, Initiative, Epic, X-FEAT, Capability, Test)',
+        'resolution = Unresolved',
+        `(labels != "${deferredLabel}" OR labels is EMPTY)`,
+      ],
+    }),
+    jqlQaVerificationPending: buildEngineeringPayloadJql(release, {
+      projectKey,
+      extras: ['issuetype in (Bug, Improvement)', 'status = Resolved'],
+    }),
+    jqlQaTestTasksUnresolved: buildEngineeringPayloadJql(release, {
+      projectKey,
+      extras: [
+        'issueType = Test',
+        'resolution = Unresolved',
+        `(labels != "${deferredLabel}" OR labels is EMPTY)`,
+      ],
+    }),
+  };
 }
 
-/**
- * Streamlit `_gap_phrase` — VERBATIM.
- */
-export function gapPhrase(gapSprints: number): string {
-  const weeks = Math.abs(gapSprints) * 3;
-  if (gapSprints === 0) return 'on the planned date';
-  if (gapSprints > 0) {
-    const word = gapSprints === 1 ? 'sprint' : 'sprints';
-    return `${weeks} weeks late (${gapSprints} ${word})`;
-  }
-  const word = gapSprints === -1 ? 'sprint' : 'sprints';
-  return `${weeks} weeks early (${Math.abs(gapSprints)} ${word})`;
+function issueTypeOf(t: ProcessedTicket): string {
+  return String(t['Issue Type'] || '').trim();
 }
 
-function formatDate(iso: string | null): string {
-  return iso ?? 'TBD';
+function isDevIssueType(issueType: string): boolean {
+  return !PROJECT_HIERARCHY.has(issueType) && issueType !== 'Test';
 }
 
-/**
- * Streamlit `_build_one_liner` — close port (NDB-only date formatting).
- */
-export function buildForecastOneLiner(
-  fc: LandingForecastResult,
-  burnStatus: string
-): string {
-  if (fc.verdict === 'shipped') {
-    return `${fc.release} shipped on ${formatDate(fc.plannedGaDate)}.`;
-  }
-  if (fc.verdict === 'not_started') {
-    if (!fc.plannedGaDate) {
-      return `${fc.release} has no EC/GA configured yet — forecast unavailable.`;
-    }
-    return `${fc.release} has not started yet (planned GA: ${formatDate(
-      fc.plannedGaDate
-    )}).`;
-  }
-  const planned = formatDate(fc.plannedGaDate);
-  const forecast = formatDate(fc.forecastGaDate);
-  if (fc.gapSprints === null || fc.forecastGaDate === null) {
-    if (fc.unresolved === 0) {
-      return `${fc.release}: all tracked work is resolved. Planned GA: ${planned}.`;
-    }
-    return `${fc.release}: not enough velocity data yet to forecast a landing date (planned GA: ${planned}).`;
-  }
-  if (fc.gapSprints <= 0) {
-    return `${fc.release} is on track to land ${gapPhrase(
-      fc.gapSprints
-    )} (forecast: ${forecast}, planned GA: ${planned}).`;
-  }
-  return `${fc.release} is forecast to land ${gapPhrase(
-    fc.gapSprints
-  )} (forecast: ${forecast}, planned GA: ${planned}).`;
+function isUnresolvedTicket(t: ProcessedTicket): boolean {
+  return categorizeResolution(t.Resolution) === 'Unresolved';
 }
 
-function buildRecommendedAction(
-  fc: LandingForecastResult,
-  burnStatus: string
-): string {
-  if (fc.verdict === 'shipped') return '';
-  if (fc.verdict === 'not_started') {
-    return 'Confirm EC / GA gate dates on the release so the forecast can engage.';
-  }
-  if (fc.verdict === 'unknown' || fc.gapSprints === null) {
-    return 'Capture at least one sprint of resolution activity before judging this release.';
-  }
-  if (fc.gapSprints <= 0) {
-    return 'Hold pace. Watch for late-arriving scope.';
-  }
-  if (fc.gapSprints === 1) {
-    return `Triage the ${fc.unresolved} unresolved ticket${fc.unresolved === 1 ? '' : 's'}; one sprint of slippage is recoverable with focus.`;
-  }
-  return `Plan a scope cut — ${fc.unresolved} unresolved at current pace means ~${fc.gapSprints} sprints of slip. Defer non-critical work to the next release.`;
+function ticketIsDeferred(
+  t: ProcessedTicket,
+  release: string,
+  labelPrefix: string
+): boolean {
+  const derived = (t as ProcessedTicket & { 'Is Deferred'?: boolean })['Is Deferred'];
+  if (typeof derived === 'boolean') return derived;
+  return isDeferredLabel(t.Labels || '', t['Release Name'] || release, {
+    labelPrefix,
+  });
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────
-
-/**
- * Sum of (Dev + 0.33*QA-Verification + QA-Test) for a sprint, matching the
- * Sprint Velocity overlay line definition from `pages/4_Sprint_Analysis.py`.
- */
-function sprintVelocityTotal(s: SprintVelocityResult): number {
-  return (
-    s.dev.count +
-    s.qaVerification.count * QA_VERIFICATION_EFFORT_RATIO +
-    s.qaTestTasks.count
+function countOutstandingFromTickets(
+  tickets: ProcessedTicket[],
+  release: string,
+  labelPrefix: string
+): Pick<
+  LandingForecastCounts,
+  | 'unresolved'
+  | 'pendingVerification'
+  | 'payloadTotal'
+  | 'devUnresolved'
+  | 'qaVerificationPending'
+  | 'qaTestTasksUnresolved'
+> {
+  const scoped = tickets.filter(
+    (t) => !release || t['Release Name'] === release
   );
-}
+  let unresolved = 0;
+  let pendingVerification = 0;
+  let devUnresolved = 0;
+  let qaTestTasksUnresolved = 0;
 
-function median(xs: number[]): number {
-  if (!xs.length) return 0;
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
+  for (const t of scoped) {
+    const type = issueTypeOf(t);
+    const deferred = ticketIsDeferred(t, release, labelPrefix);
+    const unresolvedRow = isUnresolvedTicket(t);
+    if (unresolvedRow && !deferred) unresolved += 1;
+    if (
+      (type === 'Bug' || type === 'Improvement') &&
+      t.Status === 'Resolved'
+    ) {
+      pendingVerification += 1;
+    }
+    if (isDevIssueType(type) && unresolvedRow && !deferred) {
+      devUnresolved += 1;
+    }
+    if (type === 'Test' && unresolvedRow && !deferred) {
+      qaTestTasksUnresolved += 1;
+    }
+  }
 
-function coefficientOfVariation(xs: number[]): number | null {
-  if (xs.length < 2) return null;
-  const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
-  if (mean === 0) return null;
-  const variance =
-    xs.reduce((acc, v) => acc + (v - mean) * (v - mean), 0) / xs.length;
-  return Math.sqrt(variance) / Math.abs(mean);
+  return {
+    unresolved,
+    pendingVerification,
+    payloadTotal: scoped.length,
+    devUnresolved,
+    qaVerificationPending: pendingVerification,
+    qaTestTasksUnresolved,
+  };
 }
 
 /**
- * Calculate remaining days in the sprint containing `now`.
- * Returns days from `now` (inclusive) through end of sprint (inclusive).
- * 
- * Example: if today is Wed (day 1 of 21-day sprint), returns 21 days.
- * If today is Tue (last day of sprint), returns 1 day.
- */
-function daysRemainingInCurrentSprint(
-  calendar: SprintCalendar,
-  now: Date
-): number {
-  const todaySprint = currentSprintNumber(calendar, now);
-  const { endIso } = sprintWindow(todaySprint, calendar);
-  
-  // Parse dates at UTC midnight for consistent day-counting
-  const endDate = new Date(endIso + 'T00:00:00Z');
-  const nowDate = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
-  
-  const MS_PER_DAY = 86_400_000;
-  const daysUntilEnd = Math.floor((endDate.getTime() - nowDate.getTime()) / MS_PER_DAY);
-  
-  // +1 because both start and end dates are inclusive
-  return Math.max(1, daysUntilEnd + 1);
-}
-
-// ── Public entrypoint ────────────────────────────────────────────────────
-
-/**
- * Compute the MVP landing forecast for `release`. Issues two parallel
- * JIRA calls (unresolved count + recent velocity series).
+ * Compute the MVP landing forecast from live JIRA counts.
  */
 export async function computeLandingForecast(
   opts: ComputeLandingForecastOptions
@@ -363,66 +215,10 @@ export async function computeLandingForecast(
   const now = opts.now ?? new Date();
   const todaySprint = currentSprintNumber(calendar, now);
   const window = Math.max(2, opts.recentSprintsWindow ?? 3);
-
-  // Build the unresolved JQL — mirrors Streamlit's `fc.jql_unresolved`:
-  // payload + Unresolved + not in the *-deferred bucket. `labels != X`
-  // does NOT match empty labels, so combine with `labels is EMPTY` per
-  // the comment in `landing_forecast.py`.
   const rel = opts.release;
-  const relLower = rel.toLowerCase().replace(/^ndb-/, '');
-  const deferredLabel = `ndb-${relLower}-deferred`;
-  const jqlUnresolved = buildEngineeringPayloadJql(rel, {
-    projectKey: opts.projectKey,
-    extras: [
-      'resolution = Unresolved',
-      `(labels != "${deferredLabel}" OR labels is EMPTY)`,
-    ],
-  });
+  const jqls = forecastClickthroughJqls(rel, opts.projectKey);
   const jqlPayloadTotal = buildEngineeringPayloadJql(rel, {
     projectKey: opts.projectKey,
-  });
-
-  // Pending verification: Bug + Improvement issues with status "Resolved"
-  // (waiting for QA sign-off before moving to Closed).
-  const jqlPendingVerification = buildEngineeringPayloadJql(rel, {
-    projectKey: opts.projectKey,
-    extras: [
-      'issuetype in (Bug, Improvement)',
-      'status = Resolved',
-    ],
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // 3-Stream Outstanding Breakdown (per sprint-velocity-types.mdc)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // Dev unresolved: all non-portfolio, non-Test items in Unresolved state
-  const jqlDevUnresolved = buildEngineeringPayloadJql(rel, {
-    projectKey: opts.projectKey,
-    extras: [
-      'issueType not in (Feature, Initiative, Epic, X-FEAT, Capability, Test)',
-      'resolution = Unresolved',
-      `(labels != "${deferredLabel}" OR labels is EMPTY)`,
-    ],
-  });
-
-  // QA Verification pending: Bug + Improvement in Resolved (awaiting QA sign-off)
-  const jqlQaVerificationPending = buildEngineeringPayloadJql(rel, {
-    projectKey: opts.projectKey,
-    extras: [
-      'issuetype in (Bug, Improvement)',
-      'status = Resolved',
-    ],
-  });
-
-  // QA Test Tasks unresolved: Test issues in Unresolved state
-  const jqlQaTestTasksUnresolved = buildEngineeringPayloadJql(rel, {
-    projectKey: opts.projectKey,
-    extras: [
-      'issueType = Test',
-      'resolution = Unresolved',
-      `(labels != "${deferredLabel}" OR labels is EMPTY)`,
-    ],
   });
 
   const errors: string[] = [];
@@ -453,151 +249,100 @@ export async function computeLandingForecast(
     }
   };
 
-  const [unresolved, pendingVerification, payloadTotal, recentSprints, devUnresolved, qaVerificationPending, qaTestTasksUnresolved] = await Promise.all([
-    safeCount(jqlUnresolved, 'unresolved'),
-    safeCount(jqlPendingVerification, 'pendingVerification'),
-    safeCount(jqlPayloadTotal, 'payloadTotal'),
-    safeVelocity(),
-    safeCount(jqlDevUnresolved, 'devUnresolved'),
-    safeCount(jqlQaVerificationPending, 'qaVerificationPending'),
-    safeCount(jqlQaTestTasksUnresolved, 'qaTestTasksUnresolved'),
-  ]);
-
-  const velocities = recentSprints.map(sprintVelocityTotal);
-  const recentVelocity =
-    velocities.length > 0
-      ? velocities.reduce((a, b) => a + b, 0) / velocities.length
-      : 0;
-  const velocityCv = coefficientOfVariation(velocities);
-  // MVP "elapsed sprints" proxy: how many of the recent N had non-zero
-  // velocity on this release. TODO(parity): use release_burn.first_activity_sprint().
-  const elapsedSprints = velocities.filter((v) => v > 0).length;
-
-  const plannedGaDate = opts.plannedGaIso?.slice(0, 10) ?? null;
-  const plannedGaSprint = plannedGaDate ? sprintFor(plannedGaDate, calendar) : null;
-
-  let forecastGaSprint: number | null = null;
-  let forecastGaDate: string | null = null;
-  let gapSprints: number | null = null;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // WEIGHTED OUTSTANDING — consistent units with velocity denominator
-  // devUnresolved + qaVerificationPending×0.33 + qaTestTasksUnresolved
-  // ─────────────────────────────────────────────────────────────────────────
-  const weightedOutstanding =
-    devUnresolved +
-    qaVerificationPending * QA_VERIFICATION_EFFORT_RATIO +
-    qaTestTasksUnresolved;
-
-  // Inflow subtraction was removed: the inflow JQL had no fixVersion scope so
-  // it counted all-project ticket creation (across every release), which
-  // nearly cancelled the release-specific velocity and produced absurdly far
-  // forecast dates (e.g. 2199). The payload-scoped inflow cannot be correctly
-  // computed with a simple `created` date filter because the full payload
-  // relies on portfolioChildrenOf. Effective velocity = recent velocity.
-  // TODO(parity): re-introduce inflow when a release-scoped inflow query is available.
-  const weightedInflowPerSprint = 0;
-
-  // Guard against zero velocity so we don't forecast when there's no data.
-  // Use recentVelocity directly — no inflow subtraction.
-  const effectiveVelocity = recentVelocity;
-
-  // Required velocity: weighted outstanding / sprints remaining until planned GA.
-  const sprintsRemaining =
-    plannedGaSprint !== null ? Math.max(1, plannedGaSprint - todaySprint) : null;
-  const requiredVelocity =
-    sprintsRemaining !== null
-      ? Math.round((weightedOutstanding / sprintsRemaining) * 100) / 100
-      : null;
-
-  // Calculate remaining days in today's sprint and today's available capacity.
-  const daysRemaining = daysRemainingInCurrentSprint(calendar, now);
-  const DAYS_PER_SPRINT = calendar.sprintDays;
-  const dailyVelocity = recentVelocity / DAYS_PER_SPRINT;
-  const todayCapacity = dailyVelocity * daysRemaining;
-
-  // Determine forecast sprint using weightedOutstanding (numerator now matches
-  // the weighted velocity denominator — no more unit mismatch).
-  // Guard on recentVelocity > 0: if we have no velocity data, skip the
-  // forecast entirely so forecastGaDate stays null rather than producing an
-  // absurd far-future date.
-  if (weightedOutstanding > 0 && recentVelocity > 0) {
-    if (weightedOutstanding <= todayCapacity) {
-      // All work fits in today's remaining capacity
-      forecastGaSprint = todaySprint;
-    } else {
-      // Work spills into future sprints
-      const workOverflow = weightedOutstanding - todayCapacity;
-      const sprintsToFinish = Math.ceil(workOverflow / effectiveVelocity);
-      forecastGaSprint = todaySprint + sprintsToFinish;
-    }
-    const { endIso } = sprintWindow(forecastGaSprint, calendar);
-    forecastGaDate = endIso;
-    if (plannedGaSprint !== null) {
-      gapSprints = forecastGaSprint - plannedGaSprint;
-    }
-  } else if (weightedOutstanding === 0) {
-    // No outstanding work; we're done today
-    forecastGaSprint = todaySprint;
-    const { endIso } = sprintWindow(todaySprint, calendar);
-    forecastGaDate = endIso;
-    if (plannedGaSprint !== null) {
-      gapSprints = forecastGaSprint - plannedGaSprint;
-    }
-  }
-
-  // Derive a coarse "burnStatus" for `classifyVerdict`. TODO(parity): use
-  // release_burn.release_burn(). For MVP we infer from the inputs.
-  let burnStatus = 'Active';
-  if (!plannedGaDate) burnStatus = 'Missing GA';
-  else if (elapsedSprints === 0 && weightedOutstanding === 0) burnStatus = 'Not started';
-  else if (weightedOutstanding === 0 && plannedGaSprint !== null && todaySprint > plannedGaSprint) {
-    burnStatus = 'Shipped';
-  }
-
-  const verdict = classifyVerdict(burnStatus, gapSprints);
-  const confidence = classifyConfidence(elapsedSprints, velocityCv);
-
-  const result: LandingForecastResult = {
-    release: rel,
-    plannedGaDate,
-    plannedGaSprint,
-    forecastGaDate,
-    forecastGaSprint,
-    gapSprints,
-    gapWeeks: gapSprints !== null ? gapSprints * 3 : null,
+  const [
     unresolved,
     pendingVerification,
-    recentVelocity: Math.round(recentVelocity * 100) / 100,
-    elapsedSprints,
-    velocityCv: velocityCv !== null ? Math.round(velocityCv * 1000) / 1000 : null,
-    verdict,
-    confidence,
-    oneLiner: '',
-    recommendedAction: '',
-    jqlUnresolved,
-    jqlPendingVerification,
-    forecastMethod: 'fallback_running',
-    netInflowPerSprint: Math.round(weightedInflowPerSprint * 100) / 100,
-    effectiveVelocity: Math.round(effectiveVelocity * 100) / 100,
-    daysRemainingToday: daysRemaining,
-    todayCapacityItems: Math.round(todayCapacity * 100) / 100,
-    devUnresolved,
-    jqlDevUnresolved,
-    qaVerificationPending,
-    jqlQaVerificationPending,
-    qaTestTasksUnresolved,
-    jqlQaTestTasksUnresolved,
-    weightedOutstanding: Math.round(weightedOutstanding * 100) / 100,
-    weightedInflowPerSprint: Math.round(weightedInflowPerSprint * 100) / 100,
-    sprintsRemaining,
-    requiredVelocity,
-    baselineVelocity: 0,
-    velocityVsBaselinePct: null,
     payloadTotal,
-    errors,
-  };
-  result.oneLiner = buildForecastOneLiner(result, burnStatus);
-  result.recommendedAction = buildRecommendedAction(result, burnStatus);
-  return result;
+    recentSprints,
+    devUnresolved,
+    qaVerificationPending,
+    qaTestTasksUnresolved,
+  ] = await Promise.all([
+    safeCount(jqls.jqlUnresolved, 'unresolved'),
+    safeCount(jqls.jqlPendingVerification, 'pendingVerification'),
+    safeCount(jqlPayloadTotal, 'payloadTotal'),
+    safeVelocity(),
+    safeCount(jqls.jqlDevUnresolved, 'devUnresolved'),
+    safeCount(jqls.jqlQaVerificationPending, 'qaVerificationPending'),
+    safeCount(jqls.jqlQaTestTasksUnresolved, 'qaTestTasksUnresolved'),
+  ]);
+
+  return assembleLandingForecast(
+    {
+      release: rel,
+      plannedGaIso: opts.plannedGaIso,
+      sprintCalendar: calendar,
+      now,
+      dataSource: 'live',
+    },
+    {
+      unresolved,
+      pendingVerification,
+      payloadTotal,
+      recentSprints,
+      devUnresolved,
+      qaVerificationPending,
+      qaTestTasksUnresolved,
+      ...jqls,
+      errors,
+    }
+  );
+}
+
+/**
+ * Compute the MVP landing forecast from cached `ProcessedTicket` rows
+ * (CONSOLIDATION #4 on the #1b trunk). Click-through JQL is unchanged.
+ */
+export function computeLandingForecastFromTickets(
+  opts: ComputeLandingForecastFromTicketsOptions
+): LandingForecastResult {
+  if (!opts?.projectKey) {
+    throw new Error(
+      'computeLandingForecastFromTickets: projectKey is required (D1)'
+    );
+  }
+  if (!opts?.release) {
+    throw new Error('computeLandingForecastFromTickets: release is required');
+  }
+  if (!opts?.labelPrefix) {
+    throw new Error(
+      'computeLandingForecastFromTickets: labelPrefix is required (D1)'
+    );
+  }
+  const calendar = opts.sprintCalendar ?? NDB_SPRINT_CALENDAR;
+  const now = opts.now ?? new Date();
+  const todaySprint = currentSprintNumber(calendar, now);
+  const window = Math.max(2, opts.recentSprintsWindow ?? 3);
+  const rel = opts.release;
+  const jqls = forecastClickthroughJqls(rel, opts.projectKey);
+  const outstanding = countOutstandingFromTickets(
+    opts.tickets,
+    rel,
+    opts.labelPrefix
+  );
+  const recentSprints = computeRecentSprintVelocityFromTickets({
+    tickets: opts.tickets,
+    projectKey: opts.projectKey,
+    release: rel,
+    sprintCalendar: calendar,
+    sprintsBack: window,
+    endSprint: todaySprint,
+    now,
+  });
+
+  return assembleLandingForecast(
+    {
+      release: rel,
+      plannedGaIso: opts.plannedGaIso,
+      sprintCalendar: calendar,
+      now,
+      dataSource: 'cache',
+    },
+    {
+      ...outstanding,
+      recentSprints,
+      ...jqls,
+      errors: [],
+    }
+  );
 }

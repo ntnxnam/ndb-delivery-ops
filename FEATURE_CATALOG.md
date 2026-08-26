@@ -38,7 +38,8 @@ that needs it.
 | **Exec-summary signals** (`deriveSignals`, D41) | • Sos Summary / exec-summary cell  • release AI briefing  • chat snapshot |
 | **Bundle-first derives** (`bundleDerive`, D41) | • Retrospective  • Release Brief  • Component Report  • Sprint Report (past sprints) |
 | **Capacity calc** (`capacityService.estimate`) | • standalone Capacity Planner page  • input column in Bin-Packing  • badge in Team Profile  • MCP tool `planCapacity` |
-| **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in Team-Executive Report |
+| **Sprint Velocity** (`velocityService` #2) | • Release Brief velocity panel  • `GET /api/release-dataset/velocity` |
+| **Predictive Landing** (`landingForecastService` #4) | • Release Brief `LandingForecastPanel`  • `GET /api/release-dataset/forecast`  • CrystalBall page still mock |
 | **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in Team-Executive Report |
 | **Confluence Connector** (`confluenceConnector`) | • Bulk Page Creator  • Template Editor  • Confluence Extractor  • future Status Page Auto-Publisher  • any skill that publishes to Confluence |
 | **Confluence Width Cleanup** (`.cursor/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
@@ -107,7 +108,7 @@ The "when will it land, and is our schedule realistic?" job.
 | Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `mcp-server/src/tools/ganttReleaseTimeline.ts` + `apps/delivery-ops` ReleaseVersionGantt | **merge into one UI page**                    |
 | Sprint Gantt                       | Sprint-by-sprint timeline of tickets                            | EM      | live                    | `apps/delivery-ops` (sprint-gantt-chart skill)                                           | **keep**                                      |
 | Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | Team Executive, RM  | mcp-only                | `mcp-server/src/tools/sayVsDo.ts`                                                        | **build UI page**                             |
-| Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | Team Executive, RM  | live (mock data)        | `apps/delivery-ops` + `crystalball-i/`                                                   | **wire to real data**                         |
+| Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | Team Executive, RM  | live (brief) / mock (CrystalBall page) | `landingForecastService` + Release Brief; CrystalBall page still mock | **keep brief wired; CrystalBall page still mock** |
 | Sprint Analysis                    | Per-sprint deep-dive: scope creep, carry-over, blockers         | EM, TPM | live                    | `apps/delivery-ops` SprintReportPage                                                     | **keep, merge with archived Sprint_Analysis** |
 | Release Analysis                   | Per-release deep-dive                                           | RM      | live                    | `apps/delivery-ops` ReleaseAnalysisPage                                                  | **keep**                                      |
 

@@ -104,48 +104,103 @@
 
 ### GET /api/release-dataset/velocity
 
-**Purpose**: Return sprint velocity (Dev / QA-Verification / QA-Test) for a team across a release.
+**Purpose**: Return 3-stream sprint velocity (Dev / QA-Verification ×0.33 / QA-Test) for recent sprints.
 
 **Auth**: required
 
 **Request**
-- Query: `release` (string, required), `productId` (string, required), `teamId` (string, required)
+- Query params:
+  - `productId` (string, required) — product registry id
+  - `release` (string, optional) — when set, scope to that fixVersion / trunk cache. Omit for whole-team live JIRA velocity.
+  - `sprintsBack` (number, optional, default 3, max 12)
 
-**Server flow**  
-`releaseDataset.js → shared/services/releaseDatasetService.getVelocity → bundle or live JIRA sprint queries`
+**Server flow**
+Route → `productService` (projectKey, sprintCalendar) → if `release` and trunk has tickets: `computeRecentSprintVelocityFromTickets` (no JIRA count). Else `JiraConnector.searchCount` via `computeRecentSprintVelocity`.
 
-**Response**
+**Response shape**
 ```json
 {
   "success": true,
   "data": {
+    "productId": "ndb",
+    "release": "NDB-2.11",
+    "projectKey": "ERA",
+    "source": "cache",
     "sprints": [
-      { "name": "S22", "dev": 47, "qaVerification": 5.94, "qaTestTasks": 12 }
+      {
+        "sprintNumber": 22,
+        "sprintLabel": "S22",
+        "window": { "startIso": "2026-01-07", "endIso": "2026-01-27" },
+        "isCurrent": true,
+        "dev": { "count": 47, "jql": "project = ERA AND ..." },
+        "qaVerification": { "count": 18, "adjustedCount": 5.94, "jql": "..." },
+        "qaTestTasks": { "count": 12, "jql": "..." }
+      }
     ]
   }
 }
 ```
 
-**Caching**: Bundle (24 h).
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | Unknown `productId` | Show product-picker error |
+| 401 | Missing JIRA Bearer token | Re-auth |
+| 5xx | Live JIRA count failed (cache miss only) | Retry or show error |
+
+**Caching**: Yes — prefers the release-dataset trunk (`shared/.cache/release-dataset`). `source` is `"cache"` or `"live"`. Invalidation = dataset sync.
 
 ---
 
 ### GET /api/release-dataset/forecast
 
-**Purpose**: Return landing forecast / completion probability for a release.
+**Purpose**: Return the MVP landing forecast (predicted GA sprint, gap, verdict, confidence, one-liner) for a release.
 
 **Auth**: required
 
 **Request**
-- Query: `release` (string, required), `productId` (string, required), `teamId` (string, required)
+- Query params:
+  - `productId` (string, required)
+  - `release` (string, required)
+  - `plannedGaIso` (string, optional, `YYYY-MM-DD`) — without it, verdict is `unknown` / `not_started`, never `on_time` by default
 
-**Server flow**  
-`releaseDataset.js → shared/services/landingForecastService.getForecast`
+**Server flow**
+Route → `productService` (projectKey, sprintCalendar, labelPrefix) → if trunk has tickets: `computeLandingForecastFromTickets`. Else live `computeLandingForecast` (`searchCount` + recent velocity). Assemble math is shared (`assembleLandingForecast`).
 
-**Response**
+**Response shape**
 ```json
-{ "success": true, "data": { "predictedLanding": "2026-08-12", "confidence": "medium", "basis": "velocity trend S18–S22" } }
+{
+  "success": true,
+  "data": {
+    "productId": "ndb",
+    "release": "NDB-2.11",
+    "projectKey": "ERA",
+    "source": "cache",
+    "forecast": {
+      "verdict": "slipping",
+      "confidence": "medium",
+      "forecastGaDate": "2026-08-12",
+      "forecastGaSprint": 24,
+      "gapSprints": 1,
+      "unresolved": 40,
+      "weightedOutstanding": 42.3,
+      "recentVelocity": 18.5,
+      "oneLiner": "NDB-2.11 is forecast to land 3 weeks late (1 sprint) ...",
+      "dataSource": "cache",
+      "forecastMethod": "fallback_running"
+    }
+  }
+}
 ```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | Missing `release` or unknown `productId` | Prompt for release / product |
+| 401 | Missing JIRA Bearer token | Re-auth |
+| 5xx | Live JIRA count failed (cache miss only) | Retry or show error |
+
+**Caching**: Yes — prefers the release-dataset trunk. `source` / `forecast.dataSource` is `"cache"` or `"live"`. Invalidation = dataset sync.
 
 ---
 

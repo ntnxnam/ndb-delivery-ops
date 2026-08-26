@@ -4,6 +4,8 @@
  * Implemented (real, not stub):
  *   - productService           (foundation, D1/D5)
  *   - dateMoverService         (D30 — gate-date moves with audit)
+ *   - velocityService          (#2 — 3-stream velocity, trunk + live fallback)
+ *   - landingForecastService   (#4 — MVP landing date, trunk + live fallback)
  *
  * Partial (some methods working, more to come):
  *   - statusService            (releaseRag + topBlockers only)
@@ -34,6 +36,8 @@ export * from './issueGroupsService.js';
 export * from './resolutionCategoriesService.js';
 export * from './sprintsService.js';
 export * from './releaseInsightsService.js';
+export * from './velocityService.js';
+export * from './landingForecastService.js';
 export * from './featureDashboardService.js';
 export * from './retroService.js';
 export * from './riskIndicator.js';

@@ -100,6 +100,14 @@ function buildCache(productId, shared) {
   });
 }
 
+/** Non-empty cached payload for a release, or null when the trunk is empty/missing. */
+function loadCachedReleaseTickets(cache, release) {
+  if (!release) return null;
+  const loaded = cache.loadReleaseLenient(release);
+  const tickets = loaded?.tickets;
+  return Array.isArray(tickets) && tickets.length > 0 ? tickets : null;
+}
+
 function acquireLockOrThrow(lockKey, owner) {
   const lock = syncLocking.acquire(lockKey, {
     ttlMs: SYNC_LOCK_TTL_MS,
@@ -412,8 +420,10 @@ router.get('/synopsis', auth, async (req, res) => {
 /**
  * GET /api/release-dataset/velocity?productId=ndb&release=NDB-2.11&sprintsBack=3
  *
- * Returns 3-stream sprint velocity (Dev / QA-Verification / QA-Test-Tasks)
- * for the most recent N sprints, scoped to a product + optional release.
+ * 3-stream sprint velocity (Dev / QA-Verification / QA-Test-Tasks).
+ * Cache-first on the release-dataset trunk when `release` is set and
+ * tickets exist; otherwise live JIRA `searchCount`. Whole-team velocity
+ * (no `release`) is always live — the trunk is per-release.
  *
  * Per `sprint-velocity-types.mdc`. Powers the Sprint Velocity panel on
  * the Release Brief.
@@ -454,6 +464,7 @@ router.get('/velocity', auth, async (req, res) => {
       loadEnv,
       getProductService,
       computeRecentSprintVelocity,
+      computeRecentSprintVelocityFromTickets,
     } = shared;
 
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -474,15 +485,31 @@ router.get('/velocity', auth, async (req, res) => {
         .json({ success: false, error: e.message });
     }
 
-    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
-    const jira = new JiraConnector(env);
-
-    const sprints = await computeRecentSprintVelocity(jira, {
-      projectKey: product.projectKey,
-      release,
-      sprintCalendar,
-      sprintsBack,
-    });
+    const cachedTickets = loadCachedReleaseTickets(
+      buildCache(productId, shared),
+      release
+    );
+    let source = 'live';
+    let sprints;
+    if (cachedTickets) {
+      source = 'cache';
+      sprints = computeRecentSprintVelocityFromTickets({
+        tickets: cachedTickets,
+        projectKey: product.projectKey,
+        release,
+        sprintCalendar,
+        sprintsBack,
+      });
+    } else {
+      const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
+      const jira = new JiraConnector(env);
+      sprints = await computeRecentSprintVelocity(jira, {
+        projectKey: product.projectKey,
+        release,
+        sprintCalendar,
+        sprintsBack,
+      });
+    }
 
     return res.json({
       success: true,
@@ -491,6 +518,7 @@ router.get('/velocity', auth, async (req, res) => {
         release: release || null,
         projectKey: product.projectKey,
         sprintCalendar,
+        source,
         sprints,
       },
     });
@@ -507,8 +535,8 @@ router.get('/velocity', auth, async (req, res) => {
 /**
  * GET /api/release-dataset/forecast?productId=ndb&release=NDB-2.11&plannedGaIso=YYYY-MM-DD
  *
- * Landing-forecast MVP — first fusion of the Streamlit chatbot-app's
- * `landing_forecast.py` marquee feature into the React app. Returns a
+ * Landing-forecast MVP. Cache-first on the release-dataset trunk;
+ * live JIRA `searchCount` only when the trunk is empty. Returns a
  * predicted GA date, gap to plan, verdict (on_time / slipping / at_risk),
  * confidence, and a one-line VP-friendly explanation.
  *
@@ -542,6 +570,7 @@ router.get('/forecast', auth, async (req, res) => {
       loadEnv,
       getProductService,
       computeLandingForecast,
+      computeLandingForecastFromTickets,
     } = shared;
 
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -560,16 +589,33 @@ router.get('/forecast', auth, async (req, res) => {
       return res.status(400).json({ success: false, error: e.message });
     }
 
-    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
-    const jira = new JiraConnector(env);
-
-    const forecast = await computeLandingForecast({
-      jira,
-      projectKey: product.projectKey,
-      release,
-      sprintCalendar,
-      plannedGaIso,
-    });
+    const cachedTickets = loadCachedReleaseTickets(
+      buildCache(productId, shared),
+      release
+    );
+    let source = 'live';
+    let forecast;
+    if (cachedTickets) {
+      source = 'cache';
+      forecast = computeLandingForecastFromTickets({
+        tickets: cachedTickets,
+        projectKey: product.projectKey,
+        release,
+        labelPrefix: productService.getLabelPrefix(productId),
+        sprintCalendar,
+        plannedGaIso,
+      });
+    } else {
+      const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
+      const jira = new JiraConnector(env);
+      forecast = await computeLandingForecast({
+        jira,
+        projectKey: product.projectKey,
+        release,
+        sprintCalendar,
+        plannedGaIso,
+      });
+    }
 
     return res.json({
       success: true,
@@ -577,6 +623,7 @@ router.get('/forecast', auth, async (req, res) => {
         productId,
         release,
         projectKey: product.projectKey,
+        source,
         forecast,
       },
     });

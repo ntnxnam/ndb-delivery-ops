@@ -200,8 +200,8 @@ All strategies fail:
 | GET | `/releases` | List all synced releases with metadata |
 | GET | `/per-release/:release` | Full bundle for one release from disk |
 | GET | `/synopsis` | 5-bucket count-only query (live JIRA, fast) |
-| GET | `/velocity` | Sprint velocity (3 streams) |
-| GET | `/forecast` | Landing date forecast + confidence |
+| GET | `/velocity` | Sprint velocity (3 streams) — cache-first on trunk |
+| GET | `/forecast` | Landing date forecast + confidence — cache-first on trunk |
 | GET | `/gates` | Gate dates from config |
 | GET | `/outstanding` | Open issues bucketed by severity |
 | GET | `/project-status` | Per-project issue-group breakdown matrix |

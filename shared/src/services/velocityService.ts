@@ -30,10 +30,13 @@
  */
 
 import type { JiraConnector } from '../connectors/jiraConnector.js';
+import type { ProcessedTicket } from './releaseDatasetService.js';
+import { PROJECT_HIERARCHY } from './issueGroupsService.js';
 import {
   NDB_SPRINT_CALENDAR,
   type SprintCalendar,
   currentSprint as currentSprintNumber,
+  sprintFor,
   sprintLabel,
   sprintWindow,
 } from './sprintsService.js';
@@ -230,5 +233,159 @@ export async function computeRecentSprintVelocity(
     () => worker()
   );
   await Promise.all(workers);
+  return results;
+}
+
+// ── Trunk path (cached ProcessedTicket rows) ──────────────────────────────
+
+export interface ComputeSprintVelocityFromTicketsOptions {
+  tickets: ProcessedTicket[];
+  projectKey: string;
+  release?: string;
+  sprintCalendar?: SprintCalendar;
+  sprintNumber?: number;
+  now?: Date;
+}
+
+type TicketWithSprintCols = ProcessedTicket & {
+  'Sprint Number'?: number | null;
+  'Closed Sprint Number'?: number | null;
+};
+
+function issueTypeOf(t: ProcessedTicket): string {
+  return String(t['Issue Type'] || '').trim();
+}
+
+function isDevIssueType(issueType: string): boolean {
+  return !PROJECT_HIERARCHY.has(issueType) && issueType !== 'Test';
+}
+
+function resolvedSprintOf(
+  t: TicketWithSprintCols,
+  calendar: SprintCalendar
+): number | null {
+  if (typeof t['Sprint Number'] === 'number') return t['Sprint Number'];
+  return sprintFor(t['Resolved Date'], calendar);
+}
+
+function closedSprintOf(
+  t: TicketWithSprintCols,
+  calendar: SprintCalendar
+): number | null {
+  if (typeof t['Closed Sprint Number'] === 'number') {
+    return t['Closed Sprint Number'];
+  }
+  return sprintFor(t['Closed Date'], calendar);
+}
+
+function ticketsForRelease(
+  tickets: ProcessedTicket[],
+  release?: string
+): ProcessedTicket[] {
+  if (!release) return tickets;
+  return tickets.filter((t) => t['Release Name'] === release);
+}
+
+/**
+ * 3-stream sprint velocity from cached tickets (CONSOLIDATION #2).
+ *
+ * Semantics match the live JQL in this file:
+ *   - Dev: non-portfolio, non-Test, Resolved Date in the sprint window
+ *   - QA Verification: Bug/Improvement with Closed Date in the window
+ *     (a Closed Bug in-window counts as both Dev and QA-Verif)
+ *   - QA Test: issueType = Test, Resolved Date in the window
+ *
+ * Click-through `jql` fields reuse the live builders unchanged.
+ */
+export function computeSprintVelocityFromTickets(
+  options: ComputeSprintVelocityFromTicketsOptions
+): SprintVelocityResult {
+  if (!options?.projectKey) {
+    throw new Error(
+      'computeSprintVelocityFromTickets: options.projectKey is required (D1)'
+    );
+  }
+  const calendar = options.sprintCalendar ?? NDB_SPRINT_CALENDAR;
+  const now = options.now ?? new Date();
+  const todaySprint = currentSprintNumber(calendar, now);
+  const sprintNumber = options.sprintNumber ?? todaySprint;
+  if (!Number.isInteger(sprintNumber) || sprintNumber < 1) {
+    throw new Error(
+      `computeSprintVelocityFromTickets: sprintNumber must be a positive integer, got ${sprintNumber}`
+    );
+  }
+  const window = sprintWindow(sprintNumber, calendar);
+  const scoped = ticketsForRelease(options.tickets, options.release);
+
+  let devCount = 0;
+  let qaVerifCount = 0;
+  let qaTestCount = 0;
+  for (const t of scoped) {
+    const type = issueTypeOf(t);
+    if (isDevIssueType(type) && resolvedSprintOf(t, calendar) === sprintNumber) {
+      devCount += 1;
+    }
+    if (
+      (type === 'Bug' || type === 'Improvement') &&
+      closedSprintOf(t, calendar) === sprintNumber
+    ) {
+      qaVerifCount += 1;
+    }
+    if (type === 'Test' && resolvedSprintOf(t, calendar) === sprintNumber) {
+      qaTestCount += 1;
+    }
+  }
+
+  return {
+    release: options.release,
+    projectKey: options.projectKey,
+    sprintNumber,
+    sprintLabel: sprintLabel(sprintNumber),
+    window,
+    isCurrent: sprintNumber === todaySprint,
+    dev: {
+      count: devCount,
+      jql: jqlDev(options.projectKey, options.release, window),
+    },
+    qaVerification: {
+      count: qaVerifCount,
+      jql: jqlQaVerification(options.projectKey, options.release, window),
+      adjustedCount:
+        Math.round(qaVerifCount * QA_VERIFICATION_EFFORT_RATIO * 100) / 100,
+    },
+    qaTestTasks: {
+      count: qaTestCount,
+      jql: jqlQaTestTasks(options.projectKey, options.release, window),
+    },
+  };
+}
+
+/**
+ * Recent-sprint velocity from cached tickets. Most-recent sprint first.
+ */
+export function computeRecentSprintVelocityFromTickets(
+  options: ComputeSprintVelocityFromTicketsOptions & {
+    sprintsBack?: number;
+    endSprint?: number;
+  }
+): SprintVelocityResult[] {
+  const calendar = options.sprintCalendar ?? NDB_SPRINT_CALENDAR;
+  const now = options.now ?? new Date();
+  const end = options.endSprint ?? currentSprintNumber(calendar, now);
+  const back = Math.max(1, options.sprintsBack ?? 3);
+  const start = Math.max(1, end - back + 1);
+  const results: SprintVelocityResult[] = [];
+  for (let n = end; n >= start; n--) {
+    results.push(
+      computeSprintVelocityFromTickets({
+        tickets: options.tickets,
+        projectKey: options.projectKey,
+        release: options.release,
+        sprintCalendar: calendar,
+        sprintNumber: n,
+        now,
+      })
+    );
+  }
   return results;
 }

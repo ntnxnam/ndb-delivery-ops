@@ -132,7 +132,8 @@ export async function fetchReleasePayloadSynopsis({
  * for the most recent N sprints, scoped to a product + optional release.
  *
  * Per `sprint-velocity-types.mdc`. Backed by `shared/velocityService` via
- * `/api/release-dataset/velocity` (Path B — uses `shared/JiraConnector`).
+ * `/api/release-dataset/velocity` (cache-first on the release-dataset trunk;
+ * live JIRA counts only when the trunk is empty).
  *
  * @param {{productId?: string, release?: string, sprintsBack?: number, jiraToken: string, username: string}} args
  */

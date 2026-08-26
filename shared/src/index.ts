@@ -218,10 +218,13 @@ export type { SprintCalendar } from './services/sprintsService.js';
 export {
   computeSprintVelocity,
   computeRecentSprintVelocity,
+  computeSprintVelocityFromTickets,
+  computeRecentSprintVelocityFromTickets,
   QA_VERIFICATION_EFFORT_RATIO,
 } from './services/velocityService.js';
 export type {
   ComputeSprintVelocityOptions,
+  ComputeSprintVelocityFromTicketsOptions,
   SprintVelocityStream,
   SprintVelocityResult,
 } from './services/velocityService.js';
@@ -239,6 +242,8 @@ export type {
 
 export {
   computeLandingForecast,
+  computeLandingForecastFromTickets,
+  assembleLandingForecast,
   classifyConfidence,
   classifyVerdict,
   gapPhrase,
@@ -249,6 +254,7 @@ export {
 } from './services/landingForecastService.js';
 export type {
   ComputeLandingForecastOptions,
+  ComputeLandingForecastFromTicketsOptions,
   LandingForecastResult,
   ForecastVerdict,
   ForecastConfidence,

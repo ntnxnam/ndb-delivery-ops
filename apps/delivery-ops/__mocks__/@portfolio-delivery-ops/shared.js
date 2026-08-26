@@ -25,6 +25,10 @@ const mockProductService = {
   getReleaseNamePattern: jest.fn().mockReturnValue(/^NDB-/),
   getReleasePrefix: jest.fn().mockReturnValue('NDB-'),
   getActiveVersionNames: jest.fn().mockReturnValue([]),
+  getSprintCalendar: jest.fn().mockReturnValue({
+    s1StartIso: '2024-10-23',
+    sprintDays: 21,
+  }),
 };
 
 const mockCache = {
@@ -287,6 +291,10 @@ module.exports = {
   getSprintMetrics,
   countSelfReportedRisk,
   computeReleaseHealthVerdict,
+  computeRecentSprintVelocity: jest.fn().mockResolvedValue([]),
+  computeRecentSprintVelocityFromTickets: jest.fn().mockReturnValue([]),
+  computeLandingForecast: jest.fn().mockResolvedValue({}),
+  computeLandingForecastFromTickets: jest.fn().mockReturnValue({}),
   loadAgentPack,
   runAgentTurn,
   createAgentRuntimeStores,
