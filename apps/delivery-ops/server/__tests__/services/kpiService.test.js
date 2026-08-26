@@ -8,15 +8,21 @@ jest.mock('../../utils/jiraRouteHelpers', () => ({
   getReleaseBaseFilter: jest.fn(),
   upstreamStatus: jest.fn((s) => s)
 }));
-jest.mock('../../services/jiraService', () => ({
-  retryJiraCall: jest.fn((fn) => fn()),
-  createHttpsAgent: jest.fn(() => ({}))
-}));
 jest.mock('@portfolio-delivery-ops/shared', () => ({
   buildWorkItemsJql: jest.fn(() => 'MOCK_JQL'),
   buildWorkItemsUrl: jest.fn(() => 'https://jira/mock/work-items'),
   buildAllTicketsUrl: jest.fn(() => 'https://jira/mock/all-tickets'),
-  isValidProjectKey: jest.fn(() => true)
+  isValidProjectKey: jest.fn(() => true),
+  loadEnv: () => ({ jiraPat: '', jiraTimeoutMs: 30000 }),
+  JiraConnector: class {
+    get(path, options = {}) {
+      return require('axios').get(path, options);
+    }
+    async searchCount(jql) {
+      const res = await this.get('/rest/api/2/search', { params: { jql, maxResults: 0 } });
+      return res.data?.total ?? 0;
+    }
+  },
 }));
 jest.mock('../../utils/logger', () => ({
   jira: { fetch: jest.fn(), issueBreakdown: jest.fn() }

@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2 } = require('../config/api');
+const { getJira } = require('../utils/jiraClient');
 const { extractApiError, getJiraErrorMessage } = require('../utils/errorMessages');
 const { requireAuth } = require('../middleware/authMiddleware');
 const allowedUsersConfig = require('../config/allowedUsers.json');
@@ -27,14 +27,8 @@ router.post('/login', async (req, res) => {
     // Step 1: Validate JIRA credentials and extract user info
     let jiraUserInfo = null;
     try {
-      const jiraResponse = await axios.get(JIRA_API_V2.MYSELF, {
-        headers: {
-          'Authorization': `Bearer ${jiraToken}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
+      const jira = await getJira(jiraToken);
+      const jiraResponse = await jira.get(JIRA_API_V2.MYSELF, { timeout: 10000 });
       
       jiraUserInfo = jiraResponse.data;
       logger.info(`[AUTH] JIRA user info retrieved:`, {

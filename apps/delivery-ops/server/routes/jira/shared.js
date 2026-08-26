@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2, JIRA_AGILE } = require('../../config/api');
@@ -17,7 +15,8 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {
@@ -108,23 +107,16 @@ router.post('/validate', validateJiraTokenMiddleware, async (req, res) => {
       ip: req.ip || req.connection.remoteAddress
     });
     
-    const baseUrl = JIRA_API_V2.BASE_URL;
-    const httpsAgent = createHttpsAgent();
     const apiUrl = JIRA_API_V2.ISSUE(jiraKey);
 
     try {
-      const response = await retryJiraCall(() => axios.get(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const jira = await getJira(cleanToken);
+      const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
           fields: 'issuetype,summary,status'
         }
-      }));
+      });
 
       const issueType = response.data.fields?.issuetype?.name;
       const allowedTypes = ['Feature', 'Initiative', 'X-FEAT', 'Capability'];
@@ -294,7 +286,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
     // Use validated token from middleware
     const cleanToken = req.jiraToken;
     const baseUrl = JIRA_API_V2.BASE_URL;
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(cleanToken);
     
     // First, fetch the main ticket to determine its issue type
     // OPTIMIZATION: Use already-fetched jiraData if provided to avoid redundant API call
@@ -306,13 +298,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
     } else {
       // Fetch from JIRA if not provided
       try {
-        const mainTicketResponse = await axios.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
-          headers: {
-            'Authorization': `Bearer ${cleanToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
+        const mainTicketResponse = await jira.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
           timeout: 6000, // Reduced from 30s to 6s
           params: {
             fields: 'issuetype',
@@ -349,13 +335,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
     logger.jira.fetch(jiraKey, 'FETCH_ALL_ISSUES', `Fetching all related issues with query for ${mainTicketIssueType}`);
     
     try {
-      const response = await axios.get(searchUrl, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const response = await jira.get(searchUrl, {
         timeout: 60000, // Increased timeout for comprehensive query
         params: {
           jql: jqlQuery,
@@ -373,13 +353,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
       if (!mainTicket) {
         // If main ticket not in results, fetch it separately
         try {
-          const mainTicketResponse = await axios.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
-            headers: {
-              'Authorization': `Bearer ${cleanToken}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            httpsAgent: httpsAgent,
+          const mainTicketResponse = await jira.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
             timeout: 6000, // Reduced from 30s to 6s
             params: {
               fields: 'key,summary,status,issuetype,resolution,assignee,duedate,fixVersions,customfield_10860,customfield_20363',
@@ -403,13 +377,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         console.log('Names object is empty, fetching field metadata...');
         try {
           const fieldMetadataUrl = JIRA_API_V2.FIELD;
-          const fieldResponse = await axios.get(fieldMetadataUrl, {
-            headers: {
-              'Authorization': `Bearer ${cleanToken}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            httpsAgent: httpsAgent,
+          const fieldResponse = await jira.get(fieldMetadataUrl, {
             timeout: 30000
           });
           
@@ -845,7 +813,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
     const cleanToken = req.jiraToken;
 
     const baseUrl = JIRA_API_V2.BASE_URL;
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(cleanToken);
     
     // JIRA uses PAT (Personal Access Token) with Bearer authentication
     // Use only API v2 direct issue endpoint
@@ -855,13 +823,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
     
     try {
       // For API v2, use expand=names to get custom field display names
-      const response = await axios.get(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
           fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
@@ -887,13 +849,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
       
       try {
         const fieldMetadataUrl = JIRA_API_V2.FIELD;
-        const fieldResponse = await axios.get(fieldMetadataUrl, {
-          headers: {
-            'Authorization': `Bearer ${cleanToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
+        const fieldResponse = await jira.get(fieldMetadataUrl, {
           timeout: 15000
         });
         

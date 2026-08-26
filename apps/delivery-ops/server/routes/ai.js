@@ -4,8 +4,6 @@
  */
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { generateExecSummary, generateReleaseSummary } = require('../services/naiService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
@@ -13,6 +11,7 @@ const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
 const { fetchTicketNarrative } = require('../utils/jiraTicketNarrative');
 const { JIRA_API_V2 } = require('../config/api');
+const { getJira } = require('../utils/jiraClient');
 const logger = require('../utils/logger');
 
 const EXEC_SUMMARY_FIELD = 'customfield_38460';
@@ -188,20 +187,12 @@ router.put('/exec-summary/:key', validateJiraTokenMiddleware, async (req, res) =
     return res.status(401).json({ error: 'JIRA token required' });
   }
 
-  const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
   try {
-    await axios.put(
+    const jira = await getJira(jiraToken);
+    await jira.put(
       JIRA_API_V2.ISSUE(encodeURIComponent(key)),
       { fields: { [EXEC_SUMMARY_FIELD]: summary } },
-      {
-        headers: {
-          Authorization: `Bearer ${jiraToken}`,
-          'Content-Type': 'application/json',
-        },
-        httpsAgent,
-        timeout: 15000,
-      }
+      { timeout: 15000 }
     );
 
     logger.info(`Exec summary pushed to JIRA for ${key}`);

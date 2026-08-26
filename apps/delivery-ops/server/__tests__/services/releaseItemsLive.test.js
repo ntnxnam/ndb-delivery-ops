@@ -18,9 +18,6 @@ const { fetchAllItemsAcrossVersions } = require('../../services/releaseItemsData
 
 jest.mock('axios');
 jest.mock('../../services/jiraService', () => ({
-  createHttpsAgent: () => ({}),
-  retryJiraCall: (fn) => fn(),
-  jiraHeaders: () => ({ Authorization: 'Bearer t' }),
   formatRiskIndicator: (v) => v,
   sortByRiskIndicator: (items) => items,
 }));

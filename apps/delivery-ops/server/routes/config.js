@@ -2,13 +2,12 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
-const https = require('https');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { getUserPermissions } = require('../services/authService');
 const { checkKpiViewAuthorization, checkKpiTabAuthorization, checkKpiAdminAuthorization } = require('../services/userService');
 const { sendEmailDirect } = require('../services/emailService');
 const { JIRA_API_V2 } = require('../config/api');
+const { getJira } = require('../utils/jiraClient');
 const { formatDate } = require('../utils/dateFormatter');
 const jiraConfig = require('../config/jiraConfig.json');
 const releaseVersionsCCConfig = require('../config/releaseVersionsCCConfig.json');
@@ -532,13 +531,8 @@ router.get('/release-dates/:version', (req, res) => {
 
 // ── GA date side-effect helpers ─────────────────────────────────────────────
 
-function getJiraAuthHeader() {
-  const token = process.env.JIRA_TOKEN || jiraConfig.token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function httpsAgent() {
-  return new https.Agent({ rejectUnauthorized: false });
+function getConfigJiraToken() {
+  return process.env.JIRA_TOKEN || jiraConfig.token;
 }
 
 /**
@@ -547,12 +541,8 @@ function httpsAgent() {
  */
 async function findJiraVersionId(projectKey, versionName) {
   try {
-    const url = JIRA_API_V2.PROJECT_VERSIONS(projectKey);
-    const { data } = await axios.get(url, {
-      headers: { ...getJiraAuthHeader(), 'Content-Type': 'application/json' },
-      httpsAgent: httpsAgent(),
-      timeout: 10000,
-    });
+    const jira = await getJira(getConfigJiraToken());
+    const { data } = await jira.get(JIRA_API_V2.PROJECT_VERSIONS(projectKey), { timeout: 10000 });
     const match = (data || []).find(v => v.name === versionName);
     return match ? match.id : null;
   } catch (e) {
@@ -566,12 +556,8 @@ async function findJiraVersionId(projectKey, versionName) {
  */
 async function updateJiraVersionReleaseDate(versionId, releaseDate) {
   try {
-    const url = JIRA_API_V2.VERSION(versionId);
-    await axios.put(url, { releaseDate }, {
-      headers: { ...getJiraAuthHeader(), 'Content-Type': 'application/json' },
-      httpsAgent: httpsAgent(),
-      timeout: 10000,
-    });
+    const jira = await getJira(getConfigJiraToken());
+    await jira.put(JIRA_API_V2.VERSION(versionId), { releaseDate }, { timeout: 10000 });
     return true;
   } catch (e) {
     console.warn(`[config] updateJiraVersionReleaseDate ${versionId}:`, e.message);

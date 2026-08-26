@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2, JIRA_AGILE } = require('../../config/api');
@@ -17,7 +15,8 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {
@@ -99,7 +98,7 @@ router.get('/jira-diagnostic', [
   
   try {
     const { jiraToken: cleanToken } = req;
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(cleanToken);
     
     console.log(`[${requestId}] Running JIRA diagnostic tests`);
     
@@ -107,12 +106,7 @@ router.get('/jira-diagnostic', [
     
     // Test 1: Basic server info
     try {
-      const serverInfo = await axios.get(`${JIRA_API_V2.SERVER_INFO}`, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Accept': 'application/json'
-        },
-        httpsAgent,
+      const serverInfo = await jira.get(`${JIRA_API_V2.SERVER_INFO}`, {
         timeout: 10000
       });
       tests.push({
@@ -133,18 +127,13 @@ router.get('/jira-diagnostic', [
     
     // Test 2: Very basic project query
     try {
-      const basicQuery = await axios.get(`${JIRA_API_V2.SEARCH}`, {
+      const basicQuery = await jira.get(`${JIRA_API_V2.SEARCH}`, {
+        timeout: 15000,
         params: {
           jql: 'project = ERA',
           maxResults: 1,
           fields: 'key'
         },
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Accept': 'application/json'
-        },
-        httpsAgent,
-        timeout: 15000
       });
       tests.push({
         name: 'Basic Project Query',
@@ -164,12 +153,7 @@ router.get('/jira-diagnostic', [
     
     // Test 3: Check available fix versions
     try {
-      const versions = await axios.get(`${JIRA_API_V2.PROJECT('ERA')}/versions`, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Accept': 'application/json'
-        },
-        httpsAgent,
+      const versions = await jira.get(`${JIRA_API_V2.PROJECT('ERA')}/versions`, {
         timeout: 10000
       });
       const releaseVersions = versions.data.filter(v => 
@@ -236,10 +220,11 @@ router.post('/test-jql', [
 
     console.log(`[${requestId}] Testing JQL: ${jql}`);
     
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(cleanToken);
     const startTime = Date.now();
     
-    const searchResponse = await axios.get(`${JIRA_API_V2.SEARCH}`, {
+    const searchResponse = await jira.get(`${JIRA_API_V2.SEARCH}`, {
+      timeout: 30000,
       params: {
         jql,
         fields: 'key,issuetype,status,resolved',
@@ -247,13 +232,6 @@ router.post('/test-jql', [
         startAt: 0,
         validateQuery: 'true'
       },
-      headers: {
-        'Authorization': `Bearer ${cleanToken}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      httpsAgent,
-      timeout: 30000
     });
     
     const responseTime = Date.now() - startTime;

@@ -14,7 +14,6 @@
  * doesn't change in seconds. 5-min TTL mirrors the breakdown cache.
  */
 
-const { JIRA_API_V2 } = require('../config/api');
 const { getJira } = require('./jiraClient');
 const { SimpleCache } = require('./simpleCache');
 const logger = require('./logger');

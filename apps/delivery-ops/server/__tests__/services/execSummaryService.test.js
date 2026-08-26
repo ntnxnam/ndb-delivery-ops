@@ -1,7 +1,4 @@
 jest.mock('axios');
-jest.mock('../../services/jiraService', () => ({
-  createHttpsAgent: jest.fn(() => ({}))
-}));
 jest.mock('../../utils/jiraQueryUtils', () => ({
   buildCommitItemsJQL: jest.fn(() => 'fixVersion = "NDB-2.11"')
 }));

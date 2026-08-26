@@ -1,8 +1,4 @@
 jest.mock('axios');
-jest.mock('../../services/jiraService', () => ({
-  retryJiraCall: jest.fn((fn) => fn()),
-  createHttpsAgent: jest.fn(() => ({}))
-}));
 jest.mock('../../utils/sprintCache', () => ({
   getSprintsForBoard: jest.fn(),
   classifySprintIssue: jest.fn(),

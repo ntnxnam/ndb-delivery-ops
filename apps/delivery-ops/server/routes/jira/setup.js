@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2, JIRA_AGILE } = require('../../config/api');
@@ -17,7 +15,7 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {

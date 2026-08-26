@@ -3,10 +3,9 @@ const tokenCache = require('../utils/tokenCache');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { checkFeatureAccess } = require('../services/authService');
-const { createHttpsAgent, retryJiraCall } = require('../services/jiraService');
+const { getJira } = require('../utils/jiraClient');
 
 const { loadTeamBoardConfig, saveTeamBoardConfig } = require('../utils/teamConfig');
 const { compileVersionPatterns } = require('../utils/versionPattern');
@@ -74,36 +73,20 @@ router.post('/validate-jira-project', requireSuperAdmin, async (req, res) => {
       });
     }
 
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(jiraToken);
     const JIRA_API_V2 = require('../config/api').JIRA_API_V2;
 
     // Test project access
-    const projectResponse = await retryJiraCall(() => axios.get(
+    const projectResponse = await jira.get(
       JIRA_API_V2.PROJECT(projectKey),
-      {
-        headers: {
-          'Authorization': `Bearer ${jiraToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
-        timeout: 15000
-      }
-    ));
+      { timeout: 15000 }
+    );
 
     // Get project versions to validate version access
-    const versionsResponse = await retryJiraCall(() => axios.get(
+    const versionsResponse = await jira.get(
       JIRA_API_V2.PROJECT_VERSIONS(projectKey),
-      {
-        headers: {
-          'Authorization': `Bearer ${jiraToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
-        timeout: 15000
-      }
-    ));
+      { timeout: 15000 }
+    );
 
     const project = projectResponse.data;
     const versions = versionsResponse.data || [];
@@ -150,31 +133,18 @@ router.post('/validate-filters', requireSuperAdmin, async (req, res) => {
       });
     }
 
-    const httpsAgent = createHttpsAgent();
-    const JIRA_API_V2 = require('../config/api').JIRA_API_V2;
+    const jira = await getJira(jiraToken);
     const validationResults = [];
 
     for (const filter of filters) {
       try {
         // Test filter by running a search with maxResults=1
-        const searchResponse = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-          headers: {
-            'Authorization': `Bearer ${jiraToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
-          timeout: 15000,
-          params: {
-            jql: filter.filterQuery || `filter=${filter.name}`,
-            maxResults: 1
-          }
-        }));
+        const issueCount = await jira.searchCount(filter.filterQuery || `filter=${filter.name}`);
 
         validationResults.push({
           name: filter.name,
           valid: true,
-          issueCount: searchResponse.data.total || 0
+          issueCount: issueCount || 0
         });
       } catch (filterError) {
         validationResults.push({
@@ -426,8 +396,7 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
       });
     }
 
-    const httpsAgent = createHttpsAgent();
-    const cleanToken = req.jiraToken;
+    const jira = await getJira(req.jiraToken);
     const JIRA_API_V2 = require('../config/api').JIRA_API_V2;
 
     const testResults = {
@@ -439,18 +408,10 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
 
     // Test 1: Project access
     try {
-      const projectResponse = await retryJiraCall(() => axios.get(
+      const projectResponse = await jira.get(
         JIRA_API_V2.PROJECT(team.projectKey),
-        {
-          headers: {
-            'Authorization': `Bearer ${cleanToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
-          timeout: 15000
-        }
-      ));
+        { timeout: 15000 }
+      );
 
       testResults.projectAccess = {
         valid: true,
@@ -465,18 +426,10 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
 
     // Test 2: Version access
     try {
-      const versionsResponse = await retryJiraCall(() => axios.get(
+      const versionsResponse = await jira.get(
         JIRA_API_V2.PROJECT_VERSIONS(team.projectKey),
-        {
-          headers: {
-            'Authorization': `Bearer ${cleanToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
-          timeout: 15000
-        }
-      ));
+        { timeout: 15000 }
+      );
 
       let versions = (versionsResponse.data || [])
         .filter(v => v.name && v.released === false && v.archived !== true)
@@ -520,24 +473,12 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
       const filterResults = [];
       for (const filter of filtersToTest) {
         try {
-          const searchResponse = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-            headers: {
-              'Authorization': `Bearer ${cleanToken}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            httpsAgent: httpsAgent,
-            timeout: 15000,
-            params: {
-              jql: filter.query,
-              maxResults: 1
-            }
-          }));
+          const issueCount = await jira.searchCount(filter.query);
 
           filterResults.push({
             name: filter.name,
             valid: true,
-            issueCount: searchResponse.data.total || 0
+            issueCount: issueCount || 0
           });
         } catch (error) {
           filterResults.push({

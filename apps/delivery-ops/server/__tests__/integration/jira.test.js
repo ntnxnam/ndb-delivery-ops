@@ -69,7 +69,16 @@ jest.mock('@portfolio-delivery-ops/shared', () => {
     { name: 'NDB-2.11', released: false, releaseDate: '2026-09-15' },
   ]);
   function JiraConnector() {
-    return {};
+    const axios = require('axios');
+    return {
+      get(path, options = {}) { return axios.get(path, options); },
+      post(path, body, options = {}) { return axios.post(path, body, options); },
+      put(path, body, options = {}) { return axios.put(path, body, options); },
+      async searchCount(jql) {
+        const res = await axios.get('/rest/api/2/search', { params: { jql, maxResults: 0 } });
+        return res.data?.total ?? 0;
+      },
+    };
   }
   const loadEnv = jest.fn().mockReturnValue({});
   return {
@@ -212,7 +221,7 @@ describe('JIRA API Integration Tests', () => {
           'X-Username': 'test-user'
         })
         .send({ teamId: 'other', sprintId: 1 });
-      expect(getSprintsForBoard).toHaveBeenCalledWith(999, expect.any(String), expect.anything());
+      expect(getSprintsForBoard).toHaveBeenCalledWith(999, expect.any(String), null);
     });
   });
 

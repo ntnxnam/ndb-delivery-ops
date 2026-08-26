@@ -23,24 +23,26 @@ const mockTeamConfig = {
 };
 
 function mockSearchIssues(fixVersionNames, projectVersions) {
-  axios.get.mockImplementation((url) => {
-    if (String(url).includes('/rest/api/2/search')) {
-      const issues = fixVersionNames.map((name) => ({
-        fields: { fixVersions: [{ name }] },
-      }));
-      return Promise.resolve({
-        data: { issues, total: issues.length },
-      });
-    }
-    if (String(url).includes('/versions')) {
-      return Promise.resolve({ data: projectVersions || [] });
-    }
-    return Promise.resolve({ data: [] });
+  const issues = fixVersionNames.map((name) => ({
+    fields: { fixVersions: [{ name }] },
+  }));
+  const { getJira } = require('../../utils/jiraClient');
+  getJira.mockResolvedValue({
+    searchAll: async () => issues,
+    getProjectVersions: async () => projectVersions || [],
   });
 }
 
 // Mock the config loading
 jest.mock('../../config/teamBoardConfig.json', () => mockTeamConfig, { virtual: true });
+
+jest.mock('../../utils/jiraClient', () => ({
+  ...jest.requireActual('../../utils/jiraClient'),
+  getJira: jest.fn(async () => ({
+    searchAll: async () => [],
+    getProjectVersions: async () => [],
+  })),
+}));
 
 // Mock axios for JIRA API calls
 jest.mock('axios');

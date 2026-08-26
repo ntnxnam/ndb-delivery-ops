@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2, JIRA_AGILE } = require('../../config/api');
@@ -17,7 +15,8 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {
@@ -152,21 +151,8 @@ router.get('/p0-bugs', validateJiraTokenMiddleware, async (req, res) => {
     
     console.log(`[p0-bugs] JQL: ${jqlQuery}`);
     
-    const searchResponse = await axios.get(JIRA_API_V2.SEARCH, {
-      headers: {
-        'Authorization': `Bearer ${jiraToken}`,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        jql: jqlQuery,
-        fields: 'key', // We only need the count, not the full data
-        maxResults: 1000 // Should be enough for P0 bugs
-      },
-      httpsAgent: createHttpsAgent(),
-      timeout: 30000
-    });
-
-    const p0BugCount = searchResponse.data?.total || 0;
+    const jira = await getJira(jiraToken);
+    const p0BugCount = await jira.searchCount(jqlQuery);
     
     console.log(`[p0-bugs] Found ${p0BugCount} P0 bugs for ${version}`);
     

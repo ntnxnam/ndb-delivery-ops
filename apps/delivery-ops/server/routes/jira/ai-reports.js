@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const https = require('https');
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const aiReportService = require('../../services/aiReportService');
-const { createHttpsAgent } = require('../../services/jiraService');
+
+const naiHttpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 // Use validateJiraTokenMiddleware consistently throughout this file
 
@@ -46,7 +48,7 @@ router.post('/validate-nai-key', async (req, res) => {
           'Content-Type': 'application/json'
         },
         timeout: 10000,
-        httpsAgent: createHttpsAgent()
+        httpsAgent: naiHttpsAgent
       }
     );
 

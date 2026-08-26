@@ -13,9 +13,11 @@ jest.mock('../../config/api', () => ({
   }
 }));
 
-// Mock axios for JIRA API calls
-jest.mock('axios');
-const axios = require('axios');
+jest.mock('../../utils/jiraClient', () => ({
+  getJira: jest.fn(),
+}));
+
+const { getJira } = require('../../utils/jiraClient');
 
 // Mock auth service — admin route uses checkFeatureAccess; keep checkAuthorization
 // as a stub so any other consumers that destructure it don't throw.
@@ -41,6 +43,11 @@ describe('Admin Routes', () => {
     // Default auth to authorized
     checkAuthorization.mockReturnValue({ authorized: true });
     checkFeatureAccess.mockReturnValue({ authorized: true });
+
+    getJira.mockResolvedValue({
+      get: jest.fn(),
+      searchCount: jest.fn().mockResolvedValue(0),
+    });
 
     // Default file system mocks
     fs.readFileSync.mockImplementation((filePath) => {
@@ -176,7 +183,7 @@ describe('Admin Routes', () => {
 
   describe('POST /validate-jira-project', () => {
     it('should validate accessible JIRA project', async () => {
-      axios.get
+      const get = jest.fn()
         .mockResolvedValueOnce({
           data: {
             key: 'ERA',
@@ -191,6 +198,7 @@ describe('Admin Routes', () => {
             { name: 'NDB-2.12', released: false, archived: false }
           ]
         });
+      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
 
       const response = await request(app)
         .post('/api/admin/validate-jira-project')
@@ -206,7 +214,7 @@ describe('Admin Routes', () => {
     });
 
     it('should handle invalid project key', async () => {
-      axios.get.mockRejectedValue({
+      const get = jest.fn().mockRejectedValue({
         response: {
           status: 404,
           data: {
@@ -214,6 +222,7 @@ describe('Admin Routes', () => {
           }
         }
       });
+      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
 
       const response = await request(app)
         .post('/api/admin/validate-jira-project')
@@ -229,9 +238,8 @@ describe('Admin Routes', () => {
 
   describe('POST /validate-filters', () => {
     it('should validate working JIRA filters', async () => {
-      axios.get.mockResolvedValue({
-        data: { total: 25 }
-      });
+      const searchCount = jest.fn().mockResolvedValue(25);
+      getJira.mockResolvedValue({ get: jest.fn(), searchCount });
 
       const response = await request(app)
         .post('/api/admin/validate-filters')
@@ -251,15 +259,16 @@ describe('Admin Routes', () => {
     });
 
     it('should detect invalid filters', async () => {
-      axios.get
-        .mockResolvedValueOnce({ data: { total: 10 } }) // First filter works
+      const searchCount = jest.fn()
+        .mockResolvedValueOnce(10)
         .mockRejectedValueOnce({
           response: {
             data: {
               errorMessages: ['Filter does not exist']
             }
           }
-        }); // Second filter fails
+        });
+      getJira.mockResolvedValue({ get: jest.fn(), searchCount });
 
       const response = await request(app)
         .post('/api/admin/validate-filters')

@@ -16,11 +16,15 @@
 - Body: `{ projectKey: string, jiraToken: string }`
 
 **Server flow**  
-`admin.js → jiraConnector.getProject(projectKey)`
+`admin.js → jiraClient.getJira(token) → JiraConnector.get(project) + get(project versions)`
 
 **Response**
 ```json
-{ "success": true, "project": { "key": "ERA", "name": "NDB Engineering", "id": "10001" } }
+{
+  "success": true,
+  "project": { "key": "ERA", "name": "NDB Engineering", "projectTypeKey": "software", "lead": { "displayName": "Lead" } },
+  "versions": { "total": 12, "open": 4, "openVersionNames": ["NDB-2.12"] }
+}
 ```
 
 **Error responses**
@@ -33,19 +37,20 @@
 
 ### POST /api/admin/validate-filters
 
-**Purpose**: Validate that a list of JIRA saved filter IDs exist and are accessible — used in team onboarding wizard.
+**Purpose**: Validate that each team JQL filter (or saved-filter name) is executable — used in team onboarding wizard.
 
 **Auth**: super-admin
 
 **Request**
-- Body: `{ filterIds: number[], jiraToken: string }`
+- Body: `{ filters: [{ name: string, filterQuery?: string }], jiraToken: string }`
+- `filterQuery` is JQL. If omitted, the server tests `filter=<name>`.
 
 **Server flow**  
-`admin.js → jiraConnector.getFilter(id)` for each filter ID
+`admin.js → jiraClient.getJira(token) → JiraConnector.searchCount(jql)` for each filter
 
 **Response**
 ```json
-{ "success": true, "results": [{ "id": 175938, "name": "NCM-All-Base-Filter", "valid": true }] }
+{ "success": true, "results": [{ "name": "baseFilter", "valid": true, "issueCount": 25 }] }
 ```
 
 ---
@@ -120,14 +125,25 @@ Reads `teamBoardConfig.json` → merges changes for matching `teamId` → writes
 **Auth**: super-admin + JIRA token required
 
 **Request**
-- Body: `{ teamId: string, boardId: number, baseFilterId: string|number, jiraToken: string, username: string }`
+- Body: `{ teamId: string }`
+- Headers: JIRA Bearer token (via `validateJiraTokenMiddleware`)
 
 **Server flow**  
-Calls JIRA board API + runs a test JQL using the base filter. Returns pass/fail per check.
+`admin.js → loadTeamBoardConfig → jiraClient.getJira(req.jiraToken)` → project access, version list (with `versionPatterns`), and `searchCount` on `baseFilter` / `sprintBaseFilter`.
 
 **Response**
 ```json
-{ "success": true, "checks": { "board": true, "baseFilter": true, "jqlTest": true } }
+{
+  "success": true,
+  "teamId": "ndb",
+  "teamName": "NDB",
+  "results": {
+    "teamConfig": { "valid": true },
+    "projectAccess": { "valid": true, "projectName": "NDB Engineering" },
+    "versionAccess": { "valid": true, "totalVersions": 12, "sampleVersions": ["NDB-2.12"] },
+    "filterTests": { "valid": true, "results": [{ "name": "baseFilter", "valid": true, "issueCount": 100 }] }
+  }
+}
 ```
 
 ---

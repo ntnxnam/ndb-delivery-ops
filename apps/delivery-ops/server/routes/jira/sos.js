@@ -24,7 +24,7 @@ const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { apiLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
 const { getTeamSosBaseFilter, getTeamBaseFilter } = require('../../utils/teamConfig');
 const { resolveKpiJql } = require('../../services/kpiService');
-const { createHttpsAgent, makeJiraSearchFetcher } = require('../../services/jiraService');
+const { makeJiraSearchFetcher } = require('../../services/jiraService');
 const { fetchSosItems } = require('../../services/releaseItemsDataService');
 const {
   fetchFieldHistoryForMultiple,
@@ -34,11 +34,10 @@ const {
 router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   try {
     const { teamId, forceLive = false } = req.body || {};
-    const httpsAgent = createHttpsAgent();
     const data = await fetchSosItems({
       teamId,
       jiraToken: req.jiraToken,
-      httpsAgent,
+      httpsAgent: null,
       forceLive: Boolean(forceLive),
     });
     return res.json({ success: true, data });
@@ -57,7 +56,6 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
   res.setTimeout(180000);
   try {
     const { teamId } = req.body || {};
-    const httpsAgent = createHttpsAgent();
 
     const rawSosFilter = getTeamSosBaseFilter(teamId) || getTeamBaseFilter(teamId);
     if (!rawSosFilter) {
@@ -66,7 +64,7 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
         error: `Team "${teamId || 'unknown'}" has no sosBaseFilter or baseFilter in Admin. Set the team base filter, then Fetch again.`,
       });
     }
-    const resolvedFilter = await resolveKpiJql(rawSosFilter, req.jiraToken, httpsAgent);
+    const resolvedFilter = await resolveKpiJql(rawSosFilter, req.jiraToken, null);
 
     // Fetch just the keys — no need for full field processing.
     // The SoS base filter can be a large JIRA saved filter; raise the timeout

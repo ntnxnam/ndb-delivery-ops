@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../../config/api');
 const logger = require('../../utils/logger');
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
@@ -11,7 +10,8 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {
@@ -350,21 +350,8 @@ router.get('/executive-summary-unified', validateJiraTokenMiddleware, async (req
       const filterName = `${version.toLowerCase()}-all`;
       const p0JqlQuery = `filter = "${filterName}" AND statusCategory != Done AND priority = "P0 - Blocker"`;
       
-      const p0Response = await axios.get(JIRA_API_V2.SEARCH, {
-        headers: {
-          'Authorization': `Bearer ${jiraToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          jql: p0JqlQuery,
-          fields: 'key',
-          maxResults: 1000
-        },
-        httpsAgent: createHttpsAgent(),
-        timeout: 30000
-      });
-
-      p0BugsCount = p0Response.data?.total || 0;
+      const jira = await getJira(jiraToken);
+      p0BugsCount = await jira.searchCount(p0JqlQuery);
     } catch (error) {
       console.error('[executive-summary-unified] Error fetching P0 bugs:', error.message);
       // Continue with 0 count rather than failing entirely
@@ -378,18 +365,14 @@ router.get('/executive-summary-unified', validateJiraTokenMiddleware, async (req
     try {
       // Use existing commit items JQL
       const commitJQL = buildCommitItemsJQL(version);
-      const commitResponse = await axios.get(JIRA_API_V2.SEARCH, {
-        headers: {
-          'Authorization': `Bearer ${jiraToken}`,
-          'Content-Type': 'application/json'
-        },
+      const jira = await getJira(jiraToken);
+      const commitResponse = await jira.get(JIRA_API_V2.SEARCH, {
+        timeout: 30000,
         params: {
           jql: commitJQL,
           fields: `key,summary,status,priority,assignee,${buildFieldIdsString(EXEC_SUMMARY_FIELD_KEYS)}`,
           maxResults: 1000
         },
-        httpsAgent: createHttpsAgent(),
-        timeout: 30000
       });
 
       const rawItems = commitResponse.data?.issues || [];

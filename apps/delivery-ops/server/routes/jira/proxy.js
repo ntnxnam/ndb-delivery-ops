@@ -1,9 +1,7 @@
 const express = require('express');
 const router  = express.Router();
-const axios   = require('axios');
-const { JIRA_API_V2 } = require('../../config/api');
-const { createHttpsAgent } = require('../../services/jiraService');
 const logger = require('../../utils/logger');
+const { getJira } = require('../../utils/jiraClient');
 
 /**
  * POST /api/jira/proxy
@@ -42,31 +40,22 @@ router.post('/', async (req, res) => {
     return res.status(401).json({ error: 'Missing Authorization: Bearer <token> header' });
   }
 
-  // ── 3. Validate and build target URL ─────────────────────────────────────
+  // ── 3. Validate path ─────────────────────────────────────────────────────
   const { path = '/rest/api/2/myself', method = 'GET', data = null } = req.body || {};
 
   if (!path.startsWith('/rest/')) {
     return res.status(400).json({ error: 'path must start with /rest/' });
   }
 
-  const targetUrl = `${JIRA_API_V2.BASE_URL}${path}`;
-
-  logger.info(`[JiraProxy] ${method.toUpperCase()} ${targetUrl}`);
+  logger.info(`[JiraProxy] ${method.toUpperCase()} ${path}`);
 
   // ── 4. Forward to Jira ────────────────────────────────────────────────────
   try {
-    const jiraResponse = await axios({
-      method          : method.toUpperCase(),
-      url             : targetUrl,
-      data            : data || undefined,
-      headers         : {
-        'Authorization' : `Bearer ${token}`,
-        'Content-Type'  : 'application/json',
-        'Accept'        : 'application/json'
-      },
-      httpsAgent      : createHttpsAgent(),
-      timeout         : 30000,
-      validateStatus  : () => true  // forward all status codes; let caller decide
+    const jira = await getJira(token);
+    const jiraResponse = await jira.request(method.toUpperCase(), path, {
+      data: data || undefined,
+      timeout: 30000,
+      validateStatus: () => true  // forward all status codes; let caller decide
     });
 
     return res.status(jiraResponse.status).json(jiraResponse.data);

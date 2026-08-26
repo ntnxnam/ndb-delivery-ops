@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2, JIRA_AGILE } = require('../../config/api');
@@ -17,7 +15,8 @@ const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require
 const allowedUsersConfig = require('../../config/allowedUsers.json');
 const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 const { extractUserName, extractAssigneeName, normalizeToUsername, usernameToEmail, checkKpiViewAuthorization, checkKpiTabAuthorization } = require('../../services/userService');
-const { formatRiskIndicator, sortByRiskIndicator, retryJiraCall, createHttpsAgent, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { formatRiskIndicator, sortByRiskIndicator, getRiskIndicatorPriority } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const { fetchAllChangelogHistories } = require('../../utils/changelogPagination');
 const { fetchFieldHistoryForMultiple, transformFieldHistoryToCheckpointHistory } = require('../../utils/fieldHistoryUtils');
 const {
@@ -102,7 +101,6 @@ router.post('/checkpoint-history', checkpointHistoryLimiter, validateJiraTokenMi
     }
 
     const baseUrl = JIRA_API_V2.BASE_URL;
-    const httpsAgent = createHttpsAgent();
     const cleanToken = req.jiraToken;
 
     // Checkpoint field IDs
@@ -117,19 +115,14 @@ router.post('/checkpoint-history', checkpointHistoryLimiter, validateJiraTokenMi
     
     try {
       // First, fetch issue to get issue ID and initial changelog
-      const response = await retryJiraCall(() => axios.get(issueUrl, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const jira = await getJira(cleanToken);
+      const response = await jira.get(issueUrl, {
         timeout: 30000,
         params: {
           expand: 'changelog',
           fields: `${checkpointFields.codeComplete},${checkpointFields.commitGate},${checkpointFields.promotionGate}`
         }
-      }));
+      });
 
       const issue = response.data;
       
@@ -139,8 +132,8 @@ router.post('/checkpoint-history', checkpointHistoryLimiter, validateJiraTokenMi
         jiraKey,
         issue.id || null, // Pass issue ID for Strategy 2
         cleanToken,
-        httpsAgent,
-        retryJiraCall,
+        null,
+        null,
         logger
       );
       
@@ -298,7 +291,6 @@ router.get('/test-changelog/:key', validateJiraTokenMiddleware, async (req, res)
   try {
     const { key } = req.params;
     const baseUrl = JIRA_API_V2.BASE_URL;
-    const httpsAgent = createHttpsAgent();
     const cleanToken = req.jiraToken;
     
     const issueUrl = `${baseUrl}/rest/api/2/issue/${key}`;
@@ -314,33 +306,22 @@ router.get('/test-changelog/:key', validateJiraTokenMiddleware, async (req, res)
     
     console.log(`[Test] Testing changelog fetch for ${key}...`);
     
-    const responseWithFields = await retryJiraCall(() => axios.get(issueUrl, {
-      headers: {
-        'Authorization': `Bearer ${cleanToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      httpsAgent: httpsAgent,
+    const jira = await getJira(cleanToken);
+    const responseWithFields = await jira.get(issueUrl, {
       timeout: 30000,
       params: {
         expand: 'changelog',
         fields: Object.values(checkpointFields).join(',')
       }
-    }));
+    });
     
     // Test 2: WITHOUT fields parameter
-    const responseWithoutFields = await retryJiraCall(() => axios.get(issueUrl, {
-      headers: {
-        'Authorization': `Bearer ${cleanToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      httpsAgent: httpsAgent,
+    const responseWithoutFields = await jira.get(issueUrl, {
       timeout: 30000,
       params: {
         expand: 'changelog'
       }
-    }));
+    });
     
     const withFields = responseWithFields.data;
     const withoutFields = responseWithoutFields.data;

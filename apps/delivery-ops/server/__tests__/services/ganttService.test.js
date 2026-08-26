@@ -1,8 +1,4 @@
 jest.mock('axios');
-jest.mock('../../services/jiraService', () => ({
-  createHttpsAgent: jest.fn(() => ({})),
-  retryJiraCall: jest.fn((fn) => fn())
-}));
 jest.mock('../../services/releaseItemsDataService', () => ({
   _internals: {
     fetchReleaseItemsFromJira: jest.fn(),
