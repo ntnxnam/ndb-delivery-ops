@@ -58,7 +58,9 @@ Specialists are internal sub-agents the orchestrator delegates to.
 
 The orchestrator decides delegation; users never address a specialist by name.
 
-Web chat (`POST /api/ai/chat`) runs `shared/agentRuntime` (D39) — perceive, then a read-only tool loop — not a single mailbox completion.
+Web chat (`POST /api/ai/chat`) runs `shared/agentRuntime` (D39, D42) —
+perceive, memory, tool loop, provenance. `read`/`draft` may run; `mutate`
+is HITL-queued and never executed while D26 is open.
 
 Domain derives (signals, briefing buckets, sprint rates, bundle-first page math) live in `shared/` (D41). Pages and routes fetch and render.
 

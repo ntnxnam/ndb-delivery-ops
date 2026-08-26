@@ -6,9 +6,9 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
 
 ### POST /api/ai/chat
 
-**Purpose**: Conversational release Q&A. Perceive (cached snapshot) then run the portable agent runtime (pack bootstrap + read-only tool loop). Same LLM transport as exec/release summaries (`aiConnector.completeChat`).
+**Purpose**: Conversational release Q&A. Perceive (cached snapshot) then run the portable agent runtime (pack bootstrap + tool loop + memory + provenance). Same LLM transport as exec/release summaries (`aiConnector.completeChat`).
 
-> Additive in 2026-08-25: `trace` and `runtime` on the success response. `reply` / `scope` / `snapshotMeta` are unchanged. Optional body field `audience`.
+> Additive in 2026-08-26 (D42): `sessionId`, `provenanceId`, `pendingApprovals`, `memoryMeta`. Optional body field `sessionId`. Mutate tools are HITL-queued and never executed while D26 is open.
 
 **Auth**: Required (JIRA token in `Authorization: Bearer <token>` header)
 
@@ -22,16 +22,20 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
   | `release` | string | no | Default focus release if prompt does not explicitly name one |
   | `productId` | string | no | Product namespace for dataset cache; default `ndb` |
   | `audience` | string | no | Presenter lens for the orchestrator session; default `tpm` |
+  | `sessionId` | string | no | Client chat session key; server sanitizes and persists memory against it |
   | `availableReleases` | string[] | no | Client-supplied release list to improve intent extraction |
   | `knownTeams` | string[] | no | Client-supplied team/component names to improve intent extraction |
 
 **Server flow**
 `POST /api/ai/chat`
 → `chatIntentRouter.extractScope`
-→ `chatSnapshotBuilder.buildSnapshot` (release cache + gate config + optional release intelligence)
+→ `chatSnapshotBuilder.buildSnapshot` (live per-release fetch or empty snapshot + gate config + optional release intelligence)
+→ load session/user/org memory
 → `loadAgentPack()` + `runAgentTurn` (`shared/agentRuntime`)
-→ pack tools (`list_skills`, `read_skill`, `read_specialist`) and host tools (`get_release_snapshot`, `get_release_health`) — **read-only**
-→ `aiConnector.completeChat` (native `tool_calls`, or JSON protocol fallback)
+→ pack tools (`list_skills`, `read_skill`, `read_specialist`) and host tools (`get_release_snapshot`, `get_release_health`, `remember_correction`, `propose_jira_write`)
+→ `read`/`draft` execute; `mutate` HITL-queued (D26 open — no JIRA write)
+→ append provenance JSONL
+→ `aiConnector.completeChat`
 → response
 
 **Response shape**
@@ -54,7 +58,11 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
   "trace": [
     { "tool": "get_release_health", "toolClass": "read", "ok": true, "detail": "ok" }
   ],
-  "runtime": "agent"
+  "runtime": "agent",
+  "sessionId": "s_1724_ab12",
+  "provenanceId": "3f2c9e0a-…",
+  "pendingApprovals": [],
+  "memoryMeta": { "sessionEntities": 1, "userCorrections": 0 }
 }
 ```
 
@@ -65,8 +73,72 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
 | 502 | NAI call failed or snapshot pipeline failed | Show retry affordance and preserve unsent prompt |
 
 **Caching**
-- No server-side chat persistence.
+- Session/user/org memory and provenance JSONL under `AGENT_RUNTIME_DIR` (default `.cache/agent-runtime`).
 - Snapshot is rebuilt per turn from on-disk release cache (`shared/.cache/release-dataset`) and gate config.
+
+---
+
+### GET /api/ai/approvals
+
+**Purpose**: List HITL mutate proposals for the current user (Wave 4 inbox).
+
+**Auth**: required
+
+**Request**
+- Method + path: `GET /api/ai/approvals`
+- Query params:
+  - `sessionId` (string, optional) — filter to one chat session
+  - `status` (string, optional) — `pending` | `rejected` | `blocked_d26`
+- Body: none
+- Required headers: `Authorization: Bearer <jira-pat>`
+
+**Server flow**
+`routes/ai.js` → `chatService.listApprovals` → `FileHitlInbox.list`
+
+**Response shape**
+```json
+{ "approvals": [{ "id": "…", "status": "pending", "tool": "propose_jira_write", "args": {}, "requestedBy": "alice" }] }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 500 | Store read failed | Retry |
+
+**Caching**
+No — reads the HITL JSON file.
+
+---
+
+### POST /api/ai/approvals/:id
+
+**Purpose**: Approve or reject a queued mutate. Approve records `blocked_d26` and **does not write to JIRA** while D26 is open.
+
+**Auth**: required (same user as `requestedBy`)
+
+**Request**
+- Method + path: `POST /api/ai/approvals/:id`
+- Query params: none
+- Body params: `decision` (`approve` | `reject`)
+- Required headers: `Authorization: Bearer <jira-pat>`
+
+**Server flow**
+`routes/ai.js` → `chatService.decideApproval` → `FileHitlInbox.decide` (no DateMover / JIRA call)
+
+**Response shape**
+```json
+{ "approval": { "id": "…", "status": "blocked_d26" }, "executed": false }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | Missing/invalid `decision` | Fix body |
+| 403 | Caller is not the requester, or auth username is missing | Stop |
+| 404 | Unknown id | Refresh inbox |
+
+**Caching**
+No.
 
 ---
 

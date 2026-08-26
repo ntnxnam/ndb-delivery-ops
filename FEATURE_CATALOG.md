@@ -45,7 +45,8 @@ that needs it.
 | **Sprint Classification** (`sprintService.classify`) | • used inside Sprint Health  • used inside Story Point Roll-up (only counts committed work)  • used inside Capacity calc (uses delivered velocity) |
 | **JIRA Connector** (`jiraConnector`, D40 — Data Center PAT Bearer) | every feature in every domain |
 | **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML  • Sync Hub (release-analytics rebuild) |
-| **NLP → query plan** (`nlpQueryService` — D4, unbuilt) | Future structured planner. **Today:** `agentRuntime` (D39) on `POST /api/ai/chat`. |
+| **NLP → query plan** (`nlpQueryService` — D4, unbuilt) | Future structured planner. **Today:** `agentRuntime` (D39, D42) on `POST /api/ai/chat`. |
+| **Agent memory / provenance / HITL** (`agentRuntime` stores, D42) | • `/chatbot` session memory  • provenance chip  • HITL inbox (`/api/ai/approvals`) |
 | **Product context** (`productService` — D1) | • every Layer-3 service that touches external systems  • product picker in delivery-ops top bar  • per-product audience overrides for `audience.md` styles |
 
 How to read this: the rows are services in Layer 3. Every "Surface" is either

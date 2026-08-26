@@ -208,11 +208,14 @@ All test cases drive `computeReleaseHealthVerdict` in `shared/src/services/riskI
 
 | ID | Request | Mock | Expected |
 |---|---|---|---|
-| IT-AI-001 | `POST /api/ai/chat` with message | NAI mock; bundle on disk | 200; `reply`, `runtime: "agent"`, `trace` array |
+| IT-AI-001 | `POST /api/ai/chat` with message | NAI mock; bundle on disk | 200; `reply`, `runtime: "agent"`, `trace` array, `sessionId`, `provenanceId` |
 | IT-AI-002 | `POST /api/ai/release-summary` | NAI mock + JIRA mock | 200; `{ verdict, summary, blockers, actionList }` |
 | IT-AI-003 | `POST /api/ai/release-summary` with P0 open | JIRA mock returns P0 ticket | `verdict = "RED"` regardless of NAI response |
 | IT-AI-004 | `POST /api/ai/chat` → NAI timeout | Mock 30s timeout | 503; meaningful error; no hang |
 | IT-AI-005 | `PUT /api/ai/exec-summary/:key` | JIRA mock update | 200; JIRA update call made with correct field ID |
+| IT-AI-006 | Mutate tool in a turn | `propose_jira_write` in loop | HITL pending; `execute()` never called |
+| IT-AI-007 | `POST /api/ai/approvals/:id` approve | Pending inbox row | 200; `executed: false`; status `blocked_d26` |
+| IT-AI-008 | `POST /api/ai/approvals/:id` as other user | Mismatched `requestedBy` | 403 |
 
 ---
 

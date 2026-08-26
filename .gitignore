@@ -56,3 +56,6 @@ Thumbs.db
 **/*.tsbuildinfo
 test-project-breakdown.js
 FORECAST_LANDING_FIX_NOTES.md
+
+# Agent runtime stores (Wave 4) — session memory, provenance, HITL inbox
+**/.cache/agent-runtime/

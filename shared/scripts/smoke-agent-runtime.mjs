@@ -85,7 +85,7 @@ const refused = await runAgentTurn(
     tools: [
       {
         name: 'fake_write',
-        description: 'Must be refused in Wave 1',
+        description: 'Must never execute; HITL pause (D42)',
         toolClass: 'mutate',
         parameters: { type: 'object', properties: {} },
         execute: async () => {
@@ -114,8 +114,52 @@ const refused = await runAgentTurn(
 );
 assert(!mutateExecuted, 'mutate execute() must not run');
 assert(
-  refused.trace.some((t) => t.tool === 'fake_write' && t.ok === false && t.detail === 'refused_non_read'),
-  'mutate tool refused'
+  refused.trace.some((t) => t.tool === 'fake_write' && t.ok === false && t.detail === 'hitl_pending'),
+  'mutate tool paused for HITL'
 );
 
-console.log('agent-runtime ok: native tools, JSON protocol, mutate refused');
+const hitlRows = [];
+const withInbox = await runAgentTurn(
+  {
+    message: 'Move a gate date.',
+    session: { productId: 'ndb', userId: 'tester', sessionId: 's_smoke' },
+    hitl: {
+      enqueue: (req) => {
+        const row = { id: 'appr-1', status: 'pending', tool: req.tool, args: req.args };
+        hitlRows.push(row);
+        return row;
+      },
+      list: () => hitlRows,
+      decide: () => hitlRows[0],
+    },
+    tools: [
+      {
+        name: 'fake_write',
+        description: 'HITL mutate',
+        toolClass: 'mutate',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+          mutateExecuted = true;
+          return { wrote: true };
+        },
+      },
+    ],
+    completeChat: scriptedComplete([
+      {
+        content: '',
+        toolCalls: [{ id: 'w2', name: 'fake_write', arguments: '{"action":"move"}' }],
+        finishReason: 'tool_calls',
+      },
+      {
+        content: 'Queued for HITL; not written.',
+        toolCalls: [],
+        finishReason: 'stop',
+      },
+    ]),
+  },
+  pack
+);
+assert(!mutateExecuted, 'HITL inbox must not call execute');
+assert(withInbox.pendingApprovals.some((p) => p.id === 'appr-1'), 'pending approval returned');
+
+console.log('agent-runtime ok: native tools, JSON protocol, mutate HITL-paused');

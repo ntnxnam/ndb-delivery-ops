@@ -113,6 +113,60 @@ function computeReleaseHealthVerdict() {
   return { verdict: 'GREEN', rule: 6, reason: 'test stub' };
 }
 
+function loadAgentPack() {
+  return { identity: { orchestrator: { body: '' }, specialists: [] }, skills: new Map(), constitutionalRules: [], manifest: { name: 'test', version: '0' } };
+}
+
+function runAgentTurn() {
+  return Promise.resolve({
+    reply: 'ok',
+    trace: [],
+    runtime: 'agent',
+    pendingApprovals: [],
+  });
+}
+
+function createAgentRuntimeStores() {
+  return {
+    memory: {
+      load: (keys) => ({
+        tier: keys.tier,
+        userId: keys.userId,
+        productId: keys.productId,
+        sessionId: keys.sessionId,
+        updatedAt: new Date().toISOString(),
+        entities: {},
+        corrections: [],
+      }),
+      save: jest.fn(),
+    },
+    provenance: {
+      append: (row) => ({ id: 'prov-test', ...row }),
+    },
+    hitl: {
+      enqueue: (row) => ({ id: 'appr-test', status: 'pending', ...row }),
+      list: () => [],
+      decide: (id) => ({ id, status: 'blocked_d26' }),
+    },
+  };
+}
+
+function mergeEntities(current, incoming) {
+  return { ...(current || {}), ...(incoming || {}) };
+}
+
+function appendCorrection(record, correction) {
+  return { ...record, corrections: [...(record.corrections || []), correction] };
+}
+
+function provenanceFromTurn(input) {
+  return input;
+}
+
+function safeMemoryId(value, fallback) {
+  return String(value || fallback || 's_test');
+}
+
 module.exports = {
   getProductService,
   ReleaseDatasetCache,
@@ -130,4 +184,11 @@ module.exports = {
   getSprintMetrics,
   countSelfReportedRisk,
   computeReleaseHealthVerdict,
+  loadAgentPack,
+  runAgentTurn,
+  createAgentRuntimeStores,
+  mergeEntities,
+  appendCorrection,
+  provenanceFromTurn,
+  safeMemoryId,
 };

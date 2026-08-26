@@ -5,6 +5,7 @@ import { loadAgentPack } from '../agentPack/loadAgentPack.js';
 import { buildBootstrapPrompt } from './bootstrap.js';
 import { createPackTools } from './packTools.js';
 import type { AgentTool, AgentTraceStep, AgentTurnInput, AgentTurnResult } from './types.js';
+import type { HitlApproval } from './hitl.js';
 
 const DEFAULT_MAX_STEPS = 4;
 const TOOL_RESULT_CAP = 16000;
@@ -68,16 +69,39 @@ function parseProtocol(content: string): { name: string; args: Record<string, un
 async function executeTool(
   tool: AgentTool | undefined,
   name: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  input: AgentTurnInput,
+  pending: HitlApproval[]
 ): Promise<{ ok: boolean; result: unknown; detail: string }> {
   if (!tool) {
     return { ok: false, result: { error: `unknown tool: ${name}` }, detail: 'unknown' };
   }
-  if (tool.toolClass !== 'read') {
+  if (tool.toolClass === 'mutate') {
+    if (input.hitl) {
+      const queued = input.hitl.enqueue({
+        tool: name,
+        args,
+        requestedBy: input.session.userId,
+        sessionId: input.session.sessionId,
+        productId: input.session.productId,
+      });
+      pending.push(queued);
+      return {
+        ok: false,
+        result: {
+          status: 'awaiting_approval',
+          approvalId: queued.id,
+          executed: false,
+          d26: 'open',
+          error: 'HITL queued; mutate did not execute (D26 open)',
+        },
+        detail: 'hitl_pending',
+      };
+    }
     return {
       ok: false,
-      result: { error: `refused: ${name} is ${tool.toolClass}; Wave 1 is read-only` },
-      detail: 'refused_non_read',
+      result: { error: `refused: ${name} is mutate; D26 open; no HITL inbox on this host` },
+      detail: 'hitl_pending',
     };
   }
   try {
@@ -119,6 +143,7 @@ export async function runAgentTurn(
   ];
 
   const trace: AgentTraceStep[] = [];
+  const pendingApprovals: HitlApproval[] = [];
   const openAiTools = toOpenAiTools(tools);
 
   for (let step = 1; step <= maxSteps; step += 1) {
@@ -137,7 +162,13 @@ export async function runAgentTurn(
       if (!reply) {
         throw new Error('Agent produced an empty reply');
       }
-      return { reply, trace, runtime: 'agent', steps: step };
+      return {
+        reply,
+        trace,
+        runtime: 'agent',
+        steps: step,
+        pendingApprovals: pendingApprovals.map((p) => ({ id: p.id, tool: p.tool, status: p.status })),
+      };
     }
 
     const assistantToolCalls = calls.map((call) => ({
@@ -153,7 +184,7 @@ export async function runAgentTurn(
 
     for (const call of calls) {
       const tool = byName.get(call.name);
-      const executed = await executeTool(tool, call.name, parseArgs(call.arguments));
+      const executed = await executeTool(tool, call.name, parseArgs(call.arguments), input, pendingApprovals);
       trace.push({
         tool: call.name,
         toolClass: tool?.toolClass || 'read',

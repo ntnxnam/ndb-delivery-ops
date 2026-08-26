@@ -27,7 +27,7 @@ All three use NAI (Nutanix internal LLM API), enforce ticket-key integrity, and 
 |---|---|
 | `server/services/naiService.js` | One-shot LLM for exec summary + release briefing (not chat SOPs) |
 | `server/services/chatService.js` | Host adapter: perceive snapshot, then `runAgentTurn` |
-| `shared/src/agentRuntime/` | Pack bootstrap + read-only tool loop (D39) |
+| `shared/src/agentRuntime/` | Pack bootstrap + tool loop + memory/provenance/HITL (D39, D42) |
 | `server/utils/chatIntentRouter.js` | Classify user message into intent |
 | `server/utils/chatSnapshotBuilder.js` | Build compact dataset context for LLM |
 | `server/services/aiReportService.js` | AI report orchestration |
@@ -49,17 +49,19 @@ POST /api/ai/chat
   "message": "What are the open blockers for NDB-2.12?",
   "history": [{ "role": "user"|"assistant", "content": "..." }],
   "release": "NDB-2.12",
-  "productId": "ndb"
+  "productId": "ndb",
+  "sessionId": "s_1724_ab12"
 }
 
 Response:
-{ "reply": "...", "scope": {...}, "snapshotMeta": {...}, "trace": [...], "runtime": "agent" }
+{ "reply": "...", "scope": {...}, "snapshotMeta": {...}, "trace": [...], "runtime": "agent",
+  "sessionId": "...", "provenanceId": "...", "pendingApprovals": [], "memoryMeta": {} }
 ```
 
 ### 3.2 Server Pipeline
 
 ```
-chatService.answerChat(message, history, release, productId):
+chatService.answerChat(message, history, release, productId, { sessionId, userId, audience }):
 
 1. chatIntentRouter.extractScope(message)
    → releases / teams / ticket keys / intent
@@ -67,11 +69,15 @@ chatService.answerChat(message, history, release, productId):
 2. chatSnapshotBuilder.buildSnapshot(scope, productId)
    → disk release cache + gate dates + optional release intelligence (incl. computed health)
 
-3. loadAgentPack() + runAgentTurn({ perceive, validTicketKeys, tools })
-   → read-only pack tools + get_release_snapshot / get_release_health
+3. Load session/user/org memory (D42); merge resolved entities
+
+4. loadAgentPack() + runAgentTurn({ perceive, validTicketKeys, tools, memory, hitl })
+   → pack tools + get_release_snapshot / get_release_health (`read`)
+   → remember_correction (`draft`); propose_jira_write (`mutate` → HITL, never execute)
    → aiConnector.completeChat (native tool_calls or JSON protocol)
 
-4. Return { reply, scope, snapshotMeta, trace, runtime: "agent" }
+5. Append provenance JSONL; return { reply, scope, snapshotMeta, trace, runtime,
+   sessionId, provenanceId, pendingApprovals, memoryMeta }
 ```
 
 ### 3.3 CHAT_SYSTEM_PROMPT Key Rules

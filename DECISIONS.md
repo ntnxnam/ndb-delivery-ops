@@ -850,21 +850,22 @@ place those files can run.
 
 **Statement.** `POST /api/ai/chat` must run `shared/agentRuntime`
 (`runAgentTurn`): load the portable pack (D38), perceive from the
-release snapshot, then loop read-only tools until a final answer.
+release snapshot, then loop tools until a final answer. Wave 1 shipped
+read-only tools; Wave 4 (D42) runs `draft` and pauses `mutate` in HITL.
 Stuffing the snapshot into a system prompt and calling
 `chatCompletion` once is not the product.
 
 **Implications.**
 - Exec-summary and release-briefing stay one-shot `chatCompletion`
   (transcript + computed health). Do not add chat SOPs to `naiService`
-- Wave 1 tools are `toolClass === 'read'` only. `draft` / `mutate`
-  are refused until D26
+- Wave 1 tools are `toolClass === 'read'` only. Wave 4 (D42) runs
+  `draft` and pauses `mutate` in HITL; D26 still blocks execute
 - Response keeps `reply` / `scope` / `snapshotMeta` and adds `trace`
   + `runtime: "agent"`
 - `nlpQueryService` (D4) remains unbuilt; the tool loop is the planner
 
-**What this is NOT.** Opening write-back to JIRA from chat. That is
-Wave 4 + D26.
+**What this is NOT.** Opening write-back to JIRA from chat. That stays
+blocked until D26 (HITL inbox is D42).
 
 ---
 
@@ -910,8 +911,30 @@ the same functions. Wave 3 lifts:
 - CRA cannot import `@portfolio-delivery-ops/shared` without pulling
   Node connectors — keep a same-export client copy, smoke-checked
 
-**What this is NOT.** Wave 4 (memory, provenance, HITL mutate). Replacing
-`jiraService.js`. Opening write-back from chat.
+**What this is NOT.** Replacing `jiraService.js`.
+
+---
+
+### D42 — Open the door safely: memory, provenance, HITL (Wave 4)
+
+**Statement.** Web chat persists session/user/org memory (pack schema),
+writes an append-only provenance row per turn, and pauses `mutate`
+tools in a HITL inbox. **D26 stays open:** Approve does **not** execute
+a JIRA write (`blocked_d26`). `propose_jira_write` exists so the door
+can be seen; it never calls `execute()`.
+
+**Implications.**
+- Memory is JSON files under `AGENT_RUNTIME_DIR` (default
+  `.cache/agent-runtime`). Not a vector store
+- Provenance logs `{tools, dataScopes, replySha256, unknownKeysInReply,
+  mode}` — citations stay in the reply; unknown keys are recorded, not
+  silently rewritten
+- `remember_correction` is `draft` (auto persist preference)
+- Candidate D26 (not locked): mutate always RM/TPM by action; Team Exec
+  is read + draft only. Do not implement that matrix until D26 closes
+
+**What this is NOT.** Write-back to JIRA from chat. Settling D26.
+Model routing (router vs reasoner). Unattended workflow engine.
 
 ---
 
@@ -920,7 +943,7 @@ the same functions. Wave 3 lifts:
 | ID | Decision needed | Blocked on |
 |---|---|---|
 | D24 | "Pending-response" detection mechanism — JIRA comments? Labels? Custom fields? | Build-time question for `pending-response-chase` skill |
-| D26 | **Action-level authorization** — which actions require which roles? (e.g. cascade rename = RM only? bulk triage = TPM+? admin actions = admin only?) | Chat input, can be settled when Phase F or G touches mutating actions |
+| D26 | **Action-level authorization** — which actions require which roles? (e.g. cascade rename = RM only? bulk triage = TPM+? admin actions = admin only?) | HITL inbox exists (D42). Do not execute mutate from chat until this closes. |
 | D27 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
 | D28 | First gap to build (post-Phase-A) | Phase H planning |
 | D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |

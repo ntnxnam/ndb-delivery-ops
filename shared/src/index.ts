@@ -364,11 +364,27 @@ export type {
   TicketLite,
 } from './services/releaseIntelligence.js';
 
-export { runAgentTurn, createPackTools, buildBootstrapPrompt } from './agentRuntime/index.js';
+export {
+  runAgentTurn,
+  createPackTools,
+  buildBootstrapPrompt,
+  createAgentRuntimeStores,
+  resolveAgentRuntimeDir,
+  mergeEntities,
+  appendCorrection,
+  emptyMemory,
+  provenanceFromTurn,
+  collectUnknownKeys,
+  safeMemoryId,
+} from './agentRuntime/index.js';
 export type {
   AgentSession,
   AgentTool,
   AgentTraceStep,
   AgentTurnInput,
   AgentTurnResult,
+  AgentMemoryRecord,
+  HitlApproval,
+  HitlInbox,
+  ProvenanceRecord,
 } from './agentRuntime/index.js';

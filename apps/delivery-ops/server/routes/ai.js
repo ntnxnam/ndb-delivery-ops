@@ -8,7 +8,7 @@ const axios = require('axios');
 const https = require('https');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { generateExecSummary, generateReleaseSummary } = require('../services/naiService');
-const { answerChat } = require('../services/chatService');
+const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
 const { fetchTicketNarrative } = require('../utils/jiraTicketNarrative');
@@ -20,7 +20,7 @@ const EXEC_SUMMARY_FIELD = 'customfield_38460';
 /**
  * POST /api/ai/chat
  * Conversational AI endpoint. Perceive (snapshot) then agentRuntime loop
- * (read-only pack + host tools). Same LLM transport as exec/release summaries.
+ * (pack + host tools; mutate is HITL-queued). Same LLM as exec/release summaries.
  *
  * Body:
  * {
@@ -29,6 +29,7 @@ const EXEC_SUMMARY_FIELD = 'customfield_38460';
  *   release?: string,
  *   productId?: string,
  *   audience?: string,
+ *   sessionId?: string,
  *   availableReleases?: string[],
  *   knownTeams?: string[]
  * }
@@ -40,6 +41,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
     release = null,
     productId = 'ndb',
     audience = 'tpm',
+    sessionId = null,
     availableReleases = [],
     knownTeams = [],
   } = req.body || {};
@@ -56,6 +58,8 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       defaultRelease: release,
       productId,
       audience,
+      sessionId,
+      userId: req.username || req.body?.username,
       jiraToken,
       availableReleases,
       knownTeams,
@@ -67,10 +71,42 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       snapshotMeta: result.snapshotMeta,
       trace: result.trace || [],
       runtime: result.runtime || 'agent',
+      sessionId: result.sessionId,
+      provenanceId: result.provenanceId,
+      pendingApprovals: result.pendingApprovals || [],
+      memoryMeta: result.memoryMeta || null,
     });
   } catch (err) {
     logger.error('[ai/chat] failed', err, { naiDebug: err.naiDebug });
     return res.status(502).json({ error: err.message || 'Chat request failed' });
+  }
+});
+
+router.get('/approvals', validateJiraTokenMiddleware, async (req, res) => {
+  try {
+    const rows = await listApprovals({
+      userId: req.username,
+      sessionId: req.query.sessionId,
+      status: req.query.status,
+    });
+    return res.json({ approvals: rows });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to list approvals' });
+  }
+});
+
+router.post('/approvals/:id', validateJiraTokenMiddleware, async (req, res) => {
+  try {
+    const decision = req.body?.decision;
+    const row = await decideApproval({
+      id: req.params.id,
+      decision,
+      userId: req.username,
+    });
+    return res.json({ approval: row, executed: false });
+  } catch (err) {
+    const code = err.statusCode || (String(err.message || '').includes('unknown') ? 404 : 400);
+    return res.status(code).json({ error: err.message || 'Failed to decide approval' });
   }
 });
 

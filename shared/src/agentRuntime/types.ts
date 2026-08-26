@@ -1,10 +1,18 @@
 import type { ToolClass } from '../agentPack/types.js';
 import type { AiChatMessage, AiChatTurn, AiToolDefinition } from '../connectors/aiConnector.js';
+import type { HitlInbox } from './hitl.js';
+import type { AgentMemoryRecord } from './memoryStore.js';
 
 export interface AgentSession {
   productId: string;
   audience?: string;
   userId?: string;
+  sessionId?: string;
+  memory?: {
+    session?: AgentMemoryRecord | null;
+    user?: AgentMemoryRecord | null;
+    org?: AgentMemoryRecord | null;
+  };
 }
 
 export interface AgentTool {
@@ -31,6 +39,8 @@ export interface AgentTurnInput {
   perceive?: unknown;
   validTicketKeys?: string[];
   maxSteps?: number;
+  /** When set, mutate tools enqueue here instead of execute(). */
+  hitl?: HitlInbox;
   completeChat?: (
     messages: AiChatMessage[],
     options: { tools?: AiToolDefinition[]; temperature?: number; maxTokens?: number }
@@ -42,4 +52,5 @@ export interface AgentTurnResult {
   trace: AgentTraceStep[];
   runtime: 'agent';
   steps: number;
+  pendingApprovals: Array<{ id: string; tool: string; status: string }>;
 }

@@ -102,6 +102,8 @@ This plan covers:
 | E2E-AI-003 | No hallucinated keys (spot check) | Take 2–3 cited keys from response → verify in JIRA | All keys exist as real JIRA tickets |
 | E2E-AI-004 | Conversation history | Send second message referencing first | Response acknowledges context from prior turn |
 | E2E-AI-005 | Error state | Kill NAI API (dev only) → send message | User-visible error shown; chat panel does not crash |
+| E2E-AI-006 | Session memory | Send `remember: X`; Clear; send a new message | New session id; prior session memory not shown |
+| E2E-AI-007 | HITL pause | Ask the agent to write a JIRA field | Approve/Reject card; Approve does not change JIRA |
 
 ### 3.7 Release Briefing
 

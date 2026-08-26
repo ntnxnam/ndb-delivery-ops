@@ -143,7 +143,7 @@ status.
 | Future ports (CONSOLIDATION.md #2, #4–#9, #11–#16, #18) | ○ | Velocity, landing forecast, chart catalog, NAI chatbot, team-exec report service, predictive analytics, capacity, outstanding-work, Confluence template engine, release timeline, bin packing (algo extraction), say-vs-do, story points, sprint Gantt. | various |
 | `nlpQueryService` *(D4, not built)* | ○ | Natural language → dedicated query-plan object. **Wave 1 does not wait on this.** Web chat uses `agentRuntime` (perceive + tool loop). Keep this row for a future structured planner if intents outgrow tool-calling. | future planner, not the current chat path |
 | `agentPack` (`loadAgentPack`, D38) | ● | Load portable identity / skills / workflows / constitutional rules from `agent-pack/`. Host-agnostic. | web chat, Cursor adapter, future hosts |
-| `agentRuntime` (`runAgentTurn`, D39) | ● | Perceive–plan–act loop: pack bootstrap, read-only tools, `aiConnector.completeChat`. Wave 1 refuses `toolClass !== 'read'`. | `POST /api/ai/chat`, future hosts |
+| `agentRuntime` (`runAgentTurn`, D39, D42) | ● | Perceive–plan–act loop + session/user/org memory, provenance, HITL pause for mutate. D26 open: approve does not execute writes. | `POST /api/ai/chat`, `GET/POST /api/ai/approvals` |
 | `riskIndicator` | ● | `classifyRiskIndicator`, `computeReleaseHealthVerdict`, `countSelfReportedRisk`, `bucketCounts`. One RAG/risk implementation for every host. | briefing, chat snapshot, MCP `get_release_status` / gantt |
 | `releaseIntelligence` (D41) | ● | `classifyFeature`, `buildFeatureRecord`, `assembleReleaseIntelligence`. Buckets + health for a release briefing. | `releaseAiSummaryService` (fetch stays in app), chat snapshot |
 | `sprintMetrics` (D41) | ● | `getSprintMetrics` — completion / pending-QA / carryover / scope-creep rates. | `sprintService`, Sprint Report |
@@ -175,10 +175,10 @@ Two parallel surfaces over the services:
 - **Role lens dropdown** in the header (D6): "Show me this page as Team Executive / EM /
   IC". Re-renders the current data using the audience preset, never hides
   data.
-- **Embedded chat panel** (D7, D39): the Ops Assistant runs as
-  `runAgentTurn` behind `POST /api/ai/chat` (perceive snapshot → pack
-  bootstrap → read-only tool loop). Not a mailbox LLM. Available to every
-  user. Reduces reactive pings to the Portfolio Manager (D8).
+- **Embedded chat panel** (D7, D39, D42): the Ops Assistant runs as
+  `runAgentTurn` behind `POST /api/ai/chat` (perceive → memory → pack
+  bootstrap → tool loop; mutate is HITL-queued). Not a mailbox LLM. Available
+  to every user. Reduces reactive pings to the Portfolio Manager (D8).
 - **Pages organised by domain, not by old-app** (see directory structure
   below).
 - **Product picker** (D1, D5): top-level dropdown selects active product set
@@ -283,7 +283,7 @@ blanket project filter on the fetch.
 │   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector
 │   ├── domain/                          CJS/browser derives (D41): signals, analytics, bundle
 │   ├── agentPack/                       loadAgentPack (D38)
-│   ├── agentRuntime/                    runAgentTurn (D39)
+│   ├── agentRuntime/                    runAgentTurn (D39) + memory/HITL (D42)
 │   ├── types/                           Release, Ticket, Persona, RAG, …
 │   └── utils/                           date logic, JQL builders, ID maps
 │

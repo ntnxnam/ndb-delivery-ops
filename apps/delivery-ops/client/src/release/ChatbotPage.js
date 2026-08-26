@@ -27,7 +27,7 @@ function linkifyTicketKeys(text) {
 
 export default function ChatbotPage() {
   const { selectedRelease, setSelectedRelease, activeVersions, inactiveVersions } = useSelectedRelease();
-  const { messages, loading, error, scope, sendMessage, clearChat } = useChat();
+  const { messages, loading, error, scope, sendMessage, clearChat, decideApproval } = useChat();
   const [prompt, setPrompt] = useState('');
 
   const allVersions = [...(activeVersions || []), ...(inactiveVersions || [])];
@@ -95,6 +95,29 @@ export default function ChatbotPage() {
                 ))}
               </ul>
             )}
+            {m.role === 'assistant' && m.provenanceId && (
+              <div className="chatbot-provenance">Provenance {m.provenanceId.slice(0, 8)}</div>
+            )}
+            {m.role === 'assistant' &&
+              Array.isArray(m.pendingApprovals) &&
+              m.pendingApprovals.map((row) => (
+                <div key={row.id} className="chatbot-hitl">
+                  <span>
+                    HITL {row.tool} · {row.status}
+                    {row.status === 'pending' ? ' — will not write to JIRA (D26 open)' : ''}
+                  </span>
+                  {row.status === 'pending' && (
+                    <span className="chatbot-hitl-actions">
+                      <button type="button" onClick={() => decideApproval(row.id, 'approve')}>
+                        Approve
+                      </button>
+                      <button type="button" onClick={() => decideApproval(row.id, 'reject')}>
+                        Reject
+                      </button>
+                    </span>
+                  )}
+                </div>
+              ))}
           </div>
         ))}
         {loading && <div className="chatbot-loading">Generating response...</div>}

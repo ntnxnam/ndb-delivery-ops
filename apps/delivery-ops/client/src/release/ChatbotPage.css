@@ -135,6 +135,41 @@
   background: #f8d7da;
 }
 
+.chatbot-provenance {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: #6c757d;
+}
+
+.chatbot-hitl {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  background: #fff3cd;
+  border: 1px solid #ffecb5;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chatbot-hitl-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.chatbot-hitl-actions button {
+  min-height: 2rem;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
 .chatbot-loading {
   color: #6c757d;
   font-size: 0.85rem;
