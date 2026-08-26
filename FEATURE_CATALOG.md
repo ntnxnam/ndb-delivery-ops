@@ -31,20 +31,20 @@ that needs it.
 | Capability (service) | Surfaces it appears in |
 |---|---|
 | **Story Point Roll-up** (`storyPointsService.rollUp`) | • standalone page (Domain 2) for "size my Feature" workflow  • column in Release Versions table (`/all-status`)  • column in Outstanding Work tracker  • field in Team-Executive Report  • MCP tool `calculateStoryPoints` |
-| **RAG / Risk Score** (`statusService.calcRag`) | • column in Release Versions  • headline badge in Team-Executive Report  • status cell in Sync Hub landing  • indicator in Release Brief  • indicator in Outstanding Work |
+| **RAG / Risk Score** (`statusService.calcRag`) | • column in Release Versions  • headline badge in Team-Executive Report  • indicator in Release Brief  • indicator in Outstanding Work |
 | **Date Shift** (`dateService.cascade`) | • standalone Date Mover page  • inline "shift dates" action on a Release Versions row  • used by Release Cascade Rename workflow  • MCP tool `moveJiraDates` |
 | **Say vs Do** (`predictabilityService.sayVsDo`) | • standalone page  • card in Team Executive Dashboard  • badge on Team Profile  • column in Release Versions for FEAT predictability  • MCP tool `sayVsDo` |
 | **Sprint Health metrics** (`sprintMetrics.getSprintMetrics`, D41) | • Sprint Report page  • tile in Team Profile  • sparkline in KPI Dashboard  • input to Sprint Planner |
 | **Exec-summary signals** (`deriveSignals`, D41) | • Sos Summary / exec-summary cell  • release AI briefing  • chat snapshot |
 | **Bundle-first derives** (`bundleDerive`, D41) | • Retrospective  • Release Brief  • Component Report  • Sprint Report (past sprints) |
 | **Capacity calc** (`capacityService.estimate`) | • standalone Capacity Planner page  • input column in Bin-Packing  • badge in Team Profile  • MCP tool `planCapacity` |
-| **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in Team-Executive Report  • alert in Sync Hub |
+| **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in Team-Executive Report |
 | **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in Team-Executive Report |
 | **Confluence Connector** (`confluenceConnector`) | • Bulk Page Creator  • Template Editor  • Confluence Extractor  • future Status Page Auto-Publisher  • any skill that publishes to Confluence |
 | **Confluence Width Cleanup** (`.cursor/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
 | **Sprint Classification** (`sprintService.classify`) | • used inside Sprint Health  • used inside Story Point Roll-up (only counts committed work)  • used inside Capacity calc (uses delivered velocity) |
 | **JIRA Connector** (`jiraConnector`, D40 — Data Center PAT Bearer) | every feature in every domain |
-| **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML  • Sync Hub (release-analytics rebuild) |
+| **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML |
 | **NLP → query plan** (`nlpQueryService` — D4, unbuilt) | Future structured planner. **Today:** `agentRuntime` (D39, D42) on `POST /api/ai/chat`. |
 | **Agent memory / provenance / HITL** (`agentRuntime` stores, D42) | • `/chatbot` session memory  • provenance chip  • HITL inbox (`/api/ai/approvals`) |
 | **Product context** (`productService` — D1) | • every Layer-3 service that touches external systems  • product picker in delivery-ops top bar  • per-product audience overrides for `audience.md` styles |
@@ -156,7 +156,7 @@ The "how is my team / a team doing" job.
 | Sprint Trends                    | Multi-sprint trend lines for the same team                             | EM      | live     | `apps/delivery-ops` SprintReportPage (mode=Past) | **keep**                                    |
 | Sprint Insights                  | Patterns, anomalies, AI commentary on a sprint                         | EM      | archived | `_archive/.../pages/2_Insights.py`               | **rebuild as React page (small)**           |
 | Team Profile                     | One page per team: velocity history, members, components, current load | EM, RM  | archived | `_archive/.../pages/6_Team_Profiles.py`          | **rebuild as React page**                   |
-| Sync Hub (data refresh)          | Background pull of release/sprint data with progress UI                | RM, EM  | archived | `_archive/.../pages/1_Sync_Hub.py`               | **rebuild as React landing for RM persona** |
+| Sync Hub (data refresh)          | Background pull of release/sprint data with progress UI                | RM, EM  | archived | `_archive/.../pages/1_Sync_Hub.py`               | **cut — pages fetch live JIRA; React Sync Hub removed** |
 | Carry-over / Scope Creep Metrics | Standalone view of work that slipped sprint-to-sprint                  | EM, RM  | partial  | `apps/delivery-ops` SprintReportPage             | **promote to its own page**                 |
 
 
@@ -259,7 +259,7 @@ visibility filter.
 | Team Executive / SVP                      | 1, 3, 7                                           | Ops Assistant chat (Team Executive lens)            | **agent-first, NLP, charts** (D4)       |
 | Director                      | 1, 3, 7                                           | Ops Assistant chat (similar to Team Executive)      | agent + dashboards                      |
 | TPM                           | 1, 4, 5, 6                                        | Release Versions                        | pages + agent for triage                |
-| RM                            | 1, 2, 3, 6, 7                                     | Sync Hub (rebuilt as React)             | pages + workflows                       |
+| RM                            | 1, 2, 3, 6, 7                                     | Release Versions / gates                | pages + workflows                       |
 | FEAT Manager                  | 1, 2 (story points, dates), 3                     | Release Versions filtered to their FEAT | pages                                   |
 | Team Manager (EM)             | 6 (sprint health), 2 (capacity), 3 (sprint Gantt) | My Team Profile                         | pages                                   |
 | IC / Engineer                 | 1 (their tickets), 4 (JIRA query)                 | My Tickets                              | pages                                   |

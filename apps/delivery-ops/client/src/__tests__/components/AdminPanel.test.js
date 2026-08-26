@@ -376,13 +376,16 @@ describe('Team Configuration Validation', () => {
   });
 
   it('should validate version patterns for parent projects', () => {
-    const validPatterns = ['^DataLens.*', '^DL.*', '^Analytics-\\d+\\.\\d+$'];
-    
-    validPatterns.forEach(pattern => {
+    const regexPatterns = ['^DataLens.*', '^DL.*', '^Analytics-\\d+\\.\\d+$'];
+
+    regexPatterns.forEach(pattern => {
       expect(() => new RegExp(pattern, 'i')).not.toThrow();
     });
 
-    // Test pattern matching
+    // Leading-wildcard globs are not valid JS regex (`/*msp*/: Nothing to repeat`).
+    // Server compileVersionPattern treats these as globs, not raw RegExp.
+    expect(() => new RegExp('*msp*', 'i')).toThrow(/Nothing to repeat/);
+
     const dataLensPattern = new RegExp('^DataLens.*', 'i');
     expect(dataLensPattern.test('DataLens-1.0')).toBe(true);
     expect(dataLensPattern.test('datalens-2.0')).toBe(true);

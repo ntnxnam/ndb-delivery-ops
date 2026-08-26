@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { authenticatedPost } from '../utils/api';
+import { useTeam } from '../contexts/TeamContext';
 
 // Module-level result cache keyed by fixVersion name. Survives component
 // re-mounts so navigating between tabs does NOT re-hit the heavy endpoint.
@@ -15,20 +16,24 @@ const releaseItemsInFlight = new Map(); // version -> Promise
 
 const RELEASE_ITEMS_TTL_MS = 5 * 60 * 1000;
 
-function readItemsCache(version) {
+function cacheKey(teamId, version) {
+  return `${teamId || ''}::${version || ''}`;
+}
+
+function readItemsCache(teamId, version) {
   if (!version) return null;
-  const entry = releaseItemsCache.get(version);
+  const entry = releaseItemsCache.get(cacheKey(teamId, version));
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt > RELEASE_ITEMS_TTL_MS) {
-    releaseItemsCache.delete(version);
+    releaseItemsCache.delete(cacheKey(teamId, version));
     return null;
   }
   return entry;
 }
 
-function writeCache(version, commit, longTermFunded, sectionMetadata) {
+function writeCache(teamId, version, commit, longTermFunded, sectionMetadata) {
   if (!version) return;
-  releaseItemsCache.set(version, {
+  releaseItemsCache.set(cacheKey(teamId, version), {
     commit,
     longTermFunded,
     sectionMetadata,
@@ -74,6 +79,7 @@ function splitItems(allItems, version) {
  * Uses the unified POST /api/jira/release-items endpoint.
  */
 export function useReleaseItems() {
+  const { selectedTeamId } = useTeam();
   const [items, setItems] = useState({ commit: [], longTermFunded: [] });
   const [loadingItems, setLoadingItems] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +90,7 @@ export function useReleaseItems() {
   const performFetch = useCallback(async (version) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+    const key = cacheKey(selectedTeamId, version);
 
     if (!jiraToken) {
       setError('JIRA token required');
@@ -95,7 +102,7 @@ export function useReleaseItems() {
       try {
         const response = await authenticatedPost(
           '/api/jira/release-items',
-          { fixVersions: [version] },
+          { fixVersions: [version], teamId: selectedTeamId },
           { jiraToken, username },
           { signal: abortControllerRef.current?.signal }
         );
@@ -107,11 +114,11 @@ export function useReleaseItems() {
         const allItems = response.data.data?.allItems || [];
         return allItems;
       } finally {
-        releaseItemsInFlight.delete(version);
+        releaseItemsInFlight.delete(key);
       }
     })();
 
-    releaseItemsInFlight.set(version, promise);
+    releaseItemsInFlight.set(key, promise);
 
     try {
       const allItems = await promise;
@@ -133,7 +140,7 @@ export function useReleaseItems() {
 
       setItems({ commit, longTermFunded });
       setSectionMetadata(newMetadata);
-      writeCache(version, commit, longTermFunded, newMetadata);
+      writeCache(selectedTeamId, version, commit, longTermFunded, newMetadata);
       setLoadingItems(false);
       return { commit, longTermFunded };
     } catch (err) {
@@ -147,7 +154,7 @@ export function useReleaseItems() {
       setLoadingItems(false);
       return null;
     }
-  }, []);
+  }, [selectedTeamId]);
 
   const fetchItemsForVersion = useCallback(async (version) => {
     if (!version) return null;
@@ -168,7 +175,7 @@ export function useReleaseItems() {
     abortControllerRef.current = new AbortController();
 
     // Cache hit
-    const cached = readItemsCache(version);
+    const cached = readItemsCache(selectedTeamId, version);
     if (cached) {
       setItems({ commit: cached.commit, longTermFunded: cached.longTermFunded || [] });
       setSectionMetadata(cached.sectionMetadata || {});
@@ -176,7 +183,8 @@ export function useReleaseItems() {
     }
 
     // Deduplicate concurrent fetches
-    const existing = releaseItemsInFlight.get(version);
+    const key = cacheKey(selectedTeamId, version);
+    const existing = releaseItemsInFlight.get(key);
     if (existing) {
       try {
         const allItems = await existing;
@@ -196,7 +204,7 @@ export function useReleaseItems() {
     setSectionMetadata({});
 
     return performFetch(version);
-  }, [performFetch]);
+  }, [performFetch, selectedTeamId]);
 
   // fetchLongTermItems is a no-op now — long-term items are fetched in the same
   // request as commit items. Kept for API compatibility with ReleaseVersionTab.
@@ -206,9 +214,9 @@ export function useReleaseItems() {
 
   const refreshItemsForVersion = useCallback(async (version) => {
     if (!version) return null;
-    releaseItemsCache.delete(version);
+    releaseItemsCache.delete(cacheKey(selectedTeamId, version));
     return fetchItemsForVersion(version);
-  }, [fetchItemsForVersion]);
+  }, [fetchItemsForVersion, selectedTeamId]);
 
   const cancelRequests = useCallback(() => {
     if (abortControllerRef.current) {

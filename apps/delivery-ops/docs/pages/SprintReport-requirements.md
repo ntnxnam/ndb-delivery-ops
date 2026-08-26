@@ -30,7 +30,7 @@ The Sprint Report page provides sprint-level velocity reporting for a team. It s
 ## UI Behaviour
 
 1. **Mode tabs** — Past / Current (Trends tab visible but disabled with "Coming soon" tooltip)
-2. **Team selector** — shared sidebar `TeamSelector` (`TeamContext`). If none is selected, the same `TeamRequiredGate` used on Project Status / KPIs is shown. Changing team reloads the sprint list.
+2. **Team selector** — shared sidebar `TeamSelector` (`TeamContext`). Changing the dropdown stages a team; **Fetch** applies it and reloads the sprint list (and other team-scoped pages). If none is applied, the same `TeamRequiredGate` used on Project Status / KPIs is shown.
 3. **Sprint selector** — dropdown of available sprints for the selected team
 4. **Fiscal quarter picker** — Nutanix fiscal year (Q1 = Aug–Oct); selecting a quarter shows sprints within that range
 5. **Velocity breakdown** — three bars or chips per sprint: Dev Velocity (blue), QA Verification (orange), QA Test Tasks (green)

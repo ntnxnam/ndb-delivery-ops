@@ -11,9 +11,7 @@ import {
 } from 'recharts';
 import { formatters } from '../shared/utils/formatters';
 import { useTeam } from '../contexts/TeamContext';
-import { authenticatedPost, authenticatedGet, getApiBase, getAuthHeaders } from '../utils/api';
-import { useTeamDataset } from '../hooks/useTeamDataset';
-import { derivePastSprintReportFromBundle } from '../release/utils/bundleUtils';
+import { authenticatedPost, authenticatedGet, getApiBase } from '../utils/api';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 
@@ -57,7 +55,6 @@ export default function SprintReportPage() {
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
   const { selectedTeamId: teamId, hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
-  const { bundle, syncMeta } = useTeamDataset();
   const [sprints, setSprints] = useState([]);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [mode, setMode] = useState(MODES.CURRENT);
@@ -244,16 +241,6 @@ export default function SprintReportPage() {
       }
     }
 
-    // Bundle-first: derive past sprint report from synced data (instant, no loading state)
-    const compNames = selectedComponentNames.length > 0 ? selectedComponentNames : undefined;
-    const bundleDerived = derivePastSprintReportFromBundle(bundle, from, to, compNames);
-    if (bundleDerived) {
-      setPastReportResult(bundleDerived);
-      setError(null);
-      return;
-    }
-
-    // Original fallback — unchanged:
     if (!teamId || !jiraToken) return;
     setLoadingPastReport(true);
     setError(null);
@@ -274,7 +261,7 @@ export default function SprintReportPage() {
     } finally {
       setLoadingPastReport(false);
     }
-  }, [teamId, jiraToken, username, periodType, startDate, endDate, fiscalYear, fiscalQuarter, selectedComponentNames, bundle]);
+  }, [teamId, jiraToken, username, periodType, startDate, endDate, fiscalYear, fiscalQuarter, selectedComponentNames]);
 
   const toggleComponent = (name) => {
     setSelectedComponentNames((prev) =>
@@ -525,16 +512,6 @@ export default function SprintReportPage() {
     setRefreshingLive(true);
     setError(null);
     try {
-      const productId = selectedTeam?.productId || 'ndb';
-      const headers = getAuthHeaders(jiraToken, username).headers;
-      const res = await fetch(
-        `${API_BASE}/api/release-dataset/refresh-now?productId=${encodeURIComponent(productId)}`,
-        { method: 'POST', headers }
-      );
-      const json = await res.json();
-      if (!res.ok || !json?.success) {
-        throw new Error(json?.error || `HTTP ${res.status}`);
-      }
       if (mode === MODES.CURRENT && selectedSprintId) {
         await runReport();
       } else if (mode === MODES.PAST) {
@@ -545,18 +522,7 @@ export default function SprintReportPage() {
     } finally {
       setRefreshingLive(false);
     }
-  }, [jiraToken, mode, runPastReport, runReport, selectedSprintId, selectedTeam?.productId, username]);
-
-  const lastSyncLabel = useMemo(() => {
-    if (!syncMeta?.lastSyncIso) return 'not synced';
-    const ageMs = Date.now() - new Date(syncMeta.lastSyncIso).getTime();
-    if (ageMs < 60000) return 'just now';
-    const mins = Math.floor(ageMs / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }, [syncMeta?.lastSyncIso]);
+  }, [mode, runPastReport, runReport, selectedSprintId]);
 
   const downloadPastReportCsv = useCallback(() => {
     if (!pastReportResult) return;
@@ -600,7 +566,7 @@ export default function SprintReportPage() {
       <h2 style={{ marginBottom: '1rem' }}>Sprint Report</h2>
       <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.85rem', color: '#495057' }}>
-          Dataset freshness: <strong>{lastSyncLabel}</strong>
+          Live JIRA for this team's sprint base filter
         </span>
         <button
           type="button"

@@ -7,7 +7,7 @@
  * @module changelogPagination
  */
 
-const axios = require('axios');
+const { getJira } = require('./jiraClient');
 
 /**
  * Fetches all changelog histories for a JIRA issue using multiple pagination strategies
@@ -34,7 +34,8 @@ async function fetchAllChangelogHistories(baseUrl, jiraKey, issueId, token, http
     needsPagination: false
   };
 
-  const issueUrl = `${baseUrl}/rest/api/2/issue/${jiraKey}`;
+  const issuePath = `/rest/api/2/issue/${jiraKey}`;
+  const jira = await getJira(token);
   
   try {
     let issue;
@@ -44,22 +45,12 @@ async function fetchAllChangelogHistories(baseUrl, jiraKey, issueId, token, http
       issue = preFetchedIssue;
       console.log(`[History] ${jiraKey} - Using pre-fetched issue data`);
     } else {
-      // Initial fetch with expand=changelog
-      // Note: maxResults is NOT a valid parameter for /rest/api/2/issue/{key} endpoint
-      // JIRA will return the default number of histories (usually 50-100)
-      // We'll use pagination strategies to fetch all pages if needed
-      const initialResponse = await retryJiraCall(() => axios.get(issueUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const initialResponse = await jira.get(issuePath, {
         timeout: 30000,
         params: {
           expand: 'changelog'
         }
-      }));
+      });
       issue = initialResponse.data;
     }
     let histories = issue.changelog?.histories || [];
@@ -87,19 +78,13 @@ async function fetchAllChangelogHistories(baseUrl, jiraKey, issueId, token, http
 
     // Strategy 1: Try maxResults=total in a single call
     try {
-      const maxResultsResponse = await retryJiraCall(() => axios.get(issueUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
+      const maxResultsResponse = await jira.get(issuePath, {
         timeout: 30000,
         params: {
           expand: 'changelog',
           maxResults: paginationInfo.total
         }
-      }));
+      });
 
       const maxResultsHistories = maxResultsResponse.data.changelog?.histories || [];
       if (maxResultsHistories.length >= paginationInfo.total) {
@@ -127,24 +112,18 @@ async function fetchAllChangelogHistories(baseUrl, jiraKey, issueId, token, http
     // Strategy 2: Use issue ID with changelog endpoint (if available)
     if (issueId && histories.length < paginationInfo.total) {
       try {
-        const changelogUrl = `${baseUrl}/rest/api/2/issue/${issueId}/changelog`;
+        const changelogPath = `/rest/api/2/issue/${issueId}/changelog`;
         let startAt = histories.length;
         const maxResults = 100;
         
         while (histories.length < paginationInfo.total) {
-          const changelogResponse = await retryJiraCall(() => axios.get(changelogUrl, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            httpsAgent: httpsAgent,
+          const changelogResponse = await jira.get(changelogPath, {
             timeout: 30000,
             params: {
               startAt: startAt,
               maxResults: maxResults
             }
-          }));
+          });
 
           const moreHistories = changelogResponse.data.values || changelogResponse.data.histories || [];
           if (moreHistories.length === 0) break;
@@ -191,19 +170,13 @@ async function fetchAllChangelogHistories(baseUrl, jiraKey, issueId, token, http
         const maxAttempts = 5;
 
         while (histories.length < paginationInfo.total && attempts < maxAttempts) {
-          const expandResponse = await retryJiraCall(() => axios.get(issueUrl, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            httpsAgent: httpsAgent,
+          const expandResponse = await jira.get(issuePath, {
             timeout: 30000,
             params: {
               expand: 'changelog',
               maxResults: maxResults
             }
-          }));
+          });
 
           const expandHistories = expandResponse.data.changelog?.histories || [];
           if (expandHistories.length > histories.length) {

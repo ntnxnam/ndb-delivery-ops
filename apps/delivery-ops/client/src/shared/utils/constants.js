@@ -112,6 +112,7 @@ export const STORAGE_KEYS = {
   USER_EMAIL: 'userEmail',
   JIRA_TOKEN: 'jiraToken',
   SELECTED_TEAM: 'releaseVersionSelectedTeamId',
+  SELECTED_RELEASE: 'selectedRelease',
   THEME: 'theme',
   PREFERENCES: 'userPreferences'
 };

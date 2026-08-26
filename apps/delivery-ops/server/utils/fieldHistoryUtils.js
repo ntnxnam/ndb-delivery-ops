@@ -7,10 +7,9 @@
  * @module fetchFieldHistory
  */
 
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
 const { fetchAllChangelogHistories } = require('./changelogPagination');
-const { createHttpsAgent, retryJiraCall } = require('../services/jiraService');
+const { getJira } = require('./jiraClient');
 const logger = require('../utils/logger');
 const {
   getAllFields,
@@ -194,7 +193,6 @@ function calculateDateStatistics(dates) {
 async function fetchFieldHistory(jiraKey, token, options = {}) {
   const { saveRawResponse = false, fields: fieldFilter = null } = options;
   const baseUrl = JIRA_API_V2.BASE_URL;
-  const httpsAgent = createHttpsAgent();
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
 
   // When the caller passes `fields: ['commitGate', 'promotionGate', ...]` we
@@ -209,19 +207,14 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
   
   try {
     // Fetch issue with current field values
-    const issueResponse = await retryJiraCall(() => axios.get(issueUrl, {
-      headers: {
-        'Authorization': `Bearer ${cleanToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      httpsAgent: httpsAgent,
+    const jira = await getJira(cleanToken);
+    const issueResponse = await jira.get(issueUrl, {
       timeout: 30000,
       params: {
         expand: 'changelog',
         fields: Object.values(activeFields).join(',')
       }
-    }));
+    });
     
     const issue = issueResponse.data;
     const rawResponse = saveRawResponse ? {
@@ -243,8 +236,8 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       jiraKey,
       issue.id || null,
       cleanToken,
-      httpsAgent,
-      retryJiraCall,
+      null,
+      null,
       logger,
       issue // Pass pre-fetched issue to avoid duplicate API call
     );

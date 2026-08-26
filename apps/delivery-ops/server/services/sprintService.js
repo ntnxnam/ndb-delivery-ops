@@ -1,6 +1,5 @@
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
-const { retryJiraCall, createHttpsAgent } = require('./jiraService');
+const { getJira, searchPages } = require('../utils/jiraClient');
 const { getSprintsForBoard, classifySprintIssue, getAddedToSprintAt } = require('../utils/sprintCache');
 const { runWithConcurrency } = require('../utils/concurrency');
 const { buildSprintReportJql } = require('../utils/jiraQueryUtils');
@@ -46,26 +45,11 @@ function mapIssue(issue, storyPointsFieldId, extra = {}) {
 }
 
 async function fetchAllIssues({ token, jql, fieldsList, timeout = 30000 }) {
-  const httpsAgent = createHttpsAgent();
-  let allIssues = [];
-  let startAt = 0;
-  const maxResults = 100;
-  let hasMore = true;
-  while (hasMore) {
-    const response = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-      httpsAgent,
-      timeout,
-      params: { jql, fields: fieldsList, maxResults, startAt }
-    }));
-    const issues = response.data?.issues || [];
-    const total = response.data?.total ?? 0;
-    allIssues = allIssues.concat(issues);
-    startAt = allIssues.length;
-    hasMore = allIssues.length < total && issues.length === maxResults;
-    if (hasMore) await new Promise((r) => setTimeout(r, 200));
-  }
-  return allIssues;
+  return searchPages(token, jql, fieldsList, {
+    pageSize: 100,
+    timeoutMs: timeout,
+    delayMs: 200,
+  });
 }
 
 async function getSprintList({ token, teamId, state }) {
@@ -76,7 +60,7 @@ async function getSprintList({ token, teamId, state }) {
     err.statusCode = 400;
     throw err;
   }
-  const sprintMap = await getSprintsForBoard(boardId, token, createHttpsAgent(), state);
+  const sprintMap = await getSprintsForBoard(boardId, token, null, state);
   return Array.from(sprintMap.entries()).map(([id, info]) => ({
     id,
     name: info.name,
@@ -96,11 +80,8 @@ async function getProjectComponents({ token, teamId }) {
     throw err;
   }
   const projectUrl = JIRA_API_V2.PROJECT ? JIRA_API_V2.PROJECT(projectKey) : `${JIRA_API_V2.BASE_URL}/rest/api/2/project/${projectKey}`;
-  const response = await retryJiraCall(() => axios.get(projectUrl, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    httpsAgent: createHttpsAgent(),
-    timeout: 15000
-  }));
+  const jira = await getJira(token);
+  const response = await jira.get(projectUrl, { timeout: 15000 });
   const components = (response.data && response.data.components) || [];
   return components.map((c) => ({ id: c.id, name: c.name || '' })).filter((c) => c.name !== undefined);
 }
@@ -111,7 +92,7 @@ async function buildSprintReport({ token, teamId, sprintId }) {
   if (!boardId) throw Object.assign(new Error('Team has no board configured'), { statusCode: 400 });
   const sprintFieldId = boardConfig().sprintFieldId;
   if (!sprintFieldId) throw Object.assign(new Error('sprintFieldId is not configured in boardConfig().json'), { statusCode: 500 });
-  const sprintMap = await getSprintsForBoard(boardId, token, createHttpsAgent());
+  const sprintMap = await getSprintsForBoard(boardId, token, null);
   const sprintInfo = sprintMap.get(Number(sprintId));
   if (!sprintInfo) throw Object.assign(new Error(`Sprint ${sprintId} not found for this board.`), { statusCode: 400 });
 
@@ -134,22 +115,13 @@ async function buildSprintReport({ token, teamId, sprintId }) {
   let addedAfterStart = 0;
   let removedFromSprint = 0;
   try {
-    const [addedRes, removedRes] = await Promise.all([
-      retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        httpsAgent: createHttpsAgent(),
-        timeout: 6000,
-        params: { jql: addedAfterStartJql, fields: 'key', maxResults: 1, startAt: 0 }
-      })),
-      retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        httpsAgent: createHttpsAgent(),
-        timeout: 6000,
-        params: { jql: removedFromSprintJql, fields: 'key', maxResults: 1, startAt: 0 }
-      }))
+    const jira = await getJira(token);
+    const [addedTotal, removedTotal] = await Promise.all([
+      jira.searchCount(addedAfterStartJql),
+      jira.searchCount(removedFromSprintJql),
     ]);
-    addedAfterStart = addedRes.data?.total ?? 0;
-    removedFromSprint = removedRes.data?.total ?? 0;
+    addedAfterStart = addedTotal ?? 0;
+    removedFromSprint = removedTotal ?? 0;
   } catch (_) {}
 
   const totalInSprint = allIssues.length;
@@ -197,7 +169,7 @@ async function buildSprintReportByRange({ token, teamId, startDate, endDate, com
   const storyPointsFieldId = boardConfig().storyPointsFieldId || null;
   const fieldsList = `key,summary,status,resolution,resolutiondate,issuetype,priority,assignee,components,created,${sprintFieldId}${storyPointsFieldId ? `,${storyPointsFieldId}` : ''}`;
   const compNames = (Array.isArray(componentNames) ? componentNames.filter(Boolean) : []).slice(0, 5);
-  const sprintMap = await getSprintsForBoard(team.boardId, token, createHttpsAgent(), 'closed');
+  const sprintMap = await getSprintsForBoard(team.boardId, token, null, 'closed');
   const rangeStart = start.getTime();
   const rangeEnd = end.getTime();
   const overlapping = Array.from(sprintMap.entries())
@@ -233,12 +205,13 @@ async function buildSprintReportByRange({ token, teamId, startDate, endDate, com
     const removedFromSprintJql = `issueFunction in removedAfterSprintStart("${team.boardId}", "${(sprintInfo.name || '').replace(/"/g, '\\"')}")`;
     let addedAfterStart = 0; let removedFromSprint = 0;
     try {
-      const [addedRes, removedRes] = await Promise.all([
-        retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' }, httpsAgent: createHttpsAgent(), timeout: 6000, params: { jql: addedAfterStartJql, fields: 'key', maxResults: 1, startAt: 0 } })),
-        retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' }, httpsAgent: createHttpsAgent(), timeout: 6000, params: { jql: removedFromSprintJql, fields: 'key', maxResults: 1, startAt: 0 } }))
+      const jira = await getJira(token);
+      const [addedTotal, removedTotal] = await Promise.all([
+        jira.searchCount(addedAfterStartJql),
+        jira.searchCount(removedFromSprintJql),
       ]);
-      addedAfterStart = addedRes.data?.total ?? 0;
-      removedFromSprint = removedRes.data?.total ?? 0;
+      addedAfterStart = addedTotal ?? 0;
+      removedFromSprint = removedTotal ?? 0;
     } catch (_) {}
     const metrics = getSprintMetrics({ totalInSprint: allIssues.length, addedAfterStart, inProgress, pendingQA, completedInSprint, removedFromSprint });
     const pendingQAStatusName = boardConfig().pendingQAStatusName || 'Resolved';
@@ -271,11 +244,8 @@ async function buildSprintReportByRange({ token, teamId, startDate, endDate, com
 }
 
 async function getFields({ token, search }) {
-  const response = await axios.get(JIRA_API_V2.FIELD, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    httpsAgent: createHttpsAgent(),
-    timeout: 15000
-  });
+  const jira = await getJira(token);
+  const response = await jira.get(JIRA_API_V2.FIELD, { timeout: 15000 });
   let fields = response.data || [];
   const query = (search || '').toLowerCase();
   if (query) {
@@ -333,7 +303,7 @@ async function getSprintReportTrends({ token, teamId, sprintIds }) {
   const boardId = team ? team.boardId : null;
   const sprintFieldId = boardConfig().sprintFieldId;
   if (!boardId || !sprintFieldId) throw Object.assign(new Error('Team boardId/sprintFieldId not configured'), { statusCode: 400 });
-  const sprintMap = await getSprintsForBoard(boardId, token, createHttpsAgent());
+  const sprintMap = await getSprintsForBoard(boardId, token, null);
   const maxChangelogForTrends = 15;
   const trendTasks = ids.map((sprintId) => async () => {
     const sprintInfo = sprintMap.get(Number(sprintId));
@@ -351,7 +321,7 @@ async function getSprintReportTrends({ token, teamId, sprintIds }) {
     const issuesForChangelog = allIssues.slice(0, maxChangelogForTrends);
     const changelogTasks = issuesForChangelog.map((issue) => async () => {
       try {
-        const { histories } = await fetchAllChangelogHistories(JIRA_API_V2.BASE_URL, issue.key, issue.id, token, createHttpsAgent(), retryJiraCall, logger, null);
+        const { histories } = await fetchAllChangelogHistories(JIRA_API_V2.BASE_URL, issue.key, issue.id, token, null, null, logger, null);
         const addedAt = getAddedToSprintAt(histories, sprintId, sprintFieldId);
         return (addedAt && sprintInfo.startDate && new Date(addedAt).getTime() > new Date(sprintInfo.startDate).getTime()) ? 1 : 0;
       } catch (_) {

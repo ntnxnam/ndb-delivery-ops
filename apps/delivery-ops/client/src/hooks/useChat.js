@@ -60,7 +60,7 @@ export function useChat() {
           message: text,
           history: nextMessages.slice(0, -1),
           release: selectedRelease || null,
-          productId: productId || 'ndb',
+          productId: productId || '',
           availableReleases,
           knownTeams,
           sessionId,

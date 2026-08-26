@@ -2,22 +2,16 @@
 
 **Route**: `/component-report`  
 **Server routes used**: `server/routes/component.js`  
-**Bundle utilities**: `release/utils/bundleUtils.js` (CRA copy of `shared/src/domain/bundleDerive.js`, D41) — `deriveComponentListFromBundle`, `deriveComponentHealthFromBundle`, `deriveComponentDataFromBundle`  
-**Contexts consumed**: `TeamDatasetContext`
+**Contexts consumed**: none (live component APIs)
 
 ---
 
 ## API Calls (client → server)
 
-### 1. Fetch component list (from bundle — no API call)
-
-**Client flow**: `ComponentReport → useTeamDataset → bundle → deriveComponentListFromBundle(bundle, teamId)`  
-**Returns**: `[{ name, id }]` — the list of components to render
-
-If bundle is unavailable:
+### 1. Fetch component list
 
 ```
-GET /api/component/list?productId=ndb
+GET /api/component/list
 Headers: x-jira-token, x-username
 ```
 
@@ -47,10 +41,14 @@ project=ERA AND component = "{component}" AND status not in (Done,Closed,Cancell
 
 ---
 
-### 3. Fetch component health (from bundle — no API call)
+### 3. Fetch component health (live)
 
-**Client flow**: `useTeamDataset → bundle → deriveComponentHealthFromBundle(bundle, teamId, component)`  
-**Returns**: pre-computed `{ rag, p0Count, p1Count, openCount, closedPct, deferrals }`
+```
+GET /api/component/health?component={name}
+GET /api/component/data?component={name}
+```
+
+**Client flow**: `ComponentReport → live component APIs`
 
 If bundle unavailable, the component issues response (step 2) is used to derive health client-side.
 

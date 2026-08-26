@@ -14,9 +14,8 @@
  * doesn't change in seconds. 5-min TTL mirrors the breakdown cache.
  */
 
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
-const { jiraHeaders, createHttpsAgent, retryJiraCall } = require('../services/jiraService');
+const { getJira } = require('./jiraClient');
 const { SimpleCache } = require('./simpleCache');
 const logger = require('./logger');
 
@@ -277,21 +276,15 @@ async function fetchTicketNarrative(key, jiraToken) {
   const cached = narrativeCache.get(cacheKey);
   if (cached) return cached;
 
-  const httpsAgent = createHttpsAgent();
-
-  // Single call: description, comments, links, subtasks + changelog.
-  const url = `${JIRA_API_V2}/issue/${encodeURIComponent(key)}` +
-    `?fields=description,comment,issuelinks,subtasks,status,summary` +
-    `&expand=changelog`;
-
   try {
-    const response = await retryJiraCall(() =>
-      axios.get(url, {
-        headers: jiraHeaders(jiraToken),
-        httpsAgent,
-        timeout: 15000,
-      })
-    );
+    const jira = await getJira(jiraToken);
+    const response = await jira.get(`/rest/api/2/issue/${encodeURIComponent(key)}`, {
+      timeout: 15000,
+      params: {
+        fields: 'description,comment,issuelinks,subtasks,status,summary',
+        expand: 'changelog',
+      },
+    });
 
     const fields = response.data?.fields || {};
     const narrative = {

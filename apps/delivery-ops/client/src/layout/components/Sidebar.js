@@ -114,12 +114,6 @@ export const Sidebar = () => {
       description: 'Sprint reporting and metrics'
     },
     {
-      path: '/sync-hub',
-      label: 'Sync Hub',
-      icon: '⟳',
-      description: 'Manage the centralised JIRA data cache'
-    },
-    {
       path: '/sos-summary',
       label: 'SoS Summary',
       icon: '📡',
@@ -552,6 +546,29 @@ export const Sidebar = () => {
 
         .team-select.transitioning {
           background-color: #f8f9fa;
+        }
+
+        .team-choose-btn {
+          width: 100%;
+          min-height: 2rem;
+          padding: 8px;
+          margin-top: 0;
+          background: #0d6efd;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .team-choose-btn:hover:not(:disabled) {
+          background: #0b5ed7;
+        }
+
+        .team-choose-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .transition-indicator {

@@ -147,7 +147,7 @@ async function answerChat({
   message,
   history = [],
   defaultRelease,
-  productId = 'ndb',
+  productId = '',
   jiraToken,
   availableReleases = [],
   knownTeams = [],

@@ -35,6 +35,7 @@ import type {
   TopBlockers,
 } from '../types/release.js';
 import { classifyIssueType } from '../types/ticket.js';
+import { versionBelongsToProduct } from '../utils/versionPattern.js';
 
 export interface StatusServiceOptions {
   jira: JiraConnector;
@@ -86,10 +87,16 @@ export class StatusService {
     for (const v of versions) {
       if (v.archived) continue;
       if (v.released) continue; // shipped
+      const hasScope =
+        (productCfg.projectType === 'parent' && productCfg.versionPatterns?.length) ||
+        productCfg.releasePrefix ||
+        productCfg.activeVersionNames?.length;
       if (
-        productCfg.projectType === 'parent' &&
-        productCfg.versionPatterns?.length &&
-        !productCfg.versionPatterns.some((p) => new RegExp(p).test(v.name))
+        hasScope &&
+        !versionBelongsToProduct(productCfg, v.name, {
+          productPrefix: productCfg.releasePrefix,
+          activeVersionNames: productCfg.activeVersionNames,
+        })
       ) {
         continue;
       }

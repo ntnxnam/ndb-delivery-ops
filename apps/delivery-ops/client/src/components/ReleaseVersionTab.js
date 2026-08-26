@@ -2,14 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { createPortal } from 'react-dom';
-import { authenticatedPost, authenticatedGet, getApiBase, getAuthHeaders } from '../utils/api';
+import { authenticatedPost, authenticatedGet } from '../utils/api';
 import { generateTableHTMLForEmail } from '../utils/emailTableGenerator';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { logUserAction, UserActions } from '../utils/userActionLogger';
 import { useTeam } from '../contexts/TeamContext';
 import { useReleaseData } from '../contexts/ReleaseDataContext';
-import { useTeamDataset } from '../hooks/useTeamDataset';
 import { 
   useReleaseVersions, 
   useColumnConfig, 
@@ -40,7 +39,6 @@ import './EmailSender/EmailSender.css';
 
 function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const { hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
-  const { syncMeta } = useTeamDataset();
   
   // Custom hooks for state management
   const {
@@ -74,13 +72,14 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     allVersionsConfig
   } = useAllVersionsConfig();
 
-  const { releaseError: releaseDataError } = useReleaseData();
+  const { refreshRelease } = useReleaseData();
   const {
     items,
     loadingItems,
     error: itemsError,
     setError: setItemsError,
     fetchItemsForVersion,
+    refreshItemsForVersion,
     setItems,
     sectionMetadata,
   } = useReleaseItems();
@@ -1334,37 +1333,21 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     setRefreshingLive(true);
     setError('');
     try {
-      const productId = selectedTeam?.productId || 'ndb';
-      const headers = getAuthHeaders(jiraToken, username).headers;
-      const base = getApiBase();
-      const res = await fetch(`${base}/api/release-dataset/refresh-now?productId=${encodeURIComponent(productId)}`, {
-        method: 'POST',
-        headers,
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.success) {
-        throw new Error(json?.error || `HTTP ${res.status}`);
+      if (typeof refreshVersions === 'function') {
+        await refreshVersions();
       }
-      await refreshVersions();
-      if (selectedVersion) await fetchItems();
+      if (selectedVersion) {
+        await refreshItemsForVersion(selectedVersion);
+      }
+      if (typeof refreshRelease === 'function') {
+        await refreshRelease();
+      }
     } catch (err) {
       setError(err?.message || 'Failed to refresh live data');
     } finally {
       setRefreshingLive(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jiraToken, refreshVersions, selectedTeam?.productId, selectedVersion, username]);
-
-  const lastSyncLabel = useMemo(() => {
-    if (!syncMeta?.lastSyncIso) return 'not synced';
-    const ageMs = Date.now() - new Date(syncMeta.lastSyncIso).getTime();
-    if (ageMs < 60000) return 'just now';
-    const mins = Math.floor(ageMs / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }, [syncMeta?.lastSyncIso]);
+  }, [refreshItemsForVersion, refreshRelease, refreshVersions, selectedVersion]);
 
   // Row rendering moved to ReleaseVersionTableRow component
 
@@ -1471,7 +1454,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       <div style={{ backgroundColor: '#f8f9fa', padding: '0.75rem', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.8rem', color: '#495057' }}>
-            Dataset freshness: <strong>{lastSyncLabel}</strong>
+            Live JIRA for this team's base filter
           </span>
           <button
             onClick={handleRefreshNow}
@@ -1510,11 +1493,6 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           teamSelector={<TeamSelector variant="page" id="project-status-team-select" />}
         />
       </div>
-      {releaseDataError === 'not_synced' && (
-        <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#fff3cd', borderLeft: '3px solid #ffc107', fontSize: '0.85rem' }}>
-          Selected release is not synced yet. Run sync from Sync Hub and reload.
-        </div>
-      )}
       
       {/* Rich Text Notes Section and Email — visible when user is allowed to send (allowlist or gating disabled) */}
       {isEmailSectionUser && !loadingItems && selectedVersion && ((items.commit?.length || 0) > 0 || (items.longTermFunded?.length || 0) > 0) && (

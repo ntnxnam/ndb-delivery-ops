@@ -91,7 +91,7 @@ export default function ReleaseBriefPage() {
     refresh,
   } = useReleaseBrief({
     teamId: selectedTeamId,
-    productId: team?.id || 'ndb',
+    productId: team?.id || '',
     jiraToken,
     username,
     jiraBaseUrl,

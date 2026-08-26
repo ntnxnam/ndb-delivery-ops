@@ -111,6 +111,20 @@ function resolveTeam(teamId) {
 }
 
 /**
+ * Resolve exactly the requested team. No fallback to NDB / defaultTeamId.
+ * Version listing and team-scoped fetches must use this so Prism-Infra
+ * never silently loads ERA/NDB.
+ */
+function resolveRequestedTeam(teamId) {
+  const team = getTeamById(teamId);
+  return {
+    effectiveTeamId: team && team.id ? team.id : null,
+    team: team || null,
+    projectKey: team && team.projectKey ? team.projectKey : null,
+  };
+}
+
+/**
  * Standard error responder for service-backed route handlers. Maps the
  * { statusCode, message, details? } shape thrown by services into the
  * { success: false, error, message, details? } JSON envelope the client
@@ -145,5 +159,6 @@ module.exports = {
   getConfigOverride,
   getReleaseBaseFilter,
   resolveTeam,
+  resolveRequestedTeam,
   sendServiceError,
 };

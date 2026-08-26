@@ -105,23 +105,62 @@ function summarizeTickets(tickets, { teamFilter = [], ticketKeys = [] } = {}) {
   };
 }
 
-async function loadReleasePayload(cache, releaseName) {
-  const { tickets = [], meta = null } = cache.loadReleaseLenient(releaseName);
-  return { tickets, meta };
+async function loadReleasePayload(_cache, releaseName, liveOpts) {
+  if (!liveOpts?.fetchLivePerRelease || !liveOpts.jiraToken || !liveOpts.productId) {
+    return { tickets: [], meta: { source: 'empty' }, source: 'empty' };
+  }
+  try {
+    const live = await liveOpts.fetchLivePerRelease({
+      productId: liveOpts.productId,
+      release: releaseName,
+      jiraToken: liveOpts.jiraToken,
+      writeThrough: false,
+    });
+    return { tickets: live.tickets || [], meta: live.meta || null, source: 'jira' };
+  } catch (err) {
+    console.warn(`[chatSnapshot] live fetch failed for ${releaseName}:`, err.message);
+    return { tickets: [], meta: { source: 'empty', error: err.message }, source: 'empty' };
+  }
 }
 
 async function buildSnapshot({
   scope,
   defaultRelease,
-  productId = 'ndb',
+  productId = '',
   buildReleaseIntelligence,
   jiraToken,
 }) {
+  if (!productId || !jiraToken) {
+    return {
+      generatedAt: new Date().toISOString(),
+      schema: 'chat-snapshot-v1',
+      scope,
+      defaults: { release: defaultRelease, productId },
+      releaseContext: {},
+      releaseIntelligence: {},
+      knownTeams: [],
+      validTicketKeys: [],
+      sourceInfo: {
+        releaseCacheDir: RELEASE_DATASET_CACHE_DIR,
+        releaseGateConfigPath: RELEASE_GATE_CONFIG_PATH,
+        productConfigPath: PRODUCT_CONFIG_PATH,
+        snapshotSource: 'empty',
+      },
+    };
+  }
   const shared = await getShared();
   const { ReleaseDatasetCache } = shared;
   const cache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
   const releaseGateDates = parseReleaseDates();
   const releases = scope.releases?.length ? scope.releases : [defaultRelease].filter(Boolean);
+
+  let fetchLivePerRelease = null;
+  try {
+    fetchLivePerRelease = require('../services/releaseLiveDatasetService').fetchLivePerRelease;
+  } catch (_e) {
+    fetchLivePerRelease = null;
+  }
+  const liveOpts = { fetchLivePerRelease, jiraToken, productId };
 
   const byRelease = {};
   const allTeams = new Set();
@@ -129,7 +168,7 @@ async function buildSnapshot({
   const releaseIntelligence = {};
 
   for (const release of releases.slice(0, 4)) {
-    const { tickets, meta } = await loadReleasePayload(cache, release);
+    const { tickets, meta } = await loadReleasePayload(cache, release, liveOpts);
     const summary = summarizeTickets(tickets, {
       teamFilter: scope.teams || [],
       ticketKeys: scope.ticketKeys || [],
@@ -181,6 +220,7 @@ async function buildSnapshot({
       releaseCacheDir: RELEASE_DATASET_CACHE_DIR,
       releaseGateConfigPath: RELEASE_GATE_CONFIG_PATH,
       productConfigPath: PRODUCT_CONFIG_PATH,
+      snapshotSource: 'jira',
     },
   };
 }

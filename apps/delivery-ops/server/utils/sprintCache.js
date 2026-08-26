@@ -3,8 +3,7 @@
  * TTL 10 minutes so we don't hit JIRA on every release-items request.
  */
 
-const axios = require('axios');
-const { JIRA_AGILE } = require('../config/api');
+const { getJira } = require('./jiraClient');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -19,8 +18,8 @@ const cache = new Map(); // cacheKey (boardId:state) -> { at: number, map: Map(s
  * @param {string} [state] - Optional: 'active' | 'closed' | 'future' to filter sprints
  * @returns {Promise<Map<number, { state: string, name: string, startDate: string|null, endDate: string|null, completeDate: string|null }>>}
  */
-async function fetchSprintsForBoard(boardId, token, httpsAgent, state) {
-  const url = JIRA_AGILE.BOARD_SPRINTS(boardId);
+async function fetchSprintsForBoard(boardId, token, _httpsAgent, state) {
+  const jira = await getJira(token);
   const result = new Map();
   let startAt = 0;
   const maxResults = 50;
@@ -30,14 +29,9 @@ async function fetchSprintsForBoard(boardId, token, httpsAgent, state) {
 
   while (hasMore) {
     params.startAt = startAt;
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-      },
-      httpsAgent,
+    const response = await jira.get(`/rest/agile/1.0/board/${boardId}/sprint`, {
       timeout: 15000,
-      params
+      params,
     });
 
     const values = response.data?.values || [];

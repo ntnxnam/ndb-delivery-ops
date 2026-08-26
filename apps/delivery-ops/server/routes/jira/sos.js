@@ -2,11 +2,9 @@
  * POST /api/jira/sos-items
  *
  * Fetch Feature and Initiative tickets grouped by fixVersion.
- * Cache-first from the on-disk release dataset; live JIRA only when the
- * cache is empty or the client sends forceLive: true (Refresh All).
- * A JIRA 429 falls back to cache when available.
+ * Live JIRA first; disk cache only as a 429 fallback.
  *
- * Body: { teamId?: string, forceLive?: boolean }
+ * Body: { teamId: string, forceLive?: boolean }
  * Response: { success: true, data: { byVersion, source, usedFallbackFilter, lastSyncIso, degraded } }
  *
  * POST /api/jira/sos-items-history
@@ -24,7 +22,7 @@ const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { apiLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
-const { getTeamSosBaseFilter } = require('../../utils/teamConfig');
+const { getTeamSosBaseFilter, getTeamBaseFilter } = require('../../utils/teamConfig');
 const { resolveKpiJql } = require('../../services/kpiService');
 const { createHttpsAgent, makeJiraSearchFetcher } = require('../../services/jiraService');
 const { fetchSosItems } = require('../../services/releaseItemsDataService');
@@ -35,7 +33,7 @@ const {
 
 router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   try {
-    const { teamId = 'ndb', forceLive = false } = req.body;
+    const { teamId, forceLive = false } = req.body || {};
     const httpsAgent = createHttpsAgent();
     const data = await fetchSosItems({
       teamId,
@@ -58,14 +56,17 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
   req.setTimeout(180000);
   res.setTimeout(180000);
   try {
-    const { teamId = 'ndb' } = req.body;
+    const { teamId } = req.body || {};
     const httpsAgent = createHttpsAgent();
 
-    // Resolve the same SoS filter used by /sos-items
-    const rawSosFilter = getTeamSosBaseFilter(teamId);
-    const fallback = 'filter=NDB-All-Base-Filter';
-    const sosFilter = rawSosFilter || fallback;
-    const resolvedFilter = await resolveKpiJql(sosFilter, req.jiraToken, httpsAgent);
+    const rawSosFilter = getTeamSosBaseFilter(teamId) || getTeamBaseFilter(teamId);
+    if (!rawSosFilter) {
+      return res.status(400).json({
+        success: false,
+        error: `Team "${teamId || 'unknown'}" has no sosBaseFilter or baseFilter in Admin. Set the team base filter, then Fetch again.`,
+      });
+    }
+    const resolvedFilter = await resolveKpiJql(rawSosFilter, req.jiraToken, httpsAgent);
 
     // Fetch just the keys — no need for full field processing.
     // The SoS base filter can be a large JIRA saved filter; raise the timeout

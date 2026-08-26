@@ -5,7 +5,7 @@ export { listReleaseVersions, pickDefaultRelease };
 
 export async function fetchRetrospective({
   release,
-  productId = 'ndb',
+  productId = '',
   topN = 10,
   jiraToken,
   username,
@@ -28,7 +28,7 @@ export async function fetchRetrospective({
 
 export async function fetchRetrospectiveBootstrap({
   release,
-  productId = 'ndb',
+  productId = '',
   jiraToken,
   username,
 }) {
@@ -50,7 +50,7 @@ export async function fetchRetrospectiveBootstrap({
 
 export async function fetchRetrospectiveProjects({
   release,
-  productId = 'ndb',
+  productId = '',
   page = 1,
   limit = 10,
   jiraToken,
@@ -74,7 +74,7 @@ export async function fetchRetrospectiveProjects({
 
 export async function fetchRetrospectiveProjectDetail({
   release,
-  productId = 'ndb',
+  productId = '',
   parentKey,
   parentType,
   parentSummary,

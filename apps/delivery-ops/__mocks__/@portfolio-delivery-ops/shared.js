@@ -15,6 +15,7 @@ const mockProductService = {
     projectKey: 'ERA',
     labelPrefix: 'ndb',
     displayName: 'NDB',
+    baseFilter: 'filter=test-base',
   }),
   getLabelPrefix: jest.fn().mockReturnValue('ndb'),
   getDisplayName: jest.fn().mockReturnValue('NDB'),
@@ -22,6 +23,8 @@ const mockProductService = {
   getCustomFields: jest.fn().mockReturnValue({}),
   getBoards: jest.fn().mockReturnValue([]),
   getReleaseNamePattern: jest.fn().mockReturnValue(/^NDB-/),
+  getReleasePrefix: jest.fn().mockReturnValue('NDB-'),
+  getActiveVersionNames: jest.fn().mockReturnValue([]),
 };
 
 const mockCache = {
@@ -29,6 +32,8 @@ const mockCache = {
   loadReleaseLenient: jest.fn().mockReturnValue({ tickets: [], meta: null }),
   saveRelease: jest.fn(),
   computeReleaseJqlHash: jest.fn().mockReturnValue('test-hash'),
+  loadBundleLenient: jest.fn().mockReturnValue({ meta: null }),
+  isSyncInProgress: jest.fn().mockReturnValue(false),
 };
 
 const ReleaseDatasetCache = jest.fn().mockImplementation(() => mockCache);
@@ -52,8 +57,97 @@ const getExtensionQuery = jest.fn().mockReturnValue('project = ERA AND component
 
 // Other commonly used exports
 const releaseDatasetService = {
-  fetchReleaseData: jest.fn().mockResolvedValue([]),
+  fetchReleaseData: jest.fn().mockResolvedValue({
+    tickets: [],
+    bucketCounts: {},
+    error: null,
+    bucketErrors: {},
+  }),
 };
+
+function fetchReleaseData() {
+  return Promise.resolve({
+    tickets: [{ 'Issue Key': 'ERA-1' }],
+    bucketCounts: {},
+    error: null,
+    bucketErrors: {},
+  });
+}
+
+function listFixVersionsForTeam() {
+  return Promise.resolve([]);
+}
+
+class JiraConnector {
+  constructor(env) {
+    this.env = env || {};
+  }
+
+  get(path, options = {}) {
+    const axios = require('axios');
+    return axios.get(path, options);
+  }
+
+  post(path, body, options = {}) {
+    const axios = require('axios');
+    return axios.post(path, body, options);
+  }
+
+  put(path, body, options = {}) {
+    const axios = require('axios');
+    return axios.put(path, body, options);
+  }
+
+  request(method, path, options = {}) {
+    const axios = require('axios');
+    return axios({ method, url: path, ...options });
+  }
+
+  async searchAll(jql, fields, options = {}) {
+    const res = await this.get('/rest/api/2/search', {
+      params: {
+        jql,
+        fields,
+        maxResults: options.pageSize || 1000,
+        startAt: 0,
+      },
+      timeout: options.perPageTimeoutMs,
+    });
+    return res.data?.issues || [];
+  }
+
+  async searchCount(jql) {
+    const res = await this.get('/rest/api/2/search', {
+      params: { jql, maxResults: 0 },
+    });
+    return res.data?.total ?? 0;
+  }
+
+  async getSprintsForBoard() {
+    return [];
+  }
+
+  static wrapError(err) {
+    return err;
+  }
+}
+
+function loadEnv() {
+  return {
+    jiraBaseUrl: 'https://jira.example.com',
+    jiraPat: '',
+    jiraTimeoutMs: 30000,
+    httpsProxy: null,
+  };
+}
+
+function wrapTeamScope(baseFilter, jql) {
+  const filter = typeof baseFilter === 'string' ? baseFilter.trim() : '';
+  const inner = typeof jql === 'string' ? jql.trim() : '';
+  if (!inner) return filter;
+  if (!filter) return inner;
+  return `(${filter}) AND (${inner})`;
+}
 const releaseDatasetSync = {
   syncRelease: jest.fn().mockResolvedValue({ tickets: [], meta: {} }),
 };
@@ -178,6 +272,15 @@ module.exports = {
   getExtensionQuery,
   releaseDatasetService,
   releaseDatasetSync,
+  fetchReleaseData,
+  listFixVersionsForTeam,
+  JiraConnector,
+  loadEnv,
+  wrapTeamScope,
+  getComponentQueries: jest.fn().mockReturnValue({}),
+  buildEngineeringPayloadJql: jest.fn().mockReturnValue('project = ERA'),
+  buildReleasePayloadJql: jest.fn().mockReturnValue('project = ERA'),
+  getDeferredQuery: jest.fn().mockReturnValue('labels = x'),
   classifyFeature,
   buildFeatureRecord,
   assembleReleaseIntelligence,

@@ -32,7 +32,7 @@ export function TeamRequiredGate({
         <p style={{ color: '#856404', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
           {error
             ? error
-            : 'Choose a team in the sidebar (or below) to load this page.'}
+            : 'Pick a team, then click Fetch to load this page.'}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
           <TeamSelector variant="page" id={selectorId} />

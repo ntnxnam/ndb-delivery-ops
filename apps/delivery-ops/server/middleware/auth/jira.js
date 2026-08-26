@@ -3,7 +3,7 @@ const path = require('path');
 const { JIRA_API_V2 } = require('../../config/api');
 const logger = require('../../utils/logger');
 const { extractApiError, getJiraErrorMessage, formatErrorResponse } = require('../../utils/errorMessages');
-const { createHttpsAgent } = require('../../services/jiraService');
+const { getJira } = require('../../utils/jiraClient');
 const tokenCache = require('../../utils/tokenCache');
 
 // Helper functions
@@ -50,7 +50,7 @@ async function validateJiraToken(token, username) {
   }
   
   console.log(`[TokenCache] 🔍 Cache miss for user: ${username}, validating with JIRA API...`);
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(cleanToken);
   
   // Try /rest/api/2/myself first, fallback to /rest/api/2/serverInfo if needed
   let response = null;
@@ -59,29 +59,13 @@ async function validateJiraToken(token, username) {
   try {
     // First, try to get user info from /rest/api/2/myself
     try {
-      response = await axios.get(JIRA_API_V2.MYSELF, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
-        timeout: 30000  // Increased from 10s to 30s for better reliability
-      });
+      response = await jira.get('/rest/api/2/myself', { timeout: 30000 });
       userData = response.data;
     } catch (myselfError) {
       // If /myself doesn't exist (404), try /rest/api/2/serverInfo to validate token
       if (myselfError.response?.status === 404) {
         console.log('/rest/api/2/myself not available, trying /rest/api/2/serverInfo');
-        const serverInfoResponse = await axios.get(JIRA_API_V2.SERVER_INFO, {
-          headers: {
-            'Authorization': `Bearer ${cleanToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          httpsAgent: httpsAgent,
-          timeout: 30000  // Increased from 10s to 30s for better reliability
-        });
+        const serverInfoResponse = await jira.get('/rest/api/2/serverInfo', { timeout: 30000 });
         
         // Token is valid if serverInfo returns successfully
         if (serverInfoResponse.data && serverInfoResponse.status === 200) {
@@ -292,7 +276,6 @@ module.exports = {
   validateJiraToken,
   validateJiraTokenMiddleware,
   extractToken,
-  createHttpsAgent,
   normalizeToUsername,
   isValidUsername
 };

@@ -92,9 +92,13 @@ const { extractUserName,
         checkKpiTabAuthorization }                         = require('../services/userService');
 const { formatRiskIndicator,
         sortByRiskIndicator,
-        retryJiraCall,
-        createHttpsAgent,
         getRiskIndicatorPriority }                         = require('../services/jiraService');
+const { getJira,
+        jiraGet,
+        jiraPost,
+        jiraPut,
+        searchPages,
+        wrapJiraError }                                    = require('./jiraClient');
 const releaseSetupService    = require('../services/releaseSetupService');
 const releaseDataService     = require('../services/releaseDataService');
 const releaseItemsService    = require('../services/releaseItemsDataService');
@@ -202,9 +206,13 @@ module.exports = {
   checkKpiTabAuthorization,
   formatRiskIndicator,
   sortByRiskIndicator,
-  retryJiraCall,
-  createHttpsAgent,
   getRiskIndicatorPriority,
+  getJira,
+  jiraGet,
+  jiraPost,
+  jiraPut,
+  searchPages,
+  wrapJiraError,
   releaseSetupService,
   releaseDataService,
   releaseItemsService,

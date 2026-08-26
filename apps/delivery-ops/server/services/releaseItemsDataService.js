@@ -1,20 +1,17 @@
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
-const { JIRA_API_V2 } = require('../config/api');
 const {
-  createHttpsAgent,
-  retryJiraCall,
-  jiraHeaders,
   formatRiskIndicator,
   sortByRiskIndicator,
 } = require('./jiraService');
+const { searchPages } = require('../utils/jiraClient');
 const { extractUserName, extractAssigneeName } = require('./userService');
 const { getCached, setCached } = require('../utils/simpleCache');
 const { extractTextFieldValue } = require('../utils/adfText');
 const { getSprintsForBoard, resolveSprintState } = require('../utils/sprintCache');
-const { resolveTeam } = require('../utils/jiraRouteHelpers');
-const { getTeamSprintBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
+const { resolveRequestedTeam } = require('../utils/jiraRouteHelpers');
+const { getTeamBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
+const { wrapTeamScope } = require('../utils/teamScope');
 
 const RELEASE_DATASET_CACHE_DIR = path.resolve(
   __dirname, '..', '..', '..', '..', 'shared', '.cache', 'release-dataset'
@@ -50,45 +47,21 @@ const RELEASE_ITEMS_CONFIG = {
   ].join(','),
 };
 
-async function fetchReleaseItemsFromJira(jql, jiraToken, httpsAgent, requestId) {
-  let allIssues = [];
-  let startAt = 0;
-  let hasMore = true;
-  const fetchStartTime = Date.now();
-
-  while (hasMore && allIssues.length < RELEASE_ITEMS_CONFIG.MAX_TOTAL_RESULTS) {
-    if (Date.now() - fetchStartTime > RELEASE_ITEMS_CONFIG.MAX_FETCH_TIME_MS) {
-      break;
-    }
-    const response = await retryJiraCall(() => axios.get(
-      JIRA_API_V2.SEARCH,
-      {
-        headers: jiraHeaders(jiraToken),
-        httpsAgent,
-        timeout: RELEASE_ITEMS_CONFIG.AXIOS_TIMEOUT_MS,
-        params: {
-          jql,
-          fields: RELEASE_ITEMS_CONFIG.FIELDS_LIST,
-          maxResults: RELEASE_ITEMS_CONFIG.MAX_RESULTS_PER_BATCH,
-          startAt,
-        },
-      }
-    ));
-    if (!response?.data?.issues) break;
-    allIssues = allIssues.concat(response.data.issues);
-    const total = response.data.total || allIssues.length;
-    startAt += response.data.issues.length;
-    hasMore = allIssues.length < total
-      && response.data.issues.length === RELEASE_ITEMS_CONFIG.MAX_RESULTS_PER_BATCH;
-  }
-  return allIssues;
+async function fetchReleaseItemsFromJira(jql, jiraToken, _httpsAgent, _requestId) {
+  return searchPages(jiraToken, jql, RELEASE_ITEMS_CONFIG.FIELDS_LIST, {
+    pageSize: RELEASE_ITEMS_CONFIG.MAX_RESULTS_PER_BATCH,
+    maxTotal: RELEASE_ITEMS_CONFIG.MAX_TOTAL_RESULTS,
+    timeoutMs: RELEASE_ITEMS_CONFIG.AXIOS_TIMEOUT_MS,
+    delayMs: 0,
+    maxTimeMs: RELEASE_ITEMS_CONFIG.MAX_FETCH_TIME_MS,
+  });
 }
 
 async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, boardId = null) {
   let sprintMap = new Map();
   if (boardId) {
     try {
-      sprintMap = await getSprintsForBoard(boardId, jiraToken, httpsAgent);
+      sprintMap = await getSprintsForBoard(boardId, jiraToken, null);
     } catch (_e) {
       sprintMap = new Map();
     }
@@ -175,7 +148,8 @@ function mapCachedTicketToItem(t) {
  * Try to load Feature/Initiative items for a single release from the
  * on-disk dataset cache.  Returns null if the cache is cold or unusable.
  */
-async function loadItemsFromCache(fixVersion, productId = 'ndb') {
+async function loadItemsFromCache(fixVersion, productId) {
+  if (!fixVersion || !productId) return null;
   try {
     const shared = await getShared();
     const { ReleaseDatasetCache } = shared;
@@ -220,7 +194,8 @@ function listConfiguredReleaseNames() {
   }
 }
 
-function listCachedReleaseNames(productId = 'ndb') {
+function listCachedReleaseNames(productId) {
+  if (!productId) return [];
   const dir = path.join(RELEASE_DATASET_CACHE_DIR, productId, 'per_release');
   if (!fs.existsSync(dir)) return [];
   const onDisk = fs.readdirSync(dir)
@@ -233,7 +208,8 @@ function listCachedReleaseNames(productId = 'ndb') {
   return onDisk.filter((name) => allow.has(name));
 }
 
-function readBundleLastSyncIso(productId = 'ndb') {
+function readBundleLastSyncIso(productId) {
+  if (!productId) return null;
   try {
     const metaPath = path.join(RELEASE_DATASET_CACHE_DIR, productId, 'bundle.meta.json');
     const raw = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
@@ -251,7 +227,10 @@ function isRateLimitError(err) {
  * Load Feature/Initiative rows for every versioned release present in the
  * on-disk dataset cache. No JIRA calls.
  */
-async function loadSosItemsFromCache(productId = 'ndb') {
+async function loadSosItemsFromCache(productId) {
+  if (!productId) {
+    return { byVersion: {}, lastSyncIso: null, itemCount: 0 };
+  }
   const byVersion = {};
   const releases = listCachedReleaseNames(productId);
   for (const release of releases) {
@@ -286,45 +265,51 @@ function groupItemsByVersion(items) {
   return byVersion;
 }
 
+function requireSosFilter(teamId) {
+  const raw = getTeamSosBaseFilter(teamId) || getTeamBaseFilter(teamId);
+  if (!raw) {
+    const err = new Error(
+      `Team "${teamId || 'unknown'}" has no sosBaseFilter or baseFilter in Admin. Set the team base filter, then Fetch again.`
+    );
+    err.statusCode = 400;
+    err.publicError = 'Team has no base filter';
+    throw err;
+  }
+  return raw;
+}
+
 async function fetchSosItemsFromJira(teamId, jiraToken, httpsAgent) {
   const { resolveKpiJql } = require('./kpiService');
-  const rawSosFilter = getTeamSosBaseFilter(teamId);
-  const fallback = 'filter=NDB-All-Base-Filter';
-  const sosFilter = rawSosFilter || fallback;
+  const sosFilter = requireSosFilter(teamId);
   const resolvedFilter = await resolveKpiJql(sosFilter, jiraToken, httpsAgent);
-  const jql = `(${resolvedFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY fixVersion ASC, key ASC`;
+  const jql = wrapTeamScope(resolvedFilter, 'issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY fixVersion ASC, key ASC');
   const issues = await fetchReleaseItemsFromJira(jql, jiraToken, httpsAgent, 'sos-items-all');
   const items = await processReleaseItems(issues, jiraToken, httpsAgent, 'sos-items-all');
   return {
     byVersion: groupItemsByVersion(items),
-    usedFallbackFilter: !rawSosFilter,
+    usedFallbackFilter: false,
   };
 }
 
 /**
- * SoS Feature/Initiative payload. Cache-first so a JIRA 429 (or a
- * post-restart token revalidation) does not blank the page.
+ * SoS Feature/Initiative payload. Live JIRA first; disk cache only as
+ * a 429 fallback so a rate-limit does not blank the page.
  *
  * @param {object} opts
- * @param {string} [opts.teamId='ndb']
+ * @param {string} opts.teamId
  * @param {string} opts.jiraToken
  * @param {object} opts.httpsAgent
- * @param {boolean} [opts.forceLive=false] — Refresh All: try JIRA first
+ * @param {boolean} [opts.forceLive=true]
  */
-async function fetchSosItems({ teamId = 'ndb', jiraToken, httpsAgent, forceLive = false } = {}) {
-  const productId = String(teamId || 'ndb').toLowerCase();
-  const cached = await loadSosItemsFromCache(productId);
-
-  if (!forceLive && cached.itemCount > 0) {
-    console.log(`[sos-items] Serving ${cached.itemCount} items from dataset cache (${Object.keys(cached.byVersion).length} releases)`);
-    return {
-      byVersion: cached.byVersion,
-      source: 'cache',
-      usedFallbackFilter: false,
-      lastSyncIso: cached.lastSyncIso,
-      degraded: false,
-    };
+async function fetchSosItems({ teamId, jiraToken, httpsAgent } = {}) {
+  if (!teamId) {
+    const err = new Error('Select a team to load SoS items.');
+    err.statusCode = 400;
+    err.publicError = 'Team not selected';
+    throw err;
   }
+  const productId = String(teamId).toLowerCase();
+  const cached = await loadSosItemsFromCache(productId);
 
   try {
     const live = await fetchSosItemsFromJira(teamId, jiraToken, httpsAgent);
@@ -350,31 +335,45 @@ async function fetchSosItems({ teamId = 'ndb', jiraToken, httpsAgent, forceLive 
   }
 }
 
-async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions } = {}) {
+async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions, teamId } = {}) {
   if (!fixVersions || !Array.isArray(fixVersions) || fixVersions.length === 0) {
     const err = new Error('At least one fixVersion is required');
     err.statusCode = 400;
     throw err;
   }
-  const httpsAgent = createHttpsAgent();
+  const { effectiveTeamId, team } = resolveRequestedTeam(teamId);
+  if (!effectiveTeamId || !team) {
+    const err = new Error('Select a team to load release items.');
+    err.statusCode = 400;
+    err.publicError = 'Team not selected';
+    throw err;
+  }
+  const baseFilter = getTeamBaseFilter(effectiveTeamId);
+  if (!baseFilter) {
+    const err = new Error(
+      `Team "${effectiveTeamId}" has no baseFilter in Admin. Set the team base filter, then Fetch again.`
+    );
+    err.statusCode = 400;
+    err.publicError = 'Team has no base filter';
+    throw err;
+  }
+
+  const labelPrefix = String(team.labelPrefix || effectiveTeamId || '').toLowerCase();
   const allItems = [];
-  const { team } = resolveTeam(null);
-  const sprintBaseFilter = getTeamSprintBaseFilter(team?.id || 'ndb') || `project = ${team?.projectKey || 'ERA'}`;
 
   for (const fixVersion of fixVersions) {
-    // --- Cache-first ---
-    const cached = await loadItemsFromCache(fixVersion);
-    if (cached) {
-      allItems.push(...cached);
-      continue;
-    }
-
-    // --- JQL fallback (cache cold or unreadable) ---
-    console.log(`[releaseItemsDataService] Cache miss for ${fixVersion}, falling back to JIRA JQL`);
-    const versionLabel = fixVersion.toLowerCase();
-    const jql = `${sprintBaseFilter} AND (fixVersion = "${fixVersion}" OR labels = "${versionLabel}-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
-    const issues = await fetchReleaseItemsFromJira(jql, jiraToken, httpsAgent, `release-items-${fixVersion}`);
-    const mapped = await processReleaseItems(issues, jiraToken, httpsAgent, `release-items-${fixVersion}`, team?.boardId);
+    const lower = String(fixVersion).toLowerCase();
+    const suffix = labelPrefix && lower.startsWith(`${labelPrefix}-`)
+      ? lower.slice(labelPrefix.length + 1)
+      : lower;
+    const collapsed = suffix.replace(/\s+/g, '-');
+    const longTermLabel = labelPrefix
+      ? `${labelPrefix}-${collapsed}-long-term-funded`
+      : `${collapsed}-long-term-funded`;
+    const inner = `(fixVersion = "${fixVersion}" OR labels = "${longTermLabel}") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
+    const jql = wrapTeamScope(baseFilter, inner);
+    const issues = await fetchReleaseItemsFromJira(jql, jiraToken, null, `release-items-${fixVersion}`);
+    const mapped = await processReleaseItems(issues, jiraToken, null, `release-items-${fixVersion}`, team?.boardId);
     allItems.push(...mapped);
   }
 

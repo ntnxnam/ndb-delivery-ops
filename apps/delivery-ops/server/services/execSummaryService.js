@@ -1,6 +1,5 @@
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
-const { createHttpsAgent } = require('./jiraService');
+const { getJira } = require('../utils/jiraClient');
 const { buildCommitItemsJQL } = require('../utils/jiraQueryUtils');
 const { extractQIFromItem } = require('../utils/tcmsHelpers');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
@@ -160,24 +159,19 @@ function calculateDateMetrics(version) {
 async function fetchP0BugsCount(token, version) {
   const filterName = `${version.toLowerCase()}-all`;
   const p0JqlQuery = `filter = "${filterName}" AND statusCategory != Done AND priority = "P0 - Blocker"`;
-  const response = await axios.get(JIRA_API_V2.SEARCH, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    params: { jql: p0JqlQuery, fields: 'key', maxResults: 1000 },
-    httpsAgent: createHttpsAgent(),
-    timeout: 30000
-  });
-  return response.data?.total || 0;
+  const jira = await getJira(token);
+  const total = await jira.searchCount(p0JqlQuery);
+  return total || 0;
 }
 
 async function fetchCommitItems(token, version) {
   const commitJQL = buildCommitItemsJQL(version);
   const customFields = buildFieldIdsString(EXEC_FIELD_KEYS);
   const fields = `key,summary,status,priority,assignee,${customFields}`;
-  const response = await axios.get(JIRA_API_V2.SEARCH, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  const jira = await getJira(token);
+  const response = await jira.get(JIRA_API_V2.SEARCH, {
+    timeout: 30000,
     params: { jql: commitJQL, fields, maxResults: 1000 },
-    httpsAgent: createHttpsAgent(),
-    timeout: 30000
   });
   return response.data?.issues || [];
 }

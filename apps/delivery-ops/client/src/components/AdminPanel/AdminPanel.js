@@ -12,7 +12,7 @@ function pickerTeam(team) {
 }
 
 function AdminPanel() {
-  const { replaceTeams, upsertTeam, updateTeam, changeTeam } = useTeam();
+  const { replaceTeams, upsertTeam, updateTeam } = useTeam();
   const [activeView, setActiveView] = useState('teams');
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -55,8 +55,7 @@ function AdminPanel() {
   const handleTeamCreated = (newTeam) => {
     setTeams(prev => [...prev, { ...newTeam, userConfig: null, kpiCount: 0 }]);
     upsertTeam(pickerTeam(newTeam));
-    if (newTeam?.id) changeTeam(newTeam.id);
-    setSyncNotice(`${newTeam?.name || 'New team'} is now in the Team dropdown.`);
+    setSyncNotice(`${newTeam?.name || 'New team'} is now in the Team dropdown. Click Fetch to load it.`);
     setActiveView('teams');
     setEditingTeam(null);
   };

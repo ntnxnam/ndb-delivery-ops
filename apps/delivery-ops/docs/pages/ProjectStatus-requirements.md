@@ -26,12 +26,14 @@ The Project Status page is the central release payload dashboard. It shows the f
 | PS-07 | As an RM, I can see gate dates (CCM, CG, PG, GA) as vertical rulers on the Gantt. |
 | PS-08 | As a user, changes to the release selector persist to localStorage so my selection survives a refresh. |
 | PS-09 | As a user, I can pick a team from a dropdown on the page (same control as other pages), not only from a hidden header. |
+| PS-10 | As a user, changing the Team dropdown does not load data until I click Fetch, which then reloads this page and other team-scoped pages. |
+| PS-11 | As a user, after I Fetch a team, the Release Version dropdown lists unique `fixVersion` names from tickets in that team's `baseFilter`. Missing `baseFilter` shows the Admin error and an empty dropdown. |
 
 ---
 
 ## UI Behaviour
 
-1. **Team picker** — dropdown at top of the toolbar (and in the sidebar); selection persists in localStorage as `releaseVersionSelectedTeamId`. Shown even when the teams API fails, with a Retry control.
+1. **Team picker** — dropdown at top of the toolbar (and in the sidebar). Changing the dropdown only stages a team; **Fetch** applies it and loads fixVersions from `(${team.baseFilter}) AND (fixVersion is not EMPTY)`. Applied team persists in localStorage as `releaseVersionSelectedTeamId`. Shown even when the teams API fails, with a Retry control.
 2. **Release picker** — dropdown next to the team picker; populated from JIRA; selection persists in localStorage
 3. **Payload summary row** — shows total issues, open bugs, P0/P1 count, closed % as clickable KPI chips
 4. **Filter bar** — team, component, status, priority, issue type; all client-side after initial load
@@ -58,7 +60,8 @@ The Project Status page is the central release payload dashboard. It shows the f
 | Issue with no gate date | Shown in Gantt as unscheduled (grey, no bar) |
 | Sprint-based ticket with no sprint | Show blank Gantt bar; tooltip "No sprint assigned" |
 | Payload > 5,000 issues | Table virtualised; Gantt caps at top 200 by due date proximity |
-| User lacks access to a sub-project | Those issues return 403 from JIRA; shown as "[Restricted]" rows |
+| User switches team (e.g. NDB → MSP) | Previous release is cleared; dropdown reloads from `POST /api/jira/release-versions` for the new team; default is picked from that list only |
+| Parent-team version pattern is a glob (`*msp*`, `msp*`) | Treated as a wildcard, never thrown as `Invalid regular expression: Nothing to repeat` |
 
 ---
 
@@ -71,3 +74,6 @@ The Project Status page is the central release payload dashboard. It shows the f
 - [ ] Filter combinations produce correct subsets without a server round-trip
 - [ ] Selected release survives browser refresh (localStorage)
 - [ ] Team dropdown is visible on the page toolbar and in the sidebar; Retry appears if `/api/config/teams` fails
+- [ ] Choosing a team (or Refresh on the current team) reloads Project Status and other team-scoped pages
+- [ ] After Fetch, the release dropdown contains only fixVersions that appear on tickets in the selected team's `baseFilter`
+- [ ] Switching away from NDB does not leave `NDB-2.11` selected

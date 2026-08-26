@@ -25,9 +25,14 @@ export function getUserFacingMessage(err, options = {}) {
 
   // HTTP status mapping (agreed messages)
   if (status === 400) {
-    if (context === 'release-versions') return 'Select a team in the header to load release versions.';
-    if (context === 'release-items') return 'Select a version and click Load to load items.';
-    return 'Invalid request. Please check your selection and try again.';
+    const serverMsg = err?.response?.data?.message || err?.response?.data?.error;
+    if (context === 'release-versions') {
+      return serverMsg || 'Select a team in the header to load release versions.';
+    }
+    if (context === 'release-items') {
+      return serverMsg || 'Select a version and click Load to load items.';
+    }
+    return serverMsg || 'Invalid request. Please check your selection and try again.';
   }
   if (status === 401) {
     return 'Authentication failed. Please refresh the page and log in again.';

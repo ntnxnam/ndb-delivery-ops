@@ -12,7 +12,7 @@
  *
  * Implemented endpoints:
  *   POST /sync             → run syncReleaseDataset (SSE progress stream)
- *   GET  /sync-status      → bundle metadata from disk (no JIRA calls)
+ *   GET  /sync-status      → disk meta + live fixVersions from listFixVersionsForTeam
  *   DELETE /cache          → wipe bundle or full cache (mode=bundle|full)
  *
  * Planned:
@@ -28,6 +28,8 @@ const { validateJiraTokenMiddleware, extractToken } = require('../middleware/aut
 const { getFieldId } = require('../utils/jiraFieldsConfig');
 const syncLocking = require('../utils/syncLocking');
 const syncScheduler = require('../jobs/syncScheduler');
+const { wrapTeamScope, isUnreleasedVersion } = require('../utils/teamScope');
+const { fetchLivePerRelease, listLiveFixVersions, tokenFromReq } = require('../services/releaseLiveDatasetService');
 
 // Path to the human-curated release-gate config. Owned by RM/TPMs and
 // updated via /release-config in-app — the same file the legacy
@@ -165,7 +167,7 @@ const SIDECAR_LABELS = {
  */
 router.get('/releases', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const shared = await getShared();
     const { getProductService } = shared;
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -209,45 +211,36 @@ router.get('/releases', auth, async (req, res) => {
 });
 
 /**
- * GET /api/release-dataset/per-release/:release?productId=ndb
+ * GET /api/release-dataset/per-release/:release?productId=
  *
- * Per-release cache read endpoint. Disk-only, no JiraConnector.
+ * Live fetchReleaseData wrapped with the team's baseFilter.
  */
 router.get('/per-release/:release', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.params.release || '').toString().trim();
-    if (!release) {
+    if (!productId) {
       return res.status(400).json({
         success: false,
-        error: 'release path parameter is required',
+        error: 'productId query parameter is required',
       });
     }
-
-    const shared = await getShared();
-    const cache = buildCache(productId, shared);
-    const { tickets, meta } = cache.loadReleaseLenient(release);
-    if (!Array.isArray(tickets) || tickets.length === 0) {
-      return res.status(404).json({
-        success: false,
-        reason: 'not_cached',
-        error: `No cached per-release dataset found for '${release}'`,
-      });
-    }
-
+    const data = await fetchLivePerRelease({
+      productId,
+      release,
+      jiraToken: tokenFromReq(req),
+      writeThrough: false,
+    });
     return res.json({
       success: true,
-      data: {
-        release,
-        tickets,
-        meta: meta || null,
-      },
+      data,
     });
   } catch (e) {
     console.error('[release-dataset] /per-release error:', e?.message || e);
-    return res.status(500).json({
+    const status = e.statusCode || e.response?.status || 500;
+    return res.status(status).json({
       success: false,
-      error: e?.message || 'Failed to load cached release dataset',
+      error: e.publicError || e.message || 'Failed to load live release dataset',
     });
   }
 });
@@ -260,7 +253,7 @@ router.get('/per-release/:release', auth, async (req, res) => {
  */
 router.get('/synopsis', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();
     if (!release) {
       return res
@@ -308,8 +301,11 @@ router.get('/synopsis', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
-    // Component bucket queries (5) — JQL only, no project scoping yet.
-    const bucketJql = getComponentQueries(release);
+    const teamFilter = product.baseFilter || '';
+    const scoped = (jql) => wrapTeamScope(teamFilter, jql);
+
+    // Component bucket queries (5) — click-through JQL wrapped with baseFilter.
+    const bucketJql = getComponentQueries(release, false, teamFilter);
 
     // Sidecars — deferred label only. Wishlist is intentionally excluded
     // from the Release Brief synopsis (UX call: it muddied the payload
@@ -329,7 +325,7 @@ router.get('/synopsis', auth, async (req, res) => {
       jql: bucketJql[key],
     }));
     const sidecarEntries = [
-      { key: 'deferred', label: SIDECAR_LABELS.deferred, jql: deferredJql },
+      { key: 'deferred', label: SIDECAR_LABELS.deferred, jql: scoped(deferredJql) },
     ];
     
     // Issue type group breakdown — 6 groups per issue-type-grouping.mdc
@@ -352,13 +348,13 @@ router.get('/synopsis', auth, async (req, res) => {
     const issueTypeGroupEntries = issueTypeGroups.map((group) => ({
       key: group.key,
       label: group.label,
-      jql: `${releasePayloadJql} AND (${group.filter})`,
+      jql: scoped(`${releasePayloadJql} AND (${group.filter})`),
     }));
 
     const allEntries = [
       ...componentEntries,
       ...sidecarEntries,
-      { key: 'engineering_payload', label: 'Total Release Payload (deduped)', jql: releasePayloadJql },
+      { key: 'engineering_payload', label: 'Total Release Payload (deduped)', jql: scoped(releasePayloadJql) },
       ...issueTypeGroupEntries,
     ];
 
@@ -438,7 +434,7 @@ router.get('/synopsis', auth, async (req, res) => {
  */
 router.get('/velocity', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim() || undefined;
     const sprintsBack = Math.max(
       1,
@@ -524,7 +520,7 @@ router.get('/velocity', auth, async (req, res) => {
  */
 router.get('/forecast', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();
     const plannedGaIso = (req.query.plannedGaIso || '').toString().trim() || null;
     if (!release) {
@@ -672,7 +668,7 @@ router.get('/gates', auth, async (req, res) => {
  */
 router.get('/outstanding', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();
     if (!release) {
       return res
@@ -752,7 +748,7 @@ router.get('/outstanding', auth, async (req, res) => {
  */
 router.get('/project-status', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();
 
     if (!release) {
@@ -1044,7 +1040,7 @@ function buildWeeklyBuckets(issues, weeks) {
  */
 router.get('/burndown', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();
     const weeks = Math.max(4, Math.min(104, Number.parseInt(req.query.weeks, 10) || 52));
 
@@ -1134,7 +1130,7 @@ router.get('/retrospective', auth, async (req, res) => {
   const t0 = Date.now();
   try {
     const release = (req.query.release || '').toString().trim();
-    const productId = (req.query.productId || 'ndb').toString().trim();
+    const productId = (req.query.productId || '').toString().trim();
     const topN = Math.max(1, Math.min(50, Number.parseInt(req.query.topN, 10) || 10));
 
     if (!release) {
@@ -1263,7 +1259,7 @@ router.get('/retrospective/bootstrap', auth, async (req, res) => {
   const t0 = Date.now();
   try {
     const release = (req.query.release || '').toString().trim();
-    const productId = (req.query.productId || 'ndb').toString().trim();
+    const productId = (req.query.productId || '').toString().trim();
     if (!release) {
       return res.status(400).json({ success: false, error: 'release query parameter is required' });
     }
@@ -1354,7 +1350,7 @@ router.get('/retrospective/projects', auth, async (req, res) => {
   const t0 = Date.now();
   try {
     const release = (req.query.release || '').toString().trim();
-    const productId = (req.query.productId || 'ndb').toString().trim();
+    const productId = (req.query.productId || '').toString().trim();
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.max(1, Math.min(50, Number.parseInt(req.query.limit, 10) || 10));
     if (!release) {
@@ -1430,7 +1426,7 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
   const t0 = Date.now();
   try {
     const release = (req.query.release || '').toString().trim();
-    const productId = (req.query.productId || 'ndb').toString().trim();
+    const productId = (req.query.productId || '').toString().trim();
     const parentKey = (req.params.key || '').toString().trim();
     const parentType = (req.query.parentType || 'Other').toString();
     const parentSummary = (req.query.parentSummary || parentKey).toString();
@@ -1513,12 +1509,15 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
 /**
  * GET /api/release-dataset/sync-status?productId=ndb
  *
- * Returns the current bundle metadata from disk (no JIRA calls).
- * Used by TeamDatasetContext on mount to decide whether a sync is needed.
+ * Returns disk bundle metadata plus live fixVersion names
+ * (`listFixVersionsForTeam`). Pages do not wait on this endpoint.
  */
 router.get('/sync-status', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
+    if (!productId) {
+      return res.status(400).json({ success: false, error: 'productId query parameter is required' });
+    }
     const shared = await getShared();
     const { getProductService, ReleaseDatasetCache } = shared;
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -1539,13 +1538,26 @@ router.get('/sync-status', auth, async (req, res) => {
     const cachedReleasesInfo = cache.getCachedReleasesInfo({ projectKey, labelPrefix });
     const cachedReleases = Object.keys(cachedReleasesInfo);
 
+    let liveVersions = [];
+    try {
+      liveVersions = await listLiveFixVersions({
+        productId,
+        jiraToken: tokenFromReq(req),
+      });
+    } catch (e) {
+      console.warn('[release-dataset] /sync-status live versions skipped:', e.message);
+    }
+    const liveByName = new Map((liveVersions || []).map((v) => [v.name, v]));
+    const liveNames = [...liveByName.keys()];
+    const gridReleases = [...new Set([...liveNames, ...cachedReleases])];
+
     // Tag each cached release as active / past / future using gate config.
     const gateConfig = loadReleaseGateConfig();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const activeVersionNames = productService.getActiveVersionNames(productId);
     const releaseStates = {};
-    for (const rel of cachedReleases) {
+    for (const rel of gridReleases) {
       const cfg = gateConfig[rel];
       if (cfg?.ecDate && cfg?.gaDate) {
         const ec = new Date(cfg.ecDate);
@@ -1553,10 +1565,10 @@ router.get('/sync-status', auth, async (req, res) => {
         if (today < ec) releaseStates[rel] = 'future';
         else if (today > ga) releaseStates[rel] = 'past';
         else releaseStates[rel] = 'active';
+      } else if (liveByName.get(rel)?.released === true) {
+        releaseStates[rel] = 'past';
       } else {
-        // No gate config → long-running catch-all versions stay "active",
-        // everything else is treated as past (already shipped).
-        releaseStates[rel] = activeVersionNames.includes(rel) ? 'active' : 'past';
+        releaseStates[rel] = activeVersionNames.includes(rel) || liveByName.has(rel) ? 'active' : 'past';
       }
     }
 
@@ -1564,16 +1576,18 @@ router.get('/sync-status', auth, async (req, res) => {
     // Include per-bucket counts from the meta file so the 7-column table
     // can show per-cell freshness without reading all ticket data.
     const releaseMeta = {};
-    for (const rel of cachedReleases) {
+    for (const rel of gridReleases) {
       const info = cachedReleasesInfo[rel];
-      releaseMeta[rel] = {
-        fetchedAtIso: info.fetchedAtIso || null,
-        ticketCount: info.ticketCount ?? null,
-        loadableStrict: info.loadableStrict,
-        schemaDiff: info.schemaDiff,
-        jqlDiff: info.jqlDiff,
-        buckets: info.buckets ?? null,
-      };
+      releaseMeta[rel] = info
+        ? {
+          fetchedAtIso: info.fetchedAtIso || null,
+          ticketCount: info.ticketCount ?? null,
+          loadableStrict: info.loadableStrict,
+          schemaDiff: info.schemaDiff,
+          jqlDiff: info.jqlDiff,
+          buckets: info.buckets ?? null,
+        }
+        : { fetchedAtIso: null, ticketCount: null, buckets: null };
     }
 
     return res.json({
@@ -1582,7 +1596,7 @@ router.get('/sync-status', auth, async (req, res) => {
         productId,
         bundleMeta: bundleMeta || null,
         hasBundleOnDisk: bundleMeta !== null,
-        cachedReleases,
+        cachedReleases: gridReleases,
         releaseStates,
         releaseMeta,
         isSyncInProgress: cache.isSyncInProgress(),
@@ -1641,7 +1655,7 @@ router.post('/refresh-now', auth, async (_req, res) => {
  */
 router.post('/backfill-meta', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
 
     const PAYLOAD_BUCKET_KEYS = [
       'top_level_projects',
@@ -1756,7 +1770,7 @@ router.post('/backfill-meta', auth, async (req, res) => {
  */
 router.delete('/cache', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const mode = (req.query.mode || 'bundle').toString();
     if (mode !== 'bundle' && mode !== 'full') {
       return res.status(400).json({ success: false, error: "mode must be 'bundle' or 'full'" });
@@ -1796,7 +1810,7 @@ router.delete('/cache', auth, async (req, res) => {
  */
 router.post('/sync', auth, async (req, res) => {
   const t0 = Date.now();
-  const productId = (req.query.productId || 'ndb').toString();
+  const productId = (req.query.productId || '').toString();
   const rawForce = (req.query.forceReleases || '').toString().trim();
   const forceReleasesInput = rawForce ? rawForce.split(',').map((r) => r.trim()).filter(Boolean) : [];
   const forceAll = req.query.forceAll === 'true';
@@ -1859,22 +1873,20 @@ router.post('/sync', auth, async (req, res) => {
     const projectKey = product.projectKey;
     const labelPrefix = productService.getLabelPrefix(productId);
     const productPrefix = productService.getReleasePrefix(productId);
-    const sprintCalendar = productService.getSprintCalendar(productId);
+    let sprintCalendar;
+    try {
+      sprintCalendar = productService.getSprintCalendar(productId);
+    } catch (e) {
+      return sendError(e?.message || 'Sprint calendar is not configured for this team');
+    }
 
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
     const cache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
 
-    // ── Build the full release list dynamically from JIRA ──────────────────
-    // Fetch ALL versions for this product's JIRA project so we can sync
-    // historical + active + future releases in one pass.  We include:
-    //   1. Any non-archived version whose name starts with releasePrefix
-    //      ("NDB-") — covers NDB-2.8 through NDB-3.x, released or not.
-    //   2. Special long-running fixVersions ("master", "Era Future") that
-    //      act as catch-all buckets for work not yet committed to a release.
-    // The gate config is kept for active/past/future tagging (see done event)
-    // but no longer gates WHAT gets synced.
+    // Unreleased versions on the team's primary JIRA project (NDB → ERA).
+    // Same rule as POST /api/jira/release-versions. No prefix/glob matching.
     let allProjectVersions;
     try {
       allProjectVersions = await jira.getProjectVersions(projectKey);
@@ -1882,15 +1894,12 @@ router.post('/sync', auth, async (req, res) => {
       return sendError(`Failed to fetch JIRA version list: ${vErr?.message || vErr}`);
     }
 
-    const activeVersionNames = productService.getActiveVersionNames(productId);
-    // e.g. ["master", "Era Future"]
-
     const jiraReleases = allProjectVersions
-      .filter((v) => !v.archived && v.name.startsWith(productPrefix))
+      .filter(isUnreleasedVersion)
       .map((v) => v.name);
 
     const releasesToSync = Array.from(
-      new Set([...jiraReleases, ...activeVersionNames, ...forceReleasesInput])
+      new Set([...jiraReleases, ...forceReleasesInput])
     ).sort();
 
     if (releasesToSync.length === 0) {
@@ -1971,6 +1980,7 @@ router.post('/sync', auth, async (req, res) => {
       changelogConcurrency: 1,
       fetchOptions: { concurrency: 1 },
       onProgress: (event) => sendEvent(event),
+      baseFilter: product.baseFilter,
     });
 
     const timingMs = Date.now() - t0;
@@ -2032,7 +2042,7 @@ router.post('/sync', auth, async (req, res) => {
  */
 router.post('/sync/bucket', auth, async (req, res) => {
   const t0 = Date.now();
-  const productId = (req.query.productId || 'ndb').toString();
+  const productId = (req.query.productId || '').toString();
   const release = (req.query.release || '').toString().trim();
   const bucketName = (req.query.bucket || '').toString().trim();
 
@@ -2076,7 +2086,12 @@ router.post('/sync/bucket', auth, async (req, res) => {
     const projectKey = product.projectKey;
     const labelPrefix = productService.getLabelPrefix(productId);
     const productPrefix = productService.getReleasePrefix(productId);
-    const sprintCalendar = productService.getSprintCalendar(productId);
+    let sprintCalendar;
+    try {
+      sprintCalendar = productService.getSprintCalendar(productId);
+    } catch (e) {
+      return sendError(e?.message || 'Sprint calendar is not configured for this team');
+    }
 
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
@@ -2093,6 +2108,7 @@ router.post('/sync/bucket', auth, async (req, res) => {
       productPrefix,
       sprintCalendar,
       onProgress: (event) => sendEvent(event),
+      baseFilter: product.baseFilter,
     });
 
     const timingMs = Date.now() - t0;

@@ -11,6 +11,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
 import { useSosHistory } from '../hooks/useSosHistory';
+import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { authenticatedPost, authenticatedPut, authenticatedGet } from '../utils/api';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
@@ -759,6 +760,7 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
 
 function SosSummaryPage() {
   const { jiraBaseUrl } = useJiraConfig();
+  const { selectedTeamId } = useTeam();
 
   const {
     byVersion,
@@ -788,19 +790,20 @@ function SosSummaryPage() {
   // Fetch gate data for all active releases
   const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
 
-  // Fetch on mount — cache-first (forceLive only on Refresh All)
+  // Fetch on mount — live JIRA first
   useEffect(() => {
-    fetchAll('ndb');
-  }, [fetchAll]);
+    if (!selectedTeamId) return;
+    fetchAll(selectedTeamId);
+  }, [fetchAll, selectedTeamId]);
 
   // History overlay is independent of live vs cache items. Skip only when
   // JIRA is already rate-limited so we do not immediately re-trip it.
   useEffect(() => {
-    if (degraded) return;
+    if (degraded || !selectedTeamId) return;
     if (Object.keys(byVersion).length > 0) {
-      fetchHistory('ndb');
+      fetchHistory(selectedTeamId);
     }
-  }, [degraded, byVersion, fetchHistory]);
+  }, [degraded, byVersion, fetchHistory, selectedTeamId]);
 
   // All items that need a summary (for batch button label)
   const needsCount = useMemo(() => {
@@ -863,7 +866,7 @@ function SosSummaryPage() {
               disabled={loading || sortedVersions.length === 0}
             />
             <button
-              onClick={() => fetchAll('ndb', { forceLive: true })}
+              onClick={() => fetchAll(selectedTeamId, { forceLive: true })}
               disabled={loading}
               style={{
                 padding: '6px 14px', fontSize: '12px', borderRadius: '5px',
@@ -899,7 +902,7 @@ function SosSummaryPage() {
           <p style={{ color: '#d32f2f', fontSize: '13px' }}>
             {error}&nbsp;
             <button
-              onClick={() => fetchAll('ndb')}
+              onClick={() => fetchAll(selectedTeamId)}
               style={{ fontSize: '12px', border: 'none', background: 'none', color: '#1565c0', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Retry
@@ -932,7 +935,7 @@ function SosSummaryPage() {
             breakdownDataMap={breakdownDataMap}
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}
-            onRefresh={() => fetchAll('ndb')}
+            onRefresh={() => fetchAll(selectedTeamId)}
             checkpointHistory={checkpointHistory}
             gateData={gateDataMap[version] || null}
           />

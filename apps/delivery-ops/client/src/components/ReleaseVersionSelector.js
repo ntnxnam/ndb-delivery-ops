@@ -7,8 +7,8 @@ import React, { useRef, useState, useEffect } from 'react';
  * and a Download split-button (Gantt PNG / Report Excel / Report HTML / Both).
  *
  * Props:
- *   activeVersions   {Array}   - unreleased versions (NDB-*, master, Era Future)
- *   inactiveVersions {Array}   - released/past versions (NDB-*)
+ *   activeVersions   {Array}   - unreleased versions for the selected team
+ *   inactiveVersions {Array}   - released/past versions for the selected team
  *   versions         {Array}   - legacy flat list; used as fallback when
  *                                activeVersions is not provided
  *   selectedVersion, defaultVersion, showVersionDropdown,
@@ -44,14 +44,12 @@ function ReleaseVersionSelector({
   // Fall back to splitting the flat `versions` prop with the same rule for
   // legacy callers that haven't been updated yet.
   const activeVersions = activeVersionsProp ?? (versions || []).filter((v) => {
-    const name = typeof v === 'string' ? v : v.name;
-    return (name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future') &&
-           !(typeof v === 'object' ? v.released : false);
+    const released = typeof v === 'object' ? !!v.released : false;
+    return !released;
   });
   const inactiveVersions = inactiveVersionsProp ?? (versions || []).filter((v) => {
-    const name = typeof v === 'string' ? v : v.name;
-    return (name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future') &&
-           (typeof v === 'object' ? v.released : false);
+    const released = typeof v === 'object' ? !!v.released : false;
+    return released;
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);

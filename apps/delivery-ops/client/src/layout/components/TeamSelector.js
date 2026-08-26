@@ -8,16 +8,30 @@ const PAGE_SELECT_STYLE = {
   maxWidth: '240px',
 };
 
+const PAGE_CHOOSE_STYLE = {
+  height: '32px',
+  padding: '0 14px',
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  background: '#f9fafb',
+  color: '#374151',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
+
 /**
  * Shared team dropdown used by the sidebar and page toolbars.
- * Always renders a control — loading, error+retry, or the select —
- * so a failed teams fetch cannot hide the picker.
+ * Changing the dropdown only stages a team; Fetch applies it
+ * and reloads team-scoped data on every page.
  */
 export function TeamSelector({ variant = 'page', id = 'team-select' }) {
   const {
     teams,
-    selectedTeamId,
-    changeTeam,
+    pendingTeamId,
+    setPendingTeamId,
+    applyTeam,
     isTransitioning,
     loading,
     error,
@@ -86,24 +100,37 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
     );
   }
 
+  const stagedId = pendingTeamId || '';
+  const fetchTitle = "Load this team's versions from its base filter";
+
   return (
     <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
       {label}
       <select
         id={id}
-        value={selectedTeamId || ''}
-        onChange={(e) => changeTeam(e.target.value)}
+        value={stagedId}
+        onChange={(e) => setPendingTeamId(e.target.value)}
         className={selectClass}
         style={isSidebar ? undefined : PAGE_SELECT_STYLE}
         disabled={loading || isTransitioning}
       >
-        {!selectedTeamId && <option value="">Select a team…</option>}
+        {!stagedId && <option value="">Select a team…</option>}
         {teams.map((team) => (
           <option key={team.id} value={team.id}>
             {team.name}
           </option>
         ))}
       </select>
+      <button
+        type="button"
+        className="team-choose-btn"
+        style={isSidebar ? undefined : PAGE_CHOOSE_STYLE}
+        disabled={!stagedId || isTransitioning}
+        onClick={() => applyTeam(stagedId)}
+        title={fetchTitle}
+      >
+        Fetch
+      </button>
       {isTransitioning && <span className={isSidebar ? 'transition-indicator' : undefined}>⏳</span>}
     </div>
   );

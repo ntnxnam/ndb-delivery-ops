@@ -130,6 +130,27 @@ export class JiraConnector {
     );
   }
 
+  /**
+   * Arbitrary method for pass-through hosts (e.g. Apps Script proxy).
+   * Prefer get/post/put/searchAll in app code.
+   */
+  async request<T = unknown>(
+    method: string,
+    path: string,
+    options: AxiosRequestConfig = {}
+  ): Promise<AxiosResponse<T>> {
+    return this.retry(() =>
+      axios.request<T>({
+        method,
+        url: this.absolute(path),
+        headers: this.headers(),
+        httpsAgent: this.httpsAgent,
+        timeout: this.env.jiraTimeoutMs,
+        ...options,
+      })
+    );
+  }
+
   // ── high-level helpers ────────────────────────────────────────────────────
 
   /**

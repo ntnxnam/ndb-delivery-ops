@@ -16,11 +16,10 @@
  * Extracted from server/routes/jira/index.js during Phase 2b.1.
  */
 
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2 } = require('../config/api');
-const { createHttpsAgent, retryJiraCall, jiraHeaders, wrapJiraError } = require('./jiraService');
+const { getJira, wrapJiraError } = require('../utils/jiraClient');
 
 const JIRA_TIMEOUT_MS = 15000;
 const RELEASE_COLUMNS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'releaseVersionsColumnsConfig.json');
@@ -40,11 +39,11 @@ async function checkVersionExists(jiraToken, { projectKey, versionName }) {
     throw err;
   }
   try {
-    const httpsAgent = createHttpsAgent();
-    const versionsRes = await retryJiraCall(() => axios.get(
+    const jira = await getJira(jiraToken);
+    const versionsRes = await jira.get(
       JIRA_API_V2.PROJECT_VERSIONS(projectKey),
-      { headers: jiraHeaders(jiraToken), httpsAgent, timeout: JIRA_TIMEOUT_MS }
-    ));
+      { timeout: JIRA_TIMEOUT_MS }
+    );
     const versions = Array.isArray(versionsRes.data) ? versionsRes.data : [];
     const match = versions.find(v => v.name === versionName);
     return {
@@ -72,15 +71,15 @@ async function createVersion(jiraToken, { projectKey, versionName, releaseDate }
     throw err;
   }
   try {
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(jiraToken);
     const payload = { name: versionName, project: projectKey, released: false };
     if (releaseDate) payload.releaseDate = releaseDate;
 
-    const createRes = await retryJiraCall(() => axios.post(
+    const createRes = await jira.post(
       JIRA_API_V2.CREATE_VERSION,
       payload,
-      { headers: jiraHeaders(jiraToken), httpsAgent, timeout: JIRA_TIMEOUT_MS }
-    ));
+      { timeout: JIRA_TIMEOUT_MS }
+    );
     return {
       versionId: createRes.data?.id,
       name: createRes.data?.name,
@@ -106,14 +105,10 @@ async function checkFilterExists(jiraToken, { filterName }) {
     err.statusCode = 400;
     throw err;
   }
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(jiraToken);
   const searchUrl = `${JIRA_API_V2.FILTER_SEARCH}?filterName=${encodeURIComponent(filterName)}&maxResults=50`;
   try {
-    const listRes = await retryJiraCall(() => axios.get(searchUrl, {
-      headers: jiraHeaders(jiraToken),
-      httpsAgent,
-      timeout: JIRA_TIMEOUT_MS,
-    }));
+    const listRes = await jira.get(searchUrl, { timeout: JIRA_TIMEOUT_MS });
     const filters = Array.isArray(listRes.data?.values)
       ? listRes.data.values
       : Array.isArray(listRes.data?.results)
@@ -153,7 +148,7 @@ async function createFilter(jiraToken, { filterName, jql, description }) {
   }
   let createRes;
   try {
-    const httpsAgent = createHttpsAgent();
+    const jira = await getJira(jiraToken);
     const payload = {
       name: filterName.trim(),
       jql: jql.trim(),
@@ -161,11 +156,11 @@ async function createFilter(jiraToken, { filterName, jql, description }) {
     };
     if (description) payload.description = description;
 
-    createRes = await retryJiraCall(() => axios.post(
+    createRes = await jira.post(
       JIRA_API_V2.CREATE_FILTER,
       payload,
-      { headers: jiraHeaders(jiraToken), httpsAgent, timeout: JIRA_TIMEOUT_MS }
-    ));
+      { timeout: JIRA_TIMEOUT_MS }
+    );
   } catch (error) {
     throw wrapJiraError(error, 'Failed to create filter');
   }

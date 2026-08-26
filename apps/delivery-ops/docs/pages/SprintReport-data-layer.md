@@ -2,8 +2,7 @@
 
 **Route**: `/sprint-report`  
 **Server routes used**: `server/routes/jira/index.js` (sprint sub-routes)  
-**Hooks**: `useTeamDataset`, `useTeam` (shared `TeamContext` — no extra teams fetch)  
-**Bundle utility**: `release/utils/bundleUtils.js → derivePastSprintReportFromBundle` (CRA copy of `shared/src/domain/bundleDerive.js`, D41)
+**Hooks**: `useTeam` (shared `TeamContext` — no extra teams fetch)
 
 ---
 
@@ -21,48 +20,22 @@ GET /api/config/teams
 
 ---
 
-### 2. Past sprint report (primary path — bundle)
-
-No API call if bundle is loaded in `TeamDatasetContext`.
-
-**Client flow**: `SprintReportPage → useTeamDataset → bundle → derivePastSprintReportFromBundle(bundle, teamId, sprintName)`
-
-`derivePastSprintReportFromBundle` (CRA copy of `shared/src/domain/bundleDerive.js`):
-- Reads pre-aggregated sprint data from `bundle.sprints[teamId][sprintName]`
-- Returns velocity breakdown (dev / qaVerification / qaTest) + resolution distribution + issue type distribution
-- All JQL links for clickable counts are pre-computed and stored in the bundle
-
----
-
-### 3. Past sprint report (fallback — live JIRA)
-
-When bundle is missing or the sprint is not in the bundle:
+### 2. Past sprint report (live JIRA)
 
 ```
-POST /api/jira/sprint-report
+POST /api/jira/sprint-report-by-range
 Headers: x-jira-token, x-username
-Body: { teamId, sprintId, boardId, startDate, endDate }
+Body: { teamId, startDate, endDate, componentNames? }
 ```
 
-**Server flow**: `jira/index.js → sprintService.getSprintReport(teamId, sprintId, boardId, dateRange)`
-
-**JIRA queries**:
-
-| Query | JQL |
-|-------|-----|
-| Dev velocity | `{teamBaseFilter} AND issueType not in (Feature,Initiative,Epic,X-FEAT,Capability,Test) AND resolved >= "{start}" AND resolved <= "{end}"` |
-| QA test tasks | `{teamBaseFilter} AND issueType = Test AND resolved >= "{start}" AND resolved <= "{end}"` |
-| QA verification | `{teamBaseFilter} AND issueType in (Bug,Improvement) AND status changed to "Closed" during ("{start}","{end}")` |
-| Resolution breakdown | Same base JQL, group by `resolution` in post-processing |
-
-`teamBaseFilter` is the JIRA saved filter ID from `teamBoardConfig.json` — never hardcoded.
+**Client flow**: `SprintReportPage → POST /api/jira/sprint-report-by-range` (no disk bundle).
 
 ---
 
-### 4. Current sprint report (live JIRA)
+### 3. Current sprint report (live JIRA)
 
 ```
-GET /api/jira/current-sprint?teamId=<id>&productId=ndb
+GET /api/jira/current-sprint?teamId=<id>
 Headers: x-jira-token, x-username
 ```
 

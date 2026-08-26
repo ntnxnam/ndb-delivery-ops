@@ -8,18 +8,36 @@ const mockTeamConfig = {
       id: 'ndb',
       name: 'NDB',
       projectKey: 'ERA',
-      projectType: 'dedicated'
+      projectType: 'dedicated',
+      baseFilter: 'filter=NDB-All-Base-Filter',
     },
     {
       id: 'datalens',
       name: 'DataLens',
       projectKey: 'ENG',
       projectType: 'parent',
-      versionPatterns: ['^DataLens.*', '^DL.*']
+      baseFilter: 'filter=DataLens-All-Base-Filter',
     }
   ],
   defaultTeamId: 'ndb'
 };
+
+function mockSearchIssues(fixVersionNames, projectVersions) {
+  axios.get.mockImplementation((url) => {
+    if (String(url).includes('/rest/api/2/search')) {
+      const issues = fixVersionNames.map((name) => ({
+        fields: { fixVersions: [{ name }] },
+      }));
+      return Promise.resolve({
+        data: { issues, total: issues.length },
+      });
+    }
+    if (String(url).includes('/versions')) {
+      return Promise.resolve({ data: projectVersions || [] });
+    }
+    return Promise.resolve({ data: [] });
+  });
+}
 
 // Mock the config loading
 jest.mock('../../config/teamBoardConfig.json', () => mockTeamConfig, { virtual: true });
@@ -46,6 +64,7 @@ jest.mock('../../middleware/authMiddleware', () => ({
 }));
 
 const jiraRoutes = require('../../routes/jira');
+const { clearFixVersionCache } = require('../../utils/teamScope');
 
 describe('Parent Project Version Filtering', () => {
   let app;
@@ -55,17 +74,18 @@ describe('Parent Project Version Filtering', () => {
     app.use(express.json());
     app.use('/api/jira', jiraRoutes);
     jest.clearAllMocks();
+    clearFixVersionCache();
   });
 
   describe('POST /api/jira/release-versions', () => {
-    it('should return all non-archived versions for dedicated project team (NDB), including past releases', async () => {
-      const mockVersions = [
-        { name: 'NDB-2.11', released: false, archived: false },
-        { name: 'NDB-2.12', released: false, archived: false },
-        { name: 'NDB-2.10', released: true, archived: false } // Past release — now included
+    it('returns fixVersions that appear on tickets in the team baseFilter', async () => {
+      const projectVersions = [
+        { name: 'NDB-2.11', released: false, archived: false, releaseDate: '2026-09-15' },
+        { name: 'NDB-2.12', released: false, archived: false, releaseDate: '2026-12-01' },
+        { name: 'NDB-2.10', released: true, archived: false, releaseDate: '2026-03-01' },
+        { name: 'ERA-ignored', released: false, archived: false, releaseDate: '2026-09-01' },
       ];
-
-      axios.get.mockResolvedValue({ data: mockVersions });
+      mockSearchIssues(['NDB-2.11', 'NDB-2.12', 'NDB-2.10'], projectVersions);
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -73,26 +93,24 @@ describe('Parent Project Version Filtering', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      // All 3 non-archived versions returned, newest first
-      expect(response.body.versions).toHaveLength(3);
+      expect(response.body.projectKey).toBe('ERA');
       const names = response.body.versions.map(v => v.name);
       expect(names).toEqual(['NDB-2.12', 'NDB-2.11', 'NDB-2.10']);
-      // released flag preserved
+      expect(names).not.toContain('ERA-ignored');
       expect(response.body.versions.find(v => v.name === 'NDB-2.10').released).toBe(true);
-      expect(response.body.versions.find(v => v.name === 'NDB-2.11').released).toBe(false);
+      expect(response.body.defaultVersion).toBe('NDB-2.11');
     });
 
-    it('should filter versions by patterns for parent project team (DataLens)', async () => {
-      const mockVersions = [
-        { name: 'DataLens-1.0', released: false, archived: false }, // Should match ^DataLens.*
-        { name: 'DL2025.02', released: false, archived: false },    // Should match ^DL.*
-        { name: 'Analytics-2.1', released: false, archived: false }, // Should NOT match
-        { name: 'Core-3.0', released: false, archived: false },     // Should NOT match
-        { name: 'DataLens2025.03', released: false, archived: false }, // Should match ^DataLens.*
-        { name: 'DL-1.1', released: false, archived: false }        // Should match ^DL.*
+    it('returns every name from the baseFilter search, without prefix or glob matching', async () => {
+      const names = [
+        'DataLens-1.0',
+        'DL2025.02',
+        'Analytics-2.1',
+        'Core-3.0',
+        'DataLens2025.03',
+        'DL-1.1',
       ];
-
-      axios.get.mockResolvedValue({ data: mockVersions });
+      mockSearchIssues(names, names.map((name) => ({ name, released: false, archived: false })));
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -100,28 +118,13 @@ describe('Parent Project Version Filtering', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      // Should only include DataLens and DL versions (exact sort order is server-determined)
-      expect(response.body.versions).toHaveLength(4);
-      const names = response.body.versions.map(v => v.name);
-      expect(names).toContain('DataLens2025.03');
-      expect(names).toContain('DL2025.02');
-      expect(names).toContain('DataLens-1.0');
-      expect(names).toContain('DL-1.1');
-      
-      // Should not include Analytics or Core versions
-      expect(names).not.toContain('Analytics-2.1');
-      expect(names).not.toContain('Core-3.0');
+      expect(response.body.projectKey).toBe('ENG');
+      expect(response.body.versions).toHaveLength(6);
     });
 
-    it('should handle case-insensitive pattern matching', async () => {
-      const mockVersions = [
-        { name: 'datalens-1.0', released: false, archived: false }, // lowercase
-        { name: 'DATALENS-2.0', released: false, archived: false }, // uppercase
-        { name: 'dl-test', released: false, archived: false },      // lowercase dl
-        { name: 'DL-PROD', released: false, archived: false }       // uppercase dl
-      ];
-
-      axios.get.mockResolvedValue({ data: mockVersions });
+    it('keeps mixed-case names from the search', async () => {
+      const names = ['datalens-1.0', 'DATALENS-2.0', 'dl-test', 'DL-PROD'];
+      mockSearchIssues(names, names.map((name) => ({ name, released: false, archived: false })));
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -130,15 +133,12 @@ describe('Parent Project Version Filtering', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.versions).toHaveLength(4);
-      const names = response.body.versions.map(v => v.name);
-      expect(names).toContain('datalens-1.0');
-      expect(names).toContain('DATALENS-2.0');
-      expect(names).toContain('dl-test');
-      expect(names).toContain('DL-PROD');
+      const returned = response.body.versions.map(v => v.name);
+      expect(returned).toEqual(expect.arrayContaining(names));
     });
 
     it('should handle empty version list gracefully', async () => {
-      axios.get.mockResolvedValue({ data: [] });
+      mockSearchIssues([], [{ name: 'Project-Only', released: false }]);
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -147,39 +147,33 @@ describe('Parent Project Version Filtering', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.versions).toEqual([]);
+      expect(response.body.defaultVersion).toBeNull();
     });
 
-    it('should handle team without version patterns (backward compatibility)', async () => {
-      // Test with a team that has projectType but no versionPatterns
-      const teamWithoutPatterns = {
-        id: 'test-team',
-        name: 'Test Team',
+    it('should not fall back to NDB when the teamId is unknown', async () => {
+      const response = await request(app)
+        .post('/api/jira/release-versions')
+        .send({ teamId: 'prism-infra' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('returns 400 when the team has no baseFilter', async () => {
+      mockTeamConfig.teams.push({
+        id: 'no-filter',
+        name: 'No Filter',
         projectKey: 'ENG',
-        projectType: 'parent'
-        // No versionPatterns
-      };
-
-      // Temporarily add this team to the mock config
-      mockTeamConfig.teams.push(teamWithoutPatterns);
-
-      const mockVersions = [
-        { name: 'Version-1.0', released: false, archived: false },
-        { name: 'Version-2.0', released: false, archived: false }
-      ];
-
-      axios.get.mockResolvedValue({ data: mockVersions });
+        projectType: 'parent',
+      });
 
       const response = await request(app)
         .post('/api/jira/release-versions')
-        .send({ teamId: 'test-team' })
-        .expect(200);
+        .send({ teamId: 'no-filter' })
+        .expect(400);
 
-      // Should return all versions (no filtering applied)
-      expect(response.body.success).toBe(true);
-      const names = response.body.versions.map(v => v.name);
-      expect(names).toEqual(['Version-2.0', 'Version-1.0']);
-
-      // Clean up
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toMatch(/no baseFilter/);
       mockTeamConfig.teams.pop();
     });
   });
@@ -191,7 +185,13 @@ describe('Parent Project Version Filtering', () => {
         { name: 'Analytics-2.1', released: false, archived: false }
       ];
 
-      axios.get.mockResolvedValue({ data: mockVersions });
+      mockSearchIssues(
+        ['DataLens-1.0', 'Analytics-2.1'],
+        [
+          { name: 'DataLens-1.0', released: false, archived: false },
+          { name: 'Analytics-2.1', released: false, archived: false },
+        ]
+      );
 
       const response = await request(app)
         .post('/api/jira/discover-versions')
@@ -201,13 +201,13 @@ describe('Parent Project Version Filtering', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.teamId).toBe('datalens');
       expect(response.body.projectType).toBe('parent');
-      expect(response.body.versionPatterns).toEqual(['^DataLens.*', '^DL.*']);
+      expect(response.body.projectKey).toBe('ENG');
       
-      // Should only have filtered versions with filter info
-      expect(response.body.versions).toHaveLength(1);
-      expect(response.body.versions[0].name).toBe('DataLens-1.0');
-      expect(response.body.versions[0].dynamicFilter).toBe('filter=DataLens-1.0-All');
-      expect(response.body.versions[0].hasConfigOverride).toBe(false);
+      // Should have every unreleased version (no glob filter)
+      expect(response.body.versions).toHaveLength(2);
+      const names = response.body.versions.map(v => v.name);
+      expect(names).toContain('DataLens-1.0');
+      expect(names).toContain('Analytics-2.1');
     });
 
     it('should show dedicated project information correctly', async () => {
@@ -216,7 +216,13 @@ describe('Parent Project Version Filtering', () => {
         { name: 'NDB-2.12', released: false, archived: false }
       ];
 
-      axios.get.mockResolvedValue({ data: mockVersions });
+      mockSearchIssues(
+        ['NDB-2.11', 'NDB-2.12'],
+        [
+          { name: 'NDB-2.11', released: false, archived: false },
+          { name: 'NDB-2.12', released: false, archived: false },
+        ]
+      );
 
       const response = await request(app)
         .post('/api/jira/discover-versions')
@@ -225,7 +231,7 @@ describe('Parent Project Version Filtering', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.projectType).toBe('dedicated');
-      expect(response.body.versionPatterns).toBeNull();
+      expect(response.body.projectKey).toBe('ERA');
       expect(response.body.versions).toHaveLength(2);
     });
   });

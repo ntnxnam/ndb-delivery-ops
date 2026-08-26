@@ -84,14 +84,11 @@ This plan covers:
 | E2E-SPRINT-004 | JIRA links on metrics | Click a Dev velocity bar/number | Opens JIRA query in new tab with correct JQL |
 | E2E-SPRINT-005 | Milestone markers | Observe chart for active release | EC, CG, PG, GA markers shown at correct sprint positions |
 
-### 3.5 Sync Hub
+### 3.5 Sync Hub (removed)
 
 | ID | Scenario | Steps | Expected |
 |---|---|---|---|
-| E2E-SYNC-001 | Sync status table | Navigate `/sync-hub` | Per-release × per-bucket last-sync timestamps shown |
-| E2E-SYNC-002 | Trigger full sync | Click Sync for active release | Progress events stream live; all 6 buckets update; table refreshes |
-| E2E-SYNC-003 | Cell-level sync | Click re-sync icon for one specific bucket | Only that bucket updates; other buckets' timestamps unchanged |
-| E2E-SYNC-004 | Stale after cache wipe | Wipe cache via API → open Sync Hub | Table shows "never synced" or stale state |
+| E2E-SYNC-001 | Old URL | Navigate `/sync-hub` | Redirects to `/project-status`; no sync grid |
 
 ### 3.6 AI Chat
 
@@ -187,9 +184,7 @@ Check each item. A single unchecked P0 item blocks deploy.
 - [ ] Clicking a velocity number opens JIRA in new tab
 
 ### Sync Hub
-- [ ] All active releases listed with per-bucket sync timestamps
-- [ ] Trigger sync for one release → progress stream shows → table updates
-- [ ] Cell-level sync (one bucket) works without affecting others
+- [ ] `/sync-hub` redirects to Project Status; item is absent from the sidebar
 
 ### AI Features
 - [ ] Chat panel loads at `/chatbot`; initial greeting or empty state shown

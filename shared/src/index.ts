@@ -348,6 +348,17 @@ export {
   escapeRegExp,
 } from './utils/versionPattern.js';
 
+export {
+  wrapTeamScope,
+  requireBaseFilter,
+  isUnreleasedVersion,
+  toVersionSummary,
+  pickNextUpcomingGaVersion,
+  listFixVersionsForTeam,
+  clearFixVersionCache,
+} from './utils/teamScope.js';
+export type { VersionLike, TeamScopeInput, JiraVersionClient, TeamFixVersion } from './utils/teamScope.js';
+
 export { getSprintMetrics } from './services/sprintMetrics.js';
 export type { SprintMetrics, SprintMetricsInput } from './services/sprintMetrics.js';
 export {

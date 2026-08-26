@@ -42,13 +42,15 @@ jest.mock('../../middleware/authMiddleware', () => ({
 // so routes that call getShared() can exercise their own logic under test.
 jest.mock('@portfolio-delivery-ops/shared', () => {
   const mockProductService = {
-    getProduct: jest.fn().mockReturnValue({ projectKey: 'ERA', labelPrefix: 'ndb', displayName: 'NDB' }),
+    getProduct: jest.fn().mockReturnValue({ projectKey: 'ERA', labelPrefix: 'ndb', displayName: 'NDB', baseFilter: 'filter=test-base' }),
     getLabelPrefix: jest.fn().mockReturnValue('ndb'),
     getDisplayName: jest.fn().mockReturnValue('NDB'),
     getJiraProjects: jest.fn().mockReturnValue(['ERA', 'NDB']),
     getCustomFields: jest.fn().mockReturnValue({}),
     getBoards: jest.fn().mockReturnValue([]),
     getReleaseNamePattern: jest.fn().mockReturnValue(/^NDB-/),
+    getReleasePrefix: jest.fn().mockReturnValue('NDB-'),
+    getActiveVersionNames: jest.fn().mockReturnValue([]),
   };
   const mockCache = {
     getCachedReleasesInfo: jest.fn().mockReturnValue({}),
@@ -57,15 +59,36 @@ jest.mock('@portfolio-delivery-ops/shared', () => {
   };
   const ReleaseDatasetCache = jest.fn().mockImplementation(() => mockCache);
   const getProductService = jest.fn().mockReturnValue(mockProductService);
+  const fetchReleaseData = jest.fn().mockResolvedValue({
+    tickets: [{ 'Issue Key': 'ERA-1', Summary: 'live' }],
+    bucketCounts: {},
+    error: null,
+    bucketErrors: {},
+  });
+  const listFixVersionsForTeam = jest.fn().mockResolvedValue([
+    { name: 'NDB-2.11', released: false, releaseDate: '2026-09-15' },
+  ]);
+  function JiraConnector() {
+    return {};
+  }
+  const loadEnv = jest.fn().mockReturnValue({});
   return {
     getProductService,
     ReleaseDatasetCache,
+    fetchReleaseData,
+    listFixVersionsForTeam,
+    JiraConnector,
+    loadEnv,
     PAYLOAD_BUCKET_KEYS: ['top_level_projects', 'work_toward_project', 'standalone_epics', 'work_toward_standalone_epic', 'direct_tickets'],
     LONG_TERM_COMPONENT: 'long_term_funded',
     EXTENSION_COMPONENT: 'extension',
     getPayloadJql: jest.fn().mockReturnValue('project = ERA'),
     getLongTermFundedQuery: jest.fn().mockReturnValue('project = ERA'),
     getExtensionQuery: jest.fn().mockReturnValue('project = ERA'),
+    getComponentQueries: jest.fn().mockReturnValue({}),
+    buildEngineeringPayloadJql: jest.fn().mockReturnValue('project = ERA'),
+    buildReleasePayloadJql: jest.fn().mockReturnValue('project = ERA'),
+    getDeferredQuery: jest.fn().mockReturnValue('labels = x'),
   };
 });
 
@@ -106,7 +129,7 @@ describe('JIRA API Integration Tests', () => {
   });
 
   describe('GET /api/release-dataset/per-release/:release', () => {
-    test('IT-JIRA-002: Should return 404 not_cached for unknown release cache', async () => {
+    test('IT-JIRA-002: Should live-fetch even when disk cache is empty', async () => {
       const response = await request(app)
         .get('/api/release-dataset/per-release/NO-SUCH-RELEASE-TEST')
         .set({
@@ -115,9 +138,11 @@ describe('JIRA API Integration Tests', () => {
         })
         .query({ productId: 'ndb' });
 
-      expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('success', false);
-      expect(response.body).toHaveProperty('reason', 'not_cached');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data).toHaveProperty('tickets');
+      expect(Array.isArray(response.body.data.tickets)).toBe(true);
+      expect(response.body).not.toHaveProperty('reason', 'not_cached');
     });
   });
 

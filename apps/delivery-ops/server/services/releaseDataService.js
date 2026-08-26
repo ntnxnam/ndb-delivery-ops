@@ -1,130 +1,116 @@
 /**
- * Release-data service: read-only orchestration for the release-versions
- * dropdowns and version-discovery diagnostics.
+ * Release-data service: orchestration for the release-versions dropdown.
  *
- * Functions in this module:
- *   - listOpenReleaseVersions  — returns the filtered, sorted name list a
- *                                 team's Release Versions / Trends dropdowns use
- *   - discoverVersionsWithFilters
- *                              — same list plus per-version base-filter
- *                                 metadata used by Release Setup tooling
- *
- * Both endpoints hit JIRA's project-versions API, filter to non-released /
- * non-archived versions, optionally restrict to `team.versionPatterns` for
- * "parent project" teams (e.g. ENG), and sort newest-first. The version
- * discovery variant additionally annotates each version with the JQL base
- * filter the rest of the app uses to query items for that release.
- *
- * Extracted from server/routes/jira/index.js during Phase 2b.1b.
+ * Versions are unique fixVersions that appear on tickets in the team's
+ * baseFilter. Prefix/glob name matching is not used. The next upcoming
+ * JIRA GA (releaseDate) among unreleased names is the default.
  */
 
-const axios = require('axios');
-const { JIRA_API_V2 } = require('../config/api');
-const { createHttpsAgent, retryJiraCall, jiraHeaders } = require('./jiraService');
+const fs = require('fs');
+const path = require('path');
+const { getJira } = require('../utils/jiraClient');
 const {
   getReleaseBaseFilter,
   getConfigOverride,
-  resolveTeam,
+  resolveRequestedTeam,
 } = require('../utils/jiraRouteHelpers');
+const {
+  loadTeamBoardConfig,
+  saveTeamBoardConfig,
+  findTeamInList,
+  normalizeTeamId,
+  invalidateTeamBoardCache,
+} = require('../utils/teamConfig');
+const {
+  listFixVersionsForTeam,
+  pickNextUpcomingGaVersion,
+} = require('../utils/teamScope');
 
-const JIRA_TIMEOUT_MS = 15000;
+const COLUMNS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'releaseVersionsColumnsConfig.json');
 
-/**
- * Fetch the raw JIRA project versions and reduce to the "open" set the UI
- * shows: name only, released=false, not archived, optionally pattern-matched
- * for parent projects, sorted newest first.
- *
- * @returns {Promise<string[]>}
- */
-async function fetchFilteredVersionNames(team, projectKey, jiraToken) {
-  const httpsAgent = createHttpsAgent();
-  const projectResponse = await retryJiraCall(() => axios.get(
-    JIRA_API_V2.PROJECT_VERSIONS(projectKey),
-    { headers: jiraHeaders(jiraToken), httpsAgent, timeout: JIRA_TIMEOUT_MS }
-  ));
+async function createAxiosJira(jiraToken) {
+  return getJira(jiraToken);
+}
 
-  let versions = (projectResponse.data && Array.isArray(projectResponse.data))
-    ? projectResponse.data
-      .filter(v => v.name && v.archived !== true)
-      .map(v => ({ name: v.name, released: !!v.released, releaseDate: v.releaseDate || undefined }))
-    : [];
+function persistDefaultReleaseVersion(teamId, defaultVersion) {
+  if (process.env.NODE_ENV === 'test') return;
+  if (!teamId || !defaultVersion) return;
 
-  // Apply team-specific version filtering.
-  // For parent-project teams (e.g. ENG) use versionPatterns to whitelist versions.
-  // For all teams with a releasePrefix/activeVersionNames, use those to filter.
-  if (team && team.projectType === 'parent' && Array.isArray(team.versionPatterns)) {
-    const originalCount = versions.length;
-    const patterns = team.versionPatterns.map(pattern => new RegExp(pattern, 'i'));
-    versions = versions.filter(v => patterns.some(rx => rx.test(v.name)));
-    console.log(`[releaseDataService] Parent project filtering for ${team.id}: ${originalCount} → ${versions.length} versions`);
-  } else if (team && (team.releasePrefix || team.activeVersionNames)) {
-    // Dedicated project teams: keep only versions matching the release prefix
-    // or pinned version names (e.g. "master", "Era Future").
-    const originalCount = versions.length;
-    const prefix = team.releasePrefix || '';
-    const pinned = new Set(Array.isArray(team.activeVersionNames) ? team.activeVersionNames : []);
-    versions = versions.filter(v =>
-      (prefix && v.name.startsWith(prefix)) || pinned.has(v.name)
-    );
-    console.log(`[releaseDataService] Prefix+pinned filtering for ${team.id}: ${originalCount} → ${versions.length} versions (prefix="${prefix}", pinned=[${[...pinned].join(', ')}])`);
+  try {
+    // Re-read from disk so a stale in-memory snapshot cannot wipe teams
+    // Admin just saved (D43 multi-team registry).
+    invalidateTeamBoardCache();
+    const config = loadTeamBoardConfig();
+    const team = findTeamInList(config.teams, teamId);
+    if (team && team.defaultReleaseVersion !== defaultVersion) {
+      team.defaultReleaseVersion = defaultVersion;
+      saveTeamBoardConfig(config);
+    }
+  } catch (err) {
+    console.warn(`[releaseDataService] Could not persist team.defaultReleaseVersion: ${err.message}`);
   }
 
-  return versions.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
+  if (normalizeTeamId(teamId) !== 'ndb') return;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(COLUMNS_CONFIG_PATH, 'utf8'));
+    if (raw.defaultReleaseVersion === defaultVersion) return;
+    raw.defaultReleaseVersion = defaultVersion;
+    fs.writeFileSync(COLUMNS_CONFIG_PATH, `${JSON.stringify(raw, null, 2)}\n`);
+  } catch (err) {
+    console.warn(`[releaseDataService] Could not persist columns defaultReleaseVersion: ${err.message}`);
+  }
+}
+
+function wrapJiraError(apiError) {
+  if (apiError.statusCode) return apiError;
+  if (apiError.response?.status === 429 || apiError.message?.includes('rate limit')) {
+    const err = new Error('JIRA rate limit exceeded. Please wait 60-90 seconds and try again.');
+    err.statusCode = 429;
+    err.publicError = 'Rate limit exceeded';
+    return err;
+  }
+  const err = new Error(apiError.response?.data?.errorMessages?.join(', ') || apiError.message);
+  err.statusCode = apiError.response?.status || 500;
+  err.publicError = 'Failed to fetch release versions';
+  return err;
 }
 
 /**
- * List open release version names for a team's project.
- * Used by ReleaseVersionTab + ReleaseTrendsPage dropdowns.
+ * List fixVersions that appear on tickets in the requested team's baseFilter.
  *
- * @param {string} jiraToken
- * @param {{ teamId?: string }} input
- * @returns {Promise<{ versions: string[] }>}
- * @throws {Error & { statusCode? }} on validation or upstream failure.
- *   - statusCode 400 if team / projectKey missing
- *   - statusCode 429 if JIRA reports rate-limit
+ * @returns {Promise<{ versions: Array, projectKey: string, defaultVersion: string|null }>}
  */
 async function listOpenReleaseVersions(jiraToken, { teamId } = {}) {
-  const { effectiveTeamId, team, projectKey } = resolveTeam(teamId);
+  const { effectiveTeamId, team, projectKey } = resolveRequestedTeam(teamId);
 
-  if (!effectiveTeamId || !projectKey) {
-    const err = new Error(
-      effectiveTeamId
-        ? `Team "${effectiveTeamId}" has no projectKey in config. Add projectKey (e.g. "ERA" for dedicated projects, "ENG" for parent projects) to teamBoardConfig.json.`
-        : 'Select a team in the header to load release versions.'
-    );
+  if (!teamId || !effectiveTeamId) {
+    const err = new Error('Select a team in the header to load release versions.');
     err.statusCode = 400;
-    err.publicError = 'Team not selected or team has no project configured for versions';
+    err.publicError = 'Team not selected';
     throw err;
   }
 
   try {
-    const versions = await fetchFilteredVersionNames(team, projectKey, jiraToken);
-    return { versions };
+    const jira = await createAxiosJira(jiraToken);
+    const versions = await listFixVersionsForTeam(
+      { id: effectiveTeamId, baseFilter: team.baseFilter, projectKey },
+      jira
+    );
+    const defaultVersion = pickNextUpcomingGaVersion(versions);
+    persistDefaultReleaseVersion(effectiveTeamId, defaultVersion);
+    return { versions, projectKey, defaultVersion, teamId: effectiveTeamId };
   } catch (apiError) {
-    if (apiError.response?.status === 429 || apiError.message?.includes('rate limit')) {
-      const err = new Error('JIRA rate limit exceeded. Please wait 60-90 seconds and try again.');
-      err.statusCode = 429;
-      err.publicError = 'Rate limit exceeded';
-      throw err;
-    }
-    const err = new Error(apiError.response?.data?.errorMessages?.join(', ') || apiError.message);
-    err.statusCode = apiError.response?.status || 500;
-    err.publicError = 'Failed to fetch release versions';
-    throw err;
+    throw wrapJiraError(apiError);
   }
 }
 
 /**
- * List open release versions and annotate each with the dynamic base filter
- * (JQL or saved-filter ref) the rest of the app will use to query items for
- * that version. Used by Release Setup / discovery tooling.
- *
- * @param {string} jiraToken
- * @param {{ teamId?: string }} input
- * @returns {Promise<{ teamId, teamName, projectKey, projectType, versionPatterns, versions: Array<{ name, dynamicFilter, hasConfigOverride }> }>}
+ * Same list, annotated with per-version release base filters
+ * for Release Setup / discovery tooling.
  */
 async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
-  const { effectiveTeamId, team } = resolveTeam(teamId);
+  const { effectiveTeamId, team, projectKey } = resolveRequestedTeam(teamId);
   if (!effectiveTeamId || !team) {
     const err = new Error('Select a valid team to discover release versions.');
     err.statusCode = 400;
@@ -132,8 +118,14 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
     throw err;
   }
 
-  const versions = await fetchFilteredVersionNames(team, team.projectKey, jiraToken);
-  const versionsWithFilters = versions.map(v => ({
+  const jira = await createAxiosJira(jiraToken);
+  const versions = await listFixVersionsForTeam(
+    { id: effectiveTeamId, baseFilter: team.baseFilter, projectKey },
+    jira
+  );
+  const defaultVersion = pickNextUpcomingGaVersion(versions);
+  persistDefaultReleaseVersion(effectiveTeamId, defaultVersion);
+  const versionsWithFilters = versions.map((v) => ({
     name: v.name,
     released: v.released,
     releaseDate: v.releaseDate,
@@ -144,9 +136,9 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
   return {
     teamId: effectiveTeamId,
     teamName: team.name,
-    projectKey: team.projectKey,
+    projectKey,
     projectType: team.projectType || 'dedicated',
-    versionPatterns: team.versionPatterns || null,
+    defaultVersion,
     versions: versionsWithFilters,
   };
 }
@@ -154,4 +146,5 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
 module.exports = {
   listOpenReleaseVersions,
   discoverVersionsWithFilters,
+  createAxiosJira,
 };

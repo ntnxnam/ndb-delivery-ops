@@ -9,13 +9,6 @@
 
 import React, { useState } from 'react';
 import { authenticatedGet, getApiBase } from '../utils/api';
-import { useTeam } from '../contexts/TeamContext';
-import { useTeamDataset } from '../hooks/useTeamDataset';
-import {
-  deriveComponentListFromBundle,
-  deriveComponentHealthFromBundle,
-  deriveComponentDataFromBundle,
-} from '../release/utils/bundleUtils';
 import './ComponentReport.css';
 
 const API_BASE = getApiBase();
@@ -670,8 +663,6 @@ const ReportSection = ({ title, badge, outstanding, projectBreakdown, isSelected
 
 // ── Main component ──────────────────────────────────────────────────────────
 export const ComponentReport = () => {
-  const { selectedTeamId } = useTeam();
-  const { bundle } = useTeamDataset();
 
   const [componentList, setComponentList] = useState([]);
   const [componentListLoading, setComponentListLoading] = useState(false);
@@ -692,19 +683,6 @@ export const ComponentReport = () => {
 
   // ── Fetch component list ──────────────────────────────────────────────────
   const fetchComponents = async (forceRefresh = false) => {
-    // Bundle-first: derive component list from synced data
-    if (!forceRefresh) {
-      const bundleDerived = deriveComponentListFromBundle(bundle);
-      if (bundleDerived) {
-        setComponentList(bundleDerived.components);
-        if (bundleDerived.components.length > 0 && !selectedComponent) {
-          setSelectedComponent(bundleDerived.components[0].name);
-        }
-        setComponentListError(null);
-        return;
-      }
-    }
-    // Original fallback — unchanged:
     setComponentListLoading(true);
     setComponentListError(null);
     try {
@@ -731,22 +709,6 @@ export const ComponentReport = () => {
   const fetchReportData = () => {
     if (!selectedComponent) return;
 
-    // Bundle-first: derive health + data from synced bundle (instant, no loading state)
-    const bundleHealth = deriveComponentHealthFromBundle(bundle, selectedComponent);
-    const bundleData = deriveComponentDataFromBundle(bundle, selectedComponent);
-    if (bundleHealth && bundleData) {
-      setHealthData(bundleHealth.health);
-      setActionItems(bundleHealth.actions);
-      setTabData(bundleData);
-      setFetchedAt(new Date());
-      const releases = bundleData.availableReleases || [];
-      setAvailableReleases(releases);
-      setSelectedReleases(new Set(releases.filter(r => /^NDB-\d+\.\d+/.test(r) || r.toLowerCase() === 'master')));
-      setTabDataError(null);
-      return;
-    }
-
-    // Original fallback — unchanged:
     setTabDataLoading(true);
     setTabDataError(null);
     setTabData(null);
@@ -764,13 +726,9 @@ export const ComponentReport = () => {
         setTabData(dataRes.data || null);
         setFetchedAt(new Date());
 
-        // Populate release multi-select; default = NDB-* versions + master
         const releases = dataRes.data?.availableReleases || [];
         setAvailableReleases(releases);
-        const defaultSelected = new Set(
-          releases.filter(r => /^NDB-\d+\.\d+/.test(r) || r.toLowerCase() === 'master')
-        );
-        setSelectedReleases(defaultSelected);
+        setSelectedReleases(new Set(releases));
       })
       .catch(err => setTabDataError(err.message))
       .finally(() => setTabDataLoading(false));

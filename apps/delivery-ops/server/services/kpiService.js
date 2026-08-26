@@ -1,6 +1,5 @@
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
-const { retryJiraCall, createHttpsAgent } = require('./jiraService');
+const { getJira } = require('../utils/jiraClient');
 const { loadKpiConfigSync, getKpisForTeam } = require('../utils/teamConfig');
 const { getReleaseBaseFilter, upstreamStatus } = require('../utils/jiraRouteHelpers');
 const { buildWorkItemsJql, buildWorkItemsUrl, buildAllTicketsUrl, isValidProjectKey } = require('@portfolio-delivery-ops/shared');
@@ -8,40 +7,29 @@ const logger = require('../utils/logger');
 
 const KPI_LIST_MAX_RESULTS = 200;
 
-async function resolveKpiJql(baseQuery, cleanToken, httpsAgent) {
+async function resolveKpiJql(baseQuery, cleanToken, _httpsAgent) {
   const trimmed = (baseQuery || '').trim();
   if (!trimmed) return null;
   const filterMatch = trimmed.match(/^filter\s*=\s*(.+)$/i);
   if (filterMatch) {
     const filterVal = filterMatch[1].trim();
+    const jira = await getJira(cleanToken);
     if (/^\d+$/.test(filterVal)) {
       const filterUrl = JIRA_API_V2.FILTER ? JIRA_API_V2.FILTER(filterVal) : `${JIRA_API_V2.BASE_URL}/rest/api/2/filter/${filterVal}`;
-      const filterRes = await retryJiraCall(() => axios.get(filterUrl, {
-        headers: { Authorization: `Bearer ${cleanToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        httpsAgent,
-        timeout: 15000
-      }));
+      const filterRes = await jira.get(filterUrl, { timeout: 15000 });
       if (filterRes.data && filterRes.data.jql) return filterRes.data.jql;
       return trimmed;
     }
     const favouriteUrl = `${JIRA_API_V2.BASE_URL}/rest/api/2/filter/favourite`;
     const tryFavouriteOnly = async () => {
-      const favRes = await retryJiraCall(() => axios.get(favouriteUrl, {
-        headers: { Authorization: `Bearer ${cleanToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        httpsAgent,
-        timeout: 15000
-      }));
+      const favRes = await jira.get(favouriteUrl, { timeout: 15000 });
       const favList = Array.isArray(favRes.data) ? favRes.data : [];
       const fromFav = favList.find((f) => f.name && String(f.name).trim() === filterVal);
       return fromFav && fromFav.jql ? fromFav.jql : null;
     };
     try {
       const searchUrl = `${JIRA_API_V2.BASE_URL}/rest/api/2/filter/search?filterName=${encodeURIComponent(filterVal)}&maxResults=50`;
-      const listRes = await retryJiraCall(() => axios.get(searchUrl, {
-        headers: { Authorization: `Bearer ${cleanToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        httpsAgent,
-        timeout: 15000
-      }));
+      const listRes = await jira.get(searchUrl, { timeout: 15000 });
       const filters = Array.isArray(listRes.data?.values)
         ? listRes.data.values
         : Array.isArray(listRes.data?.results)
@@ -113,24 +101,17 @@ function mapIssues(response) {
 }
 
 async function executeKpiQuery({ token, jql, displayType }) {
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(token);
   if (displayType === 'count') {
-    const response = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-      httpsAgent,
-      timeout: 20000,
-      params: { jql, maxResults: 0 }
-    }));
-    return { total: response.data.total != null ? response.data.total : 0, combinedJql: jql };
+    const total = await jira.searchCount(jql);
+    return { total: total != null ? total : 0, combinedJql: jql };
   }
 
   const fieldsList = 'key,summary,priority,assignee,status';
-  const response = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    httpsAgent,
+  const response = await jira.get(JIRA_API_V2.SEARCH, {
     timeout: 20000,
     params: { jql, fields: fieldsList, maxResults: KPI_LIST_MAX_RESULTS }
-  }));
+  });
   return { issues: mapIssues(response), total: response.data.total, combinedJql: jql };
 }
 
@@ -146,8 +127,7 @@ async function getKpiResult({ token, teamId, kpiId }) {
   if (!kpi) return { error: 'KPI_NOT_FOUND' };
   const baseQuery = (kpi.baseQuery || '').trim();
   if (!baseQuery) return { error: 'KPI_NO_BASE_QUERY' };
-  const httpsAgent = createHttpsAgent();
-  const jql = await buildKpiCombinedJql(normalizedTeamId, baseQuery, token, httpsAgent);
+  const jql = await buildKpiCombinedJql(normalizedTeamId, baseQuery, token, null);
   if (!jql) return { error: 'KPI_JQL_UNRESOLVED' };
   return executeKpiQuery({ token, jql, displayType: kpi.displayType === 'list' ? 'list' : 'count' });
 }
@@ -155,7 +135,6 @@ async function getKpiResult({ token, teamId, kpiId }) {
 async function getKpiResultBatch({ token, teamId }) {
   const { kpis, normalizedTeamId } = getTeamKpis(teamId);
   if (!kpis || kpis.length === 0) return {};
-  const httpsAgent = createHttpsAgent();
   const results = {};
   for (const kpi of kpis) {
     const baseQuery = (kpi.baseQuery || '').trim();
@@ -164,7 +143,7 @@ async function getKpiResultBatch({ token, teamId }) {
       continue;
     }
     try {
-      const jql = await buildKpiCombinedJql(normalizedTeamId, baseQuery, token, httpsAgent);
+      const jql = await buildKpiCombinedJql(normalizedTeamId, baseQuery, token, null);
       if (!jql) {
         results[kpi.id] = { error: 'Could not resolve query' };
         continue;
@@ -185,8 +164,7 @@ async function getReleaseKpiResult({ token, releaseVersion, teamId, kpiId }) {
   if (!kpi) return { error: 'KPI_NOT_FOUND' };
   const baseQuery = (kpi.baseQuery || '').trim();
   if (!baseQuery) return { error: 'KPI_NO_BASE_QUERY' };
-  const httpsAgent = createHttpsAgent();
-  let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, token, httpsAgent, normalizedTeamId);
+  let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, token, null, normalizedTeamId);
   if (!jql) return { error: 'KPI_JQL_UNRESOLVED' };
   if (kpi.excludeDeferred) {
     jql = appendDeferredExclusion(jql, releaseVersion);
@@ -197,7 +175,6 @@ async function getReleaseKpiResult({ token, releaseVersion, teamId, kpiId }) {
 async function getReleaseKpiResultBatch({ token, releaseVersion, teamId }) {
   const { kpis } = getTeamKpis(teamId);
   if (!kpis || kpis.length === 0) return {};
-  const httpsAgent = createHttpsAgent();
   const results = {};
   for (const kpi of kpis) {
     const baseQuery = (kpi.baseQuery || '').trim();
@@ -206,7 +183,7 @@ async function getReleaseKpiResultBatch({ token, releaseVersion, teamId }) {
       continue;
     }
     try {
-      let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, token, httpsAgent, teamId);
+      let jql = await buildReleaseKpiCombinedJql(releaseVersion, baseQuery, token, null, teamId);
       if (!jql) {
         results[kpi.id] = { error: 'Could not resolve query (check release base filter)' };
         continue;
@@ -310,18 +287,12 @@ async function getIssueBreakdown({ token, jiraKey, jiraKeys }) {
     throw error;
   }
 
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(token);
   const jqlQuery = buildWorkItemsJql(projectKeys, { includeLinkedIssues: true });
   logger.jira.fetch(isBulkRequest ? `BULK[${projectKeys.join(',')}]` : projectKeys[0], 'FETCH_ISSUE_BREAKDOWN', `Fetching issue breakdown for ${isBulkRequest ? 'bulk' : 'single'} JIRA ${isBulkRequest ? 'tickets' : 'ticket'}`);
   let issues = [];
   try {
-    const response = await axios.get(JIRA_API_V2.SEARCH, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      httpsAgent,
+    const response = await jira.get(JIRA_API_V2.SEARCH, {
       timeout: 30000,
       params: { jql: jqlQuery, fields: 'key,summary,status,issuetype,parent', maxResults: 1000 }
     });

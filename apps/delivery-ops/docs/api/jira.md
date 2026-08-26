@@ -174,13 +174,35 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 
 ### POST /api/jira/release-versions
 
-**Purpose**: List all JIRA release versions for a product.
+**Purpose**: List unique fixVersions that appear on tickets in the selected team's `baseFilter`.
 
 **Auth**: required + `releaseVersions` permission
 
-**Request** — Body: `{ productId: string }`
+**Request** — Body: `{ teamId: string }` (required). No fallback to another team when missing or unknown.
 
-**Response**: `{ versions: [{ id, name, released, releaseDate }] }`
+**Server flow**
+`jira/versions.js` → `releaseDataService.listOpenReleaseVersions` → `listFixVersionsForTeam` → search `(${baseFilter}) AND (fixVersion is not EMPTY)` → unique names, join `released`/`releaseDate` from project versions → pick next upcoming `releaseDate` as `defaultVersion`
+
+**Response shape**
+```json
+{
+  "success": true,
+  "versions": [{ "name": "MSP-2.1", "released": false, "releaseDate": "2026-10-01" }],
+  "projectKey": "ERA",
+  "defaultVersion": "MSP-2.1",
+  "teamId": "prism-infra"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | teamId missing, unknown, or team has no `baseFilter` | Show Fetch / Admin error |
+| 429 | JIRA rate limit | Retry later |
+
+**Caching**: ~10 min per team on the server.
+
+> ⚠️ Breaking change in 2026-08-26: versions come from tickets in `team.baseFilter`, not project-version prefix/glob matching.
 
 ---
 
@@ -368,13 +390,21 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 
 ### POST /api/jira/release-items
 
-**Purpose**: Fetch the full 5-bucket engineering payload for a release. Core data source for Project Status page.
+**Purpose**: Live Feature/Initiative items for Project Status. Always JIRA; disk cache is ignored.
 
 **Auth**: required + `releaseVersions` permission
 
-**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+**Request** — Body: `{ fixVersions: string[], teamId: string }` (both required)
 
-**Response**: `{ items: [...], total, bucketCounts: { topLevelProjects, portfolioChildren, epicChildren, standaloneEpics, directTickets } }`
+**Server flow**  
+`jira/versions.js` → `releaseItemsDataService.fetchAllItemsAcrossVersions` → wrap `(${team.baseFilter}) AND (fixVersion = "…" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled`
+
+**Response**: `{ success: true, data: { allItems: [...] } }`
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | no team, no `baseFilter`, or empty `fixVersions` | Show Admin / Fetch error |
 
 ---
 

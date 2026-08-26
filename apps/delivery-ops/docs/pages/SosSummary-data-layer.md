@@ -4,14 +4,14 @@
 
 ### 1. `POST /api/jira/sos-items`
 
-**Purpose**: Fetch Feature and Initiative tickets grouped by release. Cache-first from the on-disk dataset; live JIRA only on Refresh All (`forceLive: true`) or when the cache is empty.
+**Purpose**: Fetch Feature and Initiative tickets grouped by release. Live JIRA first; disk only as 429 fallback.
 
-**When called**: Once on page load (cache), and on Refresh All (live, with cache fallback on 429).
+**When called**: Once on page load, and on Refresh All.
 
 **Request**:
 ```json
 {
-  "teamId": "ndb",
+  "teamId": "<selected team id>",
   "forceLive": false
 }
 ```
@@ -44,14 +44,9 @@
 ```
 
 **Server flow**:
-`sos.js` → `releaseItemsDataService.fetchSosItems()` → on-disk cache first → live JIRA only if cache empty or `forceLive` → on 429 fall back to cache
+`sos.js` → `releaseItemsDataService.fetchSosItems()` → live JIRA first → on 429 fall back to cache
 
-**JQL built** (live path only):
-```
-(${resolvedSosFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY fixVersion ASC, key ASC
-```
-
-**Caching**: Yes — release dataset on disk. Live JIRA on Refresh All.
+**Caching**: Disk only as 429 fallback.
 
 ---
 
@@ -209,11 +204,11 @@ Key fields used by the UI:
 
 ## Caching Strategy
 
-The page is routed through the shared `Layout` / `ReleaseDataProvider` (same chrome as other tabs). Feature/Initiative rows come from `sos-items`, which reads the on-disk dataset by default.
+The page is routed through the shared `Layout` / `ReleaseDataProvider`. Feature/Initiative rows come from `sos-items`, which hits JIRA first.
 
 | Data | Cache | TTL |
 |---|---|---|
-| sos-items (Features/Initiatives) | On-disk release dataset; live JIRA on Refresh All | Until next Sync Hub run / Refresh All |
+| sos-items (Features/Initiatives) | Live JIRA; disk on 429 | 5 min client / until Refresh |
 | sos-items-history (CC/CG/PG hops) | In-memory in `useSosHistory`; fetched after items load unless degraded | Until page refresh |
 | Task breakdowns | In-memory Map in `useSosItems` hook | 5 min (same as Project Status) |
 | KPI widget results | In-memory state in component | Until page refresh |

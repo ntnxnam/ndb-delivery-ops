@@ -1,8 +1,8 @@
 /**
  * useSosItems — data hook for the SoS Summary page.
  *
- * Makes a single POST /api/jira/sos-items call (cache-first; forceLive
- * on Refresh All). Returns { byVersion, source, degraded, lastSyncIso }.
+ * Makes a single POST /api/jira/sos-items call (live JIRA first).
+ * Returns { byVersion, source, degraded, lastSyncIso }.
  *
  * No release version list required from the client — zero dependency on
  * useReleaseVersions / SelectedReleaseContext.
@@ -48,7 +48,7 @@ export function useSosItems() {
     }
   }, []);
 
-  const fetchAll = useCallback(async (teamId = 'ndb', { forceLive = false } = {}) => {
+  const fetchAll = useCallback(async (teamId, { forceLive = false } = {}) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
@@ -76,7 +76,7 @@ export function useSosItems() {
       // Live JIRA follow-on calls (breakdowns) only after a live fetch.
       // After a 429, firing them immediately re-trips the rate limit.
       const allKeys = Object.values(data).flat().map((i) => i.key).filter(Boolean);
-      if (forceLive && payload.source === 'jira' && allKeys.length > 0) {
+      if (payload.source === 'jira' && allKeys.length > 0) {
         fetchBreakdowns(allKeys, jiraToken, username);
       }
     } catch (err) {

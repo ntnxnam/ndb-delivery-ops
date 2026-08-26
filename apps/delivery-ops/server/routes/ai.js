@@ -39,7 +39,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
     message,
     history = [],
     release = null,
-    productId = 'ndb',
+    productId = '',
     audience = 'tpm',
     sessionId = null,
     availableReleases = [],

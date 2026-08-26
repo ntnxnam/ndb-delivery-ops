@@ -1,7 +1,6 @@
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
 const logger = require('../utils/logger');
-const { createHttpsAgent, retryJiraCall } = require('./jiraService');
+const { getJira } = require('../utils/jiraClient');
 const releaseItemsService = require('./releaseItemsDataService');
 const { buildCommitItemsJQL, buildLongTermItemsJQL } = require('../utils/jiraQueryUtils');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
@@ -11,13 +10,12 @@ const { formatDate } = require('../utils/dateFormatter');
 async function getReleaseCommitItems(fixVersion, jiraToken) {
   const requestId = `exec-commit-${Date.now()}`;
   const cleanToken = jiraToken?.replace(/^Bearer\s+/i, '') || jiraToken;
-  const httpsAgent = createHttpsAgent();
   try {
     const teams = teamBoardConfig.teams || [];
     const team = teams.find((t) => t.id === teamBoardConfig.defaultTeamId) || teams[0];
     const jql = buildCommitItemsJQL(fixVersion, team);
-    const allIssues = await releaseItemsService._internals.fetchReleaseItemsFromJira(jql, cleanToken, httpsAgent, requestId);
-    const items = await releaseItemsService._internals.processReleaseItems(allIssues, cleanToken, httpsAgent, requestId, team?.boardId);
+    const allIssues = await releaseItemsService._internals.fetchReleaseItemsFromJira(jql, cleanToken, null, requestId);
+    const items = await releaseItemsService._internals.processReleaseItems(allIssues, cleanToken, null, requestId, team?.boardId);
     return { items, success: true };
   } catch (error) {
     return { items: [], success: false, error: error.message };
@@ -27,13 +25,12 @@ async function getReleaseCommitItems(fixVersion, jiraToken) {
 async function getReleaseLongTermItems(fixVersion, jiraToken) {
   const requestId = `exec-longterm-${Date.now()}`;
   const cleanToken = jiraToken?.replace(/^Bearer\s+/i, '') || jiraToken;
-  const httpsAgent = createHttpsAgent();
   try {
     const teams = teamBoardConfig.teams || [];
     const team = teams.find((t) => t.id === teamBoardConfig.defaultTeamId) || teams[0];
     const jql = buildLongTermItemsJQL(fixVersion, team);
-    const allIssues = await releaseItemsService._internals.fetchReleaseItemsFromJira(jql, cleanToken, httpsAgent, requestId);
-    const items = await releaseItemsService._internals.processReleaseItems(allIssues, cleanToken, httpsAgent, requestId, team?.boardId);
+    const allIssues = await releaseItemsService._internals.fetchReleaseItemsFromJira(jql, cleanToken, null, requestId);
+    const items = await releaseItemsService._internals.processReleaseItems(allIssues, cleanToken, null, requestId, team?.boardId);
     return { items, success: true };
   } catch (error) {
     return { items: [], success: false, error: error.message };
@@ -48,12 +45,11 @@ async function fetchExecSummaryIssues(jiraToken, jqlQuery) {
     getFieldId('codeComplete'), getFieldId('commitGate'), getFieldId('promotionGate'),
     getFieldId('riskIndicator'), teamBoardConfig.sprintFieldId, getFieldId('tpmOwner')
   ].filter(Boolean).join(',');
-  const response = await retryJiraCall(() => axios.get(JIRA_API_V2.SEARCH, {
-    headers: { Authorization: `Bearer ${cleanToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    httpsAgent: createHttpsAgent(),
+  const jira = await getJira(cleanToken);
+  const response = await jira.get(JIRA_API_V2.SEARCH, {
     timeout: 30000,
     params: { jql: jqlQuery, fields, maxResults: 1000 }
-  }));
+  });
   return response.data.issues || [];
 }
 
@@ -104,7 +100,7 @@ async function buildSprintGanttData({ jiraKey, jiraData, epics, token }) {
   if (!jiraKey) throw Object.assign(new Error('JIRA key is required'), { statusCode: 400 });
   const cleanToken = token;
   const baseUrl = JIRA_API_V2.BASE_URL;
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(cleanToken);
   logger.jira.fetch(jiraKey, 'SPRINT_GANTT_DATA', 'Fetching sprint Gantt data');
   let allTickets = [];
   if (epics && Array.isArray(epics)) {
@@ -117,14 +113,13 @@ async function buildSprintGanttData({ jiraKey, jiraData, epics, token }) {
   if (allTickets.length === 0 && jiraData) {
     const sprintFieldA = getFieldId('sprint') || 'customfield_10020';
     const sprintFieldB = getFieldId('sprints') || 'customfield_10021';
-    const childResponse = await axios.get(`${baseUrl}/rest/api/2/search`, {
+    const childResponse = await jira.get(`${baseUrl}/rest/api/2/search`, {
+      timeout: 30000,
       params: {
         jql: `parent = "${jiraKey}" OR "Epic Link" = "${jiraKey}"`,
         maxResults: 200,
         fields: `summary,status,assignee,issueType,sprint,${sprintFieldA},${sprintFieldB}`
       },
-      headers: { Authorization: `Bearer ${cleanToken}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-      httpsAgent
     });
     allTickets = (childResponse.data?.issues || []).map((issue) => ({
       key: issue.key,
@@ -157,9 +152,8 @@ async function buildSprintGanttData({ jiraKey, jiraData, epics, token }) {
       }
       if (sprintId && !sprintCache.has(sprintId)) {
         try {
-          const sprintResponse = await axios.get(`${baseUrl}/rest/agile/1.0/sprint/${sprintId}`, {
-            headers: { Authorization: `Bearer ${cleanToken}`, Accept: 'application/json' },
-            httpsAgent
+          const sprintResponse = await jira.get(`${baseUrl}/rest/agile/1.0/sprint/${sprintId}`, {
+            timeout: 30000,
           });
           sprintCache.set(sprintId, {
             id: sprintId,

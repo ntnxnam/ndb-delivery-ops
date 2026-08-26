@@ -1,5 +1,6 @@
 const path = require('path');
 const syncLocking = require('../utils/syncLocking');
+const { isUnreleasedVersion } = require('../utils/teamScope');
 
 const PRODUCT_CONFIG_PATH = path.resolve(
   __dirname,
@@ -98,11 +99,10 @@ class SyncScheduler {
       const cache = new ReleaseDatasetCache({ cacheDir: RELEASE_DATASET_CACHE_DIR, productId });
 
       const allProjectVersions = await jira.getProjectVersions(projectKey);
-      const activeVersionNames = productService.getActiveVersionNames(productId);
       const jiraReleases = allProjectVersions
-        .filter((v) => !v.archived && v.name.startsWith(productPrefix))
+        .filter(isUnreleasedVersion)
         .map((v) => v.name);
-      const releasesToSync = Array.from(new Set([...jiraReleases, ...activeVersionNames])).sort();
+      const releasesToSync = Array.from(new Set(jiraReleases)).sort();
       if (!releasesToSync.length) {
         return { success: false, skipped: true, reason: 'no releases found to sync' };
       }
@@ -137,6 +137,7 @@ class SyncScheduler {
         changelogConcurrency: 1,
         fetchOptions: { concurrency: 1 },
         onProgress: () => {},
+        baseFilter: product.baseFilter,
       });
 
       return {

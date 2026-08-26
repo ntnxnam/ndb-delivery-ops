@@ -1,12 +1,15 @@
 const axios = require('axios');
+const https = require('https');
 const { JIRA_API_V2 } = require('../config/api');
-const { createHttpsAgent } = require('./jiraService');
+const { getJira } = require('../utils/jiraClient');
 const { buildCommitItemsJQL } = require('../utils/jiraQueryUtils');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
 const { processAllMilestones } = require('../utils/milestoneProcessor');
 const { getFieldId, getFieldValue, buildFieldIdsString } = require('../utils/jiraFieldsConfig');
 const { formatDate } = require('../utils/dateFormatter');
 const execSummaryService = require('./execSummaryService');
+
+const naiHttpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 function analyzeProjectRisk(jiraItem) {
   const fields = jiraItem.fields || {};
@@ -168,11 +171,10 @@ async function generateAiVpReport({ version, naiApiKey, jiraToken }) {
   try {
     const commitJQL = buildCommitItemsJQL(version);
     const fields = `key,summary,status,priority,assignee,${buildFieldIdsString(['riskIndicator','codeComplete','commitGate','promotionGate','statusUpdate','statusUpdateDate','qaContact','testLead','tpmOwner','requirementsLink','tcmsLink'])}`;
-    const commitResponse = await axios.get(JIRA_API_V2.SEARCH, {
-      headers: { Authorization: `Bearer ${jiraToken}`, 'Content-Type': 'application/json' },
+    const jira = await getJira(jiraToken);
+    const commitResponse = await jira.get(JIRA_API_V2.SEARCH, {
+      timeout: 30000,
       params: { jql: commitJQL, fields, maxResults: 1000 },
-      httpsAgent: createHttpsAgent(),
-      timeout: 30000
     });
     const rawItems = commitResponse.data?.issues || [];
     rawItems.forEach((item) => {
@@ -242,7 +244,7 @@ async function generateAiVpReport({ version, naiApiKey, jiraToken }) {
     {
       headers: { Authorization: `Bearer ${naiApiKey}`, 'Content-Type': 'application/json' },
       timeout: 60000,
-      httpsAgent: createHttpsAgent()
+      httpsAgent: naiHttpsAgent
     }
   );
   if (!naiResponse.data?.choices?.[0]?.message?.content) throw new Error('NAI API returned no content');

@@ -67,43 +67,16 @@ function buildCache(productId, shared) {
 }
 
 /**
- * Fetch the list of releases for a product from the JIRA release-versions API.
- *
- * Includes a version when it is non-archived AND matches EITHER:
- *   - name starts with `productPrefix` (e.g. "NDB-")
- *   - name is in `activeVersionNames` (exact match, e.g. "master", "Era Future")
- *
- * Returns an empty array on failure (sync can still run; it will just have no
- * releases to process, and the caller should surface an error upstream).
+ * Fetch the list of releases for a team from tickets in that team's baseFilter.
+ * Prefix/glob name matching is not used.
  */
-async function fetchReleasesForProduct(jira, projectKey, productPrefix, activeVersionNames = []) {
-  try {
-    const versions = await jira.getProjectVersions(projectKey);
-    const activeSet = new Set(activeVersionNames);
-
-    const all = (versions || [])
-      .filter((v) => !v.archived)
-      .map((v) => v.name)
-      .filter(Boolean);
-
-    const filtered = all.filter((name) => {
-      if (productPrefix && name.startsWith(productPrefix)) return true;
-      if (activeSet.has(name)) return true;
-      return false;
-    });
-
-    console.log(
-      `[releaseSync] ${projectKey}: ${all.length} non-archived versions → ` +
-      `${filtered.length} matching prefix "${productPrefix ?? '(none)'}"` +
-      (activeVersionNames.length
-        ? ` or pinned names [${activeVersionNames.join(', ')}]`
-        : '')
-    );
-    return filtered;
-  } catch (e) {
-    console.warn(`[releaseSync] fetchReleasesForProduct failed for ${projectKey}:`, e?.message);
-    return [];
-  }
+async function fetchReleasesForProduct(jira, product, listFixVersionsForTeam) {
+  const versions = await listFixVersionsForTeam(product, jira);
+  const names = (versions || []).map((v) => v.name).filter(Boolean);
+  console.log(
+    `[releaseSync] ${product.id || product.projectKey}: ${names.length} fixVersions from baseFilter`
+  );
+  return names;
 }
 
 /**
@@ -133,7 +106,7 @@ function sseWrite(res, payload) {
  */
 router.get('/sync-status', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
 
     const shared = await getShared();
     const cache = buildCache(productId, shared);
@@ -188,7 +161,7 @@ router.get('/sync-status', auth, async (req, res) => {
  *   { type: 'error', message: string }
  */
 router.post('/sync', auth, async (req, res) => {
-  const productId = (req.query.productId || req.body?.productId || 'ndb').toString();
+  const productId = (req.query.productId || req.body?.productId || '').toString();
 
   // Guard: only one sync at a time per server process.
   if (_syncState.isSyncing) {
@@ -221,6 +194,7 @@ router.post('/sync', auth, async (req, res) => {
       loadEnv,
       getProductService,
       syncReleaseDataset,
+      listFixVersionsForTeam,
     } = shared;
 
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -237,9 +211,6 @@ router.post('/sync', auth, async (req, res) => {
     const productPrefix = productService.getReleasePrefix
       ? productService.getReleasePrefix(productId)
       : productId.toUpperCase();
-    const activeVersionNames = productService.getActiveVersionNames
-      ? productService.getActiveVersionNames(productId)
-      : [];
     let sprintCalendar;
     try {
       sprintCalendar = productService.getSprintCalendar(productId);
@@ -251,6 +222,14 @@ router.post('/sync', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
+    if (!(product.baseFilter || '').trim()) {
+      sseWrite(res, {
+        type: 'error',
+        message: `Team "${productId}" has no baseFilter in Admin. Set the team base filter, then Fetch again.`,
+      });
+      return res.end();
+    }
+
     // Determine which releases to sync.
     const forceReleasesParam = (req.query.forceReleases || req.body?.forceReleases || '').toString();
     const forceReleases = forceReleasesParam
@@ -261,13 +240,13 @@ router.post('/sync', auth, async (req, res) => {
 
     // Fetch release list from JIRA so we know what to process.
     sseWrite(res, { type: 'progress', release: '__meta__', status: 'fetching', detail: 'Fetching release list from JIRA…' });
-    const releases = await fetchReleasesForProduct(jira, projectKey, productPrefix, activeVersionNames);
+    const releases = await fetchReleasesForProduct(jira, product, listFixVersionsForTeam);
 
     if (releases.length === 0) {
       sseWrite(res, {
         type: 'error',
-        message: `No releases found for project ${projectKey} with prefix "${productPrefix}". ` +
-          `Check the product config or try with forceReleases set explicitly.`,
+        message: `No fixVersions found on tickets in this team's baseFilter. ` +
+          `Check Admin baseFilter or try with forceReleases set explicitly.`,
       });
       return res.end();
     }
@@ -276,7 +255,7 @@ router.post('/sync', auth, async (req, res) => {
       type: 'progress',
       release: '__meta__',
       status: 'fetching',
-      detail: `Found ${releases.length} releases (${productPrefix}*). Starting sync — this may take several minutes…`,
+      detail: `Found ${releases.length} releases from the team baseFilter. Starting sync — this may take several minutes…`,
     });
 
     const cache = buildCache(productId, shared);
@@ -289,6 +268,7 @@ router.post('/sync', auth, async (req, res) => {
       sprintCalendar,
       forceReleases,
       skipChangelog,
+      baseFilter: product.baseFilter,
       onProgress: (event) => {
         sseWrite(res, { type: 'progress', ...event });
       },
@@ -334,7 +314,7 @@ router.post('/sync', auth, async (req, res) => {
  */
 router.get('/bundle', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
 
     const shared = await getShared();
     const { CACHE_SCHEMA } = shared;
@@ -404,7 +384,7 @@ router.get('/bundle', auth, async (req, res) => {
  */
 router.delete('/cache', auth, async (req, res) => {
   try {
-    const productId = (req.query.productId || 'ndb').toString();
+    const productId = (req.query.productId || '').toString();
     const mode = (req.query.mode || 'bundle').toString();
 
     if (_syncState.isSyncing && _syncState.productId === productId) {

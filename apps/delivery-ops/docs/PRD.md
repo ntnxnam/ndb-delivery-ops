@@ -76,7 +76,6 @@ Portfolio Delivery Ops is an internal Nutanix delivery-operations platform that 
 | **Release Retrospective** | Gate compliance "naughty list"; per-project violation detail |
 | **Generic Emailer** | Run JQL → select columns → send email |
 | **KPI Dashboard** | Team-scoped KPI metrics with JIRA click-throughs |
-| **Sync Hub** | Release dataset sync control; per-release bucket status |
 | **AI Chat** | Embedded conversational AI; release Q&A backed by dataset |
 | **AI Exec Summary** | Per-feature AI summary written to JIRA custom field |
 | **AI Release Briefing** | Release-level RAG verdict + blockers + 7-day action list |
@@ -144,17 +143,12 @@ Portfolio Delivery Ops is an internal Nutanix delivery-operations platform that 
 | REQ-RVS-012 | Email generation: frontend builds table HTML, backend wraps with header + notes + legend + Gantt SVG |
 | REQ-RVS-013 | Changelog pagination: when `changelog.total > changelog.histories.length`, fetch all pages using 3-strategy fallback |
 
-### 5.4 Release Dataset & Sync Hub
+### 5.4 Release Dataset (live)
 
 | ID | Requirement |
 |---|---|
-| REQ-DS-001 | Full 6-bucket JIRA payload fetched and cached to disk (`shared/.cache/`) per release |
-| REQ-DS-002 | Three groups: Group 1 (committed), Group 2 (moved-out), Group 3 (long-term-funded) |
-| REQ-DS-003 | Sync Hub page shows per-release, per-bucket cache freshness table |
-| REQ-DS-004 | Manual sync triggered from UI; progress streamed via SSE |
-| REQ-DS-005 | Cell-level sync: re-fetch one bucket for one release without full sync |
-| REQ-DS-006 | Cache TTL: `bundle.meta.json` records last-synced timestamp; UI shows staleness age |
-| REQ-DS-007 | Release dataset served from cache at all times; "Refresh" button for live data (D11) |
+| REQ-DS-001 | Pages fetch live JIRA on load, scoped to the team's `baseFilter` |
+| REQ-DS-007 | In-memory TTL 5 minutes; Refresh re-hits the same live endpoints (D11). Sync Hub UI is removed. |
 
 ### 5.5 Sprint Report
 
@@ -307,7 +301,7 @@ Chrome ≥ 120, Firefox ≥ 120, Safari ≥ 17, Edge ≥ 120.
 | AC-001 | Email send | Email delivered within 30 seconds; CC contains `namratha.singh@nutanix.com`; audit entry written |
 | AC-002 | Release table | All committed items for selected release shown; dates color-coded correctly; extension labels highlighted |
 | AC-003 | Gantt accuracy | Code Complete bar ends at current CC date; historical markers match JIRA changelog (including paginated) |
-| AC-004 | Dataset sync | All 6 buckets complete; `bundle.json` and `bundle.meta.json` updated; Sync Hub shows fresh timestamp |
+| AC-004 | Live fetch | Project Status and Release Brief load without a prior Sync Hub visit |
 | AC-005 | Sprint velocity | Three velocity streams shown as separate bars; sprint order is S1, S2, … numeric; every bar links to JIRA |
 | AC-006 | AI RAG verdict | Verdict follows deterministic rules (P0 open → RED, no exceptions); panel border is neutral; badge appears once |
 | AC-007 | Ticket key integrity | No AI-generated output contains a JIRA key that was not in the source data |

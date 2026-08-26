@@ -35,28 +35,39 @@
 
 ### GET /api/release-dataset/per-release/:release
 
-**Purpose**: Return the full pre-computed dataset for a single release from the disk bundle.
+**Purpose**: Fetch one release live from JIRA (`fetchReleaseData` wrapped with the team's `baseFilter`). Page reads do not write through to disk.
 
 **Auth**: required
 
 **Request**
 - Path: `release` (string) — e.g. `NDB-2.11`
-- Query: `productId` (string, required)
+- Query: `productId` (string, required) — team id in `teamBoardConfig.json`
 
 **Server flow**  
-Reads `shared/.cache/release-dataset/{productId}/per_release/{release}.json` from disk.
+`releaseDataset.js` → `releaseLiveDatasetService.fetchLivePerRelease` → `productService.getProduct` (require `baseFilter`) → `fetchReleaseData` with `wrapTeamScope` on every Wave JQL → optional `cache.saveRelease`
 
 **Response**
 ```json
-{ "success": true, "data": { /* full release bundle */ }, "meta": { "cachedAt": "..." } }
+{
+  "success": true,
+  "data": {
+    "release": "NDB-2.11",
+    "tickets": [{ "Issue Key": "ERA-1" }],
+    "meta": { "fetchedAtIso": "2026-08-26T15:00:00.000Z", "source": "jira", "ticketCount": 1 }
+  }
+}
 ```
 
 **Error responses**
 | Code | When | Client should |
 |------|------|---------------|
-| 404 | Release not in cache | Fall back to live fetch |
+| 400 | `productId` missing, unknown team, or team has no `baseFilter` | Show Admin / Fetch error |
+| 401 | JIRA token missing | Redirect to login |
+| 502/500 | JIRA fetch failed | Retry |
 
-**Caching**: Disk bundle. TTL: 24 h; refresh via `/sync`.
+**Caching**: 5-minute in-memory TTL on the client (`ReleaseDataContext`). Server hits JIRA on each uncached request. No disk write-through on this path.
+
+> ⚠️ Breaking change in 2026-08-26: this endpoint is no longer disk-only. Empty disk does **not** return `404 not_cached`. It hits JIRA. `reason: not_cached` is gone.
 
 ---
 
@@ -342,12 +353,15 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk rea
 
 ### GET /api/release-dataset/sync-status
 
-**Purpose**: Return bundle and per-release cache metadata without making JIRA calls. Used by SyncHubPage to render per-release tick/refresh status and by TeamDatasetContext on mount.
+**Purpose**: Return bundle metadata plus a version grid. **Unused by the UI** after Sync Hub was removed. Version names come from `listFixVersionsForTeam` (tickets in `baseFilter`). Missing `productId` is 400 — never a silent default of another team.
 
 **Auth**: required
 
 **Request**
 - Query: `productId` (string, required)
+
+**Server flow**
+`releaseDataset.js` → disk `ReleaseDatasetCache` meta → `listLiveFixVersions` / `listFixVersionsForTeam` (merged into `cachedReleases`) → scheduler status
 
 **Response**
 ```json
@@ -378,7 +392,7 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk rea
 > ⚠️ Breaking change 2026-06-17: `releaseMeta[rel]` now includes `buckets: Record<string, { count: number, fetchedAtIso: string }> | null` — per-bucket ticket counts and last-fetch timestamps for the 7-column SyncHub UI.
 > ⚠️ Behaviour change 2026-08-25: cell sync (`saveRelease` with `stampBuckets`) updates only the fetched bucket's `fetchedAtIso`. Sibling bucket ages and release-level `fetchedAtIso` (History column) stay as they were. Empty Group-1 buckets persist as `count: 0` instead of being omitted.
 
-**Caching**: Reads `bundle.meta.json` and `per_release/*.meta.json` from disk — no JIRA calls.
+**Caching**: Disk meta from `bundle.meta.json` and `per_release/*.meta.json`. Version names are live (`listFixVersionsForTeam`, ~10 min per team) merged with disk.
 
 ---
 
@@ -442,7 +456,7 @@ data: {"type":"done","releases":["NDB-2.11"],"numTickets":1253,"timingMs":45000}
 
 ### POST /api/release-dataset/refresh-now
 
-**Purpose**: Trigger an immediate scheduler-backed live refresh of release dataset cache (JSON response, no SSE stream). Used by dashboard-level "Refresh Now" actions on Project Status and Sprint Report. **Not used by Sync Hub** (use Full Sync / cell sync instead — those stream progress).
+**Purpose**: Trigger an immediate scheduler-backed live refresh of the release dataset cache (JSON response, no SSE stream). **Not used by the UI.** Pages Refresh by busting in-memory TTL and re-hitting live endpoints.
 
 **Auth**: required
 

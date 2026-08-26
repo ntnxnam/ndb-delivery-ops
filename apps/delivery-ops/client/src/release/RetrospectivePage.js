@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
-import { useTeamDataset } from '../hooks/useTeamDataset';
+import { useReleaseData } from '../contexts/ReleaseDataContext';
 import { useRetrospective } from './hooks/useRetrospective';
 import { deriveQualityMetricsFromBundle } from './utils/bundleUtils';
 import { jiraSearchUrl } from './services/retrospectiveService';
@@ -118,7 +118,7 @@ function computeSlip(actualDate, plannedDate) {
 export default function RetrospectivePage() {
   const { selectedTeamId, selectedTeam } = useTeam();
   const { jiraBaseUrl } = useJiraConfig();
-  const { bundle } = useTeamDataset();
+  const { releaseTickets } = useReleaseData();
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || '';
   const team = selectedTeam;
@@ -146,7 +146,7 @@ export default function RetrospectivePage() {
     teamId: selectedTeamId,
     jiraToken,
     username,
-    productId: team?.id || 'ndb',
+    productId: team?.id || '',
     topN: 10,
   });
 
@@ -191,8 +191,8 @@ export default function RetrospectivePage() {
   }, [retro, jiraBaseUrl]);
 
   const qualityMetrics = useMemo(
-    () => deriveQualityMetricsFromBundle(bundle, selectedRelease),
-    [bundle, selectedRelease]
+    () => deriveQualityMetricsFromBundle({ tickets: releaseTickets }, selectedRelease),
+    [releaseTickets, selectedRelease]
   );
 
   const naughtyWithUrls = useMemo(() => {
@@ -231,7 +231,7 @@ export default function RetrospectivePage() {
           <div className="retro-header">
             <div>
               <h2>Release Retrospective</h2>
-              <div className="retro-hint">Team: {team?.name || 'NDB'}</div>
+              <div className="retro-hint">Team: {team?.name || '—'}</div>
             </div>
             <div className="retro-actions">
               <label htmlFor="retro-release-select">Release</label>

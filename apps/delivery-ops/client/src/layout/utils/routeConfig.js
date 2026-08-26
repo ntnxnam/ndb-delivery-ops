@@ -124,16 +124,6 @@ export const routeConfig = {
       icon: '📈'
     },
     {
-      path: '/sync-hub',
-      exact: true,
-      component: 'SyncHubPage',
-      title: 'Sync Hub',
-      description: 'JIRA dataset sync status and manual refresh',
-      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
-      showInNav: true,
-      icon: '🔄'
-    },
-    {
       path: '/sos-summary',
       exact: true,
       component: 'SosSummaryPage',

@@ -4,6 +4,7 @@ import { ToastContainer } from '../../shared/components/Toast';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 import { useReleaseData } from '../../contexts/ReleaseDataContext';
+import { useTeam } from '../../contexts/TeamContext';
 
 function JiraConnectivityBanner() {
   const { jiraUnreachable: unreachableFromSelected } = useSelectedRelease();
@@ -53,6 +54,7 @@ function JiraConnectivityBanner() {
 }
 
 export const Layout = ({ children, wide = false }) => {
+  const { selectedTeamId, teamEpoch } = useTeam();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved !== null ? JSON.parse(saved) : false;
@@ -97,7 +99,9 @@ export const Layout = ({ children, wide = false }) => {
       >
         <JiraConnectivityBanner />
         <ErrorBoundary>
-          {children}
+          <div key={`${selectedTeamId || 'none'}:${teamEpoch}`}>
+            {children}
+          </div>
         </ErrorBoundary>
       </main>
       

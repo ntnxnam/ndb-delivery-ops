@@ -17,16 +17,13 @@
  * Extracted from server/routes/jira/index.js during Phase 2b.1e.
  */
 
-const axios = require('axios');
 const { JIRA_API_V2 } = require('../config/api');
 const logger = require('../utils/logger');
 const {
-  createHttpsAgent,
-  retryJiraCall,
-  jiraHeaders,
   makeJiraSearchFetcher,
   wrapJiraError,
-} = require('./jiraService');
+  getJira,
+} = require('../utils/jiraClient');
 const { getAllItemKeysForVersion } = require('../utils/jiraQueryUtils');
 const { fetchAllChangelogHistories } = require('../utils/changelogPagination');
 const { upstreamStatus, resolveTeam } = require('../utils/jiraRouteHelpers');
@@ -54,20 +51,15 @@ async function updateExecutiveSummary(jiraToken, { jiraKey, executiveSummary } =
     throw err;
   }
 
-  const httpsAgent = createHttpsAgent();
-  const baseUrl = JIRA_API_V2.BASE_URL;
-  const updateUrl = `${baseUrl}/rest/api/2/issue/${jiraKey}`;
+  const jira = await getJira(jiraToken);
+  const updateUrl = `/rest/api/2/issue/${jiraKey}`;
   const updatePayload = {
     // Empty string -> null clears the field in JIRA
     fields: { customfield_38460: executiveSummary || null },
   };
 
   try {
-    await retryJiraCall(() => axios.put(updateUrl, updatePayload, {
-      headers: jiraHeaders(jiraToken),
-      httpsAgent,
-      timeout: 30000,
-    }));
+    await jira.put(updateUrl, updatePayload, { timeout: 30000 });
     return { jiraKey, message: 'Executive summary updated successfully' };
   } catch (error) {
     const wrapped = wrapJiraError(error, 'Failed to update executive summary');
@@ -93,7 +85,7 @@ async function getRiskIndicatorChanges(jiraToken, { fixVersion, teamId } = {}) {
     throw err;
   }
   const baseUrl = JIRA_API_V2.BASE_URL;
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(jiraToken);
   const { team } = resolveTeam(teamId);
 
   // Legacy /risk-indicator-changes used 500ms between pages (vs 200ms default)
@@ -108,13 +100,11 @@ async function getRiskIndicatorChanges(jiraToken, { fixVersion, teamId } = {}) {
 
   for (const jiraKey of itemKeys) {
     try {
-      const issueUrl = `${baseUrl}/rest/api/2/issue/${jiraKey}`;
-      const issueResponse = await retryJiraCall(() => axios.get(issueUrl, {
-        headers: jiraHeaders(jiraToken),
-        httpsAgent,
+      const issueUrl = `/rest/api/2/issue/${jiraKey}`;
+      const issueResponse = await jira.get(issueUrl, {
         timeout: 6000,
         params: { expand: 'changelog', fields: 'summary' },
-      }));
+      });
       const issue = issueResponse.data;
       const summary = (issue.fields && issue.fields.summary) || jiraKey;
 
@@ -123,8 +113,8 @@ async function getRiskIndicatorChanges(jiraToken, { fixVersion, teamId } = {}) {
         jiraKey,
         issue.id || null,
         jiraToken,
-        httpsAgent,
-        retryJiraCall,
+        null,
+        null,
         logger,
         issue
       );

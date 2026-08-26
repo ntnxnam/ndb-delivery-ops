@@ -1,8 +1,7 @@
 /**
  * useSosHistory — fetches checkpoint-field date history for all SoS items.
  *
- * Calls POST /api/jira/sos-items-history (which resolves the ndb-all-sos filter
- * server-side and returns CC/CG/PG change history per item key).
+ * Calls POST /api/jira/sos-items-history (team sosBaseFilter or baseFilter).
  *
  * No fixVersion or item keys needed from the client — the server owns the
  * filter resolution the same way /sos-items does.
@@ -16,7 +15,7 @@ export function useSosHistory() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState(null);
 
-  const fetchHistory = useCallback(async (teamId = 'ndb') => {
+  const fetchHistory = useCallback(async (teamId) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 

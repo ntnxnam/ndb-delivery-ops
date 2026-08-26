@@ -1,18 +1,14 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTeam } from './TeamContext';
 import { listReleaseVersions, fetchGateTimeline, pickDefaultRelease } from '../release/services/releaseBriefService';
 
 /**
- * A version name is considered "allowed" if it belongs to the NDB product
- * namespace or is one of the two pinned special versions.
- *
- * Centralised here so every consumer (FeatureDashboard, ReleaseVersionSelector,
- * etc.) uses the same rule instead of each duplicating it.
+ * The server lists fixVersions that appear on tickets in the team's baseFilter.
+ * Trust that list — do not re-filter to a product prefix.
  */
 export function isAllowedVersion(v) {
   const name = typeof v === 'string' ? v : v?.name;
-  if (!name) return false;
-  return name.toUpperCase().startsWith('NDB-') || name === 'master' || name === 'Era Future';
+  return Boolean(name);
 }
 
 function isJiraUnreachable(err) {
@@ -41,7 +37,7 @@ function readVersionsCache(teamId) {
     versionsCache.delete(teamId);
     return null;
   }
-  return entry.versions;
+  return { versions: entry.versions, defaultVersion: entry.defaultVersion || null };
 }
 
 function readGateCache(release) {
@@ -56,11 +52,13 @@ function readGateCache(release) {
 }
 
 export function SelectedReleaseProvider({ children }) {
-  const { selectedTeamId, selectedTeam, hasTeamSelected } = useTeam();
+  const { selectedTeamId, selectedTeam, hasTeamSelected, teamEpoch } = useTeam();
+  const loadedEpochRef = useRef(0);
+  const loadedTeamIdRef = useRef(selectedTeamId);
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
-  const [versions, setVersions] = useState(() => readVersionsCache(selectedTeamId) || []);
+  const [versions, setVersions] = useState(() => readVersionsCache(selectedTeamId)?.versions || []);
   const [selectedRelease, setSelectedReleaseState] = useState(() => localStorage.getItem(RELEASE_STORAGE_KEY) || '');
   const [gateTimeline, setGateTimeline] = useState(null);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -81,13 +79,13 @@ export function SelectedReleaseProvider({ children }) {
   const loadVersions = useCallback(async (force = false) => {
     if (!hasTeamSelected || !selectedTeamId || !jiraToken) {
       setVersions([]);
-      return [];
+      return { versions: [], defaultVersion: null };
     }
 
     if (!force) {
       const cached = readVersionsCache(selectedTeamId);
       if (cached) {
-        setVersions(cached);
+        setVersions(cached.versions);
         return cached;
       }
     } else {
@@ -98,7 +96,7 @@ export function SelectedReleaseProvider({ children }) {
     if (existing) {
       try {
         const data = await existing;
-        setVersions(data);
+        setVersions(data.versions);
         return data;
       } catch (err) {
         setVersions([]);
@@ -106,9 +104,9 @@ export function SelectedReleaseProvider({ children }) {
           setJiraUnreachable(true);
           setVersionsError('Cannot reach JIRA — check your VPN connection.');
         } else {
-          setVersionsError(err?.message || 'Failed to load release versions');
+          setVersionsError(err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Failed to load release versions');
         }
-        return [];
+        return { versions: [], defaultVersion: null };
       }
     }
 
@@ -116,13 +114,14 @@ export function SelectedReleaseProvider({ children }) {
     setVersionsError('');
     const promise = (async () => {
       try {
-        const { versions: fetched } = await listReleaseVersions({
+        const { versions: fetched, defaultVersion } = await listReleaseVersions({
           teamId: selectedTeamId,
           jiraToken,
           username,
         });
-        versionsCache.set(selectedTeamId, { versions: fetched, fetchedAt: Date.now() });
-        return fetched;
+        const payload = { versions: fetched, defaultVersion: defaultVersion || null, fetchedAt: Date.now() };
+        versionsCache.set(selectedTeamId, payload);
+        return payload;
       } finally {
         versionsInFlight.delete(selectedTeamId);
       }
@@ -130,19 +129,19 @@ export function SelectedReleaseProvider({ children }) {
 
     versionsInFlight.set(selectedTeamId, promise);
     try {
-      const fetched = await promise;
-      setVersions(fetched);
+      const payload = await promise;
+      setVersions(payload.versions);
       setJiraUnreachable(false);
-      return fetched;
+      return payload;
     } catch (err) {
       setVersions([]);
       if (isJiraUnreachable(err)) {
         setJiraUnreachable(true);
         setVersionsError('Cannot reach JIRA — check your VPN connection.');
       } else {
-        setVersionsError(err?.message || 'Failed to load release versions');
+        setVersionsError(err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Failed to load release versions');
       }
-      return [];
+      return { versions: [], defaultVersion: null };
     } finally {
       setLoadingVersions(false);
     }
@@ -220,14 +219,33 @@ export function SelectedReleaseProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+    const teamChanged = selectedTeamId !== loadedTeamIdRef.current;
+    const force = teamEpoch > loadedEpochRef.current || teamChanged;
+
+    if (teamChanged) {
+      loadedTeamIdRef.current = selectedTeamId;
+      setVersions([]);
+      setVersionsError('');
+      setGateTimeline(null);
+      setSelectedReleaseState('');
+      localStorage.removeItem(RELEASE_STORAGE_KEY);
+    }
+
     (async () => {
-      const fetched = await loadVersions(false);
+      const payload = await loadVersions(force);
       if (cancelled) return;
+      loadedEpochRef.current = teamEpoch;
+      const fetched = payload.versions || [];
       setSelectedReleaseState((prev) => {
-        const preferred = prev || localStorage.getItem(RELEASE_STORAGE_KEY) || '';
-        const picked = pickDefaultRelease(fetched, preferred) || '';
+        // After a team switch, never keep the previous team's release.
+        const preferred = teamChanged
+          ? ''
+          : (prev || localStorage.getItem(RELEASE_STORAGE_KEY) || '');
+        const picked = pickDefaultRelease(fetched, preferred, payload.defaultVersion) || '';
         if (picked) {
           localStorage.setItem(RELEASE_STORAGE_KEY, picked);
+        } else {
+          localStorage.removeItem(RELEASE_STORAGE_KEY);
         }
         return picked;
       });
@@ -235,14 +253,14 @@ export function SelectedReleaseProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeamId, loadVersions]);
+  }, [selectedTeamId, teamEpoch, loadVersions]);
 
   useEffect(() => {
     loadGateTimeline(selectedRelease, false);
   }, [selectedRelease, loadGateTimeline]);
 
-  // Pre-split into active (unreleased) and inactive (released) — both filtered
-  // to the allowed namespace (NDB-*, master, Era Future).
+  // Pre-split into active (unreleased) and inactive (released). The server
+  // already scoped `versions` to this team.
   const activeVersions = useMemo(
     () => versions.filter((v) => isAllowedVersion(v) && !v.released),
     [versions]
@@ -257,9 +275,9 @@ export function SelectedReleaseProvider({ children }) {
   // live JIRA data rather than a potentially stale localStorage value.
   const refreshVersionsAndResetDefault = useCallback(async () => {
     localStorage.removeItem(RELEASE_STORAGE_KEY);
-    const fetched = await loadVersions(true);
+    const fetchedPayload = await loadVersions(true);
     setSelectedReleaseState(() => {
-      const picked = pickDefaultRelease(fetched, '') || '';
+      const picked = pickDefaultRelease(fetchedPayload.versions, '', fetchedPayload.defaultVersion) || '';
       if (picked) localStorage.setItem(RELEASE_STORAGE_KEY, picked);
       return picked;
     });
@@ -277,7 +295,7 @@ export function SelectedReleaseProvider({ children }) {
     versionsError,
     gateError,
     jiraUnreachable,
-    productId: selectedTeam?.productId || 'ndb',
+    productId: selectedTeam?.id || selectedTeam?.productId || '',
     // fetchVersions — returns from cache if still fresh; never forces a re-fetch.
     fetchVersions: () => loadVersions(false),
     // refreshVersions — busts the cache and forces a new JIRA call.
@@ -297,6 +315,7 @@ export function SelectedReleaseProvider({ children }) {
     loadingVersions,
     refreshVersionsAndResetDefault,
     selectedRelease,
+    selectedTeam?.id,
     selectedTeam?.productId,
     setSelectedRelease,
     versions,

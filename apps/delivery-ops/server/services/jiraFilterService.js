@@ -11,11 +11,10 @@
  * before delegating to functions in this file.
  */
 
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { JIRA_API_V2 } = require('../config/api');
-const { createHttpsAgent, retryJiraCall } = require('./jiraService');
+const { getJira } = require('../utils/jiraClient');
 const { generateFilterChain, RELEASE_PROJECTS } = require('../utils/jqlTemplates');
 const logger = require('../utils/logger');
 
@@ -27,26 +26,14 @@ const FILTER_SUFFIXES = [
   'ChildIssues',
 ];
 
-function authHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-}
-
 // ---------- Primitives ----------
 
 async function findFilterByName(token, name) {
   if (!name) return null;
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(token);
   const url = `${JIRA_API_V2.FILTER_SEARCH}?filterName=${encodeURIComponent(name)}&maxResults=50`;
   try {
-    const res = await retryJiraCall(() => axios.get(url, {
-      headers: authHeaders(token),
-      httpsAgent,
-      timeout: 15000,
-    }));
+    const res = await jira.get(url, { timeout: 15000 });
     const filters = Array.isArray(res.data?.values)
       ? res.data.values
       : Array.isArray(res.data?.results)
@@ -64,44 +51,32 @@ async function findFilterByName(token, name) {
 
 async function updateFilter(token, id, payload) {
   if (!id) throw new Error('filter id is required');
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(token);
   const body = {};
   if (payload.name !== undefined) body.name = String(payload.name).trim();
   if (payload.jql !== undefined) body.jql = String(payload.jql).trim();
   if (payload.description !== undefined) body.description = String(payload.description);
-  const res = await retryJiraCall(() => axios.put(JIRA_API_V2.FILTER(id), body, {
-    headers: authHeaders(token),
-    httpsAgent,
-    timeout: 15000,
-  }));
+  const res = await jira.put(JIRA_API_V2.FILTER(id), body, { timeout: 15000 });
   return res.data;
 }
 
 async function findVersionByName(token, projectKey, name) {
   if (!projectKey || !name) return null;
-  const httpsAgent = createHttpsAgent();
-  const res = await retryJiraCall(() => axios.get(JIRA_API_V2.PROJECT_VERSIONS(projectKey), {
-    headers: authHeaders(token),
-    httpsAgent,
-    timeout: 15000,
-  }));
+  const jira = await getJira(token);
+  const res = await jira.get(JIRA_API_V2.PROJECT_VERSIONS(projectKey), { timeout: 15000 });
   const versions = Array.isArray(res.data) ? res.data : [];
   return versions.find(v => v.name && String(v.name).trim() === String(name).trim()) || null;
 }
 
 async function updateVersion(token, id, payload) {
   if (!id) throw new Error('version id is required');
-  const httpsAgent = createHttpsAgent();
+  const jira = await getJira(token);
   const body = {};
   if (payload.name !== undefined) body.name = String(payload.name).trim();
   if (payload.releaseDate !== undefined) body.releaseDate = payload.releaseDate;
   if (payload.released !== undefined) body.released = !!payload.released;
   if (payload.archived !== undefined) body.archived = !!payload.archived;
-  const res = await retryJiraCall(() => axios.put(JIRA_API_V2.VERSION(id), body, {
-    headers: authHeaders(token),
-    httpsAgent,
-    timeout: 15000,
-  }));
+  const res = await jira.put(JIRA_API_V2.VERSION(id), body, { timeout: 15000 });
   return res.data;
 }
 

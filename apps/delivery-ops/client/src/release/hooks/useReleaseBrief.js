@@ -34,7 +34,7 @@ import {
 
 export function useReleaseBrief({
   teamId,
-  productId = 'ndb',
+  productId = '',
   jiraToken,
   username,
   jiraBaseUrl,
@@ -53,6 +53,7 @@ export function useReleaseBrief({
     setSelectedRelease,
     gateTimeline,
     loadingGateTimeline,
+    versionsError,
   } = useSelectedRelease();
   const { releaseTickets, releaseError } = useReleaseData();
 
@@ -177,7 +178,7 @@ export function useReleaseBrief({
   // 3+ times per page load (mount + results arrive + gateTimeline arrives),
   // causing the full-page loading state to flicker repeatedly.
   const loadForecast = useCallback(async () => {
-    if (!jiraToken || !selectedRelease) {
+    if (!jiraToken || !selectedRelease || !productId) {
       setForecast(null);
       return;
     }
@@ -314,12 +315,14 @@ export function useReleaseBrief({
   }, [loadingGateTimeline]);
 
   useEffect(() => {
-    if (releaseError === 'not_synced') {
-      setError(`Release ${selectedRelease || ''} is not synced yet. Run Sync to load per-release data.`);
-    } else if (releaseError === 'load_failed') {
-      setError('Failed to load per-release cached data.');
+    if (versionsError) {
+      setError(versionsError);
+      return;
     }
-  }, [releaseError, selectedRelease]);
+    if (releaseError === 'load_failed') {
+      setError('Failed to load live release data from JIRA.');
+    }
+  }, [releaseError, selectedRelease, versionsError]);
 
   const loading =
     loadingVersions ||

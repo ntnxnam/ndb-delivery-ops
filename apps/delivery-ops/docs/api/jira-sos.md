@@ -2,7 +2,7 @@
 
 ## POST /api/jira/sos-items
 
-**Purpose**: Fetch Feature and Initiative tickets grouped by `fixVersion`. Default path reads the on-disk release dataset (no JIRA). Live JIRA is used only when the cache is empty or the client sends `forceLive: true`.
+**Purpose**: Fetch Feature and Initiative tickets grouped by `fixVersion`. Live JIRA first; disk cache only as a 429 fallback.
 
 **Auth**: Required (`validateJiraTokenMiddleware`)
 
@@ -14,17 +14,16 @@
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `teamId` | string | no | Team id to resolve `sosBaseFilter` from `teamBoardConfig.json`. Defaults to `"ndb"`. |
-| `forceLive` | boolean | no | If `true`, try live JIRA first (Refresh All). Falls back to cache on JIRA 429. |
+| `teamId` | string | yes | Team id to resolve `sosBaseFilter` or `baseFilter`. No silent NDB default. |
+| `forceLive` | boolean | no | Ignored for fetch order (always live). Kept for client compatibility. |
 
 **Server flow**
 
 1. `sos.js` → `releaseItemsDataService.fetchSosItems()`
-2. Load Feature/Initiative rows from the on-disk release dataset cache (no JIRA)
-3. If cache has rows and `forceLive` is false → respond from cache (`source: "cache"`)
-4. Otherwise resolve `sosBaseFilter` → JQL via `kpiService.resolveKpiJql()` and fetch live
-5. On JIRA 429 with a warm cache → respond from cache (`source: "cache"`, `degraded: true`)
-6. Group live results by `fixVersions`. Items with no fixVersion go under `"Unversioned"`
+2. Live JIRA: `(${resolvedSosFilter}) AND issuetype in (Feature, Initiative) AND status != Cancelled`
+3. On JIRA 429 with a warm cache → respond from cache (`source: "cache"`, `degraded: true`)
+
+**Caching**: Disk only as 429 fallback.
 
 **Response shape**
 
@@ -39,21 +38,14 @@
           "summary": "Storage write throughput redesign",
           "status": "In Progress",
           "issuetype": "Feature",
-          "fixVersions": "NDB-2.12",
-          "customfield_11067": "2026-09-01",
-          "customfield_35863": "2026-10-15",
-          "customfield_35864": "2026-11-01",
-          "customfield_23560": { "value": "Yellow", "color": "#FF991F" },
-          "customfield_38460": "[2026-08-10] YELLOW: ...",
-          "customfield_45660": "2026-08-10"
+          "fixVersions": "NDB-2.12"
         }
-      ],
-      "NDB-2.11": []
+      ]
     },
     "usedFallbackFilter": false,
-    "source": "cache",
+    "source": "jira",
     "degraded": false,
-    "lastSyncIso": "2026-07-07T19:35:12.066Z"
+    "lastSyncIso": "2026-08-26T15:00:00.000Z"
   }
 }
 ```
@@ -62,12 +54,11 @@
 
 | HTTP code | When | Client should |
 |---|---|---|
+| 400 | teamId missing or team has no base filter | Show Admin / Fetch error |
 | 401 | JIRA token missing or invalid | Redirect to login |
 | 429 | JIRA rate-limited and cache empty | Wait 60–90s, then Retry |
 | 503 | JIRA unreachable | Show inline retry |
 | 500 | Unexpected server error | Show generic error toast |
-
-**Caching**: Yes — on-disk release dataset. Live JIRA only on cache miss or `forceLive`.
 
 ---
 

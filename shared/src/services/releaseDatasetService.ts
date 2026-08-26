@@ -81,6 +81,7 @@ import {
   sprintFor,
   type SprintCalendar,
 } from './sprintsService.js';
+import { wrapTeamScope } from '../utils/teamScope.js';
 
 // ── Constants (port of data_layer.py constants) ────────────────────────────
 
@@ -577,6 +578,11 @@ export interface FetchBucketOptions {
    * in ERA — omitting the project filter captures all of them.
    */
   projectKey?: string;
+  /**
+   * Team JIRA base filter. When set, every bucket search is
+   * `(${baseFilter}) AND (${bucket JQL})` — same wrap KPIs already use.
+   */
+  baseFilter?: string;
   pageSize?: number;
   maxIssues?: number;
   /**
@@ -612,9 +618,10 @@ export async function fetchBucket(
   bucketJql: string,
   options: FetchBucketOptions
 ): Promise<FetchBucketResult> {
-  const fullJql = options.projectKey
+  const scopedJql = options.projectKey
     ? `project = ${options.projectKey} AND (${bucketJql})`
     : bucketJql;
+  const fullJql = wrapTeamScope(options.baseFilter, scopedJql);
   const fieldList = options.fields ?? RELEASE_DATASET_FIELDS.join(',');
   options.onProgress?.(bucketName, 'fetching', 'page 1');
   const searchOnce = () =>
@@ -823,6 +830,11 @@ export interface FetchReleaseOptions {
    * history-scan buckets in SLOW_BUCKETS (`moved_out`) get 120 s.
    */
   perPageTimeoutMs?: number;
+  /**
+   * Team JIRA base filter. Wrapped onto every bucket JQL the same way
+   * KPIs already wrap `(${baseFilter}) AND (${query})`.
+   */
+  baseFilter?: string;
 }
 
 /**
@@ -870,6 +882,7 @@ export async function fetchReleaseData(
   const concurrency = 1;
   const baseOpts: FetchBucketOptions = {
     projectKey: options.projectKey,
+    baseFilter: options.baseFilter,
     pageSize: options.pageSize,
     maxIssues: options.maxIssuesPerBucket,
     onProgress: options.onProgress,
@@ -1195,11 +1208,16 @@ export function extractDeferredSourceReleases(
   // Pattern matches `<prefix>-<rel>-deferred` where `<rel>` may contain
   // digits, dots, hyphens, and lower-case letters (covers `3.0-ea`).
   // Word boundaries on both ends prevent accidental partial matches.
-  const prefix = options.labelPrefix.toLowerCase();
-  const pattern = new RegExp(
-    `\\b${prefix}-([0-9][0-9a-z.\\-]*?)-deferred\\b`,
-    'gi'
-  );
+  const prefix = options.labelPrefix.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let pattern: RegExp;
+  try {
+    pattern = new RegExp(
+      `\\b${prefix}-([0-9][0-9a-z.\\-]*?)-deferred\\b`,
+      'gi'
+    );
+  } catch {
+    return [];
+  }
   const out: string[] = [];
   const seen = new Set<string>();
   let m: RegExpExecArray | null;

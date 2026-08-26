@@ -5,11 +5,9 @@
  * and aggregates component-scoped payload data.
  */
 
-const axios = require('axios');
-const https = require('https');
 const { JIRA_API_V2 } = require('../config/api');
 const { runSearchByJql } = require('../utils/jiraSearchByJql');
-const { createHttpsAgent } = require('../services/jiraService');
+const { getJira, searchPages } = require('../utils/jiraClient');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
 const { formatDate } = require('../utils/dateFormatter');
 
@@ -25,20 +23,13 @@ function getProjectKey() {
 async function fetchComponentsFromERA(jiraToken) {
   const projectKey = getProjectKey();
   const url = `${JIRA_API_V2.PROJECT(projectKey)}/components`;
-  const httpsAgent = createHttpsAgent();
 
   console.log('[componentReportService] Fetching components from:', url);
 
   let response;
   try {
-    response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${jiraToken.trim()}`,
-        Accept: 'application/json',
-      },
-      httpsAgent,
-      timeout: 15000,
-    });
+    const jira = await getJira(jiraToken);
+    response = await jira.get(url, { timeout: 15000 });
   } catch (axiosErr) {
     const status = axiosErr.response?.status;
     const body = axiosErr.response?.data;
@@ -172,36 +163,18 @@ async function fetchComponentPayload(componentName, jiraToken) {
  * Returns an array of issue.fields objects.
  */
 async function paginatedJqlFetch(jql, fields, jiraToken, maxIssues = 5000) {
-  const httpsAgent = createHttpsAgent();
-  const allFields = [];
-  let startAt = 0;
-  const pageSize = 100;
-
-  while (allFields.length < maxIssues) {
-    let response;
-    try {
-      response = await axios.get(JIRA_API_V2.SEARCH, {
-        headers: {
-          Authorization: `Bearer ${jiraToken.trim()}`,
-          Accept: 'application/json',
-        },
-        params: { jql, fields, maxResults: pageSize, startAt },
-        httpsAgent,
-        timeout: 30000,
-      });
-    } catch (err) {
-      console.error('[componentReportService] paginatedJqlFetch error:', err.message, '| jql:', jql.substring(0, 100));
-      break;
-    }
-
-    const data = response.data;
-    const issues = data.issues || [];
-    allFields.push(...issues.map(i => i.fields));
-    startAt += issues.length;
-    if (issues.length === 0 || startAt >= (data.total || 0)) break;
+  try {
+    const issues = await searchPages(jiraToken, jql, fields, {
+      pageSize: 100,
+      maxTotal: maxIssues,
+      timeoutMs: 30000,
+      delayMs: 0,
+    });
+    return issues.map(i => i.fields);
+  } catch (err) {
+    console.error('[componentReportService] paginatedJqlFetch error:', err.message, '| jql:', jql.substring(0, 100));
+    return [];
   }
-
-  return allFields;
 }
 
 /** Return the Monday of the ISO week containing `date`. */

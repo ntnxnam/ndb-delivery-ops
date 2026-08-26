@@ -48,6 +48,8 @@
  *     other products can be `datalens-<release>-wishlist` etc.
  */
 
+import { wrapTeamScope } from '../utils/teamScope.js';
+
 // fixVersion is anchored at level 1 (Feature/Initiative) per the
 // Nutanix hierarchy. X-FEAT/Capability are level 0 and span multiple
 // releases, so they are not valid roots for `portfolioChildrenOf` in
@@ -283,12 +285,16 @@ export const FETCH_STRATEGY = 'indexed-parent-epic-v1';
  *   unbounded historical scans. Intended for planning-bucket versions like
  *   "master" / "Era Future" that are never released and accumulate vast
  *   ticket histories. See individual function docs for the exact change.
+ * @param baseFilter - Optional team JQL. When set, every returned query
+ *   is wrapped `(${baseFilter}) AND (${bucket})` for click-through URLs.
+ *   Fetch-time Wave JQL is wrapped separately in fetchBucket.
  */
 export function getComponentQueries(
   release: string,
-  catchAllVersion = false
+  catchAllVersion = false,
+  baseFilter?: string
 ): Record<PayloadBucketKey, string> {
-  return {
+  const raw: Record<PayloadBucketKey, string> = {
     top_level_projects: jqlTopLevelProjects(release),
     epics_of_projects: jqlEpicsOfProjects(release),
     work_toward_project: jqlWorkTowardProject(release),
@@ -300,6 +306,12 @@ export function getComponentQueries(
       ? jqlDirectTicketsCatchAll(release)
       : jqlDirectTickets(release),
   };
+  if (!baseFilter) return raw;
+  const wrapped = {} as Record<PayloadBucketKey, string>;
+  for (const key of PAYLOAD_BUCKET_KEYS) {
+    wrapped[key] = wrapTeamScope(baseFilter, raw[key]);
+  }
+  return wrapped;
 }
 
 export interface EngineeringPayloadOptions {

@@ -11,17 +11,17 @@
 
 ## API Calls (client → server) — 4-step waterfall
 
-The hook loads data in a defined sequence to avoid hitting JIRA unnecessarily when the bundle cache is warm.
+The hook loads live JIRA for the selected release (`ReleaseDataContext` → `GET /per-release`). `productId` is the selected team id.
 
 ### Step 1 — Bootstrap (gate dates + summary counts)
 
 ```
-GET /api/release-dataset/retrospective/bootstrap?release=NDB-2.11&productId=ndb
+GET /api/release-dataset/retrospective/bootstrap?release=<fixVersion>&productId=<teamId>
 Headers: x-jira-token, x-username
 ```
 
 **Server flow**: `releaseDataset.js → retroService.getBootstrap(release, productId)`  
-**Source**: reads from disk bundle first (`shared/.cache/release-dataset/ndb/per_release/{release}.json`); falls back to live JIRA if bundle stale  
+**Source**: live tickets from `ReleaseDataContext` / `GET /api/release-dataset/per-release/:release` (team `baseFilter`). No Sync Hub disk bundle. 
 **Returns**:
 ```json
 {
@@ -132,7 +132,7 @@ All JQL strings are constructed server-side by `retroService` using `productServ
 
 | Data | Cache | TTL |
 |------|-------|-----|
-| Bootstrap gate checks | Disk bundle | 24 h; refresh via Sync Hub |
-| Projects list | Disk bundle | 24 h |
+| Bootstrap gate checks | Live per-release fetch | 5 min in-memory TTL |
+| Projects list | Derived from live per-release tickets | 5 min in-memory TTL |
 | Project detail | No cache — on-demand live | — |
 | Full retro fallback | No cache | — |

@@ -23,7 +23,7 @@ tpm, rm, team_lead — KPI operators. Admin users for a team may edit the team's
 
 | ID | Story |
 |----|-------|
-| KPI-01 | As a TPM, I select a team in the sidebar and see that team's KPIs without a second team dropdown. |
+| KPI-01 | As a TPM, I pick a team in the sidebar and click Fetch, then see that team's KPIs without a second team dropdown. |
 | KPI-02 | As a team admin, I set a team base filter (JQL) once; every KPI for that team AND's with it. |
 | KPI-03 | As a TPM, I add/edit/delete/reorder KPIs (name, base query, count vs list). |
 | KPI-04 | As a TPM, I load widget results (count or issue list) for the current team. |
@@ -32,7 +32,7 @@ tpm, rm, team_lead — KPI operators. Admin users for a team may edit the team's
 
 ## UI Behaviour
 
-1. **Team** — inherited from `TeamContext` (sidebar). No local team poll or duplicate fetch.
+1. **Team** — inherited from `TeamContext` (sidebar). Changing the dropdown stages a team; **Fetch** applies it and reloads KPIs (and other team-scoped pages). No local team poll or duplicate fetch.
 2. **Team base filter** — shown for the selected team; editable by team KPI admins. Saving updates `TeamContext` immediately so other pages see the new query.
 3. **KPI table** — name, base query, widget type; admin reorder / edit / remove.
 4. **Widgets** — load on demand via `/api/jira/kpi-results-batch`.

@@ -88,8 +88,7 @@ client/src/
 │   └── ReleaseVersionSelector.js
 ├── release/
 │   ├── ChatbotPage.js            /chatbot route
-│   ├── RetrospectivePage.js      /release/retrospective
-│   └── SyncHubPage.js            /sync-hub
+│   └── RetrospectivePage.js      /release/retrospective
 ├── feature/
 │   └── FeatureDashboardPage.js   /feature-dashboard
 └── services/
@@ -186,7 +185,6 @@ shared/
 | `/sprint-report` | `SprintReportPage` | `sprint_reports_view` |
 | `/component-report` | `ComponentReport` | `release_versions_view` |
 | `/chatbot` | `ChatbotPage` | `ai_insights_view` |
-| `/sync-hub` | `SyncHubPage` | `release_versions_view` |
 | `/kpis` | `KPIPage` | `kpi_view` |
 | `/admin` | `AdminPanel` | `admin_panel_access` |
 | `/bin-packing` | static HTML | none (static mount per D37) |
@@ -210,30 +208,18 @@ Browser → POST /api/auth/login {email, token}
 
 ```
 Page mount
-  → SelectedReleaseContext: GET /api/jira/release-versions (versions list)
+  → SelectedReleaseContext: POST /api/jira/release-versions (team baseFilter)
   → SelectedReleaseContext: GET /api/config/release-versions (gate dates)
-  → ReleaseDataContext: GET /api/release-dataset/per-release/{release} (bundle from disk)
+  → ReleaseDataContext: GET /api/release-dataset/per-release/{release} (live JIRA)
 
 User selects different release
-  → ReleaseDataContext: fetch bundle for new release (cache hit if within 5 min)
-  → ReleaseVersionTab renders: table rows + Gantt from bundle data
+  → ReleaseDataContext: live fetch (5 min in-memory TTL)
+  → ReleaseVersionTab renders: table rows + Gantt from live tickets
 ```
 
 ### 4.3 Release Dataset Sync
 
-```
-User clicks "Sync" in SyncHub
-  → POST /api/release-dataset/sync {productId}
-  → Server: releaseDatasetService.syncBundle()
-    → For each release × 6 buckets:
-      → jiraConnector.runJQL(bucket JQL)
-      → Paginate until all results fetched
-      → Write per_release/{release}.json
-    → Write bundle.json (union of all releases)
-    → Write bundle.meta.json
-  → SSE stream: progress events back to client
-  → Sync Hub table re-fetches GET /api/release-dataset/sync-status
-```
+Removed from the UI. Pages fetch live JIRA (team `baseFilter`). `/sync-hub` redirects to `/project-status`.
 
 ### 4.4 AI Chat
 
@@ -242,7 +228,7 @@ User sends message in ChatbotPage
   → POST /api/ai/chat {message, history, release, productId}
   → Server: chatService.processMessage()
     → chatIntentRouter classifies intent
-    → chatSnapshotBuilder builds context from bundle.json
+    → chatSnapshotBuilder live-fetches per-release (team id as productId; no disk fallback)
     → naiService.chatCompletion(systemPrompt, context, history, message)
     → NAI API returns completion
   → Response streamed back to ChatbotPage
@@ -367,7 +353,7 @@ Request lifecycle:
 | D6 | Role lens ≠ data filter | All tabs visible; only admin tab requires permission |
 | D7 | Chat panel in web app | AI surface is embedded, not a separate product |
 | D10 | Citation-first output | Every AI claim cites a JIRA key or query |
-| D11 | Cache-first data serving | Pages load from disk; user explicitly refreshes for live data |
+| D11 | Pages fetch live; Sync Hub not a product surface | Pages load from JIRA with team `baseFilter`; `/sync-hub` redirects away |
 | D30 | Gate date audit trail | Confluence audit required before any JIRA mutation |
 | D36 | Two payload concepts | Engineering Payload (`project=ERA`) vs Release Payload (all projects) |
 | D37 | Bin-packing static mount | `/bin-packing/*` served as static HTML; not ported to React yet |

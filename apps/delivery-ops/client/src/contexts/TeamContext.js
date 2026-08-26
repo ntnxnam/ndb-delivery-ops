@@ -34,6 +34,10 @@ export const TeamProvider = ({ children }) => {
   const [selectedTeamId, setSelectedTeamId] = useState(() =>
     localStorage.getItem(TEAM_STORAGE_KEY) || ''
   );
+  const [pendingTeamId, setPendingTeamId] = useState(() =>
+    localStorage.getItem(TEAM_STORAGE_KEY) || ''
+  );
+  const [teamEpoch, setTeamEpoch] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -41,6 +45,8 @@ export const TeamProvider = ({ children }) => {
   const activeRequestsRef = useRef(new Set());
   const teamChangeCallbacksRef = useRef(new Set());
   const inFlightRef = useRef(null);
+  const selectedTeamIdRef = useRef(selectedTeamId);
+  selectedTeamIdRef.current = selectedTeamId;
 
   const registerTeamChangeCallback = useCallback((callback) => {
     teamChangeCallbacksRef.current.add(callback);
@@ -48,6 +54,7 @@ export const TeamProvider = ({ children }) => {
   }, []);
 
   const clearTeamData = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_RELEASE);
     localStorage.removeItem('selectedVersion');
 
     activeRequestsRef.current.forEach((controller) => {
@@ -66,24 +73,34 @@ export const TeamProvider = ({ children }) => {
     });
   }, []);
 
-  const changeTeam = useCallback((newTeamId) => {
-    if (newTeamId === selectedTeamId) return;
+  /**
+   * Apply a team and refresh team-scoped data on every page.
+   * Always runs — including when the id is unchanged — so Fetch
+   * can force a reload. Login restore must not call this (it would remount).
+   */
+  const applyTeam = useCallback((newTeamId) => {
+    const nextId = newTeamId || '';
+    const previousTeamId = selectedTeamIdRef.current;
 
     setIsTransitioning(true);
     clearTeamData();
-    setSelectedTeamId(newTeamId);
-    localStorage.setItem(TEAM_STORAGE_KEY, newTeamId || '');
+    setSelectedTeamId(nextId);
+    setPendingTeamId(nextId);
+    localStorage.setItem(TEAM_STORAGE_KEY, nextId);
+    setTeamEpoch((n) => n + 1);
 
     window.dispatchEvent(new CustomEvent('teamChanged', {
       detail: {
-        previousTeamId: selectedTeamId,
-        newTeamId,
+        previousTeamId,
+        newTeamId: nextId,
         timestamp: Date.now(),
       },
     }));
 
     setTimeout(() => setIsTransitioning(false), 100);
-  }, [selectedTeamId, clearTeamData]);
+  }, [clearTeamData]);
+
+  const changeTeam = applyTeam;
 
   const registerApiRequest = useCallback((controller) => {
     if (controller && typeof controller.abort === 'function') {
@@ -109,6 +126,7 @@ export const TeamProvider = ({ children }) => {
         }
         return effective;
       });
+      setPendingTeamId(effective);
     }
     return list;
   }, []);
@@ -195,12 +213,12 @@ export const TeamProvider = ({ children }) => {
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === TEAM_STORAGE_KEY && e.newValue !== selectedTeamId) {
-        changeTeam(e.newValue || '');
+        applyTeam(e.newValue || '');
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [selectedTeamId, changeTeam]);
+  }, [selectedTeamId, applyTeam]);
 
   useEffect(() => {
     const activeRequests = activeRequestsRef.current;
@@ -226,11 +244,15 @@ export const TeamProvider = ({ children }) => {
   const contextValue = useMemo(() => ({
     teams,
     selectedTeamId,
+    pendingTeamId,
+    setPendingTeamId,
     selectedTeam,
     hasTeamSelected,
+    teamEpoch,
     loading,
     error,
     isTransitioning,
+    applyTeam,
     changeTeam,
     fetchTeams,
     clearTeamData,
@@ -243,11 +265,14 @@ export const TeamProvider = ({ children }) => {
   }), [
     teams,
     selectedTeamId,
+    pendingTeamId,
     selectedTeam,
     hasTeamSelected,
+    teamEpoch,
     loading,
     error,
     isTransitioning,
+    applyTeam,
     changeTeam,
     fetchTeams,
     clearTeamData,

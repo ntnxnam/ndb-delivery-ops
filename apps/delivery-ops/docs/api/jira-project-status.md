@@ -1,5 +1,5 @@
 ### POST /api/jira/release-versions
-**Purpose**: Load release versions for Project Status page selectors.
+**Purpose**: List unique fixVersions from tickets in the team's `baseFilter` (`listFixVersionsForTeam`).
 **Auth**: required (`releaseVersions`)
 
 ### POST /api/jira/discover-versions
@@ -7,7 +7,7 @@
 **Auth**: required (`releaseVersions`)
 
 ### POST /api/jira/release-items
-**Purpose**: Fetch release payload items for Project Status table.
+**Purpose**: Live Feature/Initiative items for Project Status. Always JIRA; wrap with `team.baseFilter`. Disk cache ignored.
 **Auth**: required (`releaseVersions`)
 
 ### POST /api/jira/release-items-tcms

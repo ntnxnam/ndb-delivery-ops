@@ -460,6 +460,11 @@ export interface SyncOptions {
   /** Per-release progress hook (one call per status transition). */
   onProgress?: (event: SyncProgressEvent) => void;
   /**
+   * Team JIRA base filter. Passed through to fetchReleaseData so every
+   * bucket is `(${baseFilter}) AND (${bucket JQL})`.
+   */
+  baseFilter?: string;
+  /**
    * Internal: changelog-fetch override. Same purpose as
    * `EnrichClosedDatesOptions.fetchChangelog` — smoke-test seam.
    */
@@ -605,6 +610,7 @@ export async function syncReleaseDataset(
           labelPrefix,
           futureReleases,
           isCatchAllVersion,
+          baseFilter: options.baseFilter,
           pageSize: options.fetchOptions?.pageSize,
           maxIssuesPerBucket: options.fetchOptions?.maxIssuesPerBucket,
           concurrency: options.fetchOptions?.concurrency,
@@ -783,6 +789,7 @@ export interface SyncBucketOptions {
   productPrefix: string;
   sprintCalendar: SprintCalendar;
   onProgress?: (event: SyncProgressEvent) => void;
+  baseFilter?: string;
 }
 
 export interface SyncBucketResult {
@@ -839,6 +846,7 @@ export async function syncReleaseBucket(
     const result: FetchReleaseResult = await fetchReleaseData(jira, release, {
       labelPrefix,
       bucketFilter: [bucketName],
+      baseFilter: options.baseFilter,
     });
     if (result.error) {
       emit({ release, status: 'error', detail: `cell sync ${bucketName}: ${result.error}` });

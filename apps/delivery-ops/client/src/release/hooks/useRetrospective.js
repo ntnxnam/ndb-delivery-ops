@@ -14,7 +14,7 @@ import {
 
 export function useRetrospective({
   teamId,
-  productId = 'ndb',
+  productId = '',
   jiraToken,
   username,
   topN = 10,
@@ -41,7 +41,7 @@ export function useRetrospective({
   const [error, setError] = useState('');
   const [fallbackAttemptedForRelease, setFallbackAttemptedForRelease] = useState('');
 
-  const ready = !!teamId && !!jiraToken;
+  const ready = !!teamId && !!jiraToken && !!productId;
 
   const loadBootstrap = useCallback(async () => {
     if (!ready || !selectedRelease) return;
@@ -186,14 +186,10 @@ export function useRetrospective({
   }, [loadBootstrap, loadProjects]);
 
   useEffect(() => {
-    // Only surface the "not synced" message when there is genuinely nothing to show.
-    // If bootstrap data has already loaded (page has content), suppress it — the
-    // retrospective endpoint works independently of the release dataset cache.
-    if (releaseError === 'not_synced' && !bootstrap) {
-      setError(`Release ${selectedRelease || ''} is not synced yet. Run Sync to load per-release data.`);
-    } else if (releaseError !== 'not_synced') {
-      // Clear a stale not_synced message when the release changes or data arrives.
-      setError((prev) => (prev?.includes('not synced') ? '' : prev));
+    if (releaseError === 'load_failed' && !bootstrap) {
+      setError(`Failed to load live data for ${selectedRelease || 'this release'} from JIRA.`);
+    } else if (releaseError !== 'load_failed') {
+      setError((prev) => (prev?.includes('Failed to load live data') ? '' : prev));
     }
   }, [releaseError, selectedRelease, bootstrap]);
 

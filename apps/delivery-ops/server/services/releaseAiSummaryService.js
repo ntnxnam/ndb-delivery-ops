@@ -18,9 +18,8 @@
  * the route can pass it to naiService.generateReleaseSummary.
  */
 
-const axios = require('axios');
-const https = require('https');
 const { JIRA_API_V2 } = require('../config/api');
+const { getJira } = require('../utils/jiraClient');
 const { buildCommitItemsJQL } = require('../utils/jiraQueryUtils');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { processAllMilestones } = require('../utils/milestoneProcessor');
@@ -54,10 +53,6 @@ const FIELDS = [
   'issuelinks', 'labels',
 ].join(',');
 
-function createHttpsAgent() {
-  return new https.Agent({ rejectUnauthorized: false });
-}
-
 /**
  * Build a ganttConfig-shaped object from the release versions email config.
  * This mirrors what the client builds when it loads gantt data.
@@ -87,11 +82,10 @@ async function buildReleaseIntelligence(version, jiraToken) {
   // Committed features — same scope as the UI commit section:
   // fixVersion = version, Feature/Initiative, not cancelled, not long-term-funded.
   const commitJql = `${buildCommitItemsJQL(version)} AND labels != "${versionLabel}-long-term-funded"`;
-  const response = await axios.get(JIRA_API_V2.SEARCH, {
-    headers: { Authorization: `Bearer ${jiraToken}`, 'Content-Type': 'application/json' },
-    params: { jql: commitJql, fields: FIELDS, maxResults: 500 },
-    httpsAgent: createHttpsAgent(),
+  const jira = await getJira(jiraToken);
+  const response = await jira.get(JIRA_API_V2.SEARCH, {
     timeout: 45000,
+    params: { jql: commitJql, fields: FIELDS, maxResults: 500 },
   });
 
   const rawItems = response.data?.issues || [];
@@ -109,15 +103,13 @@ async function buildReleaseIntelligence(version, jiraToken) {
   let p0Bugs = [];
   try {
     const filterName = `${versionLabel}-all`;
-    const p0Resp = await axios.get(JIRA_API_V2.SEARCH, {
-      headers: { Authorization: `Bearer ${jiraToken}`, 'Content-Type': 'application/json' },
+    const p0Resp = await jira.get(JIRA_API_V2.SEARCH, {
+      timeout: 15000,
       params: {
         jql: `filter = "${filterName}" AND statusCategory != Done AND priority = "P0 - Blocker"`,
         fields: 'key,summary,assignee,status',
         maxResults: 50,
       },
-      httpsAgent: createHttpsAgent(),
-      timeout: 15000,
     });
     p0Bugs = (p0Resp.data?.issues || []).map(i => ({
       key: i.key,
@@ -132,15 +124,13 @@ async function buildReleaseIntelligence(version, jiraToken) {
   // Fetch open must-fix tickets (label = "<version>-mustfix"), any issue type
   let mustFixTickets = [];
   try {
-    const mustFixResp = await axios.get(JIRA_API_V2.SEARCH, {
-      headers: { Authorization: `Bearer ${jiraToken}`, 'Content-Type': 'application/json' },
+    const mustFixResp = await jira.get(JIRA_API_V2.SEARCH, {
+      timeout: 15000,
       params: {
         jql: `labels = "${versionLabel}-mustfix" AND statusCategory != Done`,
         fields: 'key,summary,assignee,status,priority,issuetype',
         maxResults: 100,
       },
-      httpsAgent: createHttpsAgent(),
-      timeout: 15000,
     });
     mustFixTickets = (mustFixResp.data?.issues || []).map(i => ({
       key: i.key,

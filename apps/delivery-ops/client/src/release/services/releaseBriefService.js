@@ -24,7 +24,7 @@ const API_BASE = getApiBase();
  * @returns {Promise<{versions: Array<{name: string, released: boolean, releaseDate?: string}>}>}
  */
 export async function listReleaseVersions({ teamId, jiraToken, username }) {
-  if (!teamId) return { versions: [] };
+  if (!teamId) return { versions: [], defaultVersion: null, projectKey: '' };
   const res = await authenticatedPost(
     `${API_BASE}/api/jira/release-versions`,
     { teamId },
@@ -43,7 +43,11 @@ export async function listReleaseVersions({ teamId, jiraToken, username }) {
           startDate: v.startDate || v.start_date || undefined,
         }
   );
-  return { versions };
+  return {
+    versions,
+    projectKey: data.projectKey || '',
+    defaultVersion: data.defaultVersion || null,
+  };
 }
 
 /**
@@ -102,7 +106,7 @@ export async function fetchReleaseKpiBatch({
  * @param {{productId?: string, release: string, jiraToken: string, username: string}} args
  */
 export async function fetchReleasePayloadSynopsis({
-  productId = 'ndb',
+  productId = '',
   release,
   jiraToken,
   username,
@@ -133,7 +137,7 @@ export async function fetchReleasePayloadSynopsis({
  * @param {{productId?: string, release?: string, sprintsBack?: number, jiraToken: string, username: string}} args
  */
 export async function fetchSprintVelocity({
-  productId = 'ndb',
+  productId = '',
   release,
   sprintsBack = 3,
   jiraToken,
@@ -166,7 +170,7 @@ export async function fetchSprintVelocity({
  * @param {{productId?: string, release: string, plannedGaIso?: string, jiraToken: string, username: string}} args
  */
 export async function fetchLandingForecast({
-  productId = 'ndb',
+  productId = '',
   release,
   plannedGaIso,
   jiraToken,
@@ -244,7 +248,7 @@ export async function fetchGateTimeline({
  * @param {{productId?: string, release: string, jiraToken: string, username: string}} args
  */
 export async function fetchOutstanding({
-  productId = 'ndb',
+  productId = '',
   release,
   jiraToken,
   username,
@@ -280,7 +284,7 @@ export async function fetchOutstanding({
  * }>}
  */
 export async function fetchProjectBreakdown({
-  productId = 'ndb',
+  productId = '',
   release,
   jiraToken,
   username,
@@ -337,7 +341,7 @@ export async function fetchProjectBreakdown({
  * @param {{productId?: string, release: string, weeks?: number, jiraToken: string, username: string}} args
  */
 export async function fetchBurndown({
-  productId = 'ndb',
+  productId = '',
   release,
   weeks = 52,
   jiraToken,
@@ -372,49 +376,37 @@ export function jiraSearchUrl(jiraBaseUrl, jql) {
 }
 
 /**
- * Pick a sensible default release from a list of versions.
+ * Pick the default release from a list of unreleased versions.
  *
  * Preference order:
- *   1. Caller-provided `preferred` (if it exists in the list)
- *   2. The one-dot unreleased release (e.g. "NDB-2.12") whose GA date
- *      (releaseDate from JIRA) is nearest to today — future or overdue.
- *      If multiple one-dot releases lack a releaseDate, falls back to the
- *      last one by sort order.
- *   3. Last unreleased version overall (any dot depth)
- *   4. First version overall
- *   5. null
+ *   1. Caller-provided `preferred` if it is still in the list (user pick)
+ *   2. Server `defaultVersion` (next upcoming JIRA GA)
+ *   3. Soonest unreleased releaseDate on or after today
+ *   4. Soonest dated unreleased (overdue)
+ *   5. First unreleased / first version
  */
-export function pickDefaultRelease(versions, preferred) {
+export function pickDefaultRelease(versions, preferred, defaultVersion) {
   if (!versions || versions.length === 0) return null;
   if (preferred && versions.some((v) => v.name === preferred)) return preferred;
-
-  const unreleased = versions.filter((v) => !v.released);
-
-  // One-dot releases only: strip "NDB-" (or any prefix up to the first "-"),
-  // then match exactly X.Y — e.g. "NDB-2.11" passes, "NDB-2.11.1" does not.
-  const oneDotUnreleased = unreleased.filter((v) => {
-    const numeric = v.name.replace(/^[^-]+-/i, '');
-    return /^\d+\.\d+$/.test(numeric);
-  });
-
-  if (oneDotUnreleased.length > 0) {
-    const today = Date.now();
-    const withDate = oneDotUnreleased.filter((v) => v.releaseDate);
-    if (withDate.length > 0) {
-      // Sort by absolute distance from today so the nearest GA wins,
-      // whether it is upcoming or slightly overdue.
-      withDate.sort(
-        (a, b) =>
-          Math.abs(new Date(a.releaseDate).getTime() - today) -
-          Math.abs(new Date(b.releaseDate).getTime() - today)
-      );
-      return withDate[0].name;
-    }
-    // No releaseDate available on any one-dot release → last by sort order.
-    return oneDotUnreleased[oneDotUnreleased.length - 1].name;
+  if (defaultVersion && versions.some((v) => v.name === defaultVersion)) {
+    return defaultVersion;
   }
 
-  // No one-dot unreleased releases → original behaviour.
-  if (unreleased.length > 0) return unreleased[unreleased.length - 1].name;
-  return versions[0].name;
+  const unreleased = versions.filter((v) => !v.released);
+  const pool = unreleased.length > 0 ? unreleased : versions;
+  const today = Date.now();
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayMs = startOfToday.getTime();
+
+  const dated = pool.filter((v) => v.releaseDate);
+  const upcoming = dated
+    .filter((v) => new Date(v.releaseDate).getTime() >= todayMs)
+    .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+  if (upcoming.length > 0) return upcoming[0].name;
+
+  const overdue = dated.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+  if (overdue.length > 0) return overdue[0].name;
+
+  return pool[0].name;
 }

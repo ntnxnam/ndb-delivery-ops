@@ -17,7 +17,7 @@
  *     version patterns)
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -28,6 +28,7 @@ import type {
   AudienceOverrides,
 } from '../types/product.js';
 import type { AudienceId } from '../types/audience.js';
+import { compileVersionPattern } from '../utils/versionPattern.js';
 
 /**
  * Nutanix-wide defaults for JIRA custom fields. These come from the legacy
@@ -157,7 +158,7 @@ export class ProductService {
   buildJqlForProduct(productId: string, extraClauses: string[] = []): string {
     const p = this.getProduct(productId);
     const clauses: string[] = [`project = ${p.projectKey}`];
-    if (p.projectType === 'parent' && p.versionPatterns?.length) {
+    if (p.versionPatterns?.length) {
       const versionClauses = p.versionPatterns
         .map((pat) => `fixVersion ~ "${escapeJqlString(pat)}"`)
         .join(' OR ');
@@ -321,11 +322,12 @@ export class ProductService {
     const index = new Map<string, { productId: string; regex: RegExp }[]>();
     for (const p of this.registry.teams) {
       if (!p.versionPatterns?.length) continue;
-      const entries = p.versionPatterns.map((pat) => ({
-        productId: p.id,
-        regex: new RegExp(pat),
-      }));
-      index.set(p.id, entries);
+      const entries: { productId: string; regex: RegExp }[] = [];
+      for (const pat of p.versionPatterns) {
+        const regex = compileVersionPattern(pat);
+        if (regex) entries.push({ productId: p.id, regex });
+      }
+      if (entries.length) index.set(p.id, entries);
     }
     return index;
   }
@@ -372,13 +374,26 @@ function defaultConfigPath(): string {
 }
 
 /**
- * Process-global singleton. Most callers should use this.
+ * Process-global singleton. Reloads when teamBoardConfig.json changes
+ * (admin-created teams / versionPatterns) so pages pick up the new team
+ * without a process restart.
  */
 let _singleton: ProductService | null = null;
+let _singletonPath: string | undefined;
+let _singletonMtime = -1;
 
 export function getProductService(configPath?: string): ProductService {
-  if (!_singleton) {
-    _singleton = new ProductService(configPath);
+  const resolvedPath = configPath ?? defaultConfigPath();
+  let mtime = -1;
+  try {
+    mtime = statSync(resolvedPath).mtimeMs;
+  } catch {
+    mtime = -1;
+  }
+  if (!_singleton || _singletonPath !== resolvedPath || mtime !== _singletonMtime) {
+    _singleton = new ProductService(resolvedPath);
+    _singletonPath = resolvedPath;
+    _singletonMtime = mtime;
   }
   return _singleton;
 }
@@ -386,4 +401,6 @@ export function getProductService(configPath?: string): ProductService {
 /** Test-only: reset the singleton. */
 export function _resetProductService(): void {
   _singleton = null;
+  _singletonPath = undefined;
+  _singletonMtime = -1;
 }

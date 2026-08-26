@@ -65,11 +65,12 @@ The Admin Panel provides app configuration and team onboarding management withou
 
 | Case | Expected behaviour |
 |------|--------------------|
+| Version pattern is a glob like `msp*` or `*msp*` | Treat `*` as a wildcard; never throw (`Nothing to repeat`); Admin Test and version dropdowns keep working |
 | Adding a user already in a group | Show "User already in this group" inline; no duplicate added |
 | Onboarding wizard — JIRA board ID doesn't exist | Validation step fails with "Board not found" |
 | Cache clear while sync is running | Server returns 409 Conflict; show "Sync in progress — wait until complete" |
 | `teamBoardConfig.json` write fails (disk full) | Show "Config save failed — check server disk" |
-| New team saved | Team dropdown updates immediately; the new team is selected; Admin shows a short confirmation. Opening Admin also syncs any teams that were added earlier in the session. |
+| New team saved | Team dropdown updates immediately (not auto-applied). Admin shows a short confirmation telling the admin to click Fetch. Opening Admin also syncs any teams that were added earlier in the session. |
 
 ---
 

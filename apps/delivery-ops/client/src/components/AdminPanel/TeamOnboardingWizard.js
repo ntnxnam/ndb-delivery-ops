@@ -485,7 +485,7 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
               <div>
                 <label className="block text-sm font-medium mb-1">Version Patterns *</label>
                 <p className="text-sm text-gray-600 mb-2">
-                  Regular expressions to match version names (e.g., ^DataLens.*, ^DL.*)
+                  Version name filters. Globs (msp*) and regular expressions (^DataLens.*) both work.
                 </p>
                 {formData.versionPatterns.map((pattern, index) => (
                   <div key={index} className="flex gap-2 mb-2">
@@ -494,7 +494,7 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
                       className="flex-1 p-2 border border-gray-300 rounded"
                       value={pattern}
                       onChange={(e) => updateArrayField('versionPatterns', index, e.target.value)}
-                      placeholder="^DataLens.*"
+                      placeholder="msp* or ^DataLens.*"
                     />
                     {formData.versionPatterns.length > 1 && (
                       <button
