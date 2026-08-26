@@ -79,9 +79,9 @@ Headers: x-jira-token, x-username
 Body: { id, name, displayName, boardId, baseFilterId, kpiConfig? }
 ```
 
-**Server flow**: `admin.js → reads teamBoardConfig.json → appends new team → writes file → invalidateTeamBoardCache()`  
+**Server flow**: `admin.js → loadTeamBoardConfig → appends new team → saveTeamBoardConfig → writes allowedUsers/KPI`  
 **Returns**: `{ success: true, team: { id, name, ... }, message }`  
-**Side effect**: in-memory `teamBoardConfig` cache is invalidated. The Admin UI immediately `upsertTeam`s into `TeamContext` and `changeTeam`s to the new team so the sidebar/page Team dropdown shows and selects it in the same session — no refresh. Opening Admin also `replaceTeams` from `GET /api/admin/teams` so teams created earlier in the session appear in the picker.
+**Side effect**: `saveTeamBoardConfig` invalidates the mtime cache so Project Status / version lists see the new team on the next request without a restart. The Admin UI also `upsertTeam`s into `TeamContext`. The new team is **not** auto-applied; the admin clicks **Fetch**. D43: this file is a multi-team registry — Save must persist to disk, not only the browser dropdown.
 
 ---
 

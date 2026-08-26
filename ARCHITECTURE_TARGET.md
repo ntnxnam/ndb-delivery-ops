@@ -4,6 +4,11 @@ Status: **v2 (locked direction)** 2026-05-20. Supersedes the multi-surface plan
 written earlier today. Pairs with `CONSOLIDATION.md` (port tracker) and
 `DECISIONS.md` (rationale log).
 
+> **D43 (2026-08-26):** Hard constraint 1 (NDB-only / one team in
+> `teamBoardConfig.json`) is **lifted**. The rest of this document is
+> historical context for the 2026-05-20 freeze. Multi-team onboarding is
+> the current rule — see D1 and D43.
+
 ## North star (one sentence)
 
 **A single React webapp at one URL that does everything an NDB ops person
@@ -32,10 +37,10 @@ card on `/release/:name/brief`** — is the next concrete build target.
 
 ## Hard constraints (the pivot)
 
-1. **NDB-only.** No multi-product abstraction. `teamBoardConfig.json` has
-   one entry: NDB. ProductService stays in place as a thin shim so shared
-   services don't need a rewrite, but it never resolves anything but NDB.
-   Drop DataLens, NCM, and "product-agnostic" overhead from new code.
+1. **~~NDB-only.~~** **Superseded by D43.** `teamBoardConfig.json` is a
+   multi-team registry. NDB is the default tenant, not the only team.
+   ProductService resolves whatever teams Admin has saved. Do not drop
+   product-agnostic work (D1) from new code.
 2. **Speed > preservation.** When a legacy feature blocks the new shape,
    delete it. Don't migrate code that nobody is using.
 3. **Five routes max.** If a feature can't be expressed inside one of the

@@ -37,7 +37,7 @@ production usefulness:
 | `client/src/components/ReleaseVersionTrends.js` | 365 LOC | Dead — never imported |
 | `client/src/components/JiraAuth.{js,css}` | 165 LOC | Superseded by `AuthContext` |
 | 6 dead AI/utility components (Insights, DatePrediction, RiskForecast, ExecutiveSummaryEditor, ConfluenceExtractor, JiraQuery) + 2 orphan services + CSS | ~1,250 LOC | Zero imports anywhere |
-| DataLens + NCM entries in `teamBoardConfig.json` | 2 config blocks | NDB-only (see D1 revision in `DECISIONS.md`) |
+| DataLens + NCM entries in `teamBoardConfig.json` | 2 config blocks | Removed in the 2026-05-20 freeze; **D43** re-opens the file as a multi-team registry — re-add teams via Admin, do not restore those old blocks blindly |
 | KPIs sidebar tile (route remains; UI moves to `/admin/kpis` in Wave 2) | nav cleanup | KPI counts already on `/release/:name/brief` |
 
 Server boot log is now ~3 lines instead of the previous ~12. No more

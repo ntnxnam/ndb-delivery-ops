@@ -29,7 +29,7 @@ products are equally valid.
 **Implications.**
 - Rename `ndb-delivery-ops` → `portfolio-delivery-ops` (see D2)
 - Every NDB-specific string in code becomes a config lookup
-- `teamBoardConfig.json` is per-user, not global
+- `teamBoardConfig.json` is a multi-team registry (D43); NDB is one entry, not the only one
 - Audience definitions reference "the active product's Team Executive", not "NDB Team Executive"
 - MCP tools take `productId` as input
 - Agents load product context at session start
@@ -213,19 +213,31 @@ platform must support **both** workflows simultaneously:
 - Citation-first design is a global rule (not Team Executive-only) — promote to a rule
   in `.cursor/rules/citation-first-output.mdc`
 
-### D11 — Dashboard freshness = Sync Hub pattern
+### D11 — Pages fetch live; Sync Hub is not a product surface
 
-**Statement.** Data is served from cache; the user clicks "Refresh now" when
-they need real-time. Optional background sync warms the cache on a schedule.
+**Statement.** Pages hit JIRA on load, scoped to the selected team's `baseFilter`.
+The Sync Hub UI was removed. Empty disk is not a dead end.
 
 **Implications.**
-- Reuse the `Sync_Hub.py` pattern from the archived `release-sprint-analysis`
-  (live progress UI during refresh, per-component status table, ETA)
-- Caching layer added to `statusService` and `predictabilityService`
-- Cache key includes `(productId, releaseName, audience)` — distinct caches
-  per persona's view
+- Version dropdowns list unique `fixVersion` names that appear on tickets in
+  `(${team.baseFilter}) AND (fixVersion is not EMPTY)` — not prefix/glob
+  matching. Missing `baseFilter` is HTTP 400; never silently fall back to
+  another team.
+- Project Status, Release Brief / Retrospective, SoS, and chat grounding
+  fetch live. SoS may fall back to disk only on HTTP 429, keyed by the
+  selected team id (never another team's cache).
+- Client in-memory TTL is 5 minutes. **Refresh** busts that TTL and re-hits
+  the same live endpoints — it does not call `/api/release-dataset/refresh-now`
+  or trigger a product sync.
+- `/sync-hub` redirects to Project Status. No sidebar item. No page reads
+  syncMeta or a disk bundle. Server sync endpoints may remain unused.
+
+**Implications (legacy cache).**
+- Caching layer remains on `statusService` / `predictabilityService` for
+  derived views
+- Cache key includes `(productId, releaseName, audience)` — `productId` is
+  the selected team id, never a silent default of another team
 - Charts in `chartService` invalidate when underlying data refreshes
-- UI shows "Last refreshed N min ago" with the Refresh button next to it
 
 ### D12 — Team Executive default landing = all active releases (per active product set)
 
@@ -935,6 +947,27 @@ can be seen; it never calls `execute()`.
 
 **What this is NOT.** Write-back to JIRA from chat. Settling D26.
 Model routing (router vs reasoner). Unattended workflow engine.
+
+---
+
+### D43 — Multi-team registry after the app stabilized
+
+**Statement.** The 2026-05-20 NDB-only freeze (`ARCHITECTURE_TARGET.md` v2:
+`teamBoardConfig.json` has one entry; ProductService never resolves anything
+but NDB) is **lifted**. The app is stable enough to onboard other teams
+(Prism-Infra, MSP, future) through Admin. Each team is one object in
+`teamBoardConfig.json`. NDB stays the default tenant (`defaultTeamId`).
+
+**Implications.**
+- Admin Save must persist the new team to `teamBoardConfig.json` on the
+  running server’s disk — not only into the browser’s Team dropdown
+- Version lists, Project Status, and live JIRA fetches use that team’s
+  `baseFilter` / `projectKey`. No silent fallback to NDB
+- ProductService already reloads when the file’s mtime changes
+- Do not restore the file to an NDB-only template after a successful save
+
+**What this is NOT.** Full SaaS multi-tenancy (still D5). Re-adding the
+old DataLens/NCM blocks unless those teams are onboarded again through Admin.
 
 ---
 

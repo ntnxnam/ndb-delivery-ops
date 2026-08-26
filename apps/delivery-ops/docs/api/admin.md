@@ -78,7 +78,7 @@ Reads `server/config/teamBoardConfig.json` — no JIRA call.
 - Body: `{ id: string, name: string, displayName: string, boardId: number, baseFilterId: string|number, kpiConfig?: object }`
 
 **Server flow**  
-Reads `teamBoardConfig.json` → appends → writes file → invalidates in-memory config cache.
+`loadTeamBoardConfig` → appends → `saveTeamBoardConfig` (writes `teamBoardConfig.json`, invalidates mtime cache) → writes `allowedUsers.json` / `kpiConfig.json`. D43: the registry is multi-team; NDB is the default entry, not the only one.
 
 **Response**
 ```json

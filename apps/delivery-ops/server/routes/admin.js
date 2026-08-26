@@ -8,9 +8,9 @@ const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { checkFeatureAccess } = require('../services/authService');
 const { createHttpsAgent, retryJiraCall } = require('../services/jiraService');
 
-const { invalidateTeamBoardCache } = require('../utils/teamConfig');
+const { loadTeamBoardConfig, saveTeamBoardConfig } = require('../utils/teamConfig');
+const { compileVersionPatterns } = require('../utils/versionPattern');
 
-const TEAM_BOARD_CONFIG_PATH = path.join(__dirname, '../config/teamBoardConfig.json');
 const ALLOWED_USERS_CONFIG_PATH = path.join(__dirname, '../config/allowedUsers.json');
 const KPI_CONFIG_PATH = path.join(__dirname, '../config/kpiConfig.json');
 
@@ -206,7 +206,7 @@ router.post('/validate-filters', requireSuperAdmin, async (req, res) => {
  */
 router.get('/teams', requireSuperAdmin, (req, res) => {
   try {
-    const teamBoardConfig = loadConfig(TEAM_BOARD_CONFIG_PATH);
+    const teamBoardConfig = loadTeamBoardConfig();
     const allowedUsersConfig = loadConfig(ALLOWED_USERS_CONFIG_PATH);
     const kpiConfig = loadConfig(KPI_CONFIG_PATH);
 
@@ -257,8 +257,9 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
       });
     }
 
-    // Load current configs
-    const teamBoardConfig = loadConfig(TEAM_BOARD_CONFIG_PATH);
+    // Load current configs (mtime-cached loader so Admin Save and live
+    // fetches share one teamBoardConfig.json — D43 multi-team registry).
+    const teamBoardConfig = loadTeamBoardConfig();
     const allowedUsersConfig = loadConfig(ALLOWED_USERS_CONFIG_PATH);
     const kpiConfig = loadConfig(KPI_CONFIG_PATH);
 
@@ -302,10 +303,13 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
     if (!kpiConfig.teams) kpiConfig.teams = {};
     if (!kpiConfig.teams[id]) kpiConfig.teams[id] = [];
 
-    // Save all configs
-    const saveSuccess = saveConfig(TEAM_BOARD_CONFIG_PATH, teamBoardConfig) &&
-                       saveConfig(ALLOWED_USERS_CONFIG_PATH, allowedUsersConfig) &&
-                       saveConfig(KPI_CONFIG_PATH, kpiConfig);
+    // Persist the team registry through saveTeamBoardConfig so the
+    // mtime cache and ProductService reload see new teams on the next
+    // request. allowedUsers / KPI stay on the local writer.
+    saveTeamBoardConfig(teamBoardConfig);
+    const saveSuccess =
+      saveConfig(ALLOWED_USERS_CONFIG_PATH, allowedUsersConfig) &&
+      saveConfig(KPI_CONFIG_PATH, kpiConfig);
 
     if (!saveSuccess) {
       return res.status(500).json({
@@ -313,8 +317,6 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
         error: 'Failed to save team configuration'
       });
     }
-
-    invalidateTeamBoardCache();
 
     return res.json({
       success: true,
@@ -341,8 +343,7 @@ router.put('/teams/:teamId', requireSuperAdmin, (req, res) => {
     const { teamId } = req.params;
     const updateData = req.body || {};
 
-    // Load current configs
-    const teamBoardConfig = loadConfig(TEAM_BOARD_CONFIG_PATH);
+    const teamBoardConfig = loadTeamBoardConfig();
     const allowedUsersConfig = loadConfig(ALLOWED_USERS_CONFIG_PATH);
 
     // Find team
@@ -372,9 +373,8 @@ router.put('/teams/:teamId', requireSuperAdmin, (req, res) => {
       allowedUsersConfig.teams[teamId] = userConfig;
     }
 
-    // Save configs
-    const saveSuccess = saveConfig(TEAM_BOARD_CONFIG_PATH, teamBoardConfig) &&
-                       saveConfig(ALLOWED_USERS_CONFIG_PATH, allowedUsersConfig);
+    saveTeamBoardConfig(teamBoardConfig);
+    const saveSuccess = saveConfig(ALLOWED_USERS_CONFIG_PATH, allowedUsersConfig);
 
     if (!saveSuccess) {
       return res.status(500).json({
@@ -382,8 +382,6 @@ router.put('/teams/:teamId', requireSuperAdmin, (req, res) => {
         error: 'Failed to save team configuration'
       });
     }
-
-    invalidateTeamBoardCache();
 
     return res.json({
       success: true,
@@ -417,7 +415,7 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
       });
     }
 
-    const teamBoardConfig = loadConfig(TEAM_BOARD_CONFIG_PATH);
+    const teamBoardConfig = loadTeamBoardConfig();
     const team = (teamBoardConfig.teams || []).find(t => t.id === teamId);
     
     if (!team) {
@@ -484,12 +482,15 @@ router.post('/test-team-config', requireSuperAdmin, validateJiraTokenMiddleware,
         .filter(v => v.name && v.released === false && v.archived !== true)
         .map(v => v.name);
 
-      // Apply version patterns for parent projects
-      if (team.projectType === 'parent' && team.versionPatterns) {
+      // Apply version patterns whenever they are configured (parent or dedicated).
+      if (Array.isArray(team.versionPatterns) && team.versionPatterns.length > 0) {
         const originalCount = versions.length;
-        const patterns = team.versionPatterns.map(p => new RegExp(p, 'i'));
-        versions = versions.filter(v => patterns.some(pattern => pattern.test(v)));
-        
+        const patterns = compileVersionPatterns(team.versionPatterns);
+        const pinned = new Set(Array.isArray(team.activeVersionNames) ? team.activeVersionNames : []);
+        versions = versions.filter(v =>
+          pinned.has(v) || (patterns.length > 0 && patterns.some(pattern => pattern.test(v)))
+        );
+
         testResults.versionAccess = {
           valid: true,
           totalVersions: originalCount,

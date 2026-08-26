@@ -1,6 +1,6 @@
 {
-  "_schema_version": "3.0-ndb-only",
-  "_description": "NDB-only configuration. Multi-product entries (DataLens, NCM) removed per ARCHITECTURE_TARGET.md v2 (2026-05-20). ProductService kept as a thin shim so shared services don't need to be rewritten; this config will only ever have one team.",
+  "_schema_version": "4.0-multi-team",
+  "_description": "Multi-team registry. Each Admin-onboarded team is one entry (NDB, Prism-Infra, …). NDB remains the default tenant. ProductService reads this file. D43 — the 2026-05-20 NDB-only freeze is lifted.",
   "sprintFieldId": "customfield_10360",
   "storyPointsFieldId": "customfield_10002",
   "completedStatusName": "Closed",
