@@ -1,12 +1,8 @@
-const axios = require('axios');
-const https = require('https');
 const { CONFLUENCE_API } = require('../../config/api');
 const logger = require('../../utils/logger');
 const { extractApiError, getConfluenceErrorMessage, formatErrorResponse } = require('../../utils/errorMessages');
+const { getConfluence } = require('../../utils/confluenceClient');
 
-const NODE_ENV = process.env.NODE_ENV || 'development';
-
-// Helper functions (shared with JIRA auth)
 function extractToken(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return null;
@@ -33,15 +29,6 @@ function isValidUsername(username) {
   return usernameRegex.test(username.trim());
 }
 
-// Create reusable HTTPS agent
-function createHttpsAgent() {
-  return new https.Agent({ 
-    rejectUnauthorized: NODE_ENV === 'production',
-    keepAlive: true,
-    maxSockets: 50
-  });
-}
-
 /**
  * Validates Confluence Bearer token and ensures it belongs to the provided username
  * @param {string} token - Confluence Bearer token
@@ -50,7 +37,7 @@ function createHttpsAgent() {
  */
 async function validateConfluenceToken(token, username) {
   const cleanToken = token.trim();
-  const httpsAgent = createHttpsAgent();
+  const confluence = await getConfluence(cleanToken);
   
   // Try multiple endpoints to validate token
   const endpoints = [
@@ -64,15 +51,7 @@ async function validateConfluenceToken(token, username) {
   
   for (const endpoint of endpoints) {
     try {
-      response = await axios.get(endpoint.url, {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        httpsAgent: httpsAgent,
-        timeout: 10000
-      });
+      response = await confluence.get(endpoint.url, { timeout: 10000 });
 
       // For /user endpoints, check for user data
       if (endpoint.url.includes('/user')) {
@@ -226,7 +205,6 @@ module.exports = {
   validateConfluenceToken,
   validateConfluenceTokenMiddleware,
   extractToken,
-  createHttpsAgent,
   normalizeToUsername,
   isValidUsername
 };

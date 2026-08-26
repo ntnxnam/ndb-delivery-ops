@@ -93,10 +93,10 @@ Each connector:
 | Connector | Purpose | Replaces |
 |---|---|---|
 | `jiraConnector` | All JIRA Data Center REST + Agile API calls. Auth: PAT as `Authorization: Bearer` only (D40). | `shared/connectors/jiraConnector.ts`. MCP's private copy is deleted. |
-| `confluenceConnector` | All Confluence REST calls | `apps/tpm-confluence-tools/src/confluence_client.py` + `apps/delivery-ops/client/src/services/confluenceService.js` |
-| `githubConnector` | GitHub commits / PRs / repos / CI signals | code currently embedded in `mcp-server/src/tools/leadershipCommitReport.ts` |
-| `slackConnector` *(new)* | Read channels, post messages, DM agent (D3) | net-new |
-| `emailConnector` *(new)* | Send digests; potentially read inbox for status pings (D3) | partial `nodemailer` usage in `server/routes/email.js` — extract + extend |
+| `confluenceConnector` | All Confluence REST calls | `shared/connectors/confluenceConnector.ts`. Express auth via `confluenceClient.js`. Python `tpm-confluence-tools` remains until Phase E. |
+| `githubConnector` | GitHub commits / PRs / repos / CI signals | `shared/connectors/githubConnector.ts`. MCP `leadership_commit_report` is a thin adapter. |
+| `slackConnector` *(new)* | Read channels, post messages, DM agent (D3) | Deferred — no caller yet. Do not add a unused client. |
+| `emailConnector` | Send digests; SMTP transport only | `shared/connectors/emailConnector.ts`. Express `emailService` keeps templates. |
 | `aiConnector` | LLM transport only (`chatCompletion`) — no domain prompts | `naiService.chatCompletion` internals (now delegates here) |
 
 ### Layer 2 — Domain models
@@ -353,7 +353,7 @@ per-capability ports is `CONSOLIDATION.md`.
 | **A. AI layer rebuild** | Orchestrator agent + 6 specialists + 13 skills + 9 rules + 3 workflows + persona-aware sidebar foundations | ✅ done — commit `54bb48a` |
 | **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express reaches it via `server/utils/jiraClient.js`; MCP constructs `JiraConnector` directly. Data Center Bearer PAT only |
 | **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
-| **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 AI transport (`aiConnector.chatCompletion`) landed. GitHub / Slack / Email still pending. |
+| **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 GitHub + Email + AI landed. Slack deferred until a real caller exists. Python Confluence client stays until Phase E. |
 | **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~7 of 20 capabilities done: #1a payload JQL, #1b dataset trunk, **#2 velocity (trunk + cache-first route)**, #3 insights first slice, **#4 landing forecast (trunk + cache-first route)**, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |
 | **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | 🟡 SyncHubPage simplified (one Sync Now button). Insights + Sprint Analysis still pending. |
 | **E. Streamlit retirement (tpm-confluence-tools)** | Rebuild Bulk Page Creator + Template Editor as React pages | ⏳ pending |

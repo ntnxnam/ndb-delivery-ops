@@ -7,30 +7,30 @@
  * - Email recipient parsing and normalization
  */
 
-const nodemailer = require('nodemailer');
+const { createEmailConnector } = require('../utils/emailClient');
 const path = require('path');
 const emailConfig = require('../config/emailConfig.json');
 const { formatContentForEmail } = require('../utils/emailFormatter');
 const { normalizeToUsername, usernameToEmail } = require('./userService');
 const { generateGanttChartHTML } = require('../utils/ganttChartEmailGenerator');
 
-let _transporter = null;
+let _email;
 
 /**
- * Create (or return cached) nodemailer transporter configured for the
+ * Create (or return cached) SMTP connector configured for the
  * Nutanix Secure eMail Relay (STARTTLS on port 587 with AD SMTP service account auth).
  */
-function createEmailTransporter() {
+async function getEmailConnector() {
   // Force recreation if credentials changed (for dev/testing)
-  if (_transporter && process.env.NODE_ENV !== 'production') {
+  if (_email && process.env.NODE_ENV !== 'production') {
     const currentUser = process.env.SMTP_USER;
     const currentPass = process.env.SMTP_PASS;
-    if (_transporter._lastUser !== currentUser || _transporter._lastPass !== currentPass) {
+    if (_email._lastUser !== currentUser || _email._lastPass !== currentPass) {
       console.log('[EmailService] Credentials changed, recreating transporter');
-      _transporter = null;
+      _email = null;
     }
   }
-  if (_transporter) return _transporter;
+  if (_email) return _email;
 
   const smtpConfig = emailConfig.smtp || {};
   const host = process.env.SMTP_HOST || smtpConfig.host || 'secure-mailrelay.corp.nutanix.com';
@@ -62,10 +62,10 @@ function createEmailTransporter() {
   }
 
   console.log(`[EmailService] Creating SMTP transporter → ${host}:${port} (STARTTLS, auth=${!!transportOptions.auth})`);
-  _transporter = nodemailer.createTransport(transportOptions);
-  _transporter._lastUser = user;
-  _transporter._lastPass = pass;
-  return _transporter;
+  _email = await createEmailConnector(transportOptions);
+  _email._lastUser = user;
+  _email._lastPass = pass;
+  return _email;
 }
 
 /**
@@ -84,10 +84,10 @@ function getDefaultFromAddress() {
  */
 async function sendEmailDirect(mailOptions) {
   mailOptions.from = mailOptions.from || getDefaultFromAddress();
-  const transporter = createEmailTransporter();
+  const email = await getEmailConnector();
   
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await email.send(mailOptions);
     console.log('[EmailService] Email sent:', info.messageId);
     return {
       messageId: info.messageId,
@@ -200,8 +200,8 @@ async function tryFallbackSMTP(mailOptions, originalError) {
         console.log(`[EmailService]   - No authentication (relay mode)`);
       }
 
-      const fallbackTransporter = nodemailer.createTransport(transportConfig);
-      const info = await fallbackTransporter.sendMail(mailOptions);
+      const fallbackEmail = await createEmailConnector(transportConfig);
+      const info = await fallbackEmail.send(mailOptions);
       
       console.log(`[EmailService] ✅ SUCCESS! ${config.name} worked!`);
       console.log(`[EmailService] Message ID: ${info.messageId}`);
@@ -469,7 +469,8 @@ function formatDateForEmail() {
 }
 
 module.exports = {
-  createEmailTransporter,
+  createEmailTransporter: getEmailConnector,
+  getEmailConnector,
   getDefaultFromAddress,
   sendEmailDirect,
   wrapReleaseVersionsEmailHTML,

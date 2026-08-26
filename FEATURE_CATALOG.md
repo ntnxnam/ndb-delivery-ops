@@ -203,9 +203,11 @@ Today these are duplicated across apps; one of them per system is the goal.
 | Connector              | Currently in                                                                                                                                                           | Decision                                                                                  |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | JIRA                   | `shared/connectors/jiraConnector.ts` (Data Center PAT Bearer, D40). Express HTTP goes through `server/utils/jiraClient.js`. Web login still validates PAT in `apps/delivery-ops/server/middleware/auth/jira.js`. | **one TS connector; MCP private copy removed** |
-| Confluence             | `apps/tpm-confluence-tools/src/confluence_client.py` (Python) + `apps/delivery-ops/client/src/services/confluenceService.js` (JS)                                      | **consolidate to one TS connector, used by both delivery-ops + future Bulk Page Creator** |
-| GitHub                 | was in `_archive/GitHub-Commits.tar.gz`; now in `mcp-server/src/tools/leadershipCommitReport.ts`                                                                       | **extract to `mcp-server/src/connectors/githubConnector.ts*`*                             |
-| AI / LLM (CrystalBall) | `crystalball-i/` package + `mcp-server` agent layer                                                                                                                    | **single `aiConnector` module**                                                           |
+| Confluence             | `shared/connectors/confluenceConnector.ts`. Express auth uses `server/utils/confluenceClient.js`. Date mover uses `getPage` / `appendStructuredRow`. Python `tpm-confluence-tools` remains until Phase E. | **one TS connector for Node hosts** |
+| GitHub                 | `shared/connectors/githubConnector.ts`. MCP `leadership_commit_report` is a thin adapter. | **one TS connector** |
+| Email                  | `shared/connectors/emailConnector.ts` (SMTP send). Express `emailService` keeps templates + recipient parsing. | **one TS connector** |
+| Slack                  | no caller yet | **deferred until a real host needs it** |
+| AI / LLM               | `shared/connectors/aiConnector.ts` — NAI `completeChat` for web chat, exec summaries, and AI reports | **single `aiConnector` module** |
 
 
 ---

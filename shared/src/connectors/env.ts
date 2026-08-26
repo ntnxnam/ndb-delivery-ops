@@ -25,6 +25,8 @@ export interface Env {
   confluenceBaseUrl?: string;
   /** Confluence PAT — may reuse the JIRA PAT if Atlassian SSO. */
   confluencePat?: string;
+  /** Optional GitHub PAT for api.github.com (Bearer). */
+  githubToken?: string;
   /** Default product id when caller omits it (typical: 'ndb'). */
   defaultProductId: string | null;
 }
@@ -68,6 +70,7 @@ export function loadEnv(options?: LoadEnvOptions): Env {
     ? process.env.CONFLUENCE_BASE_URL.replace(/\/+$/, '')
     : undefined;
   const confluencePat = process.env.CONFLUENCE_PAT || jiraPat || undefined;
+  const githubToken = process.env.GITHUB_TOKEN || undefined;
   const defaultProductId =
     process.env.DEFAULT_PRODUCT_ID ||
     process.env.NDB_DEFAULT_TEAM_ID || // legacy
@@ -79,6 +82,7 @@ export function loadEnv(options?: LoadEnvOptions): Env {
     httpsProxy,
     confluenceBaseUrl,
     confluencePat,
+    githubToken,
     defaultProductId,
   };
 }

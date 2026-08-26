@@ -177,15 +177,32 @@ export class ConfluenceConnector {
     };
   }
 
+  private absolute(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    return `${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+
   private async request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     const merged: AxiosRequestConfig = {
       timeout: this.env.jiraTimeoutMs,
       httpsAgent: this.httpsAgent,
       headers: { ...this.headers(), ...(config.headers ?? {}) },
       ...config,
-      url: `${this.baseUrl}${config.url}`,
+      url: this.absolute(String(config.url || '')),
     };
     return axios.request<T>(merged);
+  }
+
+  async get<T = unknown>(
+    path: string,
+    options: AxiosRequestConfig = {}
+  ): Promise<AxiosResponse<T>> {
+    return axios.get<T>(this.absolute(path), {
+      headers: this.headers(),
+      httpsAgent: this.httpsAgent,
+      timeout: this.env.jiraTimeoutMs,
+      ...options,
+    });
   }
 
   // ── Page read ──────────────────────────────────────────────────────────────

@@ -43,10 +43,7 @@ for (const needle of ["require('axios')", 'createHttpsAgent', 'retryJiraCall']) 
 }
 
 const skipNames = new Set([
-  'confluence.js',
   'tcmsService.js',
-  'aiReportService.js',
-  'ai-reports.js',
 ]);
 const transportRe = /(?:function|const)\s+(?:createHttpsAgent|retryJiraCall)\b/;
 
@@ -70,4 +67,23 @@ function walk(dir) {
 
 walk(join(repoRoot, 'apps/delivery-ops/server'));
 
-console.log('tool-bus ok: shared JiraConnector + DateMoverService aliases; Express via jiraClient; no MCP-private JIRA client');
+for (const rel of [
+  'shared/src/connectors/githubConnector.ts',
+  'shared/src/connectors/emailConnector.ts',
+  'apps/delivery-ops/server/utils/confluenceClient.js',
+  'apps/delivery-ops/server/utils/emailClient.js',
+]) {
+  if (!existsSync(join(repoRoot, rel))) {
+    console.error(`tool-bus failed: missing ${rel}`);
+    process.exit(1);
+  }
+}
+
+const mcpGithub = join(repoRoot, 'mcp-server/src/tools/leadershipCommitReport.ts');
+const mcpGithubSrc = readFileSync(mcpGithub, 'utf8');
+if (mcpGithubSrc.includes("from 'axios'") || mcpGithubSrc.includes('from "axios"')) {
+  console.error('tool-bus failed: leadershipCommitReport.ts must not import axios');
+  process.exit(1);
+}
+
+console.log('tool-bus ok: shared Jira/GitHub/Email connectors; Express via jiraClient; no MCP-private JIRA client');

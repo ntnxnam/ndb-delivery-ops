@@ -19,6 +19,8 @@ export * as agentRuntime from './agentRuntime/index.js';
 // Common re-exports for convenience.
 export { JiraConnector } from './connectors/jiraConnector.js';
 export { ConfluenceConnector } from './connectors/confluenceConnector.js';
+export { GithubConnector } from './connectors/githubConnector.js';
+export { EmailConnector } from './connectors/emailConnector.js';
 export { loadEnv } from './connectors/env.js';
 export type { Env, LoadEnvOptions } from './connectors/env.js';
 export { chatCompletion, completeChat, AiConnectorError } from './connectors/aiConnector.js';

@@ -194,6 +194,8 @@ ndb-status-update-sender/
 | `server/routes/jira/index.js` | JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs |
 | `server/services/emailService.js` | SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients |
 | `server/utils/jiraClient.js` | CJS adapter onto shared `JiraConnector` (`getJira`, `searchPages`) |
+| `server/utils/confluenceClient.js` | CJS adapter onto shared `ConfluenceConnector` |
+| `server/utils/emailClient.js` | CJS adapter onto shared `EmailConnector` |
 | `server/services/jiraService.js` | Risk-indicator presentation helpers only |
 | `server/services/userService.js` | Username/email normalization, JIRA user extraction, auth checks |
 | `server/config/jiraFieldsConfig.json` | **Single source of truth** for all JIRA custom field IDs (server side) |

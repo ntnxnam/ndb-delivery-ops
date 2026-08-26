@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import axios from 'axios';
+import { GithubConnector, loadEnv } from '@portfolio-delivery-ops/shared';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 const inputSchema = {
@@ -50,36 +50,30 @@ export function registerLeadershipCommitReport(server: McpServer): void {
       },
     },
     async ({ repos, sinceIsoDate, untilIsoDate, topAuthors }) => {
-      const githubToken = process.env.GITHUB_TOKEN || '';
+      const env = loadEnv({ requirePat: false });
+      const github = new GithubConnector(env);
       const until = untilIsoDate ?? new Date().toISOString().slice(0, 10);
-      const headers: Record<string, string> = {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      };
-      if (githubToken) headers['Authorization'] = `Bearer ${githubToken}`;
 
       const perRepo: Record<string, { totalCommits: number; topAuthors: AuthorRollup[]; error?: string }> = {};
 
       for (const repo of repos) {
         try {
-          // Paginate /repos/{owner}/{repo}/commits?since=&until=
           let page = 1;
           let perRepoTotal = 0;
           const byAuthor = new Map<string, AuthorRollup>();
           while (page <= 10) { // 10-page cap (= 1000 commits) per repo to bound runtime
-            const url = `https://api.github.com/repos/${repo}/commits`;
-            const res = await axios.get(url, {
-              headers,
-              params: { since: `${sinceIsoDate}T00:00:00Z`, until: `${until}T23:59:59Z`, per_page: 100, page },
-              timeout: 20000,
-              validateStatus: () => true,
+            const res = await github.listCommits(repo, {
+              sinceIso: sinceIsoDate,
+              untilIso: until,
+              page,
+              perPage: 100,
             });
             if (res.status === 404) { perRepo[repo] = { totalCommits: 0, topAuthors: [], error: 'repo not found' }; break; }
             if (res.status === 403) { perRepo[repo] = { totalCommits: 0, topAuthors: [], error: 'rate limited or forbidden' }; break; }
-            if (!Array.isArray(res.data)) { perRepo[repo] = { totalCommits: 0, topAuthors: [], error: `unexpected response shape (${res.status})` }; break; }
-            if (res.data.length === 0) break;
+            if (res.status !== 200) { perRepo[repo] = { totalCommits: 0, topAuthors: [], error: `unexpected response shape (${res.status})` }; break; }
+            if (res.commits.length === 0) break;
 
-            for (const commit of res.data as Array<{ author?: { login?: string }; commit?: { author?: { name?: string } } }>) {
+            for (const commit of res.commits) {
               const login = commit.author?.login ?? '(unknown)';
               const name = commit.commit?.author?.name ?? login;
               const existing = byAuthor.get(login) ?? { login, name, commitCount: 0 };
@@ -88,7 +82,7 @@ export function registerLeadershipCommitReport(server: McpServer): void {
               perRepoTotal += 1;
             }
 
-            if (res.data.length < 100) break;
+            if (res.commits.length < 100) break;
             page += 1;
           }
 
@@ -120,7 +114,7 @@ export function registerLeadershipCommitReport(server: McpServer): void {
         }
         lines.push('');
       }
-      if (!githubToken) {
+      if (!env.githubToken) {
         lines.push('_Note: no GITHUB_TOKEN set; unauthenticated requests are rate-limited to 60/hr per IP._');
       }
 

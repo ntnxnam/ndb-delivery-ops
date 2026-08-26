@@ -136,12 +136,59 @@ class JiraConnector {
   }
 }
 
+class ConfluenceConnector {
+  constructor(env) {
+    this.env = env || {};
+  }
+
+  get(path, options = {}) {
+    const axios = require('axios');
+    return axios.get(path, options);
+  }
+}
+
+class GithubConnector {
+  constructor(env) {
+    this.env = env || {};
+  }
+
+  async listCommits(repo, params = {}) {
+    const axios = require('axios');
+    const res = await axios.get(`https://api.github.com/repos/${repo}/commits`, {
+      params: { page: params.page, per_page: params.perPage },
+    });
+    return { status: res.status || 200, commits: res.data || [] };
+  }
+}
+
+class EmailConnector {
+  constructor(options) {
+    const nodemailer = require('nodemailer');
+    this.transporter = nodemailer.createTransport(options);
+  }
+
+  send(mail) {
+    return this.transporter.sendMail(mail);
+  }
+}
+
+async function completeChat() {
+  const axios = require('axios');
+  const res = await axios.post('/chat/completions', {});
+  return {
+    content: res.data?.choices?.[0]?.message?.content || '',
+    toolCalls: [],
+    finishReason: 'stop',
+  };
+}
+
 function loadEnv() {
   return {
     jiraBaseUrl: 'https://jira.example.com',
     jiraPat: '',
     jiraTimeoutMs: 30000,
     httpsProxy: null,
+    githubToken: '',
   };
 }
 
@@ -279,6 +326,10 @@ module.exports = {
   fetchReleaseData,
   listFixVersionsForTeam,
   JiraConnector,
+  ConfluenceConnector,
+  GithubConnector,
+  EmailConnector,
+  completeChat,
   loadEnv,
   wrapTeamScope,
   getComponentQueries: jest.fn().mockReturnValue({}),

@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const https = require('https');
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const aiReportService = require('../../services/aiReportService');
-
-const naiHttpsAgent = new https.Agent({ rejectUnauthorized: false });
+const { getShared } = require('../../utils/jiraClient');
 
 // Use validateJiraTokenMiddleware consistently throughout this file
 
@@ -28,43 +25,18 @@ router.post('/validate-nai-key', async (req, res) => {
 
     console.log('[validate-nai-key] Testing NAI API key...');
     
-    // Test the API key with a simple request
-    const testResponse = await axios.post(
-      'https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1/chat/completions',
-      {
-        model: 'eng-pool-05', // Default model for Nutanix NAI, other APIs may ignore this
-        messages: [
-          {
-            role: 'user',
-            content: 'Test connection - respond with "OK"'
-          }
-        ],
-        max_tokens: 10,
-        temperature: 0.1
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000,
-        httpsAgent: naiHttpsAgent
-      }
+    const shared = await getShared();
+    await shared.completeChat(
+      [{ role: 'user', content: 'Test connection - respond with "OK"' }],
+      { maxTokens: 10, temperature: 0.1, timeoutMs: 10000 },
+      { apiKey, rejectUnauthorized: false }
     );
 
-    if (testResponse.status === 200 && testResponse.data?.choices?.length > 0) {
-      console.log('[validate-nai-key] NAI API key validated successfully');
-      return res.json({
-        success: true,
-        message: 'NAI API key is valid'
-      });
-    } else {
-      console.log('[validate-nai-key] NAI API returned unexpected response:', testResponse.status);
-      return res.status(400).json({
-        success: false,
-        error: 'NAI API key validation failed - unexpected response'
-      });
-    }
+    console.log('[validate-nai-key] NAI API key validated successfully');
+    return res.json({
+      success: true,
+      message: 'NAI API key is valid'
+    });
 
   } catch (error) {
     console.error('[validate-nai-key] Error validating NAI API key:', error.message);

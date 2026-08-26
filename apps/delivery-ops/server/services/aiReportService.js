@@ -1,15 +1,11 @@
-const axios = require('axios');
-const https = require('https');
 const { JIRA_API_V2 } = require('../config/api');
-const { getJira } = require('../utils/jiraClient');
+const { getJira, getShared } = require('../utils/jiraClient');
 const { buildCommitItemsJQL } = require('../utils/jiraQueryUtils');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
 const { processAllMilestones } = require('../utils/milestoneProcessor');
 const { getFieldId, getFieldValue, buildFieldIdsString } = require('../utils/jiraFieldsConfig');
 const { formatDate } = require('../utils/dateFormatter');
 const execSummaryService = require('./execSummaryService');
-
-const naiHttpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 function analyzeProjectRisk(jiraItem) {
   const fields = jiraItem.fields || {};
@@ -229,27 +225,18 @@ async function generateAiVpReport({ version, naiApiKey, jiraToken }) {
     }
   };
   const vpPrompt = buildVPReportPrompt(releaseData);
-  const naiResponse = await axios.post(
-    'https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1/chat/completions',
-    {
-      model: 'eng-pool-05',
-      messages: [
-        { role: 'system', content: 'You are a technical program analyst creating executive Team Executive reports using only provided data.' },
-        { role: 'user', content: vpPrompt }
-      ],
-      max_tokens: 4000,
-      temperature: 0.3,
-      top_p: 0.9
-    },
-    {
-      headers: { Authorization: `Bearer ${naiApiKey}`, 'Content-Type': 'application/json' },
-      timeout: 60000,
-      httpsAgent: naiHttpsAgent
-    }
+  const shared = await getShared();
+  const turn = await shared.completeChat(
+    [
+      { role: 'system', content: 'You are a technical program analyst creating executive Team Executive reports using only provided data.' },
+      { role: 'user', content: vpPrompt }
+    ],
+    { maxTokens: 4000, temperature: 0.3, timeoutMs: 60000 },
+    { apiKey: naiApiKey, rejectUnauthorized: false }
   );
-  if (!naiResponse.data?.choices?.[0]?.message?.content) throw new Error('NAI API returned no content');
+  if (!turn.content) throw new Error('NAI API returned no content');
   return {
-    teamExecReport: naiResponse.data.choices[0].message.content,
+    teamExecReport: turn.content,
     releaseData,
     generatedAt: new Date().toISOString(),
     version
