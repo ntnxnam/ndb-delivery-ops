@@ -11,14 +11,23 @@
     "./types": "./dist/types/index.js",
     "./connectors": "./dist/connectors/index.js",
     "./services": "./dist/services/index.js",
-    "./agentPack": "./dist/agentPack/index.js"
+    "./agentPack": "./dist/agentPack/index.js",
+    "./agentRuntime": "./dist/agentRuntime/index.js",
+    "./execSummarySignals": "./src/domain/execSummarySignals.cjs",
+    "./execSummaryAnalytics": "./src/domain/execSummaryAnalytics.cjs",
+    "./sprintMetrics": "./src/domain/sprintMetrics.cjs",
+    "./bundleDerive": "./src/domain/bundleDerive.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "clean": "rm -rf dist",
-    "smoke:agent-pack": "node ./scripts/smoke-agent-pack.mjs"
+    "smoke:agent-pack": "node ./scripts/smoke-agent-pack.mjs",
+    "smoke:agent-runtime": "node ./scripts/smoke-agent-runtime.mjs",
+    "smoke:risk": "node ./scripts/smoke-risk-indicator.mjs",
+    "smoke:tool-bus": "node ./scripts/smoke-tool-bus.mjs",
+    "smoke:wave3": "node ./scripts/smoke-wave3.mjs"
   },
   "dependencies": {
     "axios": "^1.7.2",

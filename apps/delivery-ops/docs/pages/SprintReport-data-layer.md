@@ -3,7 +3,7 @@
 **Route**: `/sprint-report`  
 **Server routes used**: `server/routes/jira/index.js` (sprint sub-routes)  
 **Hooks**: `useTeamDataset`, `useTeam` (shared `TeamContext` — no extra teams fetch)  
-**Bundle utility**: `release/utils/bundleUtils.js → derivePastSprintReportFromBundle`
+**Bundle utility**: `release/utils/bundleUtils.js → derivePastSprintReportFromBundle` (CRA copy of `shared/src/domain/bundleDerive.js`, D41)
 
 ---
 
@@ -27,7 +27,7 @@ No API call if bundle is loaded in `TeamDatasetContext`.
 
 **Client flow**: `SprintReportPage → useTeamDataset → bundle → derivePastSprintReportFromBundle(bundle, teamId, sprintName)`
 
-`derivePastSprintReportFromBundle` (in `bundleUtils.js`):
+`derivePastSprintReportFromBundle` (CRA copy of `shared/src/domain/bundleDerive.js`):
 - Reads pre-aggregated sprint data from `bundle.sprints[teamId][sprintName]`
 - Returns velocity breakdown (dev / qaVerification / qaTest) + resolution distribution + issue type distribution
 - All JQL links for clickable counts are pre-computed and stored in the bundle

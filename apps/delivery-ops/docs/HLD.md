@@ -136,7 +136,7 @@ server/
 └── utils/
     ├── jiraQueryUtils.js        JQL builders (all JQL lives here)
     ├── jiraRouteHelpers.js      Shared route helpers
-    ├── execSummarySignals.js    RAG signal computation
+    ├── execSummarySignals.js    shim → shared/src/domain/execSummarySignals.cjs (D41)
     ├── fieldHistoryUtils.js     Changelog parsing
     ├── chatIntentRouter.js      Chat → tool routing
     └── chatSnapshotBuilder.js   Dataset → chat context

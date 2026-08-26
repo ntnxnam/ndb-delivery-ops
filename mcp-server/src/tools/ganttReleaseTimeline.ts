@@ -28,7 +28,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { JiraConnector } from '../connectors/jiraConnector.js';
+import { classifyRiskIndicator, JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
 
 const START_DATE_FIELD = 'customfield_11069';
@@ -117,7 +117,7 @@ export function registerGanttReleaseTimeline(server: McpServer, env: Env): void 
             assignee: (f['assignee'] as { displayName?: string } | undefined)?.displayName ?? 'Unassigned',
             startDate: startRaw,
             endDate,
-            riskBucket: classifyRisk(f['customfield_23560']),
+            riskBucket: classifyRiskIndicator(f['customfield_23560']),
             endDateSource,
           };
         });
@@ -156,15 +156,3 @@ export function registerGanttReleaseTimeline(server: McpServer, env: Env): void 
   );
 }
 
-function classifyRisk(raw: unknown): Row['riskBucket'] {
-  if (!raw) return 'not_set';
-  const value = typeof raw === 'object' && raw !== null
-    ? String((raw as { value?: string; name?: string }).value ?? (raw as { name?: string }).name ?? '')
-    : String(raw);
-  const v = value.toLowerCase();
-  if (!v) return 'not_set';
-  if (v.includes('red') || v.includes('critical') || v.includes('high')) return 'red';
-  if (v.includes('yellow') || v.includes('moderate') || v.includes('at risk')) return 'yellow';
-  if (v.includes('green') || v.includes('on track') || v.includes('low')) return 'green';
-  return 'not_set';
-}

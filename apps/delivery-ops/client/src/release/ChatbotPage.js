@@ -85,6 +85,16 @@ export default function ChatbotPage() {
           <div key={`${m.role}-${idx}`} className={`chatbot-message ${m.role}`}>
             <div className="chatbot-role">{m.role === 'user' ? 'You' : 'Assistant'}</div>
             <div className="chatbot-content">{linkifyTicketKeys(m.content)}</div>
+            {m.role === 'assistant' && Array.isArray(m.trace) && m.trace.length > 0 && (
+              <ul className="chatbot-trace" aria-label="Tool trace">
+                {m.trace.map((step, stepIdx) => (
+                  <li key={`${step.tool}-${stepIdx}`} className={step.ok ? 'ok' : 'fail'}>
+                    {step.tool}
+                    {step.detail ? ` · ${step.detail}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
         {loading && <div className="chatbot-loading">Generating response...</div>}

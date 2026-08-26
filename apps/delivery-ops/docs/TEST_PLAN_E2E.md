@@ -221,7 +221,7 @@ Run these when the corresponding trigger condition occurs.
 | Trigger Condition | Regression Scenario | Verification Steps |
 |---|---|---|
 | JIRA API version update | Changelog pagination regression | Fetch history for `FEAT-18452`; verify all historical dates present in Gantt markers |
-| Any change to `execSummarySignals.js` | RAG verdict regression | Run UT-RAG-001 through UT-RAG-011; confirm P0 → RED is immediate |
+| Any change to `execSummarySignals.cjs` / `riskIndicator.ts` | RAG verdict regression | Run UT-RAG-001 through UT-RAG-011; confirm P0 → RED is immediate |
 | Any change to `ReleaseGantt.js` | Gantt bar regression | Verify bar starts at EC, ends at current CC; historical markers at correct positions |
 | Any change to email service | Email template regression | Send test email; verify: CC present, table present, legend present, no `[object Object]` |
 | Any sprint chart change | Sprint ordering regression | Confirm S1, S2, S3 numeric order; not S1, S10, S11, S2 |

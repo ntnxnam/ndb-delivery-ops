@@ -24,7 +24,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { JiraConnector } from '../connectors/jiraConnector.js';
+import { JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
 
 const STORY_POINT_FIELD = 'customfield_10002';

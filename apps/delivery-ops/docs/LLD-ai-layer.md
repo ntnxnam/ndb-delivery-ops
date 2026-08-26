@@ -25,13 +25,14 @@ All three use NAI (Nutanix internal LLM API), enforce ticket-key integrity, and 
 
 | File | Purpose |
 |---|---|
-| `server/services/naiService.js` | All LLM calls (chat, exec summary, release summary) |
-| `server/services/chatService.js` | Chat intent routing + context building |
+| `server/services/naiService.js` | One-shot LLM for exec summary + release briefing (not chat SOPs) |
+| `server/services/chatService.js` | Host adapter: perceive snapshot, then `runAgentTurn` |
+| `shared/src/agentRuntime/` | Pack bootstrap + read-only tool loop (D39) |
 | `server/utils/chatIntentRouter.js` | Classify user message into intent |
 | `server/utils/chatSnapshotBuilder.js` | Build compact dataset context for LLM |
 | `server/services/aiReportService.js` | AI report orchestration |
-| `server/services/releaseAiSummaryService.js` | Release summary data assembly |
-| `server/utils/execSummarySignals.js` | Deterministic RAG signal computation |
+| `server/services/releaseAiSummaryService.js` | Release summary **fetch** (JQL + JIRA). Aggregation is `shared` `assembleReleaseIntelligence` (D41) |
+| `shared/src/domain/execSummarySignals.cjs` | Deterministic RAG signal computation (`deriveSignals`). App shim: `server/utils/execSummarySignals.js` |
 | `server/routes/ai.js` | `/api/ai/*` routes |
 | `client/src/release/ChatbotPage.js` | Chat UI |
 | `client/src/components/ReleaseSummaryPanel.js` | Release briefing UI |
@@ -52,31 +53,25 @@ POST /api/ai/chat
 }
 
 Response:
-{ "content": "...", "citations": ["ERA-66381", "ERA-66374"] }
+{ "reply": "...", "scope": {...}, "snapshotMeta": {...}, "trace": [...], "runtime": "agent" }
 ```
 
 ### 3.2 Server Pipeline
 
 ```
-chatService.processMessage(message, history, release, productId):
+chatService.answerChat(message, history, release, productId):
 
-1. chatIntentRouter.classify(message)
-   → intents: release_status | ticket_query | gate_date | blocker | sprint | general
+1. chatIntentRouter.extractScope(message)
+   → releases / teams / ticket keys / intent
 
-2. chatSnapshotBuilder.build(release, productId)
-   → reads bundle.json from disk
-   → extracts: top issues, gate dates, P0/mustfix counts, sprint velocity
-   → builds compact context (target < 4000 tokens to leave room for history)
+2. chatSnapshotBuilder.buildSnapshot(scope, productId)
+   → disk release cache + gate dates + optional release intelligence (incl. computed health)
 
-3. naiService.chatCompletion({
-     systemPrompt: CHAT_SYSTEM_PROMPT,
-     context: snapshot,
-     history,
-     message
-   })
-   → POST to NAI API
+3. loadAgentPack() + runAgentTurn({ perceive, validTicketKeys, tools })
+   → read-only pack tools + get_release_snapshot / get_release_health
+   → aiConnector.completeChat (native tool_calls or JSON protocol)
 
-4. Return response with citations
+4. Return { reply, scope, snapshotMeta, trace, runtime: "agent" }
 ```
 
 ### 3.3 CHAT_SYSTEM_PROMPT Key Rules
@@ -170,7 +165,8 @@ The LLM must produce all 20 sections. Sections may say "N/A" but must not be sil
 ### 5.1 RAG Verdict — Deterministic (Not LLM-Generated)
 
 ```javascript
-// server/utils/execSummarySignals.js
+// shared/src/services/riskIndicator.ts — computeReleaseHealthVerdict
+// (deriveSignals lives in shared/src/domain/execSummarySignals.cjs)
 function computeRAGVerdict({
   openP0Blockers,
   openMustFixTickets,
@@ -195,16 +191,15 @@ function computeRAGVerdict({
 ### 5.2 Intelligence Package Assembly
 
 ```
-releaseAiSummaryService.buildPackage(release, productId):
+releaseAiSummaryService.buildReleaseIntelligence(release, jiraToken):
 
-1. Fetch P0 blockers (with keys + summaries — LLM needs keys to name them)
-2. Fetch mustfix tickets (label = "{release}-mustfix")
-3. Compute gate signals (CC, CG, PG dates vs today)
-4. Fetch committed features (excludes long-term-funded per D36)
-5. Build VALID TICKET KEYS numbered list from all fetched tickets
-6. Compute deterministic RAG verdict
+1. Fetch committed features (existing JQL; excludes long-term-funded)
+2. Fetch P0 blockers (with keys + summaries — LLM needs keys to name them)
+3. Fetch mustfix tickets (label = "{release}-mustfix")
+4. deriveSignals per feature (shared execSummarySignals)
+5. assembleReleaseIntelligence (shared) — buckets + computeReleaseHealthVerdict
 
-Return: { verdict, p0Blockers, mustFixTickets, gateSignals, committedFeatureCount, validKeys }
+Return: { health, p0Bugs, mustFixTickets, buckets, phaseDist, valid feature keys }
 ```
 
 ### 5.3 LLM Call

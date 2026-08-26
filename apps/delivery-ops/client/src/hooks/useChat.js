@@ -46,6 +46,8 @@ export function useChat() {
         const assistantMessage = {
           role: 'assistant',
           content: String(data.reply || 'No reply received.'),
+          trace: Array.isArray(data.trace) ? data.trace : [],
+          runtime: data.runtime || 'agent',
         };
         setMessages((prev) => [...prev, assistantMessage]);
         setScope(data.scope || null);

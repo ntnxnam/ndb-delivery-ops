@@ -67,7 +67,7 @@ This plan covers:
 
 ### 2.4 RAG Verdict Computation
 
-All test cases drive `computeRAGVerdict` in `server/utils/execSummarySignals.js`.
+All test cases drive `computeReleaseHealthVerdict` in `shared/src/services/riskIndicator.ts`. Phase signals come from `shared/src/domain/execSummarySignals.cjs` (`deriveSignals`).
 
 | ID | Scenario | Input signals | Expected verdict |
 |---|---|---|---|
@@ -208,7 +208,7 @@ All test cases drive `computeRAGVerdict` in `server/utils/execSummarySignals.js`
 
 | ID | Request | Mock | Expected |
 |---|---|---|---|
-| IT-AI-001 | `POST /api/ai/chat` with message | NAI mock; bundle on disk | 200; content field in response |
+| IT-AI-001 | `POST /api/ai/chat` with message | NAI mock; bundle on disk | 200; `reply`, `runtime: "agent"`, `trace` array |
 | IT-AI-002 | `POST /api/ai/release-summary` | NAI mock + JIRA mock | 200; `{ verdict, summary, blockers, actionList }` |
 | IT-AI-003 | `POST /api/ai/release-summary` with P0 open | JIRA mock returns P0 ticket | `verdict = "RED"` regardless of NAI response |
 | IT-AI-004 | `POST /api/ai/chat` → NAI timeout | Mock 30s timeout | 503; meaningful error; no hang |

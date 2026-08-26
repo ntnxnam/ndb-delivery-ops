@@ -1,9 +1,10 @@
 /**
- * bundleUtils — CRA adapter copy of shared/src/domain/bundleDerive.js (D41).
- * Keep export names in sync (npm --workspace shared run smoke:wave3).
+ * bundleDerive — derive all page data from the centralised bundle
+ * without making JIRA API calls. Shared SoT (Wave 3 / D41).
  *
- * CRA cannot import the shared file (ModuleScopePlugin + no Node in the
- * browser graph). Shared is the SoT; this copy is the client runtime.
+ * Browser-safe (no Node builtins). CRA cannot import this path, so
+ * apps/delivery-ops/client/src/release/utils/bundleUtils.js is a
+ * same-export adapter copy — keep the two in sync (smoke:wave3).
  *
  * Exports
  * ───────

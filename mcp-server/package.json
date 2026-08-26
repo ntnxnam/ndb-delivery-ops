@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@portfolio-delivery-ops/shared": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.2",
     "https-proxy-agent": "^7.0.4",

@@ -150,15 +150,15 @@ async function buildSnapshot({
     if (typeof buildReleaseIntelligence === 'function' && jiraToken) {
       try {
         const intel = await buildReleaseIntelligence(release, jiraToken);
+        const { bucketCounts } = await getShared();
         releaseIntelligence[release] = {
           totalFeatures: intel.totalFeatures,
           p0BugsCount: intel.p0BugsCount,
           phaseDist: intel.phaseDist,
           dateMetrics: intel.dateMetrics,
           selfReportedRisk: intel.selfReportedRisk,
-          bucketCounts: Object.fromEntries(
-            Object.entries(intel.buckets || {}).map(([k, v]) => [k, Array.isArray(v) ? v.length : 0])
-          ),
+          health: intel.health,
+          bucketCounts: bucketCounts(intel.buckets || {}),
           mustFixTickets: (intel.mustFixTickets || []).slice(0, 10),
           p0Bugs: (intel.p0Bugs || []).slice(0, 10),
         };

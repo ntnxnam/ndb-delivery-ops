@@ -113,6 +113,28 @@
   text-decoration: underline;
 }
 
+.chatbot-trace {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chatbot-trace li {
+  font-size: 0.72rem;
+  color: #495057;
+  background: #eef2f5;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.chatbot-trace li.fail {
+  color: #842029;
+  background: #f8d7da;
+}
+
 .chatbot-loading {
   color: #6c757d;
   font-size: 0.85rem;

@@ -21,6 +21,7 @@ Users never invoke specialists directly.
 
 Invoke with `@ops-assistant` in Cursor, or any delivery-ops chat
 surface. Both hosts must load the same pack via `loadAgentPack()`.
+Web chat runs `runAgentTurn` (D39), not a one-shot mailbox prompt.
 
 The orchestrator:
 

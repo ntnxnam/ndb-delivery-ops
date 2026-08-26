@@ -4,6 +4,7 @@
 **Server routes used**: `server/routes/releaseDataset.js` (retrospective sub-routes)  
 **Hooks**: `useRetrospective` (`release/hooks/useRetrospective.js`)  
 **Services**: `release/services/retrospectiveService.js`  
+**Bundle utility**: `release/utils/bundleUtils.js` (CRA copy of `shared/src/domain/bundleDerive.js`, D41)  
 **Contexts consumed**: `SelectedReleaseContext`, `ReleaseDataContext`
 
 ---

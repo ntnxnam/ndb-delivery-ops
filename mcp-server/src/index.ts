@@ -2,8 +2,8 @@
  * NDB-Delivery-Ops MCP server entry point.
  *
  * Spawned by the host (Cursor, Claude Desktop, Claude.ai connectors) over
- * stdio. Registers connectors, tools, resources, and prompts, then connects
- * to the transport and waits.
+ * stdio. Registers tools and resources, then connects to the transport.
+ * JIRA traffic goes through shared `JiraConnector` (Data Center PAT Bearer).
  *
  * Subsequent tools are registered by importing their `register…` function
  * here. Keep this file thin — server-wide instructions and the connector

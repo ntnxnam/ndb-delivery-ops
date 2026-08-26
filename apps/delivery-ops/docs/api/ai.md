@@ -6,7 +6,9 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
 
 ### POST /api/ai/chat
 
-**Purpose**: Run conversational release Q&A using the same NAI connection as exec/release summaries, enriched with cached release datasets, gate config, and release intelligence.
+**Purpose**: Conversational release Q&A. Perceive (cached snapshot) then run the portable agent runtime (pack bootstrap + read-only tool loop). Same LLM transport as exec/release summaries (`aiConnector.completeChat`).
+
+> Additive in 2026-08-25: `trace` and `runtime` on the success response. `reply` / `scope` / `snapshotMeta` are unchanged. Optional body field `audience`.
 
 **Auth**: Required (JIRA token in `Authorization: Bearer <token>` header)
 
@@ -19,14 +21,17 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
   | `history` | array | no | Prior turns as `{ role, content }`; only `user` and `assistant` roles are accepted |
   | `release` | string | no | Default focus release if prompt does not explicitly name one |
   | `productId` | string | no | Product namespace for dataset cache; default `ndb` |
+  | `audience` | string | no | Presenter lens for the orchestrator session; default `tpm` |
   | `availableReleases` | string[] | no | Client-supplied release list to improve intent extraction |
   | `knownTeams` | string[] | no | Client-supplied team/component names to improve intent extraction |
 
 **Server flow**
 `POST /api/ai/chat`
 → `chatIntentRouter.extractScope`
-→ `chatSnapshotBuilder.buildSnapshot` (release cache + release gate config + optional release intelligence)
-→ `naiService.chatCompletion`
+→ `chatSnapshotBuilder.buildSnapshot` (release cache + gate config + optional release intelligence)
+→ `loadAgentPack()` + `runAgentTurn` (`shared/agentRuntime`)
+→ pack tools (`list_skills`, `read_skill`, `read_specialist`) and host tools (`get_release_snapshot`, `get_release_health`) — **read-only**
+→ `aiConnector.completeChat` (native `tool_calls`, or JSON protocol fallback)
 → response
 
 **Response shape**
@@ -45,7 +50,11 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
     "generatedAt": "2026-06-29T15:03:00.000Z",
     "releaseCount": 1,
     "validTicketKeyCount": 1024
-  }
+  },
+  "trace": [
+    { "tool": "get_release_health", "toolClass": "read", "ok": true, "detail": "ok" }
+  ],
+  "runtime": "agent"
 }
 ```
 
@@ -79,7 +88,7 @@ Route file: `apps/delivery-ops/server/routes/ai.js`
   | `releaseContext` | object | no | Aggregate release health data from `/api/jira/executive-summary-unified` |
 
 **Server flow**
-`POST /api/ai/exec-summary` → `fetchTicketNarrative` (JIRA) → `deriveSignals` → `generateExecSummary` (NAI) → response
+`POST /api/ai/exec-summary` → `fetchTicketNarrative` (JIRA) → `deriveSignals` (`shared/src/domain/execSummarySignals.cjs`) → `generateExecSummary` (NAI) → response
 
 **Response shape**
 ```json
@@ -155,7 +164,8 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
   → P0 bugs count query (JIRA)
   → `deriveSignals` (per feature, CPU-only)
   → bucket aggregation
-→ `generateReleaseSummary(intelligence)` (NAI)
+  → `computeReleaseHealthVerdict` (shared)
+→ `generateReleaseSummary(intelligence)` (NAI via `aiConnector`)
 → response
 
 **Response shape**
@@ -168,6 +178,7 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
     "p0BugsCount": 3,
     "phaseDist": { "CG Met": 12, "CC Met": 8, "Coding (late)": 5, "PG Met": 3 },
     "selfReportedRisk": { "red": 4, "yellow": 9, "green": 12, "notSet": 3 },
+    "health": { "verdict": "RED", "rule": 1, "reason": "3 open P0 blocker(s)" },
     "dateMetrics": { "currentCGDate": "2026-06-03", "currentPGDate": "2026-07-15", "daysFromCutoff": 29 },
     "bucketCounts": {
       "gate-lagging": 6,

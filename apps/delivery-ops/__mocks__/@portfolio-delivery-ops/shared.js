@@ -58,6 +58,61 @@ const releaseDatasetSync = {
   syncRelease: jest.fn().mockResolvedValue({ tickets: [], meta: {} }),
 };
 
+function classifyFeature() {
+  return ['watching'];
+}
+
+function buildFeatureRecord(item) {
+  return {
+    key: item.key,
+    summary: '',
+    status: 'Unknown',
+    jiraRisk: 'not set',
+    phase: 'Unknown',
+    criticalRisks: [],
+    assignee: 'Unassigned',
+    tpmOwner: null,
+    statusUpdateAgeDays: null,
+    dates: { codeComplete: null, commitGate: null, promotionGate: null },
+    buckets: ['watching'],
+  };
+}
+
+function assembleReleaseIntelligence(input) {
+  return {
+    version: input.version,
+    totalFeatures: (input.featureRecords || []).length,
+    p0BugsCount: (input.p0Bugs || []).length,
+    p0Bugs: input.p0Bugs || [],
+    mustFixTickets: input.mustFixTickets || [],
+    phaseDist: {},
+    selfReportedRisk: { red: 0, yellow: 0, green: 0, notSet: 0 },
+    dateMetrics: input.dateMetrics || null,
+    buckets: {
+      'gate-lagging': [],
+      compliance: [],
+      blocked: [],
+      dark: [],
+      watching: input.featureRecords || [],
+      clear: [],
+    },
+    health: { verdict: 'GREEN', rule: 6, reason: 'test stub' },
+    generatedAt: input.generatedAt || new Date().toISOString(),
+  };
+}
+
+function getSprintMetrics(input) {
+  return { ...input, completionRate: 0, pendingQARate: 0, carryoverRate: 0, scopeCreepRate: 0, open: 0 };
+}
+
+function countSelfReportedRisk() {
+  return { red: 0, yellow: 0, green: 0, notSet: 0 };
+}
+
+function computeReleaseHealthVerdict() {
+  return { verdict: 'GREEN', rule: 6, reason: 'test stub' };
+}
+
 module.exports = {
   getProductService,
   ReleaseDatasetCache,
@@ -69,4 +124,10 @@ module.exports = {
   getExtensionQuery,
   releaseDatasetService,
   releaseDatasetSync,
+  classifyFeature,
+  buildFeatureRecord,
+  assembleReleaseIntelligence,
+  getSprintMetrics,
+  countSelfReportedRisk,
+  computeReleaseHealthVerdict,
 };

@@ -27,6 +27,16 @@ const { processAllMilestones } = require('../utils/milestoneProcessor');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
 const logger = require('../utils/logger');
 
+let _shared;
+async function getShared() {
+  if (!_shared) {
+    _shared = process.env.NODE_ENV === 'test'
+      ? Promise.resolve(require('@portfolio-delivery-ops/shared'))
+      : import('@portfolio-delivery-ops/shared');
+  }
+  return _shared;
+}
+
 const FIELDS = [
   'key', 'summary', 'status', 'assignee', 'priority',
   'customfield_23560',  // Risk Indicator
@@ -44,12 +54,6 @@ const FIELDS = [
   'issuelinks', 'labels',
 ].join(',');
 
-// Phase ordering — higher index = further along the release
-const PHASE_ORDER = {
-  'Inception': 0, 'Design': 1, 'Coding': 2, 'Coding (late)': 2,
-  'CC Met': 3, 'CG Met': 4, 'PG Met': 5, 'Shipped': 6,
-};
-
 function createHttpsAgent() {
   return new https.Agent({ rejectUnauthorized: false });
 }
@@ -66,89 +70,6 @@ function buildGanttConfig(version) {
   } catch {
     return null;
   }
-}
-
-/**
- * Classify a single feature's signals into one of the bucket labels.
- * A feature may appear in multiple buckets (e.g. both gate-lagging AND dark).
- */
-function classifyFeature(signals) {
-  const buckets = new Set();
-  const s = signals;
-
-  // Shipped / PG Met → clear
-  if (s.phase === 'Shipped' || s.phase === 'PG Met') {
-    buckets.add('clear');
-    return [...buckets];
-  }
-
-  // MISSED GATE or explicit P0/P1 blocker → blocked
-  const hasMissedGate = (s.criticalRisks || []).some(r => r.startsWith('MISSED GATE'));
-  if (hasMissedGate) buckets.add('gate-lagging');
-
-  // Compliance gap → compliance bucket
-  const comp = s.compliance;
-  if (comp) {
-    const hasGap = (!comp.security?.filed || !comp.legal?.filed);
-    if (hasGap) buckets.add('compliance');
-  }
-
-  // P0/P1 open blockers mentioned in criticalRisks
-  const hasBlocker = (s.criticalRisks || []).some(r =>
-    /P0|P1|blocker/i.test(r) && !r.startsWith('MISSED GATE')
-  );
-  if (hasBlocker) buckets.add('blocked');
-
-  // Stale status update ≥14 days
-  if (s.statusUpdate?.ageDays != null && s.statusUpdate.ageDays >= 14) {
-    buckets.add('dark');
-  }
-
-  // Gate overshoot without clearance
-  const cgOvershoot = s.dates?.commitGate?.overshootMarker;
-  const pgOvershoot = s.dates?.promotionGate?.overshootMarket;
-  const cgMet = ['CG Met', 'PG Met', 'Shipped'].includes(s.phase);
-  const pgMet = ['PG Met', 'Shipped'].includes(s.phase);
-  if (cgOvershoot && parseInt(cgOvershoot) > 0 && !cgMet) buckets.add('gate-lagging');
-  if (pgOvershoot && parseInt(pgOvershoot) > 0 && !pgMet) buckets.add('gate-lagging');
-
-  if (buckets.size === 0) buckets.add('watching');
-
-  return [...buckets];
-}
-
-/**
- * Build a compact feature record for LLM consumption.
- * Keeps only the fields the prompt actually uses — avoids token bloat.
- */
-function buildFeatureRecord(item, signals) {
-  const f = item.fields || {};
-  const riskRaw = f.customfield_23560;
-  const riskVal = riskRaw
-    ? (typeof riskRaw === 'object' ? (riskRaw.value || riskRaw.name || '') : String(riskRaw))
-    : 'not set';
-
-  return {
-    key: item.key,
-    summary: (f.summary || '').slice(0, 80),
-    status: f.status?.name || 'Unknown',
-    jiraRisk: riskVal,
-    phase: signals.phase,
-    phaseRationale: signals.phaseRationale,
-    latestPassedMarker: signals.latestPassedMarker,
-    criticalRisks: signals.criticalRisks || [],
-    nextGate: signals.nextGate,
-    assignee: f.assignee?.displayName || f.assignee?.name || 'Unassigned',
-    tpmOwner: f.customfield_27764?.displayName || f.customfield_27764?.name || null,
-    statusUpdateAgeDays: signals.statusUpdate?.ageDays ?? null,
-    compliance: signals.compliance,
-    dates: {
-      codeComplete: signals.dates?.codeComplete?.effectiveValue || null,
-      commitGate: signals.dates?.commitGate?.value || null,
-      promotionGate: signals.dates?.promotionGate?.value || null,
-    },
-    buckets: classifyFeature(signals),
-  };
 }
 
 /**
@@ -233,6 +154,8 @@ async function buildReleaseIntelligence(version, jiraToken) {
     logger.warn(`[releaseAiSummaryService] Must-fix fetch failed for ${version}: ${e.message}`);
   }
 
+  const { buildFeatureRecord, assembleReleaseIntelligence } = await getShared();
+
   // Run deriveSignals on each feature (sync, CPU-only — no extra JIRA calls)
   const today = new Date();
   const featureRecords = rawItems.map(item => {
@@ -244,57 +167,28 @@ async function buildReleaseIntelligence(version, jiraToken) {
       return {
         key: item.key,
         summary: (item.fields?.summary || '').slice(0, 80),
+        status: item.fields?.status?.name || 'Unknown',
+        jiraRisk: 'not set',
         phase: 'Unknown',
         criticalRisks: [],
+        assignee: 'Unassigned',
+        tpmOwner: null,
+        statusUpdateAgeDays: null,
+        dates: { codeComplete: null, commitGate: null, promotionGate: null },
         buckets: ['watching'],
         error: e.message,
       };
     }
   });
 
-  // Aggregate into buckets
-  const buckets = {
-    'gate-lagging': [],
-    'compliance': [],
-    'blocked': [],
-    'dark': [],
-    'watching': [],
-    'clear': [],
-  };
-  for (const rec of featureRecords) {
-    for (const b of rec.buckets) {
-      buckets[b].push(rec);
-    }
-  }
-
-  // Phase distribution (for the RAG headline)
-  const phaseDist = {};
-  for (const rec of featureRecords) {
-    phaseDist[rec.phase] = (phaseDist[rec.phase] || 0) + 1;
-  }
-
-  // jiraRisk counts (self-reported by teams — kept for context)
-  const selfReportedRisk = { red: 0, yellow: 0, green: 0, notSet: 0 };
-  for (const rec of featureRecords) {
-    const v = (rec.jiraRisk || '').toLowerCase();
-    if (v.includes('red') || v.includes('high') || v.includes('critical')) selfReportedRisk.red++;
-    else if (v.includes('yellow') || v.includes('medium') || v.includes('at risk')) selfReportedRisk.yellow++;
-    else if (v.includes('green') || v.includes('on track') || v.includes('low')) selfReportedRisk.green++;
-    else selfReportedRisk.notSet++;
-  }
-
-  return {
+  return assembleReleaseIntelligence({
     version,
-    totalFeatures: featureRecords.length,
-    p0BugsCount: p0Bugs.length,
+    featureRecords,
     p0Bugs,
     mustFixTickets,
-    phaseDist,
-    selfReportedRisk,
     dateMetrics,
-    buckets,
     generatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 module.exports = { buildReleaseIntelligence };

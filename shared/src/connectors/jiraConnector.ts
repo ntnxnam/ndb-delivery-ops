@@ -1,15 +1,17 @@
 /**
- * jiraConnector — thin facade over the JIRA REST API v2 + Agile API.
+ * jiraConnector — thin facade over JIRA Data Center REST API v2 + Agile API.
  *
- * Per D3 (5 connectors, one per external system) and `minimal-architecture.mdc`
- * (no axios in components/services/routes), every JIRA call in this monorepo
- * goes through this single connector. Behaviour mirrors the legacy
- * `apps/delivery-ops/server/services/jiraService.js` and the previous
- * `mcp-server/src/connectors/jiraConnector.ts` so behaviour stays identical
- * across the web app and MCP surface.
+ * Auth is **only** a Data Center Personal Access Token sent as
+ * `Authorization: Bearer <pat>`. This is not JIRA Cloud: no email+API-token
+ * Basic auth, no OAuth, no `cloudId`. Every host (Express, MCP, future)
+ * must use this connector — D3 / Wave 2.
+ *
+ * Per `minimal-architecture.mdc` (no axios in components/services/routes),
+ * JIRA calls go through this module. Behaviour matches
+ * `apps/delivery-ops/server/services/jiraService.js`.
  *
  * Features:
- *   - Bearer-token auth via single jiraHeaders() helper
+ *   - Bearer PAT auth via a single headers() helper
  *   - Optional HTTPS proxy support
  *   - Exponential-backoff retries on 429
  *   - Paginated /search walker with tunable page size + per-page delay
@@ -74,6 +76,7 @@ export class JiraConnector {
   }
 
   // ── auth + transport ──────────────────────────────────────────────────────
+  // Data Center PAT only. Do not add Basic, Cloud API tokens, or OAuth here.
 
   private headers(): Record<string, string> {
     return {

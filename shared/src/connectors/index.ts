@@ -12,3 +12,4 @@
 export * from './env.js';
 export * from './jiraConnector.js';
 export * from './confluenceConnector.js';
+export * from './aiConnector.js';

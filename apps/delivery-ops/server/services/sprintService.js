@@ -7,6 +7,7 @@ const { buildSprintReportJql } = require('../utils/jiraQueryUtils');
 const { loadKpiConfigSync, getKpisForTeam, getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
 const { fetchAllChangelogHistories } = require('../utils/changelogPagination');
 const logger = require('../utils/logger');
+const { getSprintMetrics } = require('../../../../shared/src/domain/sprintMetrics.cjs');
 
 const SPRINT_TRENDS_SPRINT_CONCURRENCY = 3;
 const SPRINT_TRENDS_CHANGELOG_CONCURRENCY = 5;
@@ -21,27 +22,6 @@ function getTeam(teamId) {
 
 function boardConfig() {
   return loadTeamBoardConfig() || {};
-}
-
-function getSprintMetrics({ totalInSprint, addedAfterStart, inProgress, pendingQA, completedInSprint, removedFromSprint = 0 }) {
-  const completionRate = totalInSprint > 0 ? Math.round((completedInSprint / totalInSprint) * 100) : 0;
-  const pendingQARate = totalInSprint > 0 ? Math.round((pendingQA / totalInSprint) * 100) : 0;
-  const carryoverRate = totalInSprint > 0 ? Math.round(((pendingQA + inProgress) / totalInSprint) * 100) : 0;
-  const plannedIssues = totalInSprint - addedAfterStart;
-  const scopeCreepRate = plannedIssues > 0 ? Math.round((addedAfterStart / plannedIssues) * 100) : 0;
-  return {
-    totalInSprint,
-    addedAfterStart,
-    removedFromSprint,
-    open: totalInSprint - inProgress - pendingQA - completedInSprint,
-    inProgress,
-    pendingQA,
-    completedInSprint,
-    completionRate,
-    pendingQARate,
-    carryoverRate,
-    scopeCreepRate
-  };
 }
 
 function mapIssue(issue, storyPointsFieldId, extra = {}) {

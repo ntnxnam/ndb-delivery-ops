@@ -34,16 +34,18 @@ that needs it.
 | **RAG / Risk Score** (`statusService.calcRag`) | • column in Release Versions  • headline badge in Team-Executive Report  • status cell in Sync Hub landing  • indicator in Release Brief  • indicator in Outstanding Work |
 | **Date Shift** (`dateService.cascade`) | • standalone Date Mover page  • inline "shift dates" action on a Release Versions row  • used by Release Cascade Rename workflow  • MCP tool `moveJiraDates` |
 | **Say vs Do** (`predictabilityService.sayVsDo`) | • standalone page  • card in Team Executive Dashboard  • badge on Team Profile  • column in Release Versions for FEAT predictability  • MCP tool `sayVsDo` |
-| **Sprint Health metrics** (`sprintService.classify` + carryover/scope-creep) | • Sprint Report page  • tile in Team Profile  • sparkline in KPI Dashboard  • input to Sprint Planner |
+| **Sprint Health metrics** (`sprintMetrics.getSprintMetrics`, D41) | • Sprint Report page  • tile in Team Profile  • sparkline in KPI Dashboard  • input to Sprint Planner |
+| **Exec-summary signals** (`deriveSignals`, D41) | • Sos Summary / exec-summary cell  • release AI briefing  • chat snapshot |
+| **Bundle-first derives** (`bundleDerive`, D41) | • Retrospective  • Release Brief  • Component Report  • Sprint Report (past sprints) |
 | **Capacity calc** (`capacityService.estimate`) | • standalone Capacity Planner page  • input column in Bin-Packing  • badge in Team Profile  • MCP tool `planCapacity` |
 | **Predictive Landing** (`predictabilityService.predictLanding`) | • CrystalBall standalone page  • column in Release Versions  • headline in Team-Executive Report  • alert in Sync Hub |
 | **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in Team-Executive Report |
 | **Confluence Connector** (`confluenceConnector`) | • Bulk Page Creator  • Template Editor  • Confluence Extractor  • future Status Page Auto-Publisher  • any skill that publishes to Confluence |
 | **Confluence Width Cleanup** (`.cursor/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
 | **Sprint Classification** (`sprintService.classify`) | • used inside Sprint Health  • used inside Story Point Roll-up (only counts committed work)  • used inside Capacity calc (uses delivered velocity) |
-| **JIRA Connector** (`jiraConnector`) | every feature in every domain |
+| **JIRA Connector** (`jiraConnector`, D40 — Data Center PAT Bearer) | every feature in every domain |
 | **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML  • Sync Hub (release-analytics rebuild) |
-| **NLP → query plan** (`nlpQueryService` — D4) | • Ops Assistant agent (primary)  • Team Executive "how's NDB-2.11?" intents  • any "ask in plain English" chat surface |
+| **NLP → query plan** (`nlpQueryService` — D4, unbuilt) | Future structured planner. **Today:** `agentRuntime` (D39) on `POST /api/ai/chat`. |
 | **Product context** (`productService` — D1) | • every Layer-3 service that touches external systems  • product picker in delivery-ops top bar  • per-product audience overrides for `audience.md` styles |
 
 How to read this: the rows are services in Layer 3. Every "Surface" is either
@@ -198,7 +200,7 @@ Today these are duplicated across apps; one of them per system is the goal.
 
 | Connector              | Currently in                                                                                                                                                           | Decision                                                                                  |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| JIRA                   | `mcp-server/src/connectors/jiraConnector.ts` (TS) + `apps/delivery-ops/server/middleware/auth/jira.js` (JS) + many ad-hoc axios calls in `server/routes/jira/index.js` | **consolidate to one TS connector, used by everyone**                                     |
+| JIRA                   | `shared/connectors/jiraConnector.ts` (Data Center PAT Bearer, D40). Web login still validates PAT in `apps/delivery-ops/server/middleware/auth/jira.js`. Remaining ad-hoc axios in some Express routes. | **one TS connector; MCP private copy removed** |
 | Confluence             | `apps/tpm-confluence-tools/src/confluence_client.py` (Python) + `apps/delivery-ops/client/src/services/confluenceService.js` (JS)                                      | **consolidate to one TS connector, used by both delivery-ops + future Bulk Page Creator** |
 | GitHub                 | was in `_archive/GitHub-Commits.tar.gz`; now in `mcp-server/src/tools/leadershipCommitReport.ts`                                                                       | **extract to `mcp-server/src/connectors/githubConnector.ts*`*                             |
 | AI / LLM (CrystalBall) | `crystalball-i/` package + `mcp-server` agent layer                                                                                                                    | **single `aiConnector` module**                                                           |

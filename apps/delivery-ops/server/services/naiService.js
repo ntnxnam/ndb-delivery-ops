@@ -10,17 +10,7 @@
  * model from rambling about earlier-phase fields that no longer matter.
  */
 
-const axios = require('axios');
-const https = require('https');
-
-const NAI_BASE_URL = process.env.AI_API_BASE_URL || 'https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1';
-const NAI_API_KEY = process.env.AI_API_KEY;
-const NAI_MODEL = process.env.AI_DEFAULT_MODEL || 'eng-pool-05';
 const NAI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS || '4096', 10);
-const NAI_TIMEOUT = parseInt(process.env.AI_REQUEST_TIMEOUT || '30000', 10);
-
-// Self-signed cert on corp endpoint — mirrors curl -k
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const MAX_STATUS_TEXT_CHARS = 1500;
 
@@ -347,51 +337,20 @@ When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
 
 // ── Low-level NAI call ──────────────────────────────────────────────────────
 async function chatCompletion(messages, options = {}) {
-  if (!NAI_API_KEY) {
-    throw new Error('NAI API key not configured. Set AI_API_KEY in server/.env');
-  }
-  const response = await axios.post(
-    `${NAI_BASE_URL}/chat/completions`,
-    {
-      model: NAI_MODEL,
-      messages,
-      max_tokens: options.maxTokens || NAI_MAX_TOKENS,
-      stream: false,
-      temperature: options.temperature ?? 0.3, // low temp for deterministic exec prose
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${NAI_API_KEY}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      httpsAgent,
-      timeout: NAI_TIMEOUT,
+  const shared = process.env.NODE_ENV === 'test'
+    ? require('@portfolio-delivery-ops/shared')
+    : await import('@portfolio-delivery-ops/shared');
+  try {
+    return await shared.chatCompletion(messages, {
+      maxTokens: options.maxTokens || NAI_MAX_TOKENS,
+      temperature: options.temperature ?? 0.3,
+    });
+  } catch (err) {
+    if (err.message && /AI_API_KEY/.test(err.message)) {
+      throw new Error('NAI API key not configured. Set AI_API_KEY in server/.env');
     }
-  );
-
-  const choice = response.data?.choices?.[0];
-  if (!choice) {
-    const err = new Error('NAI returned no choices in response');
-    err.naiDebug = { rawBody: response.data };
     throw err;
   }
-  const content = choice.message?.content;
-  if (typeof content !== 'string' || content.trim().length === 0) {
-    // Surface the diagnostic info so the route can log and the client can react.
-    const err = new Error(
-      `NAI returned empty content (finish_reason=${choice.finish_reason || 'unknown'}). ` +
-      `Try regenerating; if persistent, the prompt may be exceeding the model's effective budget.`
-    );
-    err.naiDebug = {
-      finishReason: choice.finish_reason,
-      usage: response.data?.usage,
-      role: choice.message?.role,
-      contentLength: content == null ? 'null' : content.length,
-    };
-    throw err;
-  }
-  return content;
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -444,13 +403,10 @@ If genuinely none, say "*No current blockers.*"
 Numbered list of up to 5 concrete asks. Format: "N. Ask <owner or role> to <specific action> on <key or set of keys> by <date or timeframe>."
 Prioritise resolving P0s and must-fix tickets first, then gate-lagging features. Do not use generic language like "monitor" or "follow up".
 
-RAG VERDICT RULES (all conditions checked in order — first match wins):
-1. RED if OPEN_P0_BLOCKERS > 0.
-2. RED if OPEN_MUSTFIX_TICKETS > 0 AND fewer than 14 days to PG.
-3. RED if gate-lagging > 2 features.
-4. YELLOW if OPEN_MUSTFIX_TICKETS > 0.
-5. YELLOW if gate-lagging 1–2 OR dark > 20% of committed count OR compliance-at-risk > 0.
-6. GREEN only if: OPEN_P0_BLOCKERS = 0, OPEN_MUSTFIX_TICKETS = 0, gate-lagging = 0, dark ≤ 20%.
+RAG VERDICT RULES:
+Use COMPUTED_RELEASE_HEALTH and COMPUTED_RELEASE_HEALTH_REASON from the user
+prompt as the verdict. Do not re-derive or override them. They are computed
+by computeReleaseHealthVerdict (shared), not by you.
 
 ⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
 - You MUST copy ticket keys character-for-character from the data provided. Example: if the data says "ERA-66381", write "ERA-66381". Do NOT write "ERA-66217" or any other key not explicitly present in the prompt.
@@ -479,6 +435,12 @@ function buildReleaseSummaryPrompt(intelligence) {
     dm.daysFromCutoff != null ? `DAYS_TO_PG: ${dm.daysFromCutoff}` : null,
     dm.currentCGDate ? `CG_DATE: ${dm.currentCGDate}` : null,
     dm.currentPGDate ? `PG_DATE: ${dm.currentPGDate}` : null,
+    intelligence.health
+      ? `COMPUTED_RELEASE_HEALTH: ${intelligence.health.verdict}`
+      : null,
+    intelligence.health
+      ? `COMPUTED_RELEASE_HEALTH_REASON: ${intelligence.health.reason}`
+      : null,
   ].filter(Boolean).join('\n');
 
   const phaseBlock = Object.entries(phaseDist)

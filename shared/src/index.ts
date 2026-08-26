@@ -14,11 +14,35 @@ export * as types from './types/index.js';
 export * as connectors from './connectors/index.js';
 export * as services from './services/index.js';
 export * as agentPack from './agentPack/index.js';
+export * as agentRuntime from './agentRuntime/index.js';
 
 // Common re-exports for convenience.
 export { JiraConnector } from './connectors/jiraConnector.js';
 export { ConfluenceConnector } from './connectors/confluenceConnector.js';
 export { loadEnv } from './connectors/env.js';
+export type { Env, LoadEnvOptions } from './connectors/env.js';
+export { chatCompletion, completeChat, AiConnectorError } from './connectors/aiConnector.js';
+export type {
+  AiChatMessage,
+  AiChatOptions,
+  AiChatTurn,
+  AiConnectorConfig,
+  AiToolCall,
+  AiToolDefinition,
+} from './connectors/aiConnector.js';
+export {
+  extractRiskText,
+  classifyRiskIndicator,
+  countSelfReportedRisk,
+  computeReleaseHealthVerdict,
+  bucketCounts,
+} from './services/riskIndicator.js';
+export type {
+  RiskBucket,
+  ReleaseHealthInput,
+  ReleaseHealthResult,
+  ReleaseHealthVerdict,
+} from './services/riskIndicator.js';
 export { ProductService, getProductService } from './services/productService.js';
 export { StatusService } from './services/statusService.js';
 export { PredictabilityService } from './services/predictabilityService.js';
@@ -27,9 +51,11 @@ export { ChartService } from './services/chartService.js';
 export {
   DateMoverService,
   GATE_DATE_FIELDS,
+  GATE_DATE_FIELD_ALIASES,
   isGateDateField,
   buildAuditRow,
 } from './services/dateMoverService.js';
+export type { GateDateFieldId, GateDateFieldAlias } from './services/dateMoverService.js';
 export {
   buildEngineeringPayloadJql,
   buildReleasePayloadJql,
@@ -313,3 +339,36 @@ export type {
   LoadedWorkflow,
   ToolClass,
 } from './agentPack/index.js';
+
+export {
+  compileVersionPattern,
+  compileVersionPatterns,
+  versionMatchesAny,
+  versionBelongsToProduct,
+  escapeRegExp,
+} from './utils/versionPattern.js';
+
+export { getSprintMetrics } from './services/sprintMetrics.js';
+export type { SprintMetrics, SprintMetricsInput } from './services/sprintMetrics.js';
+export {
+  PHASE_ORDER,
+  classifyFeature,
+  buildFeatureRecord,
+  assembleReleaseIntelligence,
+} from './services/releaseIntelligence.js';
+export type {
+  FeatureBucket,
+  FeatureRecord,
+  FeatureSignals,
+  ReleaseIntelligence,
+  TicketLite,
+} from './services/releaseIntelligence.js';
+
+export { runAgentTurn, createPackTools, buildBootstrapPrompt } from './agentRuntime/index.js';
+export type {
+  AgentSession,
+  AgentTool,
+  AgentTraceStep,
+  AgentTurnInput,
+  AgentTurnResult,
+} from './agentRuntime/index.js';

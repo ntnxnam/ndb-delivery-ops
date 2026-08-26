@@ -12,7 +12,10 @@
 export interface Env {
   /** e.g. https://jira.nutanix.com (no trailing slash). Required. */
   jiraBaseUrl: string;
-  /** JIRA Personal Access Token. Required. */
+  /**
+   * JIRA **Data Center** Personal Access Token.
+   * Sent as `Authorization: Bearer`. Not a Cloud API token; not Basic; not OAuth.
+   */
   jiraPat: string;
   /** Per-request timeout in milliseconds. Default 30s. */
   jiraTimeoutMs: number;

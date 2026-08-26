@@ -57,6 +57,15 @@ export const GATE_DATE_FIELDS = {
 
 export type GateDateFieldId = keyof typeof GATE_DATE_FIELDS;
 
+/** Call-site aliases used by MCP / UI. Values are GATE_DATE_FIELDS keys. */
+export const GATE_DATE_FIELD_ALIASES = {
+  codeCompleteDate: 'customfield_11067',
+  commitGateReadyDate: 'customfield_35863',
+  promotionGateReadyDate: 'customfield_35864',
+} as const;
+
+export type GateDateFieldAlias = keyof typeof GATE_DATE_FIELD_ALIASES;
+
 export function isGateDateField(fieldId: string): fieldId is GateDateFieldId {
   return Object.prototype.hasOwnProperty.call(GATE_DATE_FIELDS, fieldId);
 }

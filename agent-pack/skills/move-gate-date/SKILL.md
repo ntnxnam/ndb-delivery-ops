@@ -55,8 +55,8 @@ the wrong skill — use `fetch-project-tickets` or the trunk's
 
 ## Tool Contract
 
-The orchestrator calls the API endpoint (or the equivalent MCP tool
-once registered):
+The orchestrator calls the API endpoint or the MCP tool `move_jira_dates`
+(both are `DateMoverService`):
 
 ```
 POST /api/date-mover/move-gate-date

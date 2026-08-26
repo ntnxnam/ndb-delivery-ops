@@ -33,7 +33,7 @@ adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Arch
 
 | Connector | Purpose |
 |---|---|
-| `jiraConnector` | All JIRA REST + Agile API calls |
+| `jiraConnector` | All JIRA Data Center REST + Agile calls (`Authorization: Bearer` PAT only, D40) |
 | `confluenceConnector` | All Confluence REST calls |
 | `githubConnector` | GitHub commits / PRs / repos / CI signals |
 | `slackConnector` | Slack reads/posts/DMs |
@@ -57,6 +57,10 @@ Specialists are internal sub-agents the orchestrator delegates to.
 - `dependency-tracker-specialist` — cross-team dep graph (D18)
 
 The orchestrator decides delegation; users never address a specialist by name.
+
+Web chat (`POST /api/ai/chat`) runs `shared/agentRuntime` (D39) — perceive, then a read-only tool loop — not a single mailbox completion.
+
+Domain derives (signals, briefing buckets, sprint rates, bundle-first page math) live in `shared/` (D41). Pages and routes fetch and render.
 
 ## Skills (`agent-pack/skills/`)
 

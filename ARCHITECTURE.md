@@ -92,12 +92,12 @@ Each connector:
 
 | Connector | Purpose | Replaces |
 |---|---|---|
-| `jiraConnector` | All JIRA REST + Agile API calls | `mcp-server/src/connectors/jiraConnector.ts` + scattered `axios.get(JIRA_URL/…)` in `server/routes/jira/index.js` + auth in `server/middleware/auth/jira.js` |
+| `jiraConnector` | All JIRA Data Center REST + Agile API calls. Auth: PAT as `Authorization: Bearer` only (D40). | `shared/connectors/jiraConnector.ts`. MCP's private copy is deleted. |
 | `confluenceConnector` | All Confluence REST calls | `apps/tpm-confluence-tools/src/confluence_client.py` + `apps/delivery-ops/client/src/services/confluenceService.js` |
 | `githubConnector` | GitHub commits / PRs / repos / CI signals | code currently embedded in `mcp-server/src/tools/leadershipCommitReport.ts` |
 | `slackConnector` *(new)* | Read channels, post messages, DM agent (D3) | net-new |
 | `emailConnector` *(new)* | Send digests; potentially read inbox for status pings (D3) | partial `nodemailer` usage in `server/routes/email.js` — extract + extend |
-| `aiConnector` | LLM calls for predictions, summaries, chat | `crystalball-i/` internals |
+| `aiConnector` | LLM transport only (`chatCompletion`) — no domain prompts | `naiService.chatCompletion` internals (now delegates here) |
 
 ### Layer 2 — Domain models
 
@@ -141,8 +141,15 @@ status.
 | `confluenceConnector.appendStructuredRow` (used as a service primitive) | ● | Insert `<tr>` after a named anchor in a Confluence page; version-conflict retries. | `dateMoverService`, future #12 template engine |
 | `statusService`, `predictabilityService`, `chartService`, `dependencyService` | ○ | Original scaffolds — retired pending real ports (see CONSOLIDATION.md "Speculative stubs"). Throw on use. | none today |
 | Future ports (CONSOLIDATION.md #2, #4–#9, #11–#16, #18) | ○ | Velocity, landing forecast, chart catalog, NAI chatbot, team-exec report service, predictive analytics, capacity, outstanding-work, Confluence template engine, release timeline, bin packing (algo extraction), say-vs-do, story points, sprint Gantt. | various |
-| `nlpQueryService` *(new, D4)* | ○ | Natural language → tool-call plan. Routes team-exec/RM questions to the right MCP tools + connectors. | Ops Assistant agent (primary), any chat surface |
+| `nlpQueryService` *(D4, not built)* | ○ | Natural language → dedicated query-plan object. **Wave 1 does not wait on this.** Web chat uses `agentRuntime` (perceive + tool loop). Keep this row for a future structured planner if intents outgrow tool-calling. | future planner, not the current chat path |
 | `agentPack` (`loadAgentPack`, D38) | ● | Load portable identity / skills / workflows / constitutional rules from `agent-pack/`. Host-agnostic. | web chat, Cursor adapter, future hosts |
+| `agentRuntime` (`runAgentTurn`, D39) | ● | Perceive–plan–act loop: pack bootstrap, read-only tools, `aiConnector.completeChat`. Wave 1 refuses `toolClass !== 'read'`. | `POST /api/ai/chat`, future hosts |
+| `riskIndicator` | ● | `classifyRiskIndicator`, `computeReleaseHealthVerdict`, `countSelfReportedRisk`, `bucketCounts`. One RAG/risk implementation for every host. | briefing, chat snapshot, MCP `get_release_status` / gantt |
+| `releaseIntelligence` (D41) | ● | `classifyFeature`, `buildFeatureRecord`, `assembleReleaseIntelligence`. Buckets + health for a release briefing. | `releaseAiSummaryService` (fetch stays in app), chat snapshot |
+| `sprintMetrics` (D41) | ● | `getSprintMetrics` — completion / pending-QA / carryover / scope-creep rates. | `sprintService`, Sprint Report |
+| `execSummarySignals` (D41) | ● | `deriveSignals` + `PHASE_RELEVANCE`. CJS domain file; Express shim. | `POST /api/ai/exec-summary`, release briefing |
+| `execSummaryAnalytics` (D41) | ● | Enhanced exec-summary analytics. Callers inject `gateDates` + `formatDate`. | `routes/jira/exec-summary.js` |
+| `bundleDerive` (D41) | ● | Bundle-first page derives (retro, brief, component, past sprint). Browser-safe. CRA keeps an adapter copy. | Retrospective, Release Brief, Component Report, Sprint Report |
 
 ### Layer 4 — API + MCP tools
 
@@ -155,7 +162,8 @@ Two parallel surfaces over the services:
 
 **MCP tools** (`mcp-server/src/tools/`) — for the AI agent
 - One tool per feature
-- Each tool calls the same service the route does
+- Each tool calls the same shared connector/service the Express route does (D40)
+- JIRA auth is Data Center PAT `Authorization: Bearer` only
 - Returns structured output for LLM consumption
 
 ### Layer 5 — UI & AI surfaces
@@ -167,9 +175,10 @@ Two parallel surfaces over the services:
 - **Role lens dropdown** in the header (D6): "Show me this page as Team Executive / EM /
   IC". Re-renders the current data using the audience preset, never hides
   data.
-- **Embedded chat panel** (D7): the Ops Assistant agent lives as a persistent
-  chat surface inside the app. Available to every user. Reduces reactive
-  pings to the Portfolio Manager (D8).
+- **Embedded chat panel** (D7, D39): the Ops Assistant runs as
+  `runAgentTurn` behind `POST /api/ai/chat` (perceive snapshot → pack
+  bootstrap → read-only tool loop). Not a mailbox LLM. Available to every
+  user. Reduces reactive pings to the Portfolio Manager (D8).
 - **Pages organised by domain, not by old-app** (see directory structure
   below).
 - **Product picker** (D1, D5): top-level dropdown selects active product set
@@ -272,6 +281,9 @@ blanket project filter on the fetch.
 │
 ├── shared/                              NEW — cross-runtime code
 │   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector
+│   ├── domain/                          CJS/browser derives (D41): signals, analytics, bundle
+│   ├── agentPack/                       loadAgentPack (D38)
+│   ├── agentRuntime/                    runAgentTurn (D39)
 │   ├── types/                           Release, Ticket, Persona, RAG, …
 │   └── utils/                           date logic, JQL builders, ID maps
 │
@@ -337,10 +349,10 @@ per-capability ports is `CONSOLIDATION.md`.
 | Phase | What | Status (as of Session 2026-05-20) |
 |---|---|---|
 | **A. AI layer rebuild** | Orchestrator agent + 6 specialists + 13 skills + 9 rules + 3 workflows + persona-aware sidebar foundations | ✅ done — commit `54bb48a` |
-| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — `mcp-server` + `apps/delivery-ops/server` both consume |
+| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express + MCP both construct shared `JiraConnector` with a Data Center Bearer PAT |
 | **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
-| **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | ⏳ pending |
-| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~5 of 20 capabilities done: #1a payload JQL (now 6-bucket + Group 2/3 builders), #1b dataset trunk (all 3 phases, now Release Payload default + 3-group model), #3 insights first slice, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). |
+| **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 AI transport (`aiConnector.chatCompletion`) landed. GitHub / Slack / Email still pending. |
+| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~5 of 20 capabilities done: #1a payload JQL (now 6-bucket + Group 2/3 builders), #1b dataset trunk (all 3 phases, now Release Payload default + 3-group model), #3 insights first slice, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |
 | **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | 🟡 SyncHubPage simplified (one Sync Now button). Insights + Sprint Analysis still pending. |
 | **E. Streamlit retirement (tpm-confluence-tools)** | Rebuild Bulk Page Creator + Template Editor as React pages | ⏳ pending |
 | **F. MCP-backed UI pages** | React pages for Capacity Planner, Bin-Packing, Story Points, Date Mover, Say vs Do | 🟡 only bin-packing has a sidebar entry today (static-mounted, opens in new tab). Date Mover backend ships but no React form. |

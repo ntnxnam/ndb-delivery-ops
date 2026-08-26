@@ -2,7 +2,7 @@
 
 **Route**: `/component-report`  
 **Server routes used**: `server/routes/component.js`  
-**Bundle utilities**: `release/utils/bundleUtils.js` — `deriveComponentListFromBundle`, `deriveComponentHealthFromBundle`, `deriveComponentDataFromBundle`  
+**Bundle utilities**: `release/utils/bundleUtils.js` (CRA copy of `shared/src/domain/bundleDerive.js`, D41) — `deriveComponentListFromBundle`, `deriveComponentHealthFromBundle`, `deriveComponentDataFromBundle`  
 **Contexts consumed**: `TeamDatasetContext`
 
 ---

@@ -1,16 +1,17 @@
 # Adapter — delivery-ops web runtime
 
-The web chat (`POST /api/ai/chat` today) must load this pack through
-`loadAgentPack()` in `@portfolio-delivery-ops/shared`. It must not keep a
-parallel system prompt or skill list inside `naiService.js`.
+The web chat (`POST /api/ai/chat`) loads this pack through
+`loadAgentPack()` and runs `runAgentTurn()` from
+`@portfolio-delivery-ops/shared`. It must not keep a parallel system
+prompt or skill list inside `naiService.js`.
 
-Target shape:
+Runtime shape (Wave 1):
 
-1. Bootstrap identity (orchestrator + caller audience + product set)
-2. Attach constitutional rules as non-overridable policy
-3. Select a skill from the manifest
-4. Run the tool loop against Layer 3 services / MCP
-5. Write session memory using `memory/schema.json`
+1. **Perceive** — `chatIntentRouter.extractScope` + `chatSnapshotBuilder.buildSnapshot`
+2. **Bootstrap** — orchestrator identity + constitutional rules + compact perceive JSON
+3. **Plan / act** — read-only tool loop (`list_skills`, `read_skill`, `read_specialist`, `get_release_snapshot`, `get_release_health`)
+4. **Answer** — final assistant prose; `trace` is returned to the client
 
-Until the mailbox chat is replaced, treat any prompt inside
-`naiService` as **legacy** and do not add new SOPs there.
+Exec / release summary endpoints still use one-shot `chatCompletion`. Do
+not add new SOPs there. Session memory (`memory/schema.json`) is not
+wired yet (Wave 4). Mutating tools stay refused until D26.

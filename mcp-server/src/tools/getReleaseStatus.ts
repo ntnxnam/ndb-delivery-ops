@@ -16,7 +16,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { JiraConnector } from '../connectors/jiraConnector.js';
+import { classifyRiskIndicator, JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
 
 // Custom field IDs used in the snapshot. Same canonical set as
@@ -51,22 +51,6 @@ const inputSchema = {
 
 type RiskBucket = 'red' | 'yellow' | 'green' | 'not_set';
 
-function classifyRisk(raw: unknown): RiskBucket {
-  if (!raw) return 'not_set';
-  const value =
-    typeof raw === 'object' && raw !== null
-      ? String((raw as { value?: string; name?: string }).value ??
-          (raw as { name?: string }).name ??
-          '')
-      : String(raw);
-  const v = value.toLowerCase();
-  if (!v) return 'not_set';
-  if (v.includes('red') || v.includes('critical') || v.includes('high')) return 'red';
-  if (v.includes('yellow') || v.includes('moderate') || v.includes('at risk')) return 'yellow';
-  if (v.includes('green') || v.includes('on track') || v.includes('low')) return 'green';
-  return 'not_set';
-}
-
 export function registerGetReleaseStatus(server: McpServer, env: Env): void {
   const jira = new JiraConnector(env);
 
@@ -93,7 +77,7 @@ export function registerGetReleaseStatus(server: McpServer, env: Env): void {
         };
         for (const issue of issues) {
           const f = (issue.fields ?? {}) as Record<string, unknown>;
-          const bucket = classifyRisk(f['customfield_23560']);
+          const bucket = classifyRiskIndicator(f['customfield_23560']);
           buckets[bucket].push({
             key: issue.key,
             summary: String(f['summary'] ?? ''),

@@ -846,6 +846,75 @@ place those files can run.
 
 ---
 
+### D39 — Web chat is an agent runtime, not a mailbox
+
+**Statement.** `POST /api/ai/chat` must run `shared/agentRuntime`
+(`runAgentTurn`): load the portable pack (D38), perceive from the
+release snapshot, then loop read-only tools until a final answer.
+Stuffing the snapshot into a system prompt and calling
+`chatCompletion` once is not the product.
+
+**Implications.**
+- Exec-summary and release-briefing stay one-shot `chatCompletion`
+  (transcript + computed health). Do not add chat SOPs to `naiService`
+- Wave 1 tools are `toolClass === 'read'` only. `draft` / `mutate`
+  are refused until D26
+- Response keeps `reply` / `scope` / `snapshotMeta` and adds `trace`
+  + `runtime: "agent"`
+- `nlpQueryService` (D4) remains unbuilt; the tool loop is the planner
+
+**What this is NOT.** Opening write-back to JIRA from chat. That is
+Wave 4 + D26.
+
+---
+
+### D40 — One JIRA connector; Data Center PAT Bearer only
+
+**Statement.** MCP and Express call `shared/connectors/jiraConnector`.
+There is no MCP-private JIRA client. Authentication is **JIRA Data
+Center Personal Access Token** sent as `Authorization: Bearer <pat>`.
+Not Cloud email+API-token Basic auth, not OAuth, not `cloudId`.
+
+**Implications.**
+- `mcp-server` tools import `JiraConnector` from
+  `@portfolio-delivery-ops/shared`
+- `move_jira_dates` is a thin adapter over `DateMoverService` (D30) —
+  same mandatory reason + Confluence audit as
+  `POST /api/date-mover/move-gate-date`
+- `Env.jiraPat` is always a Data Center PAT, whether it came from
+  process env (MCP / scheduler) or the user's Bearer header (web)
+
+**What this is NOT.** Changing how users log into JIRA Cloud. This
+deployment is Data Center.
+
+---
+
+### D41 — Domain derives live in shared, not in pages or fat routes
+
+**Statement.** Pages, hooks, and Express routes fetch and render.
+`shared/` owns derive / aggregate so MCP, web chat, and Express call
+the same functions. Wave 3 lifts:
+
+| Capability | Shared home | App leftover |
+|---|---|---|
+| Exec-summary signals (`deriveSignals`) | `shared/src/domain/execSummarySignals.cjs` | CJS shim in `server/utils/execSummarySignals.js` |
+| Exec-summary analytics | `shared/src/domain/execSummaryAnalytics.cjs` | Route injects `gateDates` + `formatDate` |
+| Release intelligence buckets | `shared/src/services/releaseIntelligence.ts` | App service keeps JIRA fetch + existing JQL |
+| Sprint health rates | `shared/src/services/sprintMetrics.ts` (+ `.cjs`) | `sprintService` keeps live JIRA I/O |
+| Bundle-first page derives | `shared/src/domain/bundleDerive.js` | CRA adapter copy in `client/.../bundleUtils.js` |
+
+**Implications.**
+- No new LLM. No JQL edits. Auth stays Data Center PAT Bearer (D40)
+- Shared must not import app JSON (`releaseVersionsEmailConfig`);
+  callers inject gate dates
+- CRA cannot import `@portfolio-delivery-ops/shared` without pulling
+  Node connectors — keep a same-export client copy, smoke-checked
+
+**What this is NOT.** Wave 4 (memory, provenance, HITL mutate). Replacing
+`jiraService.js`. Opening write-back from chat.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |

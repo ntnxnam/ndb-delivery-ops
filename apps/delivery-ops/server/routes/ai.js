@@ -19,8 +19,8 @@ const EXEC_SUMMARY_FIELD = 'customfield_38460';
 
 /**
  * POST /api/ai/chat
- * Conversational AI endpoint backed by the same NAI connection as the existing
- * summary endpoints.
+ * Conversational AI endpoint. Perceive (snapshot) then agentRuntime loop
+ * (read-only pack + host tools). Same LLM transport as exec/release summaries.
  *
  * Body:
  * {
@@ -28,6 +28,7 @@ const EXEC_SUMMARY_FIELD = 'customfield_38460';
  *   history?: [{ role: "user"|"assistant", content: string }],
  *   release?: string,
  *   productId?: string,
+ *   audience?: string,
  *   availableReleases?: string[],
  *   knownTeams?: string[]
  * }
@@ -38,6 +39,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
     history = [],
     release = null,
     productId = 'ndb',
+    audience = 'tpm',
     availableReleases = [],
     knownTeams = [],
   } = req.body || {};
@@ -53,6 +55,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       history,
       defaultRelease: release,
       productId,
+      audience,
       jiraToken,
       availableReleases,
       knownTeams,
@@ -62,6 +65,8 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       reply: result.reply,
       scope: result.scope,
       snapshotMeta: result.snapshotMeta,
+      trace: result.trace || [],
+      runtime: result.runtime || 'agent',
     });
   } catch (err) {
     logger.error('[ai/chat] failed', err, { naiDebug: err.naiDebug });
@@ -188,7 +193,7 @@ router.put('/exec-summary/:key', validateJiraTokenMiddleware, async (req, res) =
  * }
  *
  * Gate-lagging detection uses deriveSignals.latestPassedMarker — see
- * server/utils/execSummarySignals.js and the CLOSEST-DATE-THAT-PASSED RULE
+ * shared/src/domain/execSummarySignals.cjs and the CLOSEST-DATE-THAT-PASSED RULE
  * in naiService.js for the full logic.
  */
 router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) => {
@@ -223,6 +228,7 @@ router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) =>
       phaseDist: intelligence.phaseDist,
       selfReportedRisk: intelligence.selfReportedRisk,
       dateMetrics: intelligence.dateMetrics,
+      health: intelligence.health,
       bucketCounts: Object.fromEntries(
         Object.entries(intelligence.buckets).map(([k, v]) => [k, v.length])
       ),
