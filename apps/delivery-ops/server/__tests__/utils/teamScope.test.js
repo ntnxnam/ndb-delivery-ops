@@ -68,43 +68,38 @@ describe('listFixVersionsForTeam', () => {
     clearFixVersionCache();
   });
 
-  test('returns distinct fixVersions from tickets in the team baseFilter', async () => {
-    const seen = [];
+  test('returns unreleased versions from the team project — one GET, no ticket search', async () => {
     const jira = {
-      searchAll: async (jql) => {
-        seen.push(jql);
+      searchAll: jest.fn(),
+      getProjectVersions: async (projectKey) => {
+        expect(projectKey).toBe('ENG');
         return [
-          { fields: { fixVersions: [{ name: 'MSP-2.1' }, { name: 'MSP-2.0' }] } },
-          { fields: { fixVersions: [{ name: 'MSP-2.1' }] } },
-          { fields: { fixVersions: [{ name: 'master' }] } },
+          { name: 'MSP-2.1', released: false, archived: false, releaseDate: '2026-10-01' },
+          { name: 'MSP-2.0', released: true, archived: false, releaseDate: '2026-01-01' },
+          { name: 'old', released: false, archived: true, releaseDate: '2025-01-01' },
+          { name: 'MSP-2.2', released: false, archived: false, releaseDate: '2026-12-01' },
         ];
       },
-      getProjectVersions: async () => [
-        { name: 'MSP-2.1', released: false, releaseDate: '2026-10-01' },
-        { name: 'MSP-2.0', released: true, releaseDate: '2026-01-01' },
-        { name: 'ERA-ignored', released: false, releaseDate: '2026-09-01' },
-      ],
     };
 
     const versions = await listFixVersionsForTeam(
-      { id: 'prism-infra', baseFilter: 'filter=Prism-Infra-Base', projectKey: 'ERA' },
+      { id: 'prism-infra', projectKey: 'ENG' },
       jira
     );
 
-    expect(seen[0]).toBe('(filter=Prism-Infra-Base) AND (fixVersion is not EMPTY)');
-    expect(versions.map((v) => v.name)).toEqual(['MSP-2.1', 'MSP-2.0', 'master']);
+    expect(jira.searchAll).not.toHaveBeenCalled();
+    expect(versions.map((v) => v.name)).toEqual(['MSP-2.2', 'MSP-2.1']);
     expect(versions.find((v) => v.name === 'MSP-2.1')).toEqual({
       name: 'MSP-2.1',
       released: false,
       releaseDate: '2026-10-01',
     });
-    expect(versions.find((v) => v.name === 'ERA-ignored')).toBeUndefined();
   });
 
-  test('does not silently fall back when baseFilter is missing', async () => {
-    const jira = { searchAll: jest.fn() };
+  test('does not silently fall back when projectKey is missing', async () => {
+    const jira = { getProjectVersions: jest.fn() };
     await expect(listFixVersionsForTeam({ id: 'prism-infra' }, jira))
-      .rejects.toThrow(/no baseFilter/);
-    expect(jira.searchAll).not.toHaveBeenCalled();
+      .rejects.toThrow(/no projectKey/);
+    expect(jira.getProjectVersions).not.toHaveBeenCalled();
   });
 });

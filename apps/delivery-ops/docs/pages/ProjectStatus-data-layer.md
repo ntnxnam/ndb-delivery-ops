@@ -31,10 +31,10 @@ Headers: x-jira-token, x-username
 ```
 
 **Server flow**: `jira/versions.js → releaseDataService.listOpenReleaseVersions(teamId)` → `listFixVersionsForTeam`  
-**JIRA query**: `(${team.baseFilter}) AND (fixVersion is not EMPTY)` then unique names, joined with project-version `released` / `releaseDate`. Cached ~10 min per team.  
+**JIRA call**: `GET /rest/api/2/project/{team.projectKey}/versions`, keep unreleased/unarchived. Cached ~10 min per team. No ticket search.  
 **Returns**: `{ versions: [{ name, released, releaseDate }], projectKey, defaultVersion }`  
 **Default**: unreleased version whose JIRA `releaseDate` (GA) is next upcoming.  
-**400**: team not selected, or team has no `baseFilter` — never falls back to another team.
+**400**: team not selected, or team has no `projectKey` — never falls back to another team.
 
 ---
 

@@ -22,13 +22,9 @@ const mockTeamConfig = {
   defaultTeamId: 'ndb'
 };
 
-function mockSearchIssues(fixVersionNames, projectVersions) {
-  const issues = fixVersionNames.map((name) => ({
-    fields: { fixVersions: [{ name }] },
-  }));
+function mockProjectVersions(projectVersions) {
   const { getJira } = require('../../utils/jiraClient');
   getJira.mockResolvedValue({
-    searchAll: async () => issues,
     getProjectVersions: async () => projectVersions || [],
   });
 }
@@ -39,7 +35,6 @@ jest.mock('../../config/teamBoardConfig.json', () => mockTeamConfig, { virtual: 
 jest.mock('../../utils/jiraClient', () => ({
   ...jest.requireActual('../../utils/jiraClient'),
   getJira: jest.fn(async () => ({
-    searchAll: async () => [],
     getProjectVersions: async () => [],
   })),
 }));
@@ -80,14 +75,14 @@ describe('Parent Project Version Filtering', () => {
   });
 
   describe('POST /api/jira/release-versions', () => {
-    it('returns fixVersions that appear on tickets in the team baseFilter', async () => {
+    it('returns unreleased versions from the team JIRA project', async () => {
       const projectVersions = [
         { name: 'NDB-2.11', released: false, archived: false, releaseDate: '2026-09-15' },
         { name: 'NDB-2.12', released: false, archived: false, releaseDate: '2026-12-01' },
         { name: 'NDB-2.10', released: true, archived: false, releaseDate: '2026-03-01' },
-        { name: 'ERA-ignored', released: false, archived: false, releaseDate: '2026-09-01' },
+        { name: 'ERA-open', released: false, archived: false, releaseDate: '2026-09-01' },
       ];
-      mockSearchIssues(['NDB-2.11', 'NDB-2.12', 'NDB-2.10'], projectVersions);
+      mockProjectVersions(projectVersions);
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -97,13 +92,12 @@ describe('Parent Project Version Filtering', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.projectKey).toBe('ERA');
       const names = response.body.versions.map(v => v.name);
-      expect(names).toEqual(['NDB-2.12', 'NDB-2.11', 'NDB-2.10']);
-      expect(names).not.toContain('ERA-ignored');
-      expect(response.body.versions.find(v => v.name === 'NDB-2.10').released).toBe(true);
-      expect(response.body.defaultVersion).toBe('NDB-2.11');
+      expect(names).toEqual(['NDB-2.12', 'NDB-2.11', 'ERA-open']);
+      expect(names).not.toContain('NDB-2.10');
+      expect(response.body.defaultVersion).toBe('ERA-open');
     });
 
-    it('returns every name from the baseFilter search, without prefix or glob matching', async () => {
+    it('returns every unreleased name in the project, without prefix or glob matching', async () => {
       const names = [
         'DataLens-1.0',
         'DL2025.02',
@@ -112,7 +106,7 @@ describe('Parent Project Version Filtering', () => {
         'DataLens2025.03',
         'DL-1.1',
       ];
-      mockSearchIssues(names, names.map((name) => ({ name, released: false, archived: false })));
+      mockProjectVersions(names.map((name) => ({ name, released: false, archived: false })));
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -124,9 +118,9 @@ describe('Parent Project Version Filtering', () => {
       expect(response.body.versions).toHaveLength(6);
     });
 
-    it('keeps mixed-case names from the search', async () => {
+    it('keeps mixed-case names from the project', async () => {
       const names = ['datalens-1.0', 'DATALENS-2.0', 'dl-test', 'DL-PROD'];
-      mockSearchIssues(names, names.map((name) => ({ name, released: false, archived: false })));
+      mockProjectVersions(names.map((name) => ({ name, released: false, archived: false })));
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -140,7 +134,7 @@ describe('Parent Project Version Filtering', () => {
     });
 
     it('should handle empty version list gracefully', async () => {
-      mockSearchIssues([], [{ name: 'Project-Only', released: false }]);
+      mockProjectVersions([]);
 
       const response = await request(app)
         .post('/api/jira/release-versions')
@@ -161,21 +155,21 @@ describe('Parent Project Version Filtering', () => {
       expect(response.body.success).toBe(false);
     });
 
-    it('returns 400 when the team has no baseFilter', async () => {
+    it('returns 400 when the team has no projectKey', async () => {
       mockTeamConfig.teams.push({
-        id: 'no-filter',
-        name: 'No Filter',
-        projectKey: 'ENG',
+        id: 'no-project',
+        name: 'No Project',
         projectType: 'parent',
+        baseFilter: 'filter=x',
       });
 
       const response = await request(app)
         .post('/api/jira/release-versions')
-        .send({ teamId: 'no-filter' })
+        .send({ teamId: 'no-project' })
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toMatch(/no baseFilter/);
+      expect(response.body.message).toMatch(/no projectKey/);
       mockTeamConfig.teams.pop();
     });
   });
@@ -187,13 +181,10 @@ describe('Parent Project Version Filtering', () => {
         { name: 'Analytics-2.1', released: false, archived: false }
       ];
 
-      mockSearchIssues(
-        ['DataLens-1.0', 'Analytics-2.1'],
-        [
-          { name: 'DataLens-1.0', released: false, archived: false },
-          { name: 'Analytics-2.1', released: false, archived: false },
-        ]
-      );
+      mockProjectVersions([
+        { name: 'DataLens-1.0', released: false, archived: false },
+        { name: 'Analytics-2.1', released: false, archived: false },
+      ]);
 
       const response = await request(app)
         .post('/api/jira/discover-versions')
@@ -218,13 +209,10 @@ describe('Parent Project Version Filtering', () => {
         { name: 'NDB-2.12', released: false, archived: false }
       ];
 
-      mockSearchIssues(
-        ['NDB-2.11', 'NDB-2.12'],
-        [
-          { name: 'NDB-2.11', released: false, archived: false },
-          { name: 'NDB-2.12', released: false, archived: false },
-        ]
-      );
+      mockProjectVersions([
+        { name: 'NDB-2.11', released: false, archived: false },
+        { name: 'NDB-2.12', released: false, archived: false },
+      ]);
 
       const response = await request(app)
         .post('/api/jira/discover-versions')

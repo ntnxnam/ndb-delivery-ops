@@ -1,5 +1,8 @@
 /**
  * Team scope helpers (CJS). Keep in sync with shared/src/utils/teamScope.ts.
+ *
+ * Version listing is GET /project/{projectKey}/versions (one call).
+ * Ticket queries still AND the team's baseFilter.
  */
 
 const VERSION_LIST_TTL_MS = 10 * 60 * 1000;
@@ -24,6 +27,19 @@ function requireBaseFilter(team) {
     throw err;
   }
   return filter;
+}
+
+function requireProjectKey(team) {
+  const key = typeof team?.projectKey === 'string' ? team.projectKey.trim() : '';
+  if (!key) {
+    const err = new Error(
+      `Team "${team?.id || 'unknown'}" has no projectKey in Admin. Set the team's JIRA project, then Fetch again.`
+    );
+    err.statusCode = 400;
+    err.publicError = 'Team has no JIRA project';
+    throw err;
+  }
+  return key;
 }
 
 function isUnreleasedVersion(v) {
@@ -70,51 +86,27 @@ function clearFixVersionCache() {
   versionListCache.clear();
 }
 
-function uniqueFixVersionNames(issues) {
-  const names = new Set();
-  for (const issue of issues || []) {
-    for (const fv of issue.fields?.fixVersions || []) {
-      if (fv?.name) names.add(String(fv.name));
-    }
-  }
-  return [...names].sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+function sortVersionNames(a, b) {
+  return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
 }
 
 async function listFixVersionsForTeam(team, jira) {
-  const baseFilter = requireBaseFilter(team);
-  const cacheKey = String(team.id || baseFilter);
+  const projectKey = requireProjectKey(team);
+  const cacheKey = String(team.id || projectKey);
   const cached = versionListCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < VERSION_LIST_TTL_MS) {
     return cached.versions;
   }
 
-  const jql = wrapTeamScope(baseFilter, 'fixVersion is not EMPTY');
-  const issues = await jira.searchAll(jql, 'fixVersions', {
-    pageSize: 100,
-    maxIssues: 20000,
-  });
-  const names = uniqueFixVersionNames(issues);
-
-  const metaByName = new Map();
-  if (team.projectKey && typeof jira.getProjectVersions === 'function') {
-    try {
-      const projectVersions = await jira.getProjectVersions(team.projectKey);
-      for (const v of projectVersions || []) {
-        if (v?.name) metaByName.set(String(v.name), v);
-      }
-    } catch (_e) {
-      // Metadata is optional — ticket names still win.
-    }
-  }
-
-  const versions = names.map((name) => {
-    const meta = metaByName.get(name);
-    return {
-      name,
-      released: !!meta?.released,
-      releaseDate: meta?.releaseDate || undefined,
-    };
-  });
+  const projectVersions = await jira.getProjectVersions(projectKey);
+  const versions = (projectVersions || [])
+    .filter(isUnreleasedVersion)
+    .map((v) => ({
+      name: String(v.name),
+      released: false,
+      releaseDate: v.releaseDate || undefined,
+    }))
+    .sort((a, b) => sortVersionNames(a.name, b.name));
 
   versionListCache.set(cacheKey, { fetchedAt: Date.now(), versions });
   return versions;
@@ -123,10 +115,10 @@ async function listFixVersionsForTeam(team, jira) {
 module.exports = {
   wrapTeamScope,
   requireBaseFilter,
+  requireProjectKey,
   isUnreleasedVersion,
   toVersionSummary,
   pickNextUpcomingGaVersion,
   listFixVersionsForTeam,
   clearFixVersionCache,
-  uniqueFixVersionNames,
 };

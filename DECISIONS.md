@@ -219,10 +219,11 @@ platform must support **both** workflows simultaneously:
 The Sync Hub UI was removed. Empty disk is not a dead end.
 
 **Implications.**
-- Version dropdowns list unique `fixVersion` names that appear on tickets in
-  `(${team.baseFilter}) AND (fixVersion is not EMPTY)` — not prefix/glob
-  matching. Missing `baseFilter` is HTTP 400; never silently fall back to
-  another team.
+- Version dropdowns list **unreleased** versions from
+  `GET /rest/api/2/project/{team.projectKey}/versions` (one call). Choose
+  team → that team's `projectKey` (e.g. ENG) → unreleased versions.
+  Missing `projectKey` is HTTP 400; never silently fall back to another
+  team. Ticket queries still AND `team.baseFilter`.
 - Project Status, Release Brief / Retrospective, SoS, and chat grounding
   fetch live. SoS may fall back to disk only on HTTP 429, keyed by the
   selected team id (never another team's cache).

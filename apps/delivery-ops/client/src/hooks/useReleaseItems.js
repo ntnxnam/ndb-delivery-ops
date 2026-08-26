@@ -159,15 +159,6 @@ export function useReleaseItems() {
   const fetchItemsForVersion = useCallback(async (version) => {
     if (!version) return null;
 
-    // Catch-all planning versions (e.g. "Era Future", "master") have no JIRA
-    // fixVersion entries — skip the fetch entirely to avoid a 400.
-    const isCatchAll = !/^[A-Z]+-\d/.test(version);
-    if (isCatchAll) {
-      setItems({ commit: [], longTermFunded: [] });
-      setSectionMetadata({});
-      return null;
-    }
-
     // Cancel any previous in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();

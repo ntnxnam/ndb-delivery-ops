@@ -1,5 +1,5 @@
 ### POST /api/jira/release-versions
-**Purpose**: List unique fixVersions from tickets in the team's `baseFilter` (`listFixVersionsForTeam`).
+**Purpose**: List unreleased versions in the team's JIRA project (`GET /project/{projectKey}/versions`).
 **Auth**: required (`releaseVersions`)
 
 ### POST /api/jira/discover-versions

@@ -3,7 +3,7 @@ import { useTeam } from './TeamContext';
 import { listReleaseVersions, fetchGateTimeline, pickDefaultRelease } from '../release/services/releaseBriefService';
 
 /**
- * The server lists fixVersions that appear on tickets in the team's baseFilter.
+ * The server lists unreleased versions from the team's JIRA project.
  * Trust that list — do not re-filter to a product prefix.
  */
 export function isAllowedVersion(v) {

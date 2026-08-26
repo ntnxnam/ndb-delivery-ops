@@ -33,7 +33,7 @@ The Project Status page is the central release payload dashboard. It shows the f
 
 ## UI Behaviour
 
-1. **Team picker** — dropdown at top of the toolbar (and in the sidebar). Changing the dropdown only stages a team; **Fetch** applies it and loads fixVersions from `(${team.baseFilter}) AND (fixVersion is not EMPTY)`. Applied team persists in localStorage as `releaseVersionSelectedTeamId`. Shown even when the teams API fails, with a Retry control.
+1. **Team picker** — dropdown at top of the toolbar (and in the sidebar). Changing the dropdown only stages a team; **Fetch** applies it and loads unreleased versions from the team's JIRA project (`GET /project/{projectKey}/versions`). Applied team persists in localStorage as `releaseVersionSelectedTeamId`. Shown even when the teams API fails, with a Retry control.
 2. **Release picker** — dropdown next to the team picker; populated from JIRA; selection persists in localStorage
 3. **Payload summary row** — shows total issues, open bugs, P0/P1 count, closed % as clickable KPI chips
 4. **Filter bar** — team, component, status, priority, issue type; all client-side after initial load

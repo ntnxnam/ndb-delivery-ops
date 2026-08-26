@@ -1,9 +1,9 @@
 /**
  * Release-data service: orchestration for the release-versions dropdown.
  *
- * Versions are unique fixVersions that appear on tickets in the team's
- * baseFilter. Prefix/glob name matching is not used. The next upcoming
- * JIRA GA (releaseDate) among unreleased names is the default.
+ * Versions are unreleased names from GET /project/{team.projectKey}/versions.
+ * One JIRA call. Ticket queries still AND the team's baseFilter.
+ * The next upcoming JIRA GA (releaseDate) among those names is the default.
  */
 
 const fs = require('fs');
@@ -77,7 +77,7 @@ function wrapJiraError(apiError) {
 }
 
 /**
- * List fixVersions that appear on tickets in the requested team's baseFilter.
+ * List unreleased versions in the requested team's JIRA project.
  *
  * @returns {Promise<{ versions: Array, projectKey: string, defaultVersion: string|null }>}
  */
