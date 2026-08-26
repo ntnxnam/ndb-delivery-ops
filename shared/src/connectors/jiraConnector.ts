@@ -7,8 +7,8 @@
  * must use this connector — D3 / Wave 2.
  *
  * Per `minimal-architecture.mdc` (no axios in components/services/routes),
- * JIRA calls go through this module. Behaviour matches
- * `apps/delivery-ops/server/services/jiraService.js`.
+ * JIRA calls go through this module. Express reaches it via
+ * `apps/delivery-ops/server/utils/jiraClient.js`.
  *
  * Features:
  *   - Bearer PAT auth via a single headers() helper
@@ -215,7 +215,7 @@ export class JiraConnector {
   /**
    * Paginated /search walker. Returns the full accumulated issue list.
    *
-   * Tunables mirror the legacy makeJiraSearchFetcher in jiraService.js so
+   * Tunables mirror makeJiraSearchFetcher in jiraClient.js so
    * per-query tuning is portable.
    */
   async searchAll(
@@ -413,7 +413,7 @@ export class JiraConnector {
 
   /**
    * Normalise a raw axios/JIRA error into { statusCode, message, details }.
-   * Mirrors wrapJiraError() in the web-app's jiraService.js.
+   * Mirrors wrapJiraError() in the web-app's jiraClient.js.
    */
   static wrapError(error: unknown, fallbackMessage = 'JIRA request failed'): JiraErrorShape {
     const ax = error as AxiosError<{

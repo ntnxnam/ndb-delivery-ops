@@ -193,7 +193,8 @@ ndb-status-update-sender/
 | `server/routes/email/` | Email sending: sendEmail, sendReleaseVersions, sendGenericReminder, preview, schedules, history |
 | `server/routes/jira/index.js` | JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs |
 | `server/services/emailService.js` | SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients |
-| `server/services/jiraService.js` | JIRA HTTP calls, retry, risk indicator helpers |
+| `server/utils/jiraClient.js` | CJS adapter onto shared `JiraConnector` (`getJira`, `searchPages`) |
+| `server/services/jiraService.js` | Risk-indicator presentation helpers only |
 | `server/services/userService.js` | Username/email normalization, JIRA user extraction, auth checks |
 | `server/config/jiraFieldsConfig.json` | **Single source of truth** for all JIRA custom field IDs (server side) |
 | `server/utils/jiraQueryUtils.js` | JQL query builders — import here, don't inline JQL in route handlers |

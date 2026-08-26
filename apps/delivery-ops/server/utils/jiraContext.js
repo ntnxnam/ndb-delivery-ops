@@ -7,7 +7,7 @@
  *
  *   const ctx = require('../../utils/jiraContext');
  *   // then destructure what you need:
- *   const { axios, JIRA_API_V2, validateJiraTokenMiddleware, runSearchByJql } = ctx;
+ *   const { getJira, JIRA_API_V2, validateJiraTokenMiddleware, runSearchByJql } = ctx;
  *
  * Nothing in this file contains logic — it is a pure re-export. If a
  * dependency path changes, update it here once instead of in every route file.
@@ -19,8 +19,6 @@
 'use strict';
 
 // ── Node built-ins ────────────────────────────────────────────────────────────
-const axios   = require('axios');
-const https   = require('https');
 const fs      = require('fs');
 const path    = require('path');
 
@@ -130,8 +128,6 @@ const STANDARD_FIELD_NAMES = 'summary,status,assignee,reporter,issuetype,priorit
 // ── Exports ───────────────────────────────────────────────────────────────────
 module.exports = {
   // Node built-ins
-  axios,
-  https,
   fs,
   path,
 

@@ -15,14 +15,6 @@ const {
   wrapJiraError,
 } = require('../utils/jiraClient');
 
-function jiraHeaders(token) {
-  return {
-    Authorization: `Bearer ${String(token || '').replace(/^Bearer\s+/i, '')}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-}
-
 function formatRiskIndicator(value) {
   if (!value || value === null || value === undefined) {
     return { value: 'Not Set', color: 'transparent' };
@@ -101,7 +93,6 @@ module.exports = {
   makeJiraSearchFetcher,
   searchPages,
   wrapJiraError,
-  jiraHeaders,
   formatRiskIndicator,
   getRiskIndicatorPriority,
   sortByRiskIndicator,

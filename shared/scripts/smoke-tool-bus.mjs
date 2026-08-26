@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Wave 2: MCP must not ship a private JIRA connector; aliases match D30 fields.
+ * D40: Express jiraService.js must not be a second HTTP client.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GATE_DATE_FIELD_ALIASES, GATE_DATE_FIELDS } from '../dist/index.js';
@@ -21,4 +22,52 @@ for (const [alias, fieldId] of Object.entries(GATE_DATE_FIELD_ALIASES)) {
   }
 }
 
-console.log('tool-bus ok: shared JiraConnector + DateMoverService aliases; no MCP-private JIRA client');
+const jiraClient = join(repoRoot, 'apps/delivery-ops/server/utils/jiraClient.js');
+if (!existsSync(jiraClient)) {
+  console.error('tool-bus failed: apps/delivery-ops/server/utils/jiraClient.js must exist');
+  process.exit(1);
+}
+const jiraClientSrc = readFileSync(jiraClient, 'utf8');
+if (!jiraClientSrc.includes('JiraConnector')) {
+  console.error('tool-bus failed: jiraClient.js must construct shared JiraConnector');
+  process.exit(1);
+}
+
+const jiraService = join(repoRoot, 'apps/delivery-ops/server/services/jiraService.js');
+const jiraServiceSrc = readFileSync(jiraService, 'utf8');
+for (const needle of ["require('axios')", 'createHttpsAgent', 'retryJiraCall']) {
+  if (jiraServiceSrc.includes(needle)) {
+    console.error(`tool-bus failed: jiraService.js must not contain ${needle}`);
+    process.exit(1);
+  }
+}
+
+const skipNames = new Set([
+  'confluence.js',
+  'tcmsService.js',
+  'aiReportService.js',
+  'ai-reports.js',
+]);
+const transportRe = /(?:function|const)\s+(?:createHttpsAgent|retryJiraCall)\b/;
+
+function walk(dir) {
+  for (const entry of readdirSync(dir)) {
+    if (entry === '__tests__' || entry === 'node_modules') continue;
+    const full = join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      walk(full);
+      continue;
+    }
+    if (!entry.endsWith('.js') || skipNames.has(entry)) continue;
+    const src = readFileSync(full, 'utf8');
+    if (transportRe.test(src)) {
+      console.error(`tool-bus failed: leftover JIRA transport in ${full.slice(repoRoot.length + 1)}`);
+      process.exit(1);
+    }
+  }
+}
+
+walk(join(repoRoot, 'apps/delivery-ops/server'));
+
+console.log('tool-bus ok: shared JiraConnector + DateMoverService aliases; Express via jiraClient; no MCP-private JIRA client');

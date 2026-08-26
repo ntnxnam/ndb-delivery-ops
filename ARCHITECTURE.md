@@ -349,7 +349,7 @@ per-capability ports is `CONSOLIDATION.md`.
 | Phase | What | Status (as of Session 2026-05-20) |
 |---|---|---|
 | **A. AI layer rebuild** | Orchestrator agent + 6 specialists + 13 skills + 9 rules + 3 workflows + persona-aware sidebar foundations | ✅ done — commit `54bb48a` |
-| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express + MCP both construct shared `JiraConnector` with a Data Center Bearer PAT |
+| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express reaches it via `server/utils/jiraClient.js`; MCP constructs `JiraConnector` directly. Data Center Bearer PAT only |
 | **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
 | **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 AI transport (`aiConnector.chatCompletion`) landed. GitHub / Slack / Email still pending. |
 | **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~5 of 20 capabilities done: #1a payload JQL (now 6-bucket + Group 2/3 builders), #1b dataset trunk (all 3 phases, now Release Payload default + 3-group model), #3 insights first slice, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |

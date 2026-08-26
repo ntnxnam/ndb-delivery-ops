@@ -891,6 +891,9 @@ Not Cloud email+API-token Basic auth, not OAuth, not `cloudId`.
 **Implications.**
 - `mcp-server` tools import `JiraConnector` from
   `@portfolio-delivery-ops/shared`
+- Express CJS hosts use `server/utils/jiraClient.js` (`getJira`,
+  `searchPages`) onto the same connector. `jiraService.js` is
+  risk-indicator UI only — no axios, no Bearer headers
 - `move_jira_dates` is a thin adapter over `DateMoverService` (D30) —
   same mandatory reason + Confluence audit as
   `POST /api/date-mover/move-gate-date`
@@ -923,7 +926,8 @@ the same functions. Wave 3 lifts:
 - CRA cannot import `@portfolio-delivery-ops/shared` without pulling
   Node connectors — keep a same-export client copy, smoke-checked
 
-**What this is NOT.** Replacing `jiraService.js`.
+**What this is NOT.** The JIRA HTTP consolidation (D40). Write-back
+to JIRA (D26).
 
 ---
 

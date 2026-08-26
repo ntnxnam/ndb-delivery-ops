@@ -1,4 +1,3 @@
-const axios = require('axios');
 const path = require('path');
 const { JIRA_API_V2 } = require('../../config/api');
 const logger = require('../../utils/logger');
