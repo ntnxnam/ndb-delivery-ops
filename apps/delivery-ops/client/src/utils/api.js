@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { applyAxiosInterceptors, requestKey, withRequestGate } from './requestGate';
+
+applyAxiosInterceptors(axios);
 
 /**
  * API base URL for all requests. Use relative (empty string) so requests go to same origin.
@@ -56,7 +59,8 @@ export const getAuthHeaders = (jiraToken = null, username = null) => {
 };
 
 /**
- * Makes an authenticated POST request with retry logic for timeout errors
+ * Makes an authenticated POST request. Identical in-flight calls are coalesced;
+ * failed calls are gated by requestGate so a render loop cannot flood the network.
  * NOTE: System accepts username format (e.g., 'namratha.singh') not email format
  * @param {string} url - API endpoint URL
  * @param {object} data - Request body data
@@ -65,7 +69,7 @@ export const getAuthHeaders = (jiraToken = null, username = null) => {
  * @returns {Promise} Axios response
  */
 export const authenticatedPost = async (url, data = {}, options = {}, axiosConfig = {}) => {
-  const { jiraToken, username } = options;
+  const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
 
   // Merge username into data if provided (for backward compatibility, also include userEmail)
@@ -91,10 +95,15 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
   const config = {
     ...authHeaders,
     timeout,
-    ...axiosConfig // This allows passing signal and other axios config
+    ...axiosConfig,
+    requestGate: { managed: true, ignoreFailureCooldown },
   };
 
-  return axios.post(url, requestData, config);
+  return withRequestGate(
+    requestKey('POST', url, data),
+    () => axios.post(url, requestData, config),
+    { ignoreFailureCooldown }
+  );
 };
 
 /**
@@ -106,7 +115,7 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
  * @returns {Promise} Axios response
  */
 export const authenticatedPut = async (url, data = {}, options = {}) => {
-  const { jiraToken, username } = options;
+  const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
   
   // Merge username into data if provided (for backward compatibility, also include userEmail)
@@ -121,10 +130,15 @@ export const authenticatedPut = async (url, data = {}, options = {}) => {
     }
   }
   
-  return axios.put(url, requestData, {
-    ...authHeaders,
-    timeout: 60000
-  });
+  return withRequestGate(
+    requestKey('PUT', url, data),
+    () => axios.put(url, requestData, {
+      ...authHeaders,
+      timeout: 60000,
+      requestGate: { managed: true, ignoreFailureCooldown },
+    }),
+    { ignoreFailureCooldown }
+  );
 };
 
 /**
@@ -137,15 +151,20 @@ export const authenticatedPut = async (url, data = {}, options = {}) => {
  * @returns {Promise} Axios response
  */
 export const authenticatedGet = async (url, params = {}, options = {}, axiosConfig = {}) => {
-  const { jiraToken, username } = options;
+  const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
-  
-  return axios.get(url, { 
-    ...authHeaders, 
-    params,
-    timeout: 30000,
-    ...axiosConfig 
-  });
+
+  return withRequestGate(
+    requestKey('GET', url, null, params),
+    () => axios.get(url, {
+      ...authHeaders,
+      params,
+      timeout: 30000,
+      ...axiosConfig,
+      requestGate: { managed: true, ignoreFailureCooldown },
+    }),
+    { ignoreFailureCooldown }
+  );
 };
 
 /**
@@ -157,12 +176,17 @@ export const authenticatedGet = async (url, params = {}, options = {}, axiosConf
  * @returns {Promise} Axios response
  */
 export const authenticatedDelete = async (url, data = {}, options = {}) => {
-  const { jiraToken, username } = options;
+  const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
-  
-  return axios.delete(url, {
-    data,
-    ...authHeaders,
-    timeout: 60000
-  });
+
+  return withRequestGate(
+    requestKey('DELETE', url, data),
+    () => axios.delete(url, {
+      data,
+      ...authHeaders,
+      timeout: 60000,
+      requestGate: { managed: true, ignoreFailureCooldown },
+    }),
+    { ignoreFailureCooldown }
+  );
 };

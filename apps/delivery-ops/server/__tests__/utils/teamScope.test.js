@@ -21,6 +21,15 @@ describe('wrapTeamScope', () => {
     expect(wrapTeamScope('', 'fixVersion = NDB-2.11')).toBe('fixVersion = NDB-2.11');
     expect(wrapTeamScope(null, 'fixVersion = NDB-2.11')).toBe('fixVersion = NDB-2.11');
   });
+
+  test('hoists ORDER BY outside the AND parentheses', () => {
+    expect(wrapTeamScope(
+      'filter=prisminfra-all-base-filter',
+      '(fixVersion = "MSP-3.2.0.0" OR labels = "msp-3.2.0.0-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC'
+    )).toBe(
+      '(filter=prisminfra-all-base-filter) AND ((fixVersion = "MSP-3.2.0.0" OR labels = "msp-3.2.0.0-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled) ORDER BY key ASC'
+    );
+  });
 });
 
 describe('requireBaseFilter', () => {

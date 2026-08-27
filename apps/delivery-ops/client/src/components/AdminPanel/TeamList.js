@@ -276,6 +276,21 @@ function TeamList({ teams, onTeamUpdate: _onTeamUpdate, onCreateTeam, onEditTeam
                           <span style={{ fontWeight: '500' }}>{team.boardId}</span>
                         </div>
                       )}
+                      {team.sprintCalendar?.s1StartIso ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#6b7280' }}>Sprint calendar:</span>
+                          <span style={{ fontWeight: '500' }}>
+                            S1 {team.sprintCalendar.s1StartIso} · {team.sprintCalendar.sprintDays}d
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#6b7280' }}>Sprint calendar:</span>
+                          <span style={{ fontWeight: '500', color: '#b45309' }}>
+                            Missing — Edit team and detect from the sprint board
+                          </span>
+                        </div>
+                      )}
                       {team.versionPatterns && (
                         <div>
                           <span style={{ color: '#6b7280', display: 'block', marginBottom: '4px' }}>Version Patterns:</span>

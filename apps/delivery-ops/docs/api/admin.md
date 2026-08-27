@@ -55,6 +55,45 @@
 
 ---
 
+### POST /api/admin/validate-board
+
+**Purpose**: Validate a JIRA Agile board and collect sprint calendar (`s1StartIso`, `sprintDays`) from its sprints — used by the team onboarding wizard **Detect from board** action.
+
+**Auth**: super-admin
+
+**Request**
+- Method + path: `POST /api/admin/validate-board`
+- Body params:
+  - `boardId` (number, required) — JIRA Agile board ID
+  - `jiraToken` (string, required) — caller PAT
+- Required headers: super-admin username (`X-Username`)
+
+**Server flow**
+`admin.js` → `getJira(token)` → `collectSprintCalendarFromBoard` → `GET /rest/agile/1.0/board/{boardId}` → paginated `GET /rest/agile/1.0/board/{boardId}/sprint` → infer calendar (named S1, else earliest sprint; median duration snapped to 7/14/21)
+
+**Response shape**
+```json
+{
+  "success": true,
+  "board": { "id": 2888, "name": "NDB Scrum", "type": "scrum" },
+  "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 },
+  "inferredFrom": { "sprintCount": 40, "namedS1": true, "namedS1Name": "S1" },
+  "sprintCount": 40
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Missing `boardId` / `jiraToken`, or board has no dated sprints | Show the message; allow manual S1 + length entry |
+| 404 | Board not found | Show "Board not found — check ID" |
+| 403 | Token lacks access | Show "Token does not have access to this board" |
+
+**Caching**
+No — live JIRA read. Inferred calendar is persisted only when the admin saves the team.
+
+---
+
 ### GET /api/admin/teams
 
 **Purpose**: Return the current team configuration list.
@@ -80,20 +119,23 @@ Reads `server/config/teamBoardConfig.json` — no JIRA call.
 **Auth**: super-admin
 
 **Request**
-- Body: `{ id: string, name: string, displayName: string, boardId: number, baseFilterId: string|number, kpiConfig?: object }`
+- Body: `{ id, name, projectKey, projectType, boardId, sprintCalendar: { s1StartIso, sprintDays }, baseFilter, sprintBaseFilter, versionPatterns?, userConfig? }`
+- `sprintCalendar` is required (`s1StartIso` ISO date, `sprintDays` integer 1–90). Collect it with **Detect from board** (`POST /api/admin/validate-board`).
 
 **Server flow**  
-`loadTeamBoardConfig` → appends → `saveTeamBoardConfig` (writes `teamBoardConfig.json`, invalidates mtime cache) → writes `allowedUsers.json` / `kpiConfig.json`. D43: the registry is multi-team; NDB is the default entry, not the only one.
+`loadTeamBoardConfig` → appends team including `sprintCalendar` → `saveTeamBoardConfig` (writes `teamBoardConfig.json`, invalidates mtime cache) → writes `allowedUsers.json` / `kpiConfig.json`. D43: the registry is multi-team; NDB is the default entry, not the only one.
 
 **Response**
 ```json
-{ "success": true, "teams": [ /* updated list */ ] }
+{ "success": true, "team": { "id": "analytics", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 } }, "message": "Team \"Analytics Team\" created successfully" }
 ```
 
 **Error responses**
 | Code | When | Client should |
 |------|------|---------------|
-| 400 | Team ID already exists | Show "Team ID already in use" |
+| 400 | Missing id/name/projectKey | Show required-field error |
+| 400 | Missing or invalid `sprintCalendar` | Prompt to detect from the sprint board |
+| 409 | Team ID already exists | Show "Team ID already in use" |
 | 500 | File write failure | Show "Config save failed — check server disk" |
 
 ---
@@ -106,14 +148,15 @@ Reads `server/config/teamBoardConfig.json` — no JIRA call.
 
 **Request**
 - Path: `teamId` (string)
-- Body: partial team config (any subset of fields)
+- Body: partial team config. If `sprintCalendar` is sent it is validated. The saved team must end up with a valid `sprintCalendar` (existing or new).
 
 **Server flow**  
-Reads `teamBoardConfig.json` → merges changes for matching `teamId` → writes.
+Reads `teamBoardConfig.json` → merges changes for matching `teamId` (calendar required) → writes `teamBoardConfig.json` and optional `allowedUsers.json`.
 
 **Error responses**
 | Code | When | Client should |
 |------|------|---------------|
+| 400 | Resulting config would have no valid sprintCalendar | Prompt to detect from the sprint board |
 | 404 | teamId not found | Show "Team not found" |
 
 ---

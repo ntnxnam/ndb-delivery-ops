@@ -363,6 +363,7 @@ export {
   toVersionSummary,
   pickNextUpcomingGaVersion,
   listFixVersionsForTeam,
+  requireProjectKey,
   clearFixVersionCache,
 } from './utils/teamScope.js';
 export type { VersionLike, TeamScopeInput, JiraVersionClient, TeamFixVersion } from './utils/teamScope.js';

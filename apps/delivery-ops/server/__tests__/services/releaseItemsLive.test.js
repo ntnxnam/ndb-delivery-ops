@@ -66,6 +66,8 @@ describe('fetchAllItemsAcrossVersions', () => {
     expect(jql).toContain('(filter=Prism-Infra-Base) AND ');
     expect(jql).toContain('fixVersion = "MSP-2.1"');
     expect(jql).toContain('labels = "msp-2.1-long-term-funded"');
+    expect(jql).toMatch(/\) ORDER BY key ASC$/);
+    expect(jql).not.toMatch(/ORDER BY key ASC\)/);
     expect(result.allItems.map((i) => i.key)).toEqual(['FEAT-1']);
   });
 

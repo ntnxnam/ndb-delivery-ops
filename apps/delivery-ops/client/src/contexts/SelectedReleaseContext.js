@@ -55,6 +55,10 @@ export function SelectedReleaseProvider({ children }) {
   const { selectedTeamId, selectedTeam, hasTeamSelected, teamEpoch } = useTeam();
   const loadedEpochRef = useRef(0);
   const loadedTeamIdRef = useRef(selectedTeamId);
+  // After a failed fetch, do not auto-retry the same team until force=true
+  // (explicit refresh) or the team changes. Prevents a request storm when a
+  // consumer effect keys off an empty versions list.
+  const versionsFailedForTeamRef = useRef(null);
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
@@ -82,14 +86,17 @@ export function SelectedReleaseProvider({ children }) {
       return { versions: [], defaultVersion: null };
     }
 
-    if (!force) {
+    if (force) {
+      versionsCache.delete(selectedTeamId);
+      versionsFailedForTeamRef.current = null;
+    } else if (versionsFailedForTeamRef.current === selectedTeamId) {
+      return { versions: [], defaultVersion: null };
+    } else {
       const cached = readVersionsCache(selectedTeamId);
       if (cached) {
         setVersions(cached.versions);
         return cached;
       }
-    } else {
-      versionsCache.delete(selectedTeamId);
     }
 
     const existing = versionsInFlight.get(selectedTeamId);
@@ -118,10 +125,17 @@ export function SelectedReleaseProvider({ children }) {
           teamId: selectedTeamId,
           jiraToken,
           username,
+          ignoreFailureCooldown: force,
         });
         const payload = { versions: fetched, defaultVersion: defaultVersion || null, fetchedAt: Date.now() };
         versionsCache.set(selectedTeamId, payload);
+        versionsFailedForTeamRef.current = null;
         return payload;
+      } catch (err) {
+        // Latch before dropping in-flight so a concurrent loadVersions(false)
+        // cannot start another request in the gap.
+        versionsFailedForTeamRef.current = selectedTeamId;
+        throw err;
       } finally {
         versionsInFlight.delete(selectedTeamId);
       }
@@ -224,6 +238,7 @@ export function SelectedReleaseProvider({ children }) {
 
     if (teamChanged) {
       loadedTeamIdRef.current = selectedTeamId;
+      versionsFailedForTeamRef.current = null;
       setVersions([]);
       setVersionsError('');
       setGateTimeline(null);
@@ -283,6 +298,13 @@ export function SelectedReleaseProvider({ children }) {
     });
   }, [loadVersions]);
 
+  const fetchVersions = useCallback(() => loadVersions(false), [loadVersions]);
+  const refreshVersions = useCallback(() => loadVersions(true), [loadVersions]);
+  const refreshGateTimeline = useCallback(
+    () => loadGateTimeline(selectedRelease, true),
+    [loadGateTimeline, selectedRelease]
+  );
+
   const value = useMemo(() => ({
     selectedRelease,
     setSelectedRelease,
@@ -297,22 +319,24 @@ export function SelectedReleaseProvider({ children }) {
     jiraUnreachable,
     productId: selectedTeam?.id || selectedTeam?.productId || '',
     // fetchVersions — returns from cache if still fresh; never forces a re-fetch.
-    fetchVersions: () => loadVersions(false),
+    fetchVersions,
     // refreshVersions — busts the cache and forces a new JIRA call.
-    refreshVersions: () => loadVersions(true),
+    refreshVersions,
     // refreshVersionsAndResetDefault — busts cache + clears localStorage preference
     // so pickDefaultRelease re-runs the GA-date logic with fresh JIRA data.
     refreshVersionsAndResetDefault,
-    refreshGateTimeline: () => loadGateTimeline(selectedRelease, true),
+    refreshGateTimeline,
   }), [
     activeVersions,
     inactiveVersions,
-    loadVersions,
+    fetchVersions,
     gateError,
     gateTimeline,
     jiraUnreachable,
     loadingGateTimeline,
     loadingVersions,
+    refreshGateTimeline,
+    refreshVersions,
     refreshVersionsAndResetDefault,
     selectedRelease,
     selectedTeam?.id,
@@ -320,7 +344,6 @@ export function SelectedReleaseProvider({ children }) {
     setSelectedRelease,
     versions,
     versionsError,
-    loadGateTimeline,
   ]);
 
   return (

@@ -38,7 +38,7 @@ import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
 function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
-  const { hasTeamSelected, isTransitioning, selectedTeam } = useTeam();
+  const { hasTeamSelected, isTransitioning, selectedTeamId } = useTeam();
   
   // Custom hooks for state management
   const {
@@ -51,7 +51,6 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     defaultVersion,
     setDefaultVersion,
     setSelectedVersion,
-    fetchVersions,
     refreshVersions,
     handleVersionChange: handleVersionChangeHook,
     error: versionsError,
@@ -123,7 +122,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
 
   // Combined error state (from multiple hooks)
   const error = versionsError || itemsError || '';
-  const setError = (err) => {
+  const setError = useCallback((err) => {
     if (err) {
       setVersionsError(err);
       setItemsError(err);
@@ -131,7 +130,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       setVersionsError('');
       setItemsError('');
     }
-  };
+  }, [setItemsError, setVersionsError]);
 
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
@@ -154,6 +153,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       : allowedSendersNormalized.length > 0 && allowedSendersNormalized.includes(normalizedUsername);
   const refreshButtonContainerRef = useRef(null);
   const hasInitialSynced = useRef(false);
+  const lastLoadedKeyRef = useRef('');
   const ganttChartRef = useRef(null);
   const pdfContentRef = useRef(null);  // wraps Gantt + tables for PDF capture
   const [downloading, setDownloading] = useState(false);
@@ -294,18 +294,8 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     // Remove selectedVersion from dependencies to prevent infinite loop
   }, [configDefaultVersion, setSelectedVersion, setDefaultVersion]);
 
-  // Fetch release versions when team is available and authenticated
-  useEffect(() => {
-    // Only fetch if we have all required auth and team, and not transitioning
-    if (jiraToken && hasTeamSelected && !isTransitioning) {
-      if (!versions.length) {
-        fetchVersions();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jiraToken, hasTeamSelected, isTransitioning, fetchVersions]);
-
-  // No auto-fetch: user must click Load to fetch items/history for the selected version (even if default is pre-selected)
+  // Versions are loaded by SelectedReleaseProvider. Do not refetch on an empty
+  // list — that retried after every failed load and stormed the versions API.
 
   // Handle committed items initial loading and background tasks
   useEffect(() => {
@@ -394,12 +384,57 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     }
   }, []);
 
-  // Handle version change - clear items and history when version changes; user must click Load to fetch for new version
+  const loadVersionData = useCallback(async (version, { userInitiated = false } = {}) => {
+    if (!version) {
+      setError('Please select a version');
+      return;
+    }
+    if (!jiraToken) {
+      setError('JIRA token required');
+      return;
+    }
+
+    setError('');
+    setVersionsError('');
+    setItemsError('');
+    resetFilters();
+    setItems({ commit: [], longTermFunded: [] });
+    setCheckpointHistory({});
+    resetTcmsData();
+    setBreakdownDataMap(new Map());
+
+    try {
+      const itemsResult = await fetchItemsForVersion(version, {
+        ignoreFailureCooldown: userInitiated,
+      });
+      if (itemsResult) {
+        try {
+          await fetchHistoryForVersion(version);
+        } catch (historyError) {
+          console.warn('[ReleaseVersionTab] History fetch failed (items still available):', historyError?.message || historyError);
+        }
+      }
+    } catch (error) {
+      console.error('[ReleaseVersionTab] Error loading release items:', error);
+    }
+  }, [fetchHistoryForVersion, fetchItemsForVersion, jiraToken, resetTcmsData, setCheckpointHistory, setError, setItems, setItemsError, setVersionsError]);
+
+  // Load payload when the selected version (or team) changes. Once per
+  // team+version — a failed load does not auto-retry (Load / picking again does).
+  useEffect(() => {
+    if (!selectedVersion || !jiraToken || !hasTeamSelected || isTransitioning) return;
+    const key = `${selectedTeamId || ''}::${selectedVersion}`;
+    if (lastLoadedKeyRef.current === key) return;
+    lastLoadedKeyRef.current = key;
+    loadVersionData(selectedVersion, { userInitiated: false });
+  }, [hasTeamSelected, isTransitioning, jiraToken, loadVersionData, selectedTeamId, selectedVersion]);
+
   const handleVersionChange = async (event) => {
     const newVersion = event.target.value;
+    lastLoadedKeyRef.current = newVersion
+      ? `${selectedTeamId || ''}::${newVersion}`
+      : '';
     handleVersionChangeHook(event);
-    // Clear items and history when version changes
-    // The useEffect will auto-fetch for the new version
     setItems({ commit: [], longTermFunded: [] });
     setCheckpointHistory({});
     setBreakdownDataMap(new Map());
@@ -409,10 +444,13 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     setBriefingIntelligence(null);
     setBriefingError(null);
 
-    // Log user action
     await logUserAction(UserActions.VERSION_CHANGED, newVersion, {
       previousVersion: selectedVersion
     });
+
+    if (newVersion) {
+      await loadVersionData(newVersion, { userInitiated: true });
+    }
   };
 
 
@@ -434,60 +472,12 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     }
   }, [selectedVersion, jiraToken]);
 
-  // Coordinated fetch function - fetches both items and history together
   const fetchItems = async () => {
-    if (!selectedVersion) {
-      setError('Please select a version');
-      return;
-    }
-
-    if (!jiraToken) {
-      setError('JIRA token required');
-      return;
-    }
-
-    // Clear errors and reset filters when loading a new version
-    setError('');
-    setVersionsError('');
-    setItemsError('');
-    resetFilters();
-
-    // Log user action
     await logUserAction(UserActions.FETCH_ITEMS_CLICKED, selectedVersion);
-
-    // Clear previous data
-    setItems({ commit: [], longTermFunded: [] });
-    setCheckpointHistory({});
-    resetTcmsData();
-    setBreakdownDataMap(new Map());
-
-    // Sequential loading approach to prevent timeouts
-    console.log('[ReleaseVersionTab] Starting sequential loading...');
-    
-    try {
-      // Step 1: Fetch all items (commit + long-term) in one unified call
-      console.log('[ReleaseVersionTab] Step 1: Loading release items...');
-      const itemsResult = await fetchItemsForVersion(selectedVersion);
-      
-      if (itemsResult) {
-        console.log('[ReleaseVersionTab] Step 1 complete: Items loaded');
-        
-        // Step 2: Load checkpoint history
-        console.log('[ReleaseVersionTab] Step 2: Loading checkpoint history...');
-        try {
-          await fetchHistoryForVersion(selectedVersion);
-          console.log('[ReleaseVersionTab] Step 2 complete: History loaded');
-        } catch (historyError) {
-          console.warn('[ReleaseVersionTab] History fetch failed (items still available):', historyError?.message || historyError);
-        }
-      } else {
-        console.error('[ReleaseVersionTab] Failed to load release items');
-      }
-    } catch (error) {
-      console.error('[ReleaseVersionTab] Error loading release items:', error);
+    if (selectedVersion) {
+      lastLoadedKeyRef.current = `${selectedTeamId || ''}::${selectedVersion}`;
     }
-
-    // Background tasks will be handled by useEffect when items are loaded
+    await loadVersionData(selectedVersion, { userInitiated: true });
   };
 
   // Helper function to render "Not Set" with consistent highlighting
@@ -1347,7 +1337,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     } finally {
       setRefreshingLive(false);
     }
-  }, [refreshItemsForVersion, refreshRelease, refreshVersions, selectedVersion]);
+  }, [refreshItemsForVersion, refreshRelease, refreshVersions, selectedVersion, setError]);
 
   // Row rendering moved to ReleaseVersionTableRow component
 
@@ -1545,7 +1535,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       {/* Show message when version is selected but no items loaded yet */}
       {!loadingItems && selectedVersion && (items.commit?.length || 0) === 0 && (items.longTermFunded?.length || 0) === 0 && (
         <div style={{ padding: '0.75rem', textAlign: 'center', color: '#6c757d', backgroundColor: '#f8f9fa', fontSize: '0.85rem' }}>
-          <p style={{ margin: 0 }}>Select a release version and click &quot;Load&quot; to view data.</p>
+          <p style={{ margin: 0 }}>Select a release version to load data, or click &quot;Load&quot; to refresh.</p>
         </div>
       )}
 

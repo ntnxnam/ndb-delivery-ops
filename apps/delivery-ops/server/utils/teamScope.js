@@ -8,12 +8,20 @@
 const VERSION_LIST_TTL_MS = 10 * 60 * 1000;
 const versionListCache = new Map();
 
+const TRAILING_ORDER_BY = /\s+(ORDER\s+BY\s+.+)$/i;
+
 function wrapTeamScope(baseFilter, jql) {
   const filter = typeof baseFilter === 'string' ? baseFilter.trim() : '';
   const inner = typeof jql === 'string' ? jql.trim() : '';
   if (!inner) return filter;
   if (!filter) return inner;
-  return `(${filter}) AND (${inner})`;
+  // ORDER BY is only valid at the top level. Wrapping it inside AND (...)
+  // is a JQL parse error (HTTP 400 from JIRA).
+  const orderMatch = inner.match(TRAILING_ORDER_BY);
+  const clause = orderMatch ? inner.slice(0, orderMatch.index).trim() : inner;
+  const orderBy = orderMatch ? orderMatch[1].trim() : '';
+  const wrapped = `(${filter}) AND (${clause})`;
+  return orderBy ? `${wrapped} ${orderBy}` : wrapped;
 }
 
 function requireBaseFilter(team) {

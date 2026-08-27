@@ -1,4 +1,5 @@
 import { getApiBase, getAuthHeaders } from '../../utils/api';
+import { requestKey, withRequestGate } from '../../utils/requestGate';
 
 class ApiService {
   constructor() {
@@ -16,7 +17,8 @@ class ApiService {
       onProgress = null,
       errorContext = '',
       estimatedTime = null,
-      stages = []
+      stages = [],
+      ignoreFailureCooldown = false,
     } = options;
 
     const requestId = `${loadingKey || 'request'}_${Date.now()}`;
@@ -55,7 +57,11 @@ class ApiService {
         requestOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
       }
 
-      const response = await fetch(fullUrl, requestOptions);
+      const response = await withRequestGate(
+        requestKey(method, fullUrl, body),
+        () => fetch(fullUrl, requestOptions),
+        { ignoreFailureCooldown }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

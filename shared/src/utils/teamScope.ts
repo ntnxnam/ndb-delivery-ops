@@ -32,15 +32,25 @@ export interface TeamFixVersion {
 const VERSION_LIST_TTL_MS = 10 * 60 * 1000;
 const versionListCache = new Map<string, { fetchedAt: number; versions: TeamFixVersion[] }>();
 
+const TRAILING_ORDER_BY = /\s+(ORDER\s+BY\s+.+)$/i;
+
 /**
  * `(${baseFilter}) AND (${jql})` — same shape as kpiService.buildKpiCombinedJql.
  * Empty filter or empty JQL is passed through without wrapping.
+ * A trailing ORDER BY is hoisted outside the AND group — JIRA 400s if it
+ * stays inside the parentheses.
  */
 export function wrapTeamScope(baseFilter: string | null | undefined, jql: string | null | undefined): string {
   const filter = typeof baseFilter === 'string' ? baseFilter.trim() : '';
   const inner = typeof jql === 'string' ? jql.trim() : '';
   if (!inner) return filter;
   if (!filter) return inner;
+  const orderMatch = inner.match(TRAILING_ORDER_BY);
+  if (orderMatch && orderMatch.index != null) {
+    const clause = inner.slice(0, orderMatch.index).trim();
+    const orderBy = String(orderMatch[1]).trim();
+    return `(${filter}) AND (${clause}) ${orderBy}`;
+  }
   return `(${filter}) AND (${inner})`;
 }
 

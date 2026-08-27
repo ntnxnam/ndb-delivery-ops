@@ -72,7 +72,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
         </span>
         <button
           type="button"
-          onClick={() => fetchTeams()}
+          onClick={() => fetchTeams({ force: true })}
           style={{
             padding: '0.25rem 0.6rem',
             fontSize: '0.8rem',

@@ -18,15 +18,55 @@
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb",
       "releasePrefix": "NDB-",
-      "activeVersionNames": ["master", "Era Future"],
-      "companionDisciplines": [
-        { "projectKey": "TECHPUBS", "label": "TechPubs / Docs", "hardGate": "GA" },
-        { "projectKey": "SDL", "label": "Security (SDL)", "hardGate": "GA" },
-        { "projectKey": "LEG", "label": "Legal", "hardGate": "GA" },
-        { "projectKey": "SR", "label": "Security Review", "hardGate": "GA" },
-        { "projectKey": "NDBQUAL", "label": "NDB Quality", "hardGate": "GA" }
+      "activeVersionNames": [
+        "master",
+        "Era Future"
       ],
-      "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }
+      "companionDisciplines": [
+        {
+          "projectKey": "TECHPUBS",
+          "label": "TechPubs / Docs",
+          "hardGate": "GA"
+        },
+        {
+          "projectKey": "SDL",
+          "label": "Security (SDL)",
+          "hardGate": "GA"
+        },
+        {
+          "projectKey": "LEG",
+          "label": "Legal",
+          "hardGate": "GA"
+        },
+        {
+          "projectKey": "SR",
+          "label": "Security Review",
+          "hardGate": "GA"
+        },
+        {
+          "projectKey": "NDBQUAL",
+          "label": "NDB Quality",
+          "hardGate": "GA"
+        }
+      ],
+      "sprintCalendar": {
+        "s1StartIso": "2024-10-23",
+        "sprintDays": 21
+      },
+      "defaultReleaseVersion": "NDB-2.11.0.0-Hotfix"
+    },
+    {
+      "id": "prism-infra",
+      "name": "prism-infra",
+      "projectKey": "ENG",
+      "projectType": "parent",
+      "baseFilter": "filter=prisminfra-all-base-filter",
+      "sprintBaseFilter": "filter=prisminfra-all-base-filter",
+      "versionPatterns": [
+        "MSP*",
+        "msp*"
+      ],
+      "defaultReleaseVersion": "NCC-6.0.1"
     }
   ],
   "defaultTeamId": "ndb"

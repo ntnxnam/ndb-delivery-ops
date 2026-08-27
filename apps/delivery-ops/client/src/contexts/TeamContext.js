@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { getApiBase, getAuthHeaders } from '../utils/api';
+import { requestKey, withRequestGate } from '../utils/requestGate';
 import { STORAGE_KEYS } from '../shared/utils/constants';
 
 const TEAM_STORAGE_KEY = STORAGE_KEYS.SELECTED_TEAM;
@@ -144,14 +145,19 @@ export const TeamProvider = ({ children }) => {
       const timeoutId = setTimeout(() => controller.abort(), TEAMS_FETCH_TIMEOUT_MS);
       try {
         const { headers: authHeaders } = getAuthHeaders();
-        const response = await fetch(`${getApiBase()}/api/config/teams`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders,
-          },
-          signal: controller.signal,
-        });
+        const teamsUrl = `${getApiBase()}/api/config/teams`;
+        const response = await withRequestGate(
+          requestKey('GET', teamsUrl),
+          () => fetch(teamsUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders,
+            },
+            signal: controller.signal,
+          }),
+          { ignoreFailureCooldown: force }
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);

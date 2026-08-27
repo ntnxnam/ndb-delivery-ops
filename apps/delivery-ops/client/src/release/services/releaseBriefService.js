@@ -23,12 +23,12 @@ const API_BASE = getApiBase();
  *
  * @returns {Promise<{versions: Array<{name: string, released: boolean, releaseDate?: string}>}>}
  */
-export async function listReleaseVersions({ teamId, jiraToken, username }) {
+export async function listReleaseVersions({ teamId, jiraToken, username, ignoreFailureCooldown = false }) {
   if (!teamId) return { versions: [], defaultVersion: null, projectKey: '' };
   const res = await authenticatedPost(
     `${API_BASE}/api/jira/release-versions`,
     { teamId },
-    { jiraToken, username }
+    { jiraToken, username, ignoreFailureCooldown }
   );
   const data = res?.data || {};
   const raw = Array.isArray(data.versions) ? data.versions : [];

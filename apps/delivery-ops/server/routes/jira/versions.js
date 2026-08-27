@@ -133,16 +133,9 @@ router.post('/release-items', releaseVersionsLimiter, validateJiraTokenMiddlewar
     const data = await releaseItemsService.fetchAllItemsAcrossVersions(req.jiraToken, req.body || {});
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error in /api/jira/release-items:', error);
-    const status = error.statusCode || error.response?.status || 500;
-    return res.status(status).json({
-      success: false,
-      error: error.statusCode === 400 ? error.message : 'Failed to fetch release items',
-      message: error.message,
-      ...(NODE_ENV !== 'production' && {
-        stack: error.stack,
-        details: { name: error.name, code: error.code },
-      }),
+    console.error('Error in /api/jira/release-items:', error.message);
+    return sendServiceError(res, error, 'Failed to fetch release items', {
+      includeStack: NODE_ENV !== 'production',
     });
   }
 });

@@ -397,14 +397,14 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 **Request** — Body: `{ fixVersions: string[], teamId: string }` (both required)
 
 **Server flow**  
-`jira/versions.js` → `releaseItemsDataService.fetchAllItemsAcrossVersions` → wrap `(${team.baseFilter}) AND (fixVersion = "…" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled`
+`jira/versions.js` → `releaseItemsDataService.fetchAllItemsAcrossVersions` → wrap `(${team.baseFilter}) AND ((fixVersion = "…" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled) ORDER BY key ASC`
 
 **Response**: `{ success: true, data: { allItems: [...] } }`
 
 **Error responses**
 | HTTP code | When | Client should |
 |-----|---|---|
-| 400 | no team, no `baseFilter`, or empty `fixVersions` | Show Admin / Fetch error |
+| 400 | no team, no `baseFilter`, empty `fixVersions`, or JIRA rejected the JQL | Show the server `error` string (JIRA message when present) |
 
 ---
 

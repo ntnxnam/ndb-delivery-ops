@@ -1,6 +1,10 @@
 {
-  "superAdminUsers": ["namratha.singh"],
-  "adminUsers": ["sneha.kulkarni"],
+  "superAdminUsers": [
+    "namratha.singh"
+  ],
+  "adminUsers": [
+    "sneha.kulkarni"
+  ],
   "allowedUsers": [
     "namratha.singh",
     "sakthivel.subburaja",
@@ -56,6 +60,22 @@
     "shyam"
   ],
   "kpiAdminUsers": {
-    "ndb": ["namratha.singh"]
+    "ndb": [
+      "namratha.singh"
+    ]
+  },
+  "teams": {
+    "prism-infra": {
+      "admins": [
+        "namratha.singh"
+      ],
+      "allowedUsers": [],
+      "emailSenders": [],
+      "features": {
+        "releaseVersions": true,
+        "sprintReports": true,
+        "kpiTab": true
+      }
+    }
   }
 }

@@ -59,15 +59,16 @@ Body: { username, group }
 
 ---
 
-### 4. Onboarding wizard — validate JIRA board
+### 4. Onboarding wizard — validate JIRA board + collect sprint calendar
 
 ```
-GET /api/admin/validate-board?boardId=2888&productId=ndb
-Headers: x-jira-token, x-username
+POST /api/admin/validate-board
+Headers: Authorization Bearer, X-Username
+Body: { boardId, jiraToken }
 ```
 
-**Server flow**: `admin.js → jiraConnector.getBoard(boardId)` → returns board name if valid  
-**JIRA endpoint**: `GET /rest/agile/1.0/board/{boardId}`
+**Server flow**: `admin.js → sprintCalendar.collectSprintCalendarFromBoard` → `GET /rest/agile/1.0/board/{boardId}` then paginated `GET /rest/agile/1.0/board/{boardId}/sprint` → infer `{ s1StartIso, sprintDays }`  
+**Returns**: `{ success, board, sprintCalendar, inferredFrom, sprintCount }`
 
 ---
 
@@ -76,7 +77,7 @@ Headers: x-jira-token, x-username
 ```
 POST /api/admin/teams
 Headers: x-jira-token, x-username
-Body: { id, name, displayName, boardId, baseFilterId, kpiConfig? }
+Body: { id, name, projectKey, projectType, boardId, sprintCalendar: { s1StartIso, sprintDays }, baseFilter, sprintBaseFilter, versionPatterns?, userConfig? }
 ```
 
 **Server flow**: `admin.js → loadTeamBoardConfig → appends new team → saveTeamBoardConfig → writes allowedUsers/KPI`  

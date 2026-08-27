@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { authenticatedPost } from '../utils/api';
+import { requestKey, resetGateForKey } from '../utils/requestGate';
 import { useTeam } from '../contexts/TeamContext';
 
 // Module-level result cache keyed by fixVersion name. Survives component
@@ -87,10 +88,11 @@ export function useReleaseItems() {
 
   const abortControllerRef = useRef(null);
 
-  const performFetch = useCallback(async (version) => {
+  const performFetch = useCallback(async (version, { ignoreFailureCooldown = false } = {}) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
     const key = cacheKey(selectedTeamId, version);
+    const body = { fixVersions: [version], teamId: selectedTeamId };
 
     if (!jiraToken) {
       setError('JIRA token required');
@@ -98,12 +100,16 @@ export function useReleaseItems() {
       return null;
     }
 
+    if (ignoreFailureCooldown) {
+      resetGateForKey(requestKey('POST', '/api/jira/release-items', body));
+    }
+
     const promise = (async () => {
       try {
         const response = await authenticatedPost(
           '/api/jira/release-items',
-          { fixVersions: [version], teamId: selectedTeamId },
-          { jiraToken, username },
+          body,
+          { jiraToken, username, ignoreFailureCooldown },
           { signal: abortControllerRef.current?.signal }
         );
 
@@ -149,14 +155,15 @@ export function useReleaseItems() {
         setLoadingItems(false);
         return null;
       }
-      console.error('[useReleaseItems] Error fetching items:', err);
-      setError(err.message || 'Failed to load release items');
+      const serverMsg = err.response?.data?.error || err.response?.data?.message;
+      console.error('[useReleaseItems] Error fetching items:', serverMsg || err.message);
+      setError(serverMsg || err.message || 'Failed to load release items');
       setLoadingItems(false);
       return null;
     }
   }, [selectedTeamId]);
 
-  const fetchItemsForVersion = useCallback(async (version) => {
+  const fetchItemsForVersion = useCallback(async (version, opts = {}) => {
     if (!version) return null;
 
     // Cancel any previous in-flight request
@@ -164,9 +171,12 @@ export function useReleaseItems() {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
+    if (opts.ignoreFailureCooldown) {
+      releaseItemsInFlight.delete(cacheKey(selectedTeamId, version));
+    }
 
-    // Cache hit
-    const cached = readItemsCache(selectedTeamId, version);
+    // Cache hit — skip when the user explicitly chose this version / Load
+    const cached = opts.ignoreFailureCooldown ? null : readItemsCache(selectedTeamId, version);
     if (cached) {
       setItems({ commit: cached.commit, longTermFunded: cached.longTermFunded || [] });
       setSectionMetadata(cached.sectionMetadata || {});
@@ -194,7 +204,7 @@ export function useReleaseItems() {
     setItems({ commit: [], longTermFunded: [] });
     setSectionMetadata({});
 
-    return performFetch(version);
+    return performFetch(version, opts);
   }, [performFetch, selectedTeamId]);
 
   // fetchLongTermItems is a no-op now — long-term items are fetched in the same
@@ -206,7 +216,7 @@ export function useReleaseItems() {
   const refreshItemsForVersion = useCallback(async (version) => {
     if (!version) return null;
     releaseItemsCache.delete(cacheKey(selectedTeamId, version));
-    return fetchItemsForVersion(version);
+    return fetchItemsForVersion(version, { ignoreFailureCooldown: true });
   }, [fetchItemsForVersion, selectedTeamId]);
 
   const cancelRequests = useCallback(() => {

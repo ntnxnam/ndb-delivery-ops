@@ -9,6 +9,10 @@ const { getJira } = require('../utils/jiraClient');
 
 const { loadTeamBoardConfig, saveTeamBoardConfig } = require('../utils/teamConfig');
 const { compileVersionPatterns } = require('../utils/versionPattern');
+const {
+  parseSprintCalendar,
+  collectSprintCalendarFromBoard,
+} = require('../utils/sprintCalendar');
 
 const ALLOWED_USERS_CONFIG_PATH = path.join(__dirname, '../config/allowedUsers.json');
 const KPI_CONFIG_PATH = path.join(__dirname, '../config/kpiConfig.json');
@@ -171,6 +175,42 @@ router.post('/validate-filters', requireSuperAdmin, async (req, res) => {
 });
 
 /**
+ * Validate a JIRA sprint board and collect sprint calendar from its sprints.
+ * POST /api/admin/validate-board
+ * Body: { boardId, jiraToken }
+ */
+router.post('/validate-board', requireSuperAdmin, async (req, res) => {
+  try {
+    const { boardId, jiraToken } = req.body || {};
+
+    if (!boardId || !jiraToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'boardId and jiraToken are required'
+      });
+    }
+
+    const jira = await getJira(jiraToken);
+    const collected = await collectSprintCalendarFromBoard(jira, boardId);
+
+    return res.json({
+      success: true,
+      board: collected.board,
+      sprintCalendar: collected.sprintCalendar,
+      inferredFrom: collected.inferredFrom,
+      sprintCount: collected.sprintCount
+    });
+  } catch (error) {
+    console.error('Error validating JIRA board:', error.message);
+    return res.status(error.response?.status || error.statusCode || 500).json({
+      success: false,
+      error: 'Failed to validate JIRA board',
+      message: error.response?.data?.errorMessages?.join(', ') || error.message
+    });
+  }
+});
+
+/**
  * Get all teams for admin management
  * GET /api/admin/teams
  */
@@ -217,6 +257,7 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
       boardId,
       baseFilter,
       sprintBaseFilter,
+      sprintCalendar,
       userConfig 
     } = req.body || {};
 
@@ -224,6 +265,15 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'id, name, and projectKey are required'
+      });
+    }
+
+    const parsedCalendar = parseSprintCalendar(sprintCalendar);
+    if (!parsedCalendar) {
+      return res.status(400).json({
+        success: false,
+        error: 'sprintCalendar is required',
+        message: 'Collect sprint calendar from the sprint board (S1 start date + sprint length in days).'
       });
     }
 
@@ -249,6 +299,7 @@ router.post('/teams', requireSuperAdmin, (req, res) => {
       name,
       projectKey,
       projectType,
+      sprintCalendar: parsedCalendar,
       ...(boardId && { boardId }),
       ...(baseFilter && { baseFilter }),
       ...(sprintBaseFilter && { sprintBaseFilter })
@@ -326,15 +377,30 @@ router.put('/teams/:teamId', requireSuperAdmin, (req, res) => {
       });
     }
 
+    const { sprintCalendar: calendarUpdate, userConfig, ...restUpdate } = updateData;
+    const existingTeam = teamBoardConfig.teams[teamIndex];
+    const parsedCalendar = calendarUpdate !== undefined
+      ? parseSprintCalendar(calendarUpdate)
+      : parseSprintCalendar(existingTeam.sprintCalendar);
+
+    if (!parsedCalendar) {
+      return res.status(400).json({
+        success: false,
+        error: 'sprintCalendar is required',
+        message: 'Collect sprint calendar from the sprint board (S1 start date + sprint length in days).'
+      });
+    }
+
     // Update team config (preserve existing values, override with new ones)
     const updatedTeam = {
-      ...teamBoardConfig.teams[teamIndex],
-      ...updateData,
+      ...existingTeam,
+      ...restUpdate,
+      sprintCalendar: parsedCalendar,
       id: teamId // Ensure ID cannot be changed
     };
 
     // Remove userConfig from team object (it goes in allowedUsersConfig)
-    const { userConfig, ...teamConfigOnly } = updatedTeam;
+    const teamConfigOnly = updatedTeam;
     teamBoardConfig.teams[teamIndex] = teamConfigOnly;
 
     // Update user config if provided

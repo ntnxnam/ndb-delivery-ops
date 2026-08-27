@@ -281,7 +281,7 @@ export class ProductService {
     if (!p.sprintCalendar) {
       throw new Error(
         `ProductService: product '${productId}' has no sprintCalendar configured. ` +
-          `Add { sprintCalendar: { s1StartIso, sprintDays } } to teamBoardConfig.json.`
+          `Edit the team in Admin, set the JIRA sprint board ID, and detect S1 start + sprint length from the board.`
       );
     }
     return p.sprintCalendar;

@@ -133,3 +133,7 @@ project already has:
 - Hard-code `customfield_NNNNN` outside `productService` config
 - Create a new util file that overlaps in purpose with an existing one
 - Grow a file past its hard limit without splitting it first
+- Auto-refetch in a `useEffect` when a list is empty after an error — that
+  is a request storm. User retry is an explicit button. All HTTP goes through
+  `requestGate` (`authenticated*` or `apiService`); do not add a parallel
+  ungated `axios` / `fetch` client.

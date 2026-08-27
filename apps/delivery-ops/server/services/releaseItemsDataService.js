@@ -4,7 +4,7 @@ const {
   formatRiskIndicator,
   sortByRiskIndicator,
 } = require('./jiraService');
-const { searchPages } = require('../utils/jiraClient');
+const { searchPages, wrapJiraError } = require('../utils/jiraClient');
 const { extractUserName, extractAssigneeName } = require('./userService');
 const { getCached, setCached } = require('../utils/simpleCache');
 const { extractTextFieldValue } = require('../utils/adfText');
@@ -361,20 +361,25 @@ async function fetchAllItemsAcrossVersions(jiraToken, { fixVersions, teamId } = 
   const labelPrefix = String(team.labelPrefix || effectiveTeamId || '').toLowerCase();
   const allItems = [];
 
-  for (const fixVersion of fixVersions) {
-    const lower = String(fixVersion).toLowerCase();
-    const suffix = labelPrefix && lower.startsWith(`${labelPrefix}-`)
-      ? lower.slice(labelPrefix.length + 1)
-      : lower;
-    const collapsed = suffix.replace(/\s+/g, '-');
-    const longTermLabel = labelPrefix
-      ? `${labelPrefix}-${collapsed}-long-term-funded`
-      : `${collapsed}-long-term-funded`;
-    const inner = `(fixVersion = "${fixVersion}" OR labels = "${longTermLabel}") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
-    const jql = wrapTeamScope(baseFilter, inner);
-    const issues = await fetchReleaseItemsFromJira(jql, jiraToken, null, `release-items-${fixVersion}`);
-    const mapped = await processReleaseItems(issues, jiraToken, null, `release-items-${fixVersion}`, team?.boardId);
-    allItems.push(...mapped);
+  try {
+    for (const fixVersion of fixVersions) {
+      const lower = String(fixVersion).toLowerCase();
+      const suffix = labelPrefix && lower.startsWith(`${labelPrefix}-`)
+        ? lower.slice(labelPrefix.length + 1)
+        : lower;
+      const collapsed = suffix.replace(/\s+/g, '-');
+      const longTermLabel = labelPrefix
+        ? `${labelPrefix}-${collapsed}-long-term-funded`
+        : `${collapsed}-long-term-funded`;
+      const inner = `(fixVersion = "${fixVersion}" OR labels = "${longTermLabel}") AND issuetype IN (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
+      const jql = wrapTeamScope(baseFilter, inner);
+      const issues = await fetchReleaseItemsFromJira(jql, jiraToken, null, `release-items-${fixVersion}`);
+      const mapped = await processReleaseItems(issues, jiraToken, null, `release-items-${fixVersion}`, team?.boardId);
+      allItems.push(...mapped);
+    }
+  } catch (err) {
+    if (err.statusCode) throw err;
+    throw wrapJiraError(err, 'Failed to fetch release items');
   }
 
   return { allItems: sortByRiskIndicator([...allItems]) };

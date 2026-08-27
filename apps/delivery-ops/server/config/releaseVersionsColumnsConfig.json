@@ -1,5 +1,5 @@
 {
-  "defaultReleaseVersion": "NDB-2.11",
+  "defaultReleaseVersion": "NDB-2.11.0.0-Hotfix",
   "releaseBaseFilters": {
     "NDB-2.11": "filter=NDB-2.11-All",
     "NDB-2.10": "filter=NDB-2.10-All",

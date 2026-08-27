@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { authenticatedPost } from '../../utils/api';
+import SprintBoardFields from './SprintBoardFields';
 
 const STEPS = [
-  { id: 'basic', name: 'Basic Info', description: 'Team name and project details' },
+  { id: 'basic', name: 'Basic Info', description: 'Team, project, and sprint board' },
   { id: 'versions', name: 'Version Config', description: 'Configure version patterns' },
   { id: 'users', name: 'User Management', description: 'Set up team permissions' },
   { id: 'filters', name: 'JIRA Filters', description: 'Configure base filters' },
@@ -20,7 +21,9 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
         projectKey: initialData.projectKey || '',
         projectType: initialData.projectType || 'dedicated',
         boardId: initialData.boardId || null,
-        
+        s1StartIso: initialData.sprintCalendar?.s1StartIso || '',
+        sprintDays: initialData.sprintCalendar?.sprintDays || '',
+
         // Version Config
         versionPatterns: (initialData.versionPatterns && initialData.versionPatterns.length > 0)
           ? initialData.versionPatterns
@@ -55,7 +58,9 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
       projectKey: '',
       projectType: 'dedicated',
       boardId: null,
-      
+      s1StartIso: '',
+      sprintDays: '',
+
       // Version Config
       versionPatterns: [''],
       
@@ -87,6 +92,17 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
     }
   };
 
+  const patchFormData = (fields) => {
+    setFormData(prev => ({ ...prev, ...fields }));
+    const cleared = {};
+    Object.keys(fields).forEach((key) => {
+      if (validation[key]) cleared[key] = null;
+    });
+    if (Object.keys(cleared).length > 0) {
+      setValidation(prev => ({ ...prev, ...cleared }));
+    }
+  };
+
   const validateStep = (stepIndex) => {
     const errors = {};
     
@@ -97,6 +113,16 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
         if (!formData.projectKey.trim()) errors.projectKey = 'Project key is required';
         if (!/^[a-z0-9-]+$/.test(formData.id)) {
           errors.id = 'Team ID must contain only lowercase letters, numbers, and hyphens';
+        }
+        if (!formData.boardId) {
+          errors.boardId = 'Sprint board ID is required so calendar can be collected from the board';
+        }
+        if (!formData.s1StartIso) {
+          errors.s1StartIso = 'S1 start date is required';
+        }
+        const sprintDays = Number(formData.sprintDays);
+        if (!Number.isInteger(sprintDays) || sprintDays < 1) {
+          errors.sprintDays = 'Sprint length must be a positive number of days';
         }
         break;
         
@@ -243,7 +269,11 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
         ...(formData.projectType === 'parent' && {
           versionPatterns: formData.versionPatterns.filter(p => p.trim())
         }),
-        ...(formData.boardId && { boardId: parseInt(formData.boardId) }),
+        ...(formData.boardId && { boardId: parseInt(formData.boardId, 10) }),
+        sprintCalendar: {
+          s1StartIso: formData.s1StartIso,
+          sprintDays: parseInt(formData.sprintDays, 10)
+        },
         ...(formData.baseFilter && { baseFilter: formData.baseFilter }),
         ...(formData.sprintBaseFilter && { sprintBaseFilter: formData.sprintBaseFilter }),
         userConfig: {
@@ -455,16 +485,11 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Board ID (optional)</label>
-              <input
-                type="number"
-                className="w-full p-2 border border-gray-300 rounded"
-                value={formData.boardId || ''}
-                onChange={(e) => updateFormData('boardId', e.target.value)}
-                placeholder="JIRA board ID for sprint reports"
-              />
-            </div>
+            <SprintBoardFields
+              formData={formData}
+              patchFormData={patchFormData}
+              validation={validation}
+            />
           </div>
         );
 

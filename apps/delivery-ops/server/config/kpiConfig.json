@@ -195,6 +195,7 @@
         "displayType": "count",
         "order": 4
       }
-    ]
+    ],
+    "prism-infra": []
   }
 }

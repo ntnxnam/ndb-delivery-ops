@@ -49,9 +49,9 @@ Headers: x-jira-token, x-username
 **Server flow**: `jira/versions.js → releaseItemsDataService.fetchAllItemsAcrossVersions` — **always live JIRA**, no disk cache.  
 **JQL**:
 ```
-(${team.baseFilter}) AND (fixVersion = "<version>" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled
+(${team.baseFilter}) AND ((fixVersion = "<version>" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled) ORDER BY key ASC
 ```
-**Hook**: `useReleaseItems` (5-minute in-memory TTL; **Refresh** busts TTL and re-hits this endpoint — does not call `/refresh-now`)
+**Hook**: `useReleaseItems` (5-minute in-memory TTL). Choosing a version in the dropdown, or **Load** / **Refresh**, hits this endpoint. **Refresh** busts TTL. Does not call `/refresh-now`.
 
 ---
 

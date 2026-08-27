@@ -197,7 +197,11 @@ function wrapTeamScope(baseFilter, jql) {
   const inner = typeof jql === 'string' ? jql.trim() : '';
   if (!inner) return filter;
   if (!filter) return inner;
-  return `(${filter}) AND (${inner})`;
+  const orderMatch = inner.match(/\s+(ORDER\s+BY\s+.+)$/i);
+  const clause = orderMatch ? inner.slice(0, orderMatch.index).trim() : inner;
+  const orderBy = orderMatch ? orderMatch[1].trim() : '';
+  const wrapped = `(${filter}) AND (${clause})`;
+  return orderBy ? `${wrapped} ${orderBy}` : wrapped;
 }
 const releaseDatasetSync = {
   syncRelease: jest.fn().mockResolvedValue({ tickets: [], meta: {} }),

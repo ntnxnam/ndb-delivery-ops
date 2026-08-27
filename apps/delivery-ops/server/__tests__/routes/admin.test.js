@@ -86,8 +86,7 @@ describe('Admin Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.teams).toHaveLength(1);
-      expect(response.body.teams[0].id).toBe('ndb');
+      expect(response.body.teams.map((t) => t.id)).toContain('ndb');
     });
 
     it('should deny access for unauthorized users', async () => {
@@ -108,7 +107,8 @@ describe('Admin Routes', () => {
         projectKey: 'ANAL',
         projectType: 'dedicated',
         baseFilter: 'filter=Analytics-Base',
-        sprintBaseFilter: 'filter=Analytics-Sprint'
+        sprintBaseFilter: 'filter=Analytics-Sprint',
+        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 }
       };
 
       const response = await request(app)
@@ -118,6 +118,10 @@ describe('Admin Routes', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.team.id).toBe('analytics');
+      expect(response.body.team.sprintCalendar).toEqual({
+        s1StartIso: '2024-10-23',
+        sprintDays: 21
+      });
       expect(fs.writeFileSync).toHaveBeenCalledTimes(3); // teamBoard, allowedUsers, kpi configs
     });
 
@@ -128,6 +132,7 @@ describe('Admin Routes', () => {
         projectKey: 'ENG',
         projectType: 'parent',
         versionPatterns: ['^DataLens.*', '^DL.*'],
+        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 },
         userConfig: {
           admins: ['user1'],
           allowedUsers: ['user1', 'user2'],
@@ -164,11 +169,26 @@ describe('Admin Routes', () => {
       expect(response.body.error).toContain('required');
     });
 
+    it('should reject team creation without sprintCalendar', async () => {
+      const response = await request(app)
+        .post('/api/admin/teams')
+        .send({
+          id: 'no-cal',
+          name: 'No Calendar',
+          projectKey: 'ENG'
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBe('sprintCalendar is required');
+    });
+
     it('should reject duplicate team ids', async () => {
       const duplicateTeam = {
         id: 'ndb', // Already exists
         name: 'Duplicate NDB',
-        projectKey: 'ERA2'
+        projectKey: 'ERA2',
+        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 }
       };
 
       const response = await request(app)
@@ -178,6 +198,45 @@ describe('Admin Routes', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBe('Team already exists');
+    });
+  });
+
+  describe('POST /validate-board', () => {
+    it('collects sprint calendar from the board', async () => {
+      const get = jest.fn()
+        .mockResolvedValueOnce({
+          data: { id: 99, name: 'Prism Infra', type: 'scrum' }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            isLast: true,
+            values: [
+              { id: 1, name: 'S1', startDate: '2024-10-23T00:00:00.000Z', endDate: '2024-11-12T00:00:00.000Z' }
+            ]
+          }
+        });
+      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
+
+      const response = await request(app)
+        .post('/api/admin/validate-board')
+        .send({ boardId: 99, jiraToken: 'test-token' })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.board.name).toBe('Prism Infra');
+      expect(response.body.sprintCalendar).toEqual({
+        s1StartIso: '2024-10-23',
+        sprintDays: 21
+      });
+    });
+
+    it('requires boardId and jiraToken', async () => {
+      const response = await request(app)
+        .post('/api/admin/validate-board')
+        .send({})
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
     });
   });
 
