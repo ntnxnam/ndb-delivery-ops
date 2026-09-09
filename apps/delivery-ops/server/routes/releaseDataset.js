@@ -780,18 +780,17 @@ router.get('/outstanding', auth, async (req, res) => {
 });
 
 /**
- * /project-status — Reads the on-disk release bundle to build the
- * per-project issue-type-group breakdown matrix. Zero JIRA API calls.
- *
- * Replaces the old 6-stage live-JIRA /project-breakdown endpoint.
- * The bundle must have been synced via POST /sync first; if no bundle
- * is found the endpoint returns 404 with a clear message so the client
- * can prompt the user to run a sync.
+ * /project-status — Builds the per-project issue-type-group breakdown
+ * matrix. Cache-first: reads the on-disk release bundle when present;
+ * when the bundle is empty (no sync has run) it falls back to a live
+ * per-release JIRA fetch scoped by the team baseFilter, so the endpoint
+ * NEVER dead-ends on "run a sync first". Derivation is pure in-memory in
+ * both cases.
  *
  * Response shape (identical to old /project-breakdown so the client
  * needs no changes):
  *   { success, data: { productId, release, projects, standaloneEpics,
- *                      standaloneTickets, _source: 'bundle' } }
+ *                      standaloneTickets, _source: 'bundle' | 'live' } }
  */
 router.get('/project-status', auth, async (req, res) => {
   try {
@@ -804,14 +803,24 @@ router.get('/project-status', auth, async (req, res) => {
 
     const shared = await getShared();
     const cache = buildCache(productId, shared);
-    const { tickets, meta } = cache.loadReleaseLenient(release);
+    const loaded = cache.loadReleaseLenient(release);
+    let tickets = Array.isArray(loaded?.tickets) ? loaded.tickets : [];
+    let source = 'bundle';
+    let bundleSyncedAt = loaded?.meta?.syncedAt ?? null;
 
-    if (!Array.isArray(tickets) || tickets.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: `No bundle data found for release "${release}". Run a sync first.`,
-        _hint: 'POST /api/release-dataset/sync',
+    // Empty disk is NOT a dead end. Fall back to a live per-release fetch
+    // (same path as GET /per-release), scoped by the team baseFilter. We
+    // never tell the user to "run a sync first".
+    if (tickets.length === 0) {
+      const live = await fetchLivePerRelease({
+        productId,
+        release,
+        jiraToken: tokenFromReq(req),
+        writeThrough: false,
       });
+      tickets = Array.isArray(live?.tickets) ? live.tickets : [];
+      source = 'live';
+      bundleSyncedAt = null;
     }
 
     // ── Constants matching the old live endpoint ──────────────────────────
@@ -959,15 +968,16 @@ router.get('/project-status', auth, async (req, res) => {
           projects,
           standaloneEpics,
           standaloneTickets,
-          _source: 'bundle',
-          _bundleSyncedAt: meta?.syncedAt ?? null,
+          _source: source,
+          _bundleSyncedAt: bundleSyncedAt,
         },
       });
   } catch (e) {
     console.error('[release-dataset] /project-status error:', e?.message || e);
-    return res.status(500).json({
+    const status = e.statusCode || e.response?.status || 500;
+    return res.status(status).json({
       success: false,
-      error: e?.message || 'Project status computation failed',
+      error: e.publicError || e?.message || 'Project status computation failed',
     });
   }
 });

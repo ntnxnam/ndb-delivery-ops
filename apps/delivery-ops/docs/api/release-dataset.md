@@ -248,15 +248,15 @@ Reads `server/config/releaseVersionsEmailConfig.json` — no JIRA call.
 
 ### GET /api/release-dataset/project-status
 
-**Purpose**: Return per-project issue-type-group breakdown matrix for a release (powers ProjectBreakdownMatrix). Reads from the on-disk bundle — zero JIRA API calls. Bundle must be synced first via `POST /sync`.
+**Purpose**: Return per-project issue-type-group breakdown matrix for a release (powers ProjectBreakdownMatrix). Cache-first: reads the on-disk bundle when present; when the bundle is empty it falls back to a live per-release JIRA fetch scoped by the team `baseFilter`. Never dead-ends on "run a sync first". Derivation is pure in-memory in both cases.
 
-**Auth**: required (JIRA token not used — bundle is read from disk)
+**Auth**: required (JIRA Bearer token used only when falling back to live fetch)
 
 **Request**
 - Query: `release` (string, required), `productId` (string, optional, default `ndb`)
 
 **Server flow**
-Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk read → in-memory derivation
+Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → if empty, `fetchLivePerRelease({ writeThrough: false })` (live JIRA, `baseFilter`-scoped) → in-memory derivation
 
 **Response shape**
 ```json
@@ -287,15 +287,18 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → disk rea
 }
 ```
 
+`_source` is `"bundle"` when served from disk, `"live"` when the bundle was empty and the endpoint fell back to a live per-release fetch. When `_source` is `"live"`, `_bundleSyncedAt` is `null`. A release with genuinely no tickets returns HTTP 200 with empty `projects` / `standaloneEpics` arrays (not a 404).
+
 **Error responses**
 | HTTP code | When | Client should |
 |---|---|---|
-| 404 | No bundle found for this release | Prompt user to run a sync |
-| 400 | `release` param missing | Fix request |
+| 400 | `release` param missing, or unknown `productId` / team has no `baseFilter` (on live fallback) | Fix request / set team base filter |
+| 401 | JIRA Bearer token missing on live fallback | Re-authenticate |
 | 500 | Unexpected error | Show error message |
 
-**Caching**: Yes — served from disk bundle. Stale until next sync.
+**Caching**: Cache-first from disk bundle when present (stale until next sync); otherwise a fresh live JIRA fetch with no write-through.
 
+> ⚠️ Breaking change 2026-09-09: `/project-status` no longer 404s "run a sync first" on empty disk — it falls back to a live per-release fetch. Callers that special-cased the 404 should treat empty disk as a live read instead.
 > ⚠️ Breaking change 2026-06-16: renamed from `/project-breakdown`. Old path redirects (HTTP 307) to this endpoint for back-compat.
 
 ---
