@@ -1,25 +1,17 @@
 const { resolveSosRecipientLists } = require('../../utils/sosEmailRecipients');
-const emailConfig = require('../../config/emailConfig.json');
-const emailSenderCCConfig = require('../../config/emailSenderCCConfig.json');
 
-describe('resolveSosRecipientLists', () => {
-  test('applies status-sender defaultTo and emailSenderCCConfig plus sender', () => {
-    const { toList, ccList } = resolveSosRecipientLists('namratha.singh@nutanix.com');
+describe('resolveSosRecipientLists (verification override)', () => {
+  test('sends only to the single test recipient with no CC', () => {
+    const { toList, ccList } = resolveSosRecipientLists('someone.else@nutanix.com', 'a@nutanix.com', 'b@nutanix.com');
 
-    expect(toList).toEqual(emailConfig.defaultTo.map((e) => e.toLowerCase()));
-    expect(toList).toContain('ndb-projects-updates@nutanix.com');
-
-    for (const addr of emailSenderCCConfig.defaultCC) {
-      const normalized = addr.toLowerCase();
-      if (!toList.includes(normalized)) {
-        expect(ccList).toContain(normalized);
-      }
-    }
-    expect(ccList).toContain('namratha.singh@nutanix.com');
+    expect(toList).toEqual(['namratha.singh@nutanix.com']);
+    expect(ccList).toEqual([]);
   });
 
-  test('does not require client recipients', () => {
-    const { toList } = resolveSosRecipientLists('test.user@nutanix.com', '', '');
-    expect(toList.length).toBeGreaterThan(0);
+  test('ignores sender and extra recipients while override is active', () => {
+    const { toList, ccList } = resolveSosRecipientLists('test.user@nutanix.com', '', '');
+
+    expect(toList).toEqual(['namratha.singh@nutanix.com']);
+    expect(ccList).toEqual([]);
   });
 });

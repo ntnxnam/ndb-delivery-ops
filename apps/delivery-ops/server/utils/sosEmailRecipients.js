@@ -1,42 +1,18 @@
-const { parseEmailRecipients } = require('../services/emailService');
-const emailConfig = require('../config/emailConfig.json');
-const emailSenderCCConfig = require('../config/emailSenderCCConfig.json');
-
-function nutanixEmails(list) {
-  return (Array.isArray(list) ? list : [])
-    .map((e) => String(e || '').trim().toLowerCase())
-    .filter((e) => e.endsWith('@nutanix.com'));
-}
-
-function uniqueEmails(list) {
-  return [...new Set((list || []).filter(Boolean))];
-}
+// TEMPORARY VERIFICATION OVERRIDE:
+// The SoS email is currently locked to a single test recipient so the sender
+// can verify content before broadcasting. To restore the full distribution
+// list, remove SOS_TEST_RECIPIENT and re-enable the config-driven logic below.
+const SOS_TEST_RECIPIENT = 'namratha.singh@nutanix.com';
 
 /**
- * Resolve SoS / status-sender To+CC lists.
- * To = emailConfig.defaultTo + optional extra recipients.
- * CC = emailSenderCCConfig.defaultCC + optional extra CC + sender.
- * Only @nutanix.com addresses are kept (corporate relay rejects others).
+ * Resolve SoS To+CC lists.
+ *
+ * Verification mode: To = [namratha.singh@nutanix.com] only, CC = [].
+ * Extra recipients/CC and the config defaults are intentionally ignored while
+ * the override above is active.
  */
-function resolveSosRecipientLists(senderEmail, recipients, ccRecipients) {
-  const extraTo = recipients && String(recipients).trim()
-    ? parseEmailRecipients(recipients).filter((e) => e.endsWith('@nutanix.com'))
-    : [];
-  const toList = uniqueEmails([...nutanixEmails(emailConfig.defaultTo), ...extraTo]);
-
-  const extraCC = ccRecipients && String(ccRecipients).trim()
-    ? parseEmailRecipients(ccRecipients).filter((e) => e.endsWith('@nutanix.com'))
-    : [];
-  const sender = senderEmail && senderEmail.toLowerCase().endsWith('@nutanix.com')
-    ? senderEmail.toLowerCase()
-    : null;
-  const ccList = uniqueEmails([
-    ...nutanixEmails(emailSenderCCConfig.defaultCC),
-    ...extraCC,
-    sender,
-  ].filter((e) => !toList.includes(e)));
-
-  return { toList, ccList };
+function resolveSosRecipientLists() {
+  return { toList: [SOS_TEST_RECIPIENT], ccList: [] };
 }
 
 module.exports = { resolveSosRecipientLists };
