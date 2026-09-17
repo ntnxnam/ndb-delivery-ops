@@ -1,0 +1,1653 @@
+[
+  {
+    "key": "ERA-38582",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-01",
+      "2026-07-31",
+      "2026-08-31",
+      "2026-10-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 21.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2025-03-17T10:17:51.759+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49565",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2025-07-23T10:40:58.494+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-62743",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-02"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-06-17T09:13:31.300+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-67814",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-20"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-08-19T04:54:21.221+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19178",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-02"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-09-21",
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-27T15:44:30.050+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-08T14:04:20.095+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19626",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": null
+      }
+    ]
+  },
+  {
+    "key": "ERA-62640",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-16"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-18T06:59:06.946+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-67955",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-26T06:25:31.549+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-17455",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-07-01T10:05:04.251+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-07-16T04:40:33.695+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18943",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-12-31"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-01T06:43:32.984+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19454",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-05-06T08:56:32.773+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-25T15:05:26.813+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-08T14:40:38.334+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-15T12:04:30.332+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19660",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-20",
+      "2026-12-15",
+      "2026-12-18"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 4,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-09-15T10:10:25.523+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-15T10:11:54.197+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19966",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-12-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-19T15:27:15.712+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-47856",
+    "codeCompleteDate": [
+      "2026-12-01"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-01"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-08-20",
+      "2025-09-17",
+      "2025-10-08",
+      "2025-10-15",
+      "2026-02-20",
+      "2026-06-15",
+      "2026-10-01"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 6,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 58.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-07-23T10:12:34.593+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49556",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-08-29",
+      "2025-09-15",
+      "2025-09-30",
+      "2025-10-17",
+      "2026-01-30",
+      "2026-02-27"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 5,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 26,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:21:07.039+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49560",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-09-30",
+      "2025-11-14",
+      "2026-05-15",
+      "2026-08-31",
+      "2026-09-18"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 4,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 50.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:32:16.466+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49562",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-06-13",
+      "2027-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 119.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:33:58.949+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-59313",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-11-14"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ]
+  },
+  {
+    "key": "ERA-59316",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ]
+  },
+  {
+    "key": "ERA-63073",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-03-06"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ]
+  },
+  {
+    "key": "ERA-64402",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-09-09T09:00:49.204+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-68591",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-29",
+      "2026-09-25"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 17,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19443",
+    "codeCompleteDate": [
+      "2026-04-28"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-05-12"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-03-16",
+      "2026-08-15",
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 28.29,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": null
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-08T17:06:48.808+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19980",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-08-21T04:10:55.935+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-48194",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-60011",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-62664",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-63552",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-67841",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-68685",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "ERA-69545",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-16856",
+    "codeCompleteDate": [
+      "2027-01-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-10-31",
+      "2026-12-15"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 6.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-17235",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-31",
+      "2026-08-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-18587",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-10-12"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-18787",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-18820",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-19749",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17",
+      "2029-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 156.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  },
+  {
+    "key": "FEAT-16815",
+    "codeCompleteDate": [
+      "2026-09-18",
+      "2026-09-23"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 0.71,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-04-30",
+      "2026-06-01",
+      "2026-06-10",
+      "2026-06-19",
+      "2026-06-26",
+      "2026-06-30",
+      "2026-07-01"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 6,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-15T13:16:57.982+0000"
+      },
+      {
+        "value": "Deep",
+        "changedAt": "2026-08-19T06:57:46.674+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19515",
+    "codeCompleteDate": [
+      "2026-07-14",
+      "2026-09-04",
+      "2026-09-10"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 8.29,
+    "PGCompleteDate": [
+      "2026-08-18",
+      "2026-10-09",
+      "2026-10-22"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-10",
+      "2026-07-14"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": null
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-13T15:09:48.105+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-10T15:47:22.994+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-62216",
+    "codeCompleteDate": [
+      "2026-08-18",
+      "2026-09-14"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.86,
+    "PGCompleteDate": [
+      "2026-09-29",
+      "2026-10-23",
+      "2026-10-24"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-07",
+      "2026-07-14"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-05-21T06:57:29.284+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-07-22T06:06:54.513+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-07-30T04:51:56.719+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:50:51.459+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-26T05:08:11.896+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64543",
+    "codeCompleteDate": [
+      "2026-06-30",
+      "2026-09-11",
+      "2026-09-15"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 11,
+    "PGCompleteDate": [
+      "2026-10-12"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-30",
+      "2026-07-06",
+      "2026-07-08",
+      "2026-07-13"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-08-25T08:50:15.570+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-03T05:13:05.934+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18520",
+    "codeCompleteDate": [
+      "2026-09-01",
+      "2026-09-29",
+      "2026-10-23"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 7.43,
+    "PGCompleteDate": [
+      "2026-10-13",
+      "2026-10-15",
+      "2026-10-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-08-04",
+      "2026-08-07",
+      "2026-08-11"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-03-18T07:04:42.827+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-07-15T18:32:22.069+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18597",
+    "codeCompleteDate": [
+      "2026-09-10"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-09",
+      "2026-10-22"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-19",
+      "2026-06-23",
+      "2026-06-26",
+      "2026-06-30",
+      "2026-07-01",
+      "2026-07-10"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 5,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 3,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-18T16:14:51.981+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-07-02T15:09:57.444+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-10T00:43:55.049+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19398",
+    "codeCompleteDate": [
+      "2026-10-10",
+      "2026-10-23"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 1.86,
+    "PGCompleteDate": [
+      "2026-10-15",
+      "2026-10-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-31",
+      "2026-08-05",
+      "2026-08-06"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-15T10:14:37.470+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-06-24T05:20:50.235+0000"
+      },
+      {
+        "value": "Deep",
+        "changedAt": "2026-08-19T06:53:23.570+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-09T06:58:47.689+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19440",
+    "codeCompleteDate": [
+      "2026-09-07",
+      "2026-09-15",
+      "2026-09-30"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.29,
+    "PGCompleteDate": [
+      "2026-10-15",
+      "2026-11-03"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-30",
+      "2026-08-25",
+      "2026-09-04",
+      "2026-09-18"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 7.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-03T17:19:55.202+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-61284",
+    "codeCompleteDate": [
+      "2026-09-04"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-04T06:56:26.263+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:56:36.387+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-18T06:48:46.910+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64035",
+    "codeCompleteDate": [
+      "2026-08-18",
+      "2026-08-28"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 1.43,
+    "PGCompleteDate": [
+      "2026-09-29",
+      "2026-10-15",
+      "2026-10-16"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-19"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-06-02T09:34:57.882+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64393",
+    "codeCompleteDate": [
+      "2026-09-15",
+      "2026-09-22"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 1,
+    "PGCompleteDate": [
+      "2026-10-13"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-28"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-06-02T09:31:32.072+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:45:40.609+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-18T06:38:47.942+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-25T06:52:25.743+0000"
+      }
+    ]
+  },
+  {
+    "key": "ERA-65154",
+    "codeCompleteDate": [
+      "2026-08-18"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-09-29"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-14",
+      "2026-07-15"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-09-03T18:01:32.203+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-16814",
+    "codeCompleteDate": [
+      "2026-09-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-03-31",
+      "2026-04-14",
+      "2026-04-30",
+      "2027-05-14",
+      "2027-05-25"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 4,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 60,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-07-01T06:22:01.030+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2025-07-04T16:50:38.501+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-18T06:33:30.774+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-28T04:36:34.365+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-17T16:46:27.753+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19516",
+    "codeCompleteDate": [
+      "2026-07-14",
+      "2026-09-04"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 7.43,
+    "PGCompleteDate": [
+      "2026-08-18",
+      "2026-10-09"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-10",
+      "2026-07-14"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": null
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-13T15:14:48.574+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-10T15:35:31.073+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-17T00:53:57.733+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19669",
+    "codeCompleteDate": [
+      "2026-09-04"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-09"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-10",
+      "2026-06-30",
+      "2026-07-10",
+      "2026-07-31"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 7.29,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-05-06T21:39:13.450+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-25T15:16:58.873+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-03T18:04:58.199+0000"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19657",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": []
+  }
+]

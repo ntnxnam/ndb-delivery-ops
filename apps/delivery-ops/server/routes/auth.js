@@ -39,13 +39,22 @@ router.post('/login', async (req, res) => {
       });
       
     } catch (error) {
+      // extractApiError() puts the human-readable text on `.message` (not
+      // `.userMessage`) and the real HTTP status on `.statusCode`. Reading
+      // the wrong field made EVERY failure — including a VPN/DNS/timeout
+      // where JIRA is simply unreachable — surface as "Invalid JIRA
+      // credentials" with a 401. Honour the classified status/message so a
+      // network error reads as unreachable (503/504) and only a genuine
+      // 401 from JIRA reads as an invalid token.
       const errorResponse = extractApiError(error, 'JIRA', { baseUrl: JIRA_API_V2.BASE_URL });
-      const errorMessage = errorResponse.userMessage || 'Invalid JIRA credentials';
-      logger.error(`[AUTH] ❌ JIRA validation failed:`, errorMessage);
-      
-      return res.status(401).json({
+      const statusCode = errorResponse.statusCode || 401;
+      const errorMessage = errorResponse.message || 'Invalid JIRA credentials';
+      logger.error(`[AUTH] ❌ JIRA validation failed (status ${statusCode}):`, errorMessage);
+
+      return res.status(statusCode).json({
         success: false,
-        error: errorMessage
+        error: errorMessage,
+        ...(errorResponse.reason && { reason: errorResponse.reason }),
       });
     }
 
