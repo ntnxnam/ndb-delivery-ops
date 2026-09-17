@@ -36,14 +36,20 @@ function execSummaryText(item) {
   return raw.replace(DATE_PREFIX_REGEX, '').trim() || '—';
 }
 
+// Mirror the UI's getBreakdownSummary + TaskBreakdownCell compact summary line
+// exactly so the emailed snapshot matches what the SoS page renders. Previously
+// this emitted "X done · Y in prog · Z remaining", which double-counted the
+// in-progress items (they're already inside `remaining`/outstandingCount) and
+// omitted the total + completion %, so the email disagreed with the UI.
 function breakdownLabel(breakdown) {
   const stats = breakdown?.overallStats;
   if (!stats) return '—';
-  const done = stats.done || 0;
-  const inProgress = stats.inProgress || 0;
+  const total = breakdown.total || 0;
   const remaining = breakdown.outstandingCount
     ?? ((stats.toDo || 0) + (stats.inProgress || 0) + (stats.blocked || 0) + (stats.other || 0));
-  return `${done} done · ${inProgress} in prog · ${remaining} remaining`;
+  const completionRate = parseFloat(stats.completionRate || '0');
+  if (!total) return '—';
+  return `${remaining} remaining out of ${total} total (${completionRate}% complete)`;
 }
 
 function issueType(item) {
