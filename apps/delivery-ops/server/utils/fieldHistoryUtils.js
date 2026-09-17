@@ -40,6 +40,56 @@ function getDateFields() {
 
 const DATE_FIELDS = getDateFields();
 
+// Risk Indicator is a SELECT field (e.g. "Green - On Track"), not a date, so it
+// is not part of DATE_FIELDS. It is captured separately from the changelog only
+// when `includeRiskIndicator` is passed (the SoS page). This keeps the shared
+// date-history path used by project-status completely unchanged.
+const RISK_INDICATOR_FIELD_ID = getFieldId('riskIndicator');
+
+/**
+ * Reduce a JIRA select value / changelog string to its RAG word.
+ * "Green - On Track" → "Green"; { value: "Red - ..." } → "Red".
+ * @param {*} v
+ * @returns {string|null}
+ */
+function riskValueToWord(v) {
+  if (v == null) return null;
+  const s = typeof v === 'object' ? (v.value || v.name || '') : String(v);
+  const trimmed = s.trim();
+  if (!trimmed || trimmed === 'null') return null;
+  return trimmed.split(/[\s-]/)[0].trim() || null;
+}
+
+/**
+ * Build an ordered (oldest → newest) Risk Indicator trail from changelog
+ * transitions plus the current value. Consecutive duplicates are collapsed.
+ * @param {Array<{from:string,to:string,changedAt:string}>} changes
+ * @param {*} currentValue
+ * @returns {Array<{value:string, changedAt:string|null}>}
+ */
+function buildRiskIndicatorTrail(changes, currentValue) {
+  const sorted = [...(changes || [])]
+    .filter((c) => c && c.changedAt)
+    .sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt));
+
+  const trail = [];
+  const push = (rawValue, changedAt) => {
+    const word = riskValueToWord(rawValue);
+    if (!word) return;
+    const last = trail[trail.length - 1];
+    if (last && last.value === word) return; // collapse consecutive duplicates
+    trail.push({ value: word, changedAt: changedAt || null });
+  };
+
+  sorted.forEach((c, i) => {
+    if (i === 0) push(c.from, null); // state before the first recorded change
+    push(c.to, c.changedAt);
+  });
+  push(currentValue, null); // ensure current value is the newest entry
+
+  return trail;
+}
+
 /**
  * Field name mappings (field display names that map to our field keys)
  * Now loaded from jiraFieldsConfig.json
@@ -191,7 +241,7 @@ function calculateDateStatistics(dates) {
  * @returns {Promise<Object>} Formatted field history data
  */
 async function fetchFieldHistory(jiraKey, token, options = {}) {
-  const { saveRawResponse = false, fields: fieldFilter = null } = options;
+  const { saveRawResponse = false, fields: fieldFilter = null, includeRiskIndicator = false } = options;
   const baseUrl = JIRA_API_V2.BASE_URL;
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
 
@@ -207,12 +257,17 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
   
   try {
     // Fetch issue with current field values
+    const requestFieldIds = Object.values(activeFields);
+    if (includeRiskIndicator && RISK_INDICATOR_FIELD_ID) {
+      requestFieldIds.push(RISK_INDICATOR_FIELD_ID);
+    }
+
     const jira = await getJira(cleanToken);
     const issueResponse = await jira.get(issueUrl, {
       timeout: 30000,
       params: {
         expand: 'changelog',
-        fields: Object.values(activeFields).join(',')
+        fields: requestFieldIds.join(',')
       }
     });
     
@@ -253,6 +308,9 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
     // Build a fast lookup set of active field IDs for changelog filtering
     const activeFieldIds = new Set(Object.values(activeFields));
 
+    // Risk Indicator changelog transitions (captured only when requested).
+    const riskChanges = [];
+
     // Process changelog to find field changes
     histories.forEach(history => {
       const items = history.items || [];
@@ -262,6 +320,16 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
         const fieldName = item.field;
         const fromValue = item.fromString || item.from;
         const toValue = item.toString || item.to;
+
+        // Risk Indicator (select field) — capture before the date-field logic,
+        // which would otherwise early-return on the non-date fieldId.
+        if (includeRiskIndicator && (
+          (fieldId && RISK_INDICATOR_FIELD_ID && fieldId === RISK_INDICATOR_FIELD_ID) ||
+          (fieldName && fieldName.toLowerCase().trim() === 'risk indicator')
+        )) {
+          riskChanges.push({ from: fromValue, to: toValue, changedAt: history.created });
+          return;
+        }
         
         // Find which field this change belongs to
         // First try by fieldId, then by field name
@@ -373,7 +441,11 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       weeksDiffBetweenOldestAndLatestCodeCompleteDate: statistics.codeComplete.weeksDiffBetweenOldestAndLatest,
       statusUpdateDate: statistics.statusUpdateDate.dates,
       numberOfTimesStatusUpdateDateMoved: statistics.statusUpdateDate.numberOfTimesMoved,
-      weeksDiffBetweenOldestAndLatestStatusUpdateDate: statistics.statusUpdateDate.weeksDiffBetweenOldestAndLatest
+      weeksDiffBetweenOldestAndLatestStatusUpdateDate: statistics.statusUpdateDate.weeksDiffBetweenOldestAndLatest,
+      // Risk Indicator (RAG) trail — oldest → newest. Empty unless requested.
+      riskIndicatorHistory: includeRiskIndicator
+        ? buildRiskIndicatorTrail(riskChanges, fields[RISK_INDICATOR_FIELD_ID])
+        : []
     };
     
     // Add raw response if requested
@@ -455,6 +527,16 @@ function transformFieldHistoryToCheckpointHistory(fieldHistoryData) {
     if (!key) return;
     
     checkpointHistory[key] = {};
+
+    // Risk Indicator trail (select field, not a date) — pass through as
+    // { value, changedAt } entries, oldest → newest. Absent on the shared
+    // project-status path, so defaults to an empty array.
+    checkpointHistory[key].riskIndicator = Array.isArray(item.riskIndicatorHistory)
+      ? item.riskIndicatorHistory.map((e) => ({
+          value: e.value,
+          changedAt: e.changedAt || null,
+        }))
+      : [];
     
     // Transform each date field
     Object.keys(fieldMapping).forEach(jsonField => {
@@ -489,6 +571,8 @@ module.exports = {
   fetchFieldHistory,
   fetchFieldHistoryForMultiple,
   transformFieldHistoryToCheckpointHistory,
+  buildRiskIndicatorTrail,
+  riskValueToWord,
   DATE_FIELDS
 };
 

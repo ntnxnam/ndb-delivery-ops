@@ -15,9 +15,13 @@ export function useSosHistory() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState(null);
 
-  const fetchHistory = useCallback(async (teamId) => {
+  const fetchHistory = useCallback(async (teamId, keys) => {
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+
+    // The page scopes history to the tracked upcoming releases and passes the
+    // exact keys to walk. Without keys the server falls back to its own search.
+    if (Array.isArray(keys) && keys.length === 0) return;
 
     setLoadingHistory(true);
     setHistoryError(null);
@@ -25,7 +29,7 @@ export function useSosHistory() {
     try {
       const resp = await authenticatedPost(
         '/api/jira/sos-items-history',
-        { teamId },
+        { teamId, keys },
         { jiraToken, username }
       );
 

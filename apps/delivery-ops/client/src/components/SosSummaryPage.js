@@ -8,13 +8,14 @@
  * Email SoS sends an HTML snapshot of the already-loaded view via SMTP.
  */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
 import { useSosHistory } from '../hooks/useSosHistory';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { authenticatedPost, authenticatedPut, authenticatedGet } from '../utils/api';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
+import { formatRiskWithHistory } from '../utils/riskHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseGantt from './ReleaseGantt';
@@ -510,7 +511,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
       <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#444' }}>
         {item.status || '—'}
       </td>
-      {/* Risk */}
+      {/* Risk — RAG dot plus a movement trail when the indicator has changed */}
       <td style={{ padding: '6px 8px', textAlign: 'center' }}>
         <span
           style={{
@@ -520,10 +521,10 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
             borderRadius: '50%',
             background: ragColor,
             verticalAlign: 'middle',
-            title: ragLabel,
           }}
           title={ragLabel}
         />
+        {formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)}
       </td>
       {/* CC */}
       <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
@@ -772,6 +773,7 @@ function SosSummaryPage() {
     breakdownDataMap,
     loadingBreakdowns,
     fetchAll,
+    fetchBreakdowns,
   } = useSosItems();
 
   const { batchRunning, batchProgress, pendingReviews, runBatch, regenerateOne, pushOne, discardOne, pushAll, discardAll } = useBatchExecSummary();
@@ -796,21 +798,53 @@ function SosSummaryPage() {
     fetchAll(selectedTeamId);
   }, [fetchAll, selectedTeamId]);
 
-  // History overlay is independent of live vs cache items. Skip only when
-  // JIRA is already rate-limited so we do not immediately re-trip it.
-  useEffect(() => {
-    if (degraded || !selectedTeamId) return;
-    if (Object.keys(byVersion).length > 0) {
-      fetchHistory(selectedTeamId);
-    }
-  }, [degraded, byVersion, fetchHistory, selectedTeamId]);
-
   // All items that need a summary (for batch button label)
   const needsCount = useMemo(() => {
     return Object.values(byVersion).flat().filter(needsSummary).length;
   }, [byVersion]);
 
   const { releases: releaseDatesConfig } = useReleaseDatesConfig();
+
+  // Keys to enrich = only items whose fixVersions include a tracked upcoming
+  // release (the release-dates config list, e.g. NDB-2.11, NDB-2.12, NDB-3.0).
+  // This deliberately excludes master / Era Future / untracked releases so we
+  // never walk their changelogs or fetch their task breakdowns.
+  const enrichKeys = useMemo(() => {
+    const tracked = new Set(
+      Object.keys(releaseDatesConfig || {}).map((v) => v.trim().toLowerCase())
+    );
+    if (tracked.size === 0) return [];
+    const seen = new Set();
+    const keys = [];
+    Object.values(byVersion).flat().forEach((it) => {
+      if (!it || !it.key || seen.has(it.key)) return;
+      const versions = String(it.fixVersions || '')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (versions.some((v) => tracked.has(v))) {
+        seen.add(it.key);
+        keys.push(it.key);
+      }
+    });
+    return keys;
+  }, [byVersion, releaseDatesConfig]);
+
+  // Drive BOTH follow-on JIRA passes (date+risk history and task breakdowns)
+  // from the same scoped key list. De-duped per team + key-set so React
+  // StrictMode's double-invoke and the cache→live byVersion update don't fire
+  // duplicate walks. Runs even in degraded mode — the server serves history
+  // from its snapshot rather than re-tripping JIRA.
+  const lastEnrichRef = useRef('');
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    if (enrichKeys.length === 0) return;
+    const signature = `${selectedTeamId}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
+    if (lastEnrichRef.current === signature) return;
+    lastEnrichRef.current = signature;
+    fetchHistory(selectedTeamId, enrichKeys);
+    fetchBreakdowns(enrichKeys);
+  }, [selectedTeamId, enrichKeys, fetchHistory, fetchBreakdowns]);
 
   const handleBatchGenerate = useCallback(() => {
     const allItems = Object.values(byVersion).flat();

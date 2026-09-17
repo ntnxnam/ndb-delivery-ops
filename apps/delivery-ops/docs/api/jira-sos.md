@@ -64,7 +64,7 @@
 
 ## POST /api/jira/sos-items-history
 
-**Purpose**: Fetch checkpoint-field date change history (Code Complete, Commit Gate, Promotion Gate) for all Feature and Initiative tickets in scope of the team's SoS filter. Used by the SoS Summary page to show struck-out old dates and delay deltas alongside the current gate dates.
+**Purpose**: Fetch checkpoint-field date change history (Code Complete, Commit Gate, Promotion Gate) **and Risk Indicator (RAG) change history** for the Feature/Initiative tickets the client scopes to the tracked upcoming releases. Used by the SoS Summary page to show struck-out old dates + delay deltas next to the current gate dates, and a RAG movement trail next to the risk dot.
 
 **Auth**: Required (`validateJiraTokenMiddleware`)
 
@@ -76,15 +76,19 @@
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `teamId` | string | no | Team id to resolve `sosBaseFilter`. Defaults to `"ndb"`. |
+| `keys` | string[] | no (preferred) | Explicit ticket keys to walk. The client sends only the keys belonging to the tracked upcoming releases (from the release-dates config), excluding `master` / `Era Future` / untracked versions. When present, the server walks exactly these and performs **no** JIRA search. |
+| `teamId` | string | conditionally | Required only when `keys` is omitted (fallback path) to resolve `sosBaseFilter` / `baseFilter`. |
+
+> ⚠️ Breaking change in 2026-09: added the `keys` body param. The `keys` path is now the primary caller path; the `teamId`-only search path is a fallback. Response gained `history[key].riskIndicator`.
 
 **Server flow**
 
-1. Resolve `sosBaseFilter` → JQL (same as `/sos-items`)
-2. Fetch only `key` for all matching Feature/Initiative tickets via `makeJiraSearchFetcher`
-3. Call `fetchFieldHistoryForMultiple(itemKeys, jiraToken)` — fetches JIRA changelog for `customfield_11067`, `customfield_35863`, `customfield_35864`
-4. Call `transformFieldHistoryToCheckpointHistory(rawHistory)` — normalises to `{ codeComplete, commitGate, promotionGate }` arrays per key
-5. Respond with `{ success: true, data: { history, itemCount } }`
+1. **If `keys` supplied** (primary): de-dupe and walk exactly those keys — no JIRA search, so `master` / `Era Future` buckets are never touched. `skipped` = 0.
+2. **Else (fallback)**: resolve `sosBaseFilter` → JQL (same as `/sos-items`), fetch `key,fixVersions` via `makeJiraSearchFetcher` (JQL where-clause unchanged), then `filterHistoryEligibleIssues()` drops items whose fix versions are ENTIRELY placeholder buckets (`master`, `Era Future`). `skipped` counts the dropped items.
+3. Call `fetchFieldHistoryForMultiple(itemKeys, jiraToken, { fields: ['codeComplete','commitGate','promotionGate'], includeRiskIndicator: true })` — walks JIRA changelog for `customfield_11067`, `customfield_35863`, `customfield_35864`, and the Risk Indicator select field (`customfield_23560`).
+4. On success, write the raw payload to `server/JIRA-fields-history-for-sos.json` (snapshot). On fetch failure, fall back to that snapshot; if none exists, propagate the error.
+5. Call `transformFieldHistoryToCheckpointHistory(rawHistory)` — normalises to `{ codeComplete, commitGate, promotionGate, riskIndicator }` per key. `riskIndicator` is an ordered (oldest → newest) list of `{ value, changedAt }` RAG words.
+6. Respond with `{ success: true, data: { history, itemCount, skipped } }`
 
 **Response shape**
 
@@ -93,6 +97,7 @@
   "success": true,
   "data": {
     "itemCount": 42,
+    "skipped": 0,
     "history": {
       "FEAT-12345": {
         "codeComplete": [
@@ -100,7 +105,12 @@
           { "date": "2026-09-01", "changedAt": "2026-08-01", "from": "2026-08-01" }
         ],
         "commitGate": [],
-        "promotionGate": []
+        "promotionGate": [],
+        "riskIndicator": [
+          { "value": "Green", "changedAt": null },
+          { "value": "Yellow", "changedAt": "2026-07-20T00:00:00.000Z" },
+          { "value": "Red", "changedAt": "2026-08-05T00:00:00.000Z" }
+        ]
       }
     }
   }
@@ -112,9 +122,9 @@
 | HTTP code | When | Client should |
 |---|---|---|
 | 401 | JIRA token missing or invalid | Redirect to login |
-| 500 | History fetch failed | Log warning; page renders without history overlay (dates show as plain) |
+| 500 | History fetch failed AND no snapshot on disk | Log warning; page renders without history overlay (dates show as plain) |
 
-**Caching**: None. Fire-and-forget on the client; non-blocking — page renders from `/sos-items` before this completes.
+**Caching**: Disk snapshot (`server/JIRA-fields-history-for-sos.json`) written on every successful walk and read as a fallback when the live changelog fetch fails (rate-limit / timeout). Fire-and-forget on the client; non-blocking — page renders from `/sos-items` before this completes.
 
 ---
 
