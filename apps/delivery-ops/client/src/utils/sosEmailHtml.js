@@ -6,6 +6,7 @@
 import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
 
 const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
+const STALE_DAYS = 7;
 const GATE_ORDER = ['CC', 'CCM', 'EC', 'CG', 'PG', 'GA'];
 const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
 
@@ -30,7 +31,20 @@ function ragKey(riskIndicator) {
   return val.split(' ')[0] || '';
 }
 
+function daysOld(dateVal) {
+  if (!dateVal) return null;
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+// Mirror ExecSummaryCell: when the Status Update Date (customfield_45660) is
+// >= 7 days old the on-screen cell shows only a "Stale Update" badge and hides
+// the AI summary. The email must do the same — otherwise it prints a stale
+// AI summary as if it were current (false info).
 function execSummaryText(item) {
+  const statusDays = daysOld(item?.customfield_45660);
+  if (statusDays !== null && statusDays >= STALE_DAYS) return '⚠ Stale Update';
   const raw = item?.customfield_38460 || '';
   if (!raw) return '—';
   return raw.replace(DATE_PREFIX_REGEX, '').trim() || '—';
@@ -106,7 +120,7 @@ function buildItemsTable(title, items, breakdownDataMap, jiraBaseUrl, checkpoint
   if (!items.length) {
     return `<p style="color:#888;font-size:12px">No ${escapeHtml(title.toLowerCase())} found.</p>`;
   }
-  const header = ['Key', 'Summary', 'Status', 'Risk', 'CC', 'CG', 'PG', 'Assignee', 'AI Summary', 'Breakdown']
+  const header = ['Key', 'Summary', 'Status', 'Risk', 'CCM', 'CG', 'PG', 'Assignee', 'AI Summary', 'Breakdown']
     .map((label) => `<th style="background:#f0f4f8;padding:6px 8px;text-align:left;font-size:11px;border:1px solid #ddd">${label}</th>`)
     .join('');
   return `<h3 style="color:#333;margin:12px 0 6px;font-size:13px">${escapeHtml(title)} (${items.length})</h3>

@@ -27,6 +27,9 @@ import SosEmailBar from './SosEmailBar';
 
 const STALE_DAYS = 7;
 const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
+// Rolling / placeholder fixVersion buckets we never fetch task breakdowns for
+// (they can hold thousands of tickets). Everything else is a real release.
+const PLACEHOLDER_VERSIONS = new Set(['master', 'era future', 'unversioned']);
 
 function daysOld(dateVal) {
   if (!dateVal) return null;
@@ -419,7 +422,7 @@ const SOS_COLUMNS = [
   { key: 'summary',    label: 'Summary',    width: '220px' },
   { key: 'status',     label: 'Status',     width: '100px' },
   { key: 'risk',       label: 'Risk',       width: '70px' },
-  { key: 'ccDate',     label: 'CC',         width: '140px' },
+  { key: 'ccmDate',     label: 'CCM',        width: '140px' },
   { key: 'cgDate',     label: 'CG',         width: '140px' },
   { key: 'pgDate',     label: 'PG',         width: '140px' },
   { key: 'assignee',   label: 'Assignee',   width: '110px' },
@@ -805,10 +808,10 @@ function SosSummaryPage() {
 
   const { releases: releaseDatesConfig } = useReleaseDatesConfig();
 
-  // Keys to enrich = only items whose fixVersions include a tracked upcoming
-  // release (the release-dates config list, e.g. NDB-2.11, NDB-2.12, NDB-3.0).
-  // This deliberately excludes master / Era Future / untracked releases so we
-  // never walk their changelogs or fetch their task breakdowns.
+  // History walk is rate-limit sensitive (per-ticket changelog fetch), so it
+  // stays scoped to items in the tracked upcoming releases (the release-dates
+  // config list, e.g. NDB-2.11, NDB-2.12, NDB-3.0). master / Era Future /
+  // untracked versions are never walked.
   const enrichKeys = useMemo(() => {
     const tracked = new Set(
       Object.keys(releaseDatesConfig || {}).map((v) => v.trim().toLowerCase())
@@ -830,21 +833,50 @@ function SosSummaryPage() {
     return keys;
   }, [byVersion, releaseDatesConfig]);
 
-  // Drive BOTH follow-on JIRA passes (date+risk history and task breakdowns)
-  // from the same scoped key list. De-duped per team + key-set so React
-  // StrictMode's double-invoke and the cache→live byVersion update don't fire
-  // duplicate walks. Runs even in degraded mode — the server serves history
-  // from its snapshot rather than re-tripping JIRA.
+  // Task breakdowns render for EVERY real Feature/Initiative row, independent
+  // of the release-dates config. Only the huge rolling buckets (master / Era
+  // Future / Unversioned) are skipped. Keeping this OFF the tracked-release
+  // allow-list is deliberate: an empty or mismatched release-dates config used
+  // to silently blank the entire Breakdown column.
+  const breakdownKeys = useMemo(() => {
+    const seen = new Set();
+    const keys = [];
+    Object.entries(byVersion).forEach(([version, items]) => {
+      if (PLACEHOLDER_VERSIONS.has(String(version).trim().toLowerCase())) return;
+      (items || []).forEach((it) => {
+        if (!it || !it.key || seen.has(it.key)) return;
+        seen.add(it.key);
+        keys.push(it.key);
+      });
+    });
+    return keys;
+  }, [byVersion]);
+
+  // Drive the two follow-on JIRA passes. Each is de-duped on its own key-set so
+  // React StrictMode's double-invoke and the cache→live byVersion update don't
+  // fire duplicate walks. Both run even in degraded mode — the server serves
+  // history from its snapshot rather than re-tripping JIRA.
   const lastEnrichRef = useRef('');
+  const lastBreakdownRef = useRef('');
   useEffect(() => {
     if (!selectedTeamId) return;
-    if (enrichKeys.length === 0) return;
-    const signature = `${selectedTeamId}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
-    if (lastEnrichRef.current === signature) return;
-    lastEnrichRef.current = signature;
-    fetchHistory(selectedTeamId, enrichKeys);
-    fetchBreakdowns(enrichKeys);
-  }, [selectedTeamId, enrichKeys, fetchHistory, fetchBreakdowns]);
+
+    if (enrichKeys.length > 0) {
+      const sig = `${selectedTeamId}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
+      if (lastEnrichRef.current !== sig) {
+        lastEnrichRef.current = sig;
+        fetchHistory(selectedTeamId, enrichKeys);
+      }
+    }
+
+    if (breakdownKeys.length > 0) {
+      const sig = `${selectedTeamId}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
+      if (lastBreakdownRef.current !== sig) {
+        lastBreakdownRef.current = sig;
+        fetchBreakdowns(breakdownKeys);
+      }
+    }
+  }, [selectedTeamId, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
 
   const handleBatchGenerate = useCallback(() => {
     const allItems = Object.values(byVersion).flat();
