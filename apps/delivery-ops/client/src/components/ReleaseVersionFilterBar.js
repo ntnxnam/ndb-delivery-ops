@@ -35,6 +35,17 @@ function extractAssignee(item) {
 }
 
 /**
+ * Extract assignee manager display name from item.
+ */
+function extractAssigneeManager(item) {
+  const m = item.assigneeManager;
+  if (!m) return 'No Manager';
+  if (typeof m === 'string') return m.trim() || 'No Manager';
+  if (typeof m === 'object') return (m.displayName || m.name || 'No Manager').trim();
+  return 'No Manager';
+}
+
+/**
  * Returns true if the item's status update date is older than `days` days or missing.
  */
 function isStale(item, days = 10) {
@@ -57,6 +68,7 @@ function isStale(item, days = 10) {
  * @param {string} filters.risk    - '' = all, or specific value e.g. 'Red'
  * @param {string} filters.status  - '' = all, or specific status name
  * @param {string} filters.assignee - '' = all, or specific assignee name
+ * @param {string} filters.assigneeManager - '' = all, or specific assignee manager name
  * @param {string} filters.staleness - '' = all, 'stale' = stale only, 'fresh' = not stale
  * @returns {Array}
  */
@@ -76,6 +88,9 @@ export function applyFilters(itemsArray, filters) {
     }
     if (filters.assignee && filters.assignee !== '') {
       if (extractAssignee(item) !== filters.assignee) return false;
+    }
+    if (filters.assigneeManager && filters.assigneeManager !== '') {
+      if (extractAssigneeManager(item) !== filters.assigneeManager) return false;
     }
     if (filters.staleness && filters.staleness !== '') {
       const stale = isStale(item);
@@ -132,7 +147,8 @@ function ReleaseVersionFilterBar({
   activeSection,
   onSectionChange,
   totalCount,
-  filteredCount
+  filteredCount,
+  showSection = true
 }) {
   const allItems = useMemo(
     () => [...(items?.commit || []), ...(items?.longTermFunded || [])],
@@ -172,10 +188,21 @@ function ReleaseVersionFilterBar({
     });
   }, [allItems]);
 
+  const assigneeManagerOptions = useMemo(() => {
+    const seen = new Set();
+    allItems.forEach(item => seen.add(extractAssigneeManager(item)));
+    return [...seen].sort((a, b) => {
+      if (a === 'No Manager') return 1;
+      if (b === 'No Manager') return -1;
+      return a.localeCompare(b);
+    });
+  }, [allItems]);
+
   const hasActiveFilters =
     (activeFilters.risk !== '') ||
     (activeFilters.status !== '') ||
     (activeFilters.assignee !== '') ||
+    (activeFilters.assigneeManager !== '') ||
     (activeFilters.staleness !== '') ||
     (activeSection !== '');
 
@@ -197,18 +224,20 @@ function ReleaseVersionFilterBar({
       fontSize: '0.8rem'
     }}>
       {/* Section filter */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={LABEL_STYLE}>Section:</span>
-        <select
-          style={SELECT_STYLE}
-          value={activeSection}
-          onChange={e => onSectionChange(e.target.value)}
-        >
-          <option value="">Both</option>
-          <option value="commit">Commit only</option>
-          <option value="longTermFunded">Long-term-funded only</option>
-        </select>
-      </div>
+      {showSection && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={LABEL_STYLE}>Section:</span>
+          <select
+            style={SELECT_STYLE}
+            value={activeSection}
+            onChange={e => onSectionChange(e.target.value)}
+          >
+            <option value="">Both</option>
+            <option value="commit">Commit only</option>
+            <option value="longTermFunded">Long-term-funded only</option>
+          </select>
+        </div>
+      )}
 
       {/* Risk filter */}
       {riskOptions.length > 1 && (
@@ -274,6 +303,26 @@ function ReleaseVersionFilterBar({
         </div>
       )}
 
+      {/* Assignee Manager filter */}
+      {assigneeManagerOptions.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={LABEL_STYLE}>Assignee Mgr:</span>
+          <select
+            style={{
+              ...SELECT_STYLE,
+              ...(activeFilters.assigneeManager ? { borderColor: '#0066cc', color: '#0066cc', fontWeight: 600 } : {})
+            }}
+            value={activeFilters.assigneeManager}
+            onChange={e => onFilterChange('assigneeManager', e.target.value)}
+          >
+            <option value="">All</option>
+            {assigneeManagerOptions.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Staleness filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <span style={LABEL_STYLE}>Status update:</span>
@@ -315,6 +364,7 @@ function ReleaseVersionFilterBar({
               onFilterChange('risk', '');
               onFilterChange('status', '');
               onFilterChange('assignee', '');
+              onFilterChange('assigneeManager', '');
               onFilterChange('staleness', '');
               onSectionChange('');
             }}

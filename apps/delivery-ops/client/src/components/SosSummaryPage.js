@@ -20,6 +20,7 @@ import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseGantt from './ReleaseGantt';
 import SosEmailBar from './SosEmailBar';
+import ReleaseVersionFilterBar, { applyFilters } from './ReleaseVersionFilterBar';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -883,6 +884,45 @@ function SosSummaryPage() {
     runBatch(allItems, gateDataMap);
   }, [byVersion, gateDataMap, runBatch]);
 
+  // Client-side filters (shared bar with the Release Versions page). Applied to
+  // what is rendered only — batch/email/enrich passes still act on the full set.
+  const [sosFilters, setSosFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
+  const handleSosFilterChange = useCallback((key, value) => {
+    setSosFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const allSosItems = useMemo(() => Object.values(byVersion).flat(), [byVersion]);
+
+  const hasSosFilters = useMemo(
+    () => Object.values(sosFilters).some((v) => v !== ''),
+    [sosFilters]
+  );
+
+  // byVersion narrowed by the active filters; versions with no surviving items
+  // are dropped so we don't render empty sections.
+  const filteredByVersion = useMemo(() => {
+    if (!hasSosFilters) return byVersion;
+    const out = {};
+    Object.entries(byVersion).forEach(([version, items]) => {
+      const kept = applyFilters(items || [], sosFilters);
+      if (kept.length > 0) out[version] = kept;
+    });
+    return out;
+  }, [byVersion, sosFilters, hasSosFilters]);
+
+  const filteredSortedVersions = useMemo(() => {
+    return Object.keys(filteredByVersion).sort((a, b) => {
+      if (a === 'Unversioned') return 1;
+      if (b === 'Unversioned') return -1;
+      return b.localeCompare(a, undefined, { numeric: true });
+    });
+  }, [filteredByVersion]);
+
+  const filteredSosCount = useMemo(
+    () => Object.values(filteredByVersion).reduce((n, arr) => n + arr.length, 0),
+    [filteredByVersion]
+  );
+
   return (
     <div>
         {/* Page header */}
@@ -993,11 +1033,28 @@ function SosSummaryPage() {
           onRegenerateOne={regenerateOne}
         />
 
-        {sortedVersions.map((version) => (
+        {!loading && !error && allSosItems.length > 0 && (
+          <ReleaseVersionFilterBar
+            items={{ commit: allSosItems, longTermFunded: [] }}
+            activeFilters={sosFilters}
+            onFilterChange={handleSosFilterChange}
+            activeSection=""
+            onSectionChange={() => {}}
+            showSection={false}
+            totalCount={allSosItems.length}
+            filteredCount={filteredSosCount}
+          />
+        )}
+
+        {!loading && !error && hasSosFilters && filteredSortedVersions.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px' }}>No items match the current filters.</p>
+        )}
+
+        {filteredSortedVersions.map((version) => (
           <ReleaseSection
             key={version}
             version={version}
-            items={byVersion[version] || []}
+            items={filteredByVersion[version] || []}
             breakdownDataMap={breakdownDataMap}
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}
