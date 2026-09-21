@@ -44,6 +44,7 @@ const RELEASE_ITEMS_CONFIG = {
     'customfield_14463', 'customfield_31460', 'customfield_14464',
     'customfield_14465', 'customfield_23073', 'customfield_45660',
     'customfield_23560', 'customfield_38460',
+    'customfield_19262', // Assignee Manager — TODO(D1): source id via productService
   ].join(','),
 };
 
@@ -84,6 +85,8 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       labels: issue.fields.labels || [],
       labelsString: issue.fields.labels?.join(', ') || 'N/A',
       assignee: extractAssigneeName(issue.fields.assignee, issue.key),
+      assigneeManager: issue.fields.customfield_19262?.displayName || null,
+      assigneeManagerEmail: issue.fields.customfield_19262?.emailAddress || null,
       issuetype: issue.fields.issuetype?.name || null,
       sprintState: sprintInfo.state,
       sprintName: sprintInfo.name,
@@ -123,6 +126,8 @@ function mapCachedTicketToItem(t) {
     labels,
     labelsString: labels.join(', ') || 'N/A',
     assignee: t['Assignee'] || null,
+    assigneeManager: t['Assignee Manager'] || null,
+    assigneeManagerEmail: t['Assignee Manager Email'] || null,
     issuetype: t['Issue Type'] || null,
     sprintState: null,
     sprintName: t['Sprint Name'] || null,

@@ -191,16 +191,21 @@ POST /api/email/send-sos
 
 ### Item shape (from sos-items)
 
-Identical to the shape returned by `/api/jira/release-items`. All fields defined in `releaseItemsDataService.RELEASE_ITEMS_CONFIG.FIELDS_LIST` (24 fields).
+Identical to the shape returned by `/api/jira/release-items`. All fields defined in `releaseItemsDataService.RELEASE_ITEMS_CONFIG.FIELDS_LIST` (25 fields).
 
 Key fields used by the UI:
 - `key`, `summary`, `status`, `issuetype`, `assignee`
+- `assigneeManager` (display name) / `assigneeManagerEmail` — from `customfield_19262`; powers the client-side **Assignee Mgr** filter and the release-versions email manager CC
 - `customfield_11067` (CC Date), `customfield_35863` (CG Date), `customfield_35864` (PG Date)
 - `customfield_23560` (Risk Indicator — rendered as RAG chip)
 - `customfield_38460` (AI Executive Summary — displayed in ExecSummaryCell)
 - `customfield_45660` (Status Update Date — staleness check in ExecSummaryCell)
 - `customfield_23073` (Status Update text — **passed to AI only, never displayed**)
 - `labels`, `fixVersions`
+
+### Client-side filtering
+
+The page renders the shared `ReleaseVersionFilterBar` (`showSection={false}`) above the release sections. Filters (Risk, Status, Assignee, Assignee Mgr, Status-update staleness) are applied purely client-side via `applyFilters` to a copy of `byVersion`; versions with no surviving items are hidden. Batch AI summary, email snapshot, history, and breakdown passes still operate on the full unfiltered set.
 
 ## Caching Strategy
 
