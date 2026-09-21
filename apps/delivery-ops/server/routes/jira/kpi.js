@@ -171,6 +171,34 @@ router.post('/release-kpi-results-batch', validateJiraTokenMiddleware, apiLimite
 
 
 /**
+ * Run all team KPIs scoped by release version, split by resolution
+ * (total / done / open). Powers the retrospective cross-release comparison.
+ * POST /api/jira/release-kpi-breakdown-batch  body: { releaseVersion, teamId }
+ * Returns { success: true, results: { [kpiId]: { name, total, done, open, links } | { error } } }
+ */
+
+router.post('/release-kpi-breakdown-batch', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
+  try {
+    const username = req.username || req.headers['x-username'] || '';
+    const { authorized } = checkKpiViewAuthorization(username);
+    if (!authorized) {
+      return res.status(403).json({ error: 'Access denied. You are not authorized to view KPI results.' });
+    }
+    const { releaseVersion, teamId } = req.body || {};
+    if (!releaseVersion || !teamId) {
+      return res.status(400).json({ error: 'releaseVersion and teamId are required' });
+    }
+    const results = await kpiService.getReleaseKpiResolutionBreakdown({ token: req.jiraToken, releaseVersion, teamId });
+    return res.json({ success: true, results });
+  } catch (err) {
+    console.error('Error in /api/jira/release-kpi-breakdown-batch:', err?.response?.data || err.message);
+    const statusCode = err.response?.status || 500;
+    const message = err.response?.data?.errorMessages?.[0] || err.response?.data?.message || err.message || 'Release KPI breakdown failed';
+    return res.status(statusCode).json({ success: false, error: message });
+  }
+});
+
+/**
  * Get issue breakdown statistics (optimized for single and bulk requests)  
  * POST /api/jira/issue-breakdown
  */

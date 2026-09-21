@@ -87,6 +87,94 @@ async function buildReleaseKpiCombinedJql(releaseVersion, kpiBaseQuery, cleanTok
   return `${releaseBaseFilter.trim()} and ${kpiPart} and status != Closed`;
 }
 
+/**
+ * Build a release-scoped KPI JQL split by resolution bucket, for the
+ * cross-release retrospective comparison. Unlike buildReleaseKpiCombinedJql
+ * (which always adds `status != Closed`), this returns the full set for
+ * `total`, resolution-based done for `done`, and open for `open`.
+ *
+ *   total: <releaseBaseFilter> AND <kpiPart>
+ *   done:  <releaseBaseFilter> AND <kpiPart> AND resolution in (Fixed, Done, Resolved, Complete)
+ *   open:  <releaseBaseFilter> AND <kpiPart> AND status not in (Done, Closed)
+ *
+ * When no release base filter is configured, the KPI saved filter is
+ * resolved to underlying JQL and the same clauses are appended.
+ */
+async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket, cleanToken, httpsAgent, teamId = null) {
+  const trimmedKpi = (kpiBaseQuery || '').trim();
+  if (!trimmedKpi) return null;
+  const releaseBaseFilter = getReleaseBaseFilter(releaseVersion, teamId);
+
+  let base;
+  if (releaseBaseFilter) {
+    const kpiPart = trimmedKpi.match(/^filter\s*=\s*.+$/i)
+      ? trimmedKpi
+      : `(${trimmedKpi.replace(/\btype\s*=/gi, 'issuetype=')})`;
+    base = `${releaseBaseFilter.trim()} and ${kpiPart}`;
+  } else {
+    const resolved = await resolveKpiJql(kpiBaseQuery, cleanToken, httpsAgent);
+    if (!resolved) return null;
+    base = `(${resolved})`;
+  }
+
+  if (bucket === 'done') return `${base} and resolution in (Fixed, Done, Resolved, Complete)`;
+  if (bucket === 'open') return `${base} and status not in (Done, Closed)`;
+  return base; // total
+}
+
+/**
+ * For each team KPI, return total / done / open counts scoped to a
+ * release, plus the JQL used for each (for click-through). Count-only
+ * queries via jira.searchCount (maxResults=0).
+ */
+async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId }) {
+  const { kpis, normalizedTeamId } = getTeamKpis(teamId);
+  if (!kpis || kpis.length === 0) return {};
+  const jira = await getJira(token);
+  const results = {};
+
+  for (const kpi of kpis) {
+    const baseQuery = (kpi.baseQuery || '').trim();
+    if (!baseQuery) {
+      results[kpi.id] = { error: 'No base query' };
+      continue;
+    }
+    try {
+      const buildBucket = async (bucket) => {
+        let jql = await buildReleaseKpiResolutionJql(releaseVersion, baseQuery, bucket, token, null, normalizedTeamId);
+        if (!jql) return null;
+        if (kpi.excludeDeferred) jql = appendDeferredExclusion(jql, releaseVersion);
+        return jql;
+      };
+      const [totalJql, doneJql, openJql] = await Promise.all([
+        buildBucket('total'),
+        buildBucket('done'),
+        buildBucket('open'),
+      ]);
+      if (!totalJql) {
+        results[kpi.id] = { error: 'Could not resolve query (check release base filter)' };
+        continue;
+      }
+      const [total, done, open] = await Promise.all([
+        jira.searchCount(totalJql),
+        doneJql ? jira.searchCount(doneJql) : Promise.resolve(0),
+        openJql ? jira.searchCount(openJql) : Promise.resolve(0),
+      ]);
+      results[kpi.id] = {
+        name: kpi.name,
+        total: total || 0,
+        done: done || 0,
+        open: open || 0,
+        links: { total: totalJql, done: doneJql, open: openJql },
+      };
+    } catch (err) {
+      const message = err.response?.data?.errorMessages?.[0] || err.response?.data?.message || err.message || 'Query failed';
+      results[kpi.id] = { error: message };
+    }
+  }
+  return results;
+}
+
 function mapIssues(response) {
   return (response.data.issues || []).map((issue) => {
     const f = issue.fields || {};
@@ -373,10 +461,12 @@ module.exports = {
   deriveDeferredLabel,
   appendDeferredExclusion,
   buildReleaseKpiCombinedJql,
+  buildReleaseKpiResolutionJql,
   getKpiResult,
   getKpiResultBatch,
   getReleaseKpiResult,
   getReleaseKpiResultBatch,
+  getReleaseKpiResolutionBreakdown,
   categorizeStatus,
   groupBreakdownByProject,
   getIssueBreakdown

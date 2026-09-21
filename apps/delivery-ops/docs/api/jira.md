@@ -144,6 +144,67 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 
 ---
 
+### POST /api/jira/release-kpi-breakdown-batch
+
+**Purpose**: For each team KPI, return `total` / `done` / `open` counts scoped to
+a release version, split by resolution. Powers the Retrospective page's
+Cross-Release Comparison "KPI Categories" rows.
+
+**Auth**: required — KPI view authorization (same gate as `kpi-results-batch`).
+
+**Request**
+- Method + path: `POST /api/jira/release-kpi-breakdown-batch`
+- Required headers: `x-jira-token` (PAT), `x-username`
+- Body params:
+  - `releaseVersion` (string, required) — e.g. `NDB-2.11`
+  - `teamId` (string, required) — team key whose KPI config is used
+
+**Server flow**
+Route (`routes/jira/kpi.js`) → `kpiService.getReleaseKpiResolutionBreakdown`
+→ per KPI builds `buildReleaseKpiResolutionJql(total|done|open)` (release base
+filter + KPI filter + resolution/status clause) → `jira.searchCount` (count-only,
+maxResults=0) for each bucket.
+
+**Response shape**
+```json
+{
+  "success": true,
+  "results": {
+    "product-blockers": {
+      "name": "Product Blockers",
+      "total": 12,
+      "done": 9,
+      "open": 3,
+      "links": {
+        "total": "fixVersion = \"NDB-2.11\" and (...) ",
+        "done": "... and resolution in (Fixed, Done, Resolved, Complete)",
+        "open": "... and status not in (Done, Closed)"
+      }
+    },
+    "system-test": { "error": "..." }
+  }
+}
+```
+Per-KPI `error` strings are returned inline; a failing KPI does not fail the batch.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | `releaseVersion` or `teamId` missing | fix request |
+| 403 | not KPI-view authorized | hide the comparison KPI rows |
+| 5xx | JIRA/query failure | show error, allow retry |
+
+**Caching**: No server cache. Client caches per (teamId, releaseSet) via the
+`useRetroComparison` hook key; no auto-refetch on empty results.
+
+> JQL buckets approved via the richer-retrospective plan (2026-09-21):
+> `total = <releaseBaseFilter> AND (<kpiPart>)`;
+> `done = total AND resolution in (Fixed, Done, Resolved, Complete)`;
+> `open = total AND status not in (Done, Closed)`. `excludeDeferred` KPIs also
+> append the deferred-label exclusion.
+
+---
+
 ## Issue Breakdown & History
 
 ### POST /api/jira/issue-breakdown
