@@ -171,7 +171,13 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
     const today = Date.now();
     return ['CG', 'PG', 'GA']
       .map((kind) => {
-        const g = gateData.gates.find((x) => String(x.kind || '').toUpperCase() === kind && x.iso);
+        // Pick the latest solid gate of this kind (dotted = superseded/planned).
+        // Fall back to the latest entry of any style if no solid one exists.
+        const allOfKind = gateData.gates.filter(
+          (x) => String(x.kind || '').toUpperCase() === kind && x.iso,
+        );
+        const solidOnes = allOfKind.filter((x) => x.style === 'solid');
+        const g = (solidOnes.length ? solidOnes : allOfKind).at(-1);
         if (!g) return null;
         const iso = String(g.iso).slice(0, 10);
         const ms = new Date(`${iso}T00:00:00Z`).getTime();
@@ -345,11 +351,16 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
       </div>
     );
   }
-  // If the whole KPI load failed, hide the strip silently (don't pollute the SoS view)
+  // Strip-level failure (e.g. 403, network) — hide silently
   if (error) return null;
   if (!kpiData || Object.keys(kpiData).length === 0) return null;
 
-  const entries = Object.entries(kpiData);
+  const allEntries = Object.entries(kpiData);
+  const goodEntries = allEntries.filter(([, kpi]) => !kpi.error);
+  const noFilterEntries = allEntries.filter(([, kpi]) => kpi.error && /release base filter/i.test(kpi.error));
+
+  // Nothing at all to show
+  if (goodEntries.length === 0 && noFilterEntries.length === 0) return null;
 
   return (
     <div style={{
@@ -358,9 +369,8 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
       gap: 8,
       padding: '8px 0 4px',
     }}>
-      {entries.map(([kpiId, kpi]) => {
-        // Individual KPI failed — skip its chip entirely
-        if (kpi.error) return null;
+      {/* Working KPI chips */}
+      {goodEntries.map(([kpiId, kpi]) => {
 
         const total    = kpi.total    ?? 0;
         const closed   = kpi.closed   ?? 0;
@@ -445,6 +455,32 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
           </div>
         );
       })}
+      {/* No-filter chips — one per KPI that needs a release base filter configured */}
+      {noFilterEntries.length > 0 && (
+        <div
+          title={`${noFilterEntries.length} KPI${noFilterEntries.length > 1 ? 's' : ''} need a release base filter configured for this version`}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 6,
+            border: '1px solid #e0e0e0',
+            background: '#f5f5f5',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            minWidth: 110,
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+            KPIs
+          </div>
+          <div style={{ fontSize: 10, color: '#bbb', fontStyle: 'italic' }}>
+            No release filter
+          </div>
+          <div style={{ fontSize: 9, color: '#ccc' }}>
+            {noFilterEntries.map(([, kpi]) => kpi.name || '—').join(', ')}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

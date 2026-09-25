@@ -59,6 +59,30 @@ const GATE_CLEARANCE = {
   GA: { expectedPhase: 'Shipped', statusName: 'Closed', phaseRank: 6 },
 };
 
+/**
+ * Gate → the ticket date field that must land BEFORE that gate closes.
+ *
+ * Think of each gate as a toll booth with a cutoff date (release calendar).
+ * A ticket "misses" the gate if its own date for the prerequisite milestone
+ * is scheduled AFTER the gate's cutoff — e.g. ticket says CC will be Dec 20
+ * but CG closes Dec 15 → that ticket cannot clear CG in time.
+ *
+ * CCM / CC gate → ticket's Code Complete date (customfield_11067)
+ * CG gate        → ticket's Code Complete date (customfield_11067)
+ *                  (CC must be achieved before a ticket can pass CG)
+ * PG gate        → ticket's Commit Gate Ready date (customfield_35863)
+ *                  (CG must be achieved before a ticket can pass PG)
+ * GA gate        → ticket's Promotion Gate Ready date (customfield_35864)
+ *                  (PG must be achieved before a ticket can pass GA)
+ */
+const GATE_PREREQUISITE_FIELD = {
+  CCM: 'customfield_11067',
+  CC:  'customfield_11067',
+  CG:  'customfield_11067',  // Code Complete must land before CG closes
+  PG:  'customfield_35863',  // Commit Gate Ready must land before PG closes
+  GA:  'customfield_35864',  // Promotion Gate Ready must land before GA closes
+};
+
 export function classifyRiskWord(riskIndicator) {
   const raw = typeof riskIndicator === 'string'
     ? riskIndicator
@@ -205,14 +229,15 @@ export function buildTierCallouts(items, checkpointHistory = {}, gateContext = n
   const nextGate = gateContext?.nextGate;
   if (nextGate && list.length) {
     const gateIso = nextGate.iso;
+    // Which ticket date field must land before this gate closes?
+    // e.g. next gate = CG (cutoff Dec 15) → check ticket's CC date.
+    // A ticket is flagged only when its prerequisite date is scheduled
+    // AFTER the release gate cutoff (toll booth closes before they arrive).
+    const prereqField = GATE_PREREQUISITE_FIELD[nextGate.kind] || 'customfield_11067';
     const keys = list.filter((i) => {
       if (!i?.key) return false;
-      const dates = [
-        itemDateIso(i, 'customfield_11067'),
-        itemDateIso(i, 'customfield_35863'),
-        itemDateIso(i, 'customfield_35864'),
-      ].filter(Boolean);
-      return dates.some((d) => d > gateIso);
+      const prereqDate = itemDateIso(i, prereqField);
+      return !!prereqDate && prereqDate > gateIso;
     }).map((i) => i.key);
     datesPastNextGate = {
       count: keys.length,
@@ -222,6 +247,7 @@ export function buildTierCallouts(items, checkpointHistory = {}, gateContext = n
         label: nextGate.label,
         iso: nextGate.iso,
         daysUntil: nextGate.daysFromToday,
+        prereqField,  // which ticket date field was compared
       },
     };
   }
@@ -261,7 +287,13 @@ function daysUntil(iso) {
 function gateIsoFromGateData(gateData, kinds) {
   if (!gateData?.gates?.length) return null;
   const want = new Set(kinds.map((k) => k.toUpperCase()));
-  const hit = gateData.gates.find((g) => want.has(String(g.kind || '').toUpperCase()) && g.iso);
+  // Prefer the latest solid gate of the requested kind(s); dotted = superseded.
+  // Fall back to the latest entry of any style when no solid one exists.
+  const allMatching = gateData.gates.filter(
+    (g) => want.has(String(g.kind || '').toUpperCase()) && g.iso,
+  );
+  const solidOnes = allMatching.filter((g) => g.style === 'solid');
+  const hit = (solidOnes.length ? solidOnes : allMatching).at(-1);
   return hit?.iso ? String(hit.iso).slice(0, 10) : null;
 }
 

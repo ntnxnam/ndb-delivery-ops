@@ -86,8 +86,12 @@ function formatGateStrip(gateData) {
   const parts = [];
   const seen = new Set();
   for (const kind of GATE_ORDER) {
-    const gate = gateData.gates.find((g) => (g.kind || '').toUpperCase() === kind && g.iso);
-    if (!gate || seen.has(kind)) continue;
+    if (seen.has(kind)) continue;
+    // Use the latest solid gate of this kind; fall back to latest of any style.
+    const allOfKind = gateData.gates.filter((g) => (g.kind || '').toUpperCase() === kind && g.iso);
+    const solidOnes = allOfKind.filter((g) => g.style === 'solid');
+    const gate = (solidOnes.length ? solidOnes : allOfKind).at(-1);
+    if (!gate) continue;
     seen.add(kind);
     parts.push(`<strong>${escapeHtml(gate.label || kind)}</strong> ${formatShortDate(gate.iso)}`);
   }
@@ -139,6 +143,107 @@ function formatTierSummaryHtml(summary) {
     parts.push(`<div style="font-size:11px;line-height:1.35;color:#495057;margin:1px 0;word-break:break-word">${escapeHtml(t)}</div>`);
   }
   return parts.join('') || '<span style="color:#adb5bd;font-size:11px">—</span>';
+}
+
+/* ─────────────────────────────────────────────────────────────
+   buildRagCountsRow — email-safe equivalent of RagDonut + legend.
+   Renders as a compact 4-cell table: one cell per RAG state.
+───────────────────────────────────────────────────────────── */
+
+function buildRagCountsRow(items) {
+  if (!items || items.length === 0) return '';
+  const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
+  items.forEach((item) => {
+    const key = ragKey(item.customfield_23560);
+    if (key === 'Red' || key === 'Yellow' || key === 'Green') counts[key]++;
+    else counts.NotSet++;
+  });
+  const total = counts.Red + counts.Yellow + counts.Green + counts.NotSet;
+  if (total === 0) return '';
+
+  const cells = [
+    { label: 'Red',    key: 'Red',    color: RAG_COLORS.Red    },
+    { label: 'Yellow', key: 'Yellow', color: RAG_COLORS.Yellow  },
+    { label: 'Green',  key: 'Green',  color: RAG_COLORS.Green   },
+    { label: 'not set', key: 'NotSet', color: RAG_COLORS.NotSet },
+  ].map(({ label, key, color }) => {
+    const n = counts[key];
+    return `<td style="padding:4px 10px;text-align:center;border-right:1px solid #eee">
+  <div style="font-size:16px;font-weight:700;color:${color}">${n}</div>
+  <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:1px">${escapeHtml(label)}</div>
+</td>`;
+  }).join('');
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eee;border-radius:5px;background:#fafafa;margin:0 0 8px">
+  <tr>
+    <td style="padding:4px 10px;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-right:1px solid #eee;white-space:nowrap;vertical-align:middle">RAG<br>split</td>
+    ${cells}
+    <td style="padding:4px 10px;text-align:center">
+      <div style="font-size:16px;font-weight:700;color:#333">${total}</div>
+      <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:1px">total</div>
+    </td>
+  </tr>
+</table>`;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   buildGateCountdownRow — email-safe equivalent of GateCountdown.
+   Shows CG / PG / GA with days remaining and a filled progress bar.
+   Uses table layout only (no flex) for email client compatibility.
+───────────────────────────────────────────────────────────── */
+
+function buildGateCountdownRow(gateData) {
+  if (!gateData?.gates?.length) return '';
+  const today = Date.now();
+  const bars = ['CG', 'PG', 'GA']
+    .map((kind) => {
+      // Latest solid gate wins; dotted = superseded. Fall back to latest overall.
+      const allOfKind = gateData.gates.filter(
+        (x) => String(x.kind || '').toUpperCase() === kind && x.iso,
+      );
+      const solidOnes = allOfKind.filter((x) => x.style === 'solid');
+      const g = (solidOnes.length ? solidOnes : allOfKind).at(-1);
+      if (!g) return null;
+      const iso = String(g.iso).slice(0, 10);
+      const ms = new Date(`${iso}T00:00:00Z`).getTime();
+      if (Number.isNaN(ms)) return null;
+      const days = Math.ceil((ms - today) / 86400000);
+      return { kind, iso, days };
+    })
+    .filter(Boolean);
+
+  if (bars.length === 0) return '';
+
+  const maxAbs = Math.max(...bars.map((b) => Math.abs(b.days)), 1);
+
+  const rows = bars.map(({ kind, iso, days }) => {
+    const pct = Math.min(100, Math.round((Math.abs(days) / maxAbs) * 100));
+    const past = days < 0;
+    const urgent = !past && days <= 14;
+    const color = past ? '#d32f2f' : urgent ? '#f57c00' : '#388e3c';
+    const label = past
+      ? `${Math.abs(days)}d past · ${iso}`
+      : `${days}d · ${iso}`;
+    // Progress bar: past gates show full red bar; upcoming fill proportionally
+    const fillWidth = past ? 100 : pct;
+    return `<tr>
+  <td style="padding:2px 8px 2px 0;font-size:10px;font-weight:700;color:#555;white-space:nowrap;width:28px">${escapeHtml(kind)}</td>
+  <td style="padding:2px 0;width:120px">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-radius:3px;background:#eee;overflow:hidden">
+      <tr>
+        <td style="width:${fillWidth}%;background:${color};height:7px;border-radius:3px;font-size:0">&nbsp;</td>
+        ${fillWidth < 100 ? `<td style="width:${100 - fillWidth}%;height:7px;font-size:0">&nbsp;</td>` : ''}
+      </tr>
+    </table>
+  </td>
+  <td style="padding:2px 0 2px 8px;font-size:10px;color:${color};white-space:nowrap">${escapeHtml(label)}</td>
+</tr>`;
+  }).join('');
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eee;border-radius:5px;background:#fafafa;padding:6px 10px;margin:0 0 8px;width:auto">
+  <tr><td colspan="3" style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;padding-bottom:4px">Gate countdown</td></tr>
+  ${rows}
+</table>`;
 }
 
 const TIER_ORDER = [
@@ -228,10 +333,22 @@ function buildReleaseSection(version, items, breakdownDataMap, gateData, jiraBas
   const initiatives = items.filter((i) => issueType(i) === 'initiative');
   const rag = items.length > 0 ? overallRag(items) : '';
   const gates = formatGateStrip(gateData);
+  const ragRow = buildRagCountsRow(items);
+  const gateRow = buildGateCountdownRow(gateData);
+  // Lay RAG counts and gate countdown side-by-side when both are present
+  const chartsBlock = (ragRow || gateRow)
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px">
+        <tr>
+          ${ragRow ? `<td style="vertical-align:top;padding-right:12px">${ragRow}</td>` : ''}
+          ${gateRow ? `<td style="vertical-align:top">${gateRow}</td>` : ''}
+        </tr>
+      </table>`
+    : '';
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;border:1px solid #ddd;border-radius:6px;margin:0 0 12px;background:#fafafa">
   <tr><td style="padding:8px 10px;overflow:hidden">
     <div style="font-size:14px;font-weight:700;color:#1a1a2e;margin:0 0 4px">${escapeHtml(version)} ${rag ? ragChip(rag) : ''}</div>
     ${gates ? `<div style="color:#555;font-size:10px;margin:0 0 8px">${gates}</div>` : ''}
+    ${chartsBlock}
     ${buildTierBoxesRow(tierSummaries)}
     ${buildItemsTable('Features', features, breakdownDataMap, jiraBaseUrl, checkpointHistory)}
     ${buildItemsTable('Initiatives', initiatives, breakdownDataMap, jiraBaseUrl, checkpointHistory)}
