@@ -117,17 +117,15 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
     base = `(${resolved})`;
   }
 
-  // Four resolution buckets (per velocity-resolution-categories):
-  //   closed   = positive resolutions — work actually shipped
-  //             resolution in (Fixed, Done, Resolved, Complete)
-  //             NOTE: resolution=Resolved is positive. status=Resolved is TBV (different field).
-  //   tbv      = status = Resolved AND resolution is EMPTY — dev done, QA pending
+  // Four resolution buckets — status is the gating condition:
+  //   closed   = status = Closed AND resolution in (Fixed, Done, Resolved, Complete)
+  //   tbv      = status = Resolved AND resolution is not EMPTY  (dev done, awaiting QA)
   //   others   = negative resolutions (Dupe, Not Repro, Won't Fix, etc.)
-  //   open     = truly unresolved (resolution is EMPTY AND status != Resolved)
-  if (bucket === 'closed')   return `${base} and resolution in (Fixed, Done, Resolved, Complete)`;
-  if (bucket === 'resolved') return `${base} and status = Resolved and resolution is EMPTY`;
+  //   open     = resolution is EMPTY AND status not in (Resolved, Closed)
+  if (bucket === 'closed')   return `${base} and status = Closed and resolution in (Fixed, Done, Resolved, Complete)`;
+  if (bucket === 'resolved') return `${base} and status = Resolved and resolution is not EMPTY`;
   if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid, "Works as Designed")`;
-  if (bucket === 'open')     return `${base} and resolution is EMPTY and status != Resolved`;
+  if (bucket === 'open')     return `${base} and resolution is EMPTY and status not in (Resolved, Closed)`;
   return base; // total
 }
 
