@@ -284,3 +284,53 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
 | `dark` | Status update is ≥14 days stale |
 | `watching` | On track, no critical signals |
 | `clear` | At PG Met or Shipped |
+
+---
+
+### POST /api/ai/sos-tier-summary
+
+**Purpose**: Team-exec SoS work-tier briefing (FEAT / Standalone / Direct) from a tiny client-assembled packet — RAG, outstanding-by-type, gates, ≤8 CRITICAL_ITEMS, and CALL_OUTS (Risk not set, stale status updates ≥14d, date moves in last 7d with exact keys). No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-tier-summary`
+- Body:
+  - `release` (string, required)
+  - `tier` (`feat` | `standalone` | `direct`, required)
+  - `ragCounts` `{ Red, Yellow, Green, NotSet }`
+  - `itemCount` number
+  - `outstandingByType` map of open counts by issue-type group
+  - `gateDates` `{ cgDate, pgDate, daysToCommitGate, daysToPromotionGate }`
+  - `criticalItems` `[{ key, rag, tldr, summary }]` — max ~8
+  - `callouts` optional hygiene packet:
+    - `riskNotSet` `{ count, keys[] }`
+    - `staleStatusUpdates` `{ count, keys[], thresholdDays }`
+    - `dateMovesLast7d` `[{ field, label, keys[] }]` e.g. FS/DS Done Date moved
+    - `pastGateLagging` `{ count, keys[], gate: { kind, label, iso, expectedStatus, daysAgo } }` — this release's most recently elapsed gate; status not cleared
+    - `datesPastNextGate` `{ count, keys[], gate: { kind, label, iso, daysUntil } }` — item CC/CG/PG dates after upcoming gate ("Keep an eye")
+    - `gateContext` `{ pastGate, nextGate }` snapshot of the release calendar
+  - `p0Count`, `mustFixCount` numbers
+  - `p0Keys`, `mustFixKeys` optional string arrays for VALID TICKET KEYS
+
+**Server flow**
+Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI (`SOS_TIER_SYSTEM_PROMPT`) → response
+
+**Response shape**
+```json
+{
+  "summary": "## FEAT Work — NDB-3.0\n🟡 TLDR: …\n⚠️ Call-outs:\n• Risk Indicator not set (2): ERA-1, ERA-2\n📋 Key Risks:\n• …\n✅ Next Owner Actions:\n• FEAT Manager — …",
+  "release": "NDB-3.0",
+  "tier": "feat",
+  "generatedAt": "2026-09-25T17:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `release` / `tier` missing or invalid | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / upstream failure | Retry that tier |
+
+**Caching**: No — on demand. One call per tier; client runs tiers sequentially per release.

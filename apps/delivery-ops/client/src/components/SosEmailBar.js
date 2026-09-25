@@ -20,6 +20,7 @@ export default function SosEmailBar({
   checkpointHistory,
   jiraBaseUrl,
   sortedVersions,
+  tierSummaries = {},
   disabled,
 }) {
   const { hasPermission } = usePermissions();
@@ -34,7 +35,8 @@ export default function SosEmailBar({
     checkpointHistory,
     jiraBaseUrl,
     sortedVersions,
-  }), [byVersion, breakdownDataMap, gateDataMap, checkpointHistory, jiraBaseUrl, sortedVersions]);
+    tierSummaries,
+  }), [byVersion, breakdownDataMap, gateDataMap, checkpointHistory, jiraBaseUrl, sortedVersions, tierSummaries]);
 
   const handleOpen = useCallback(async () => {
     try {

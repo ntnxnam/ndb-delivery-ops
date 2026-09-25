@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
-const { generateExecSummary, generateReleaseSummary } = require('../services/naiService');
+const { generateExecSummary, generateReleaseSummary, generateSosTierSummary } = require('../services/naiService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
@@ -273,6 +273,38 @@ router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) =>
       return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
     }
     return res.status(502).json({ error: err.message || 'Release summary generation failed' });
+  }
+});
+
+/**
+ * POST /api/ai/sos-tier-summary
+ * Team-exec SoS work-tier briefing from a tiny client-assembled packet.
+ * No JIRA — auth only.
+ */
+router.post('/sos-tier-summary', validateJiraTokenMiddleware, async (req, res) => {
+  const payload = req.body || {};
+  const { release, tier } = payload;
+  if (!release) {
+    return res.status(400).json({ error: 'release is required' });
+  }
+  if (!['feat', 'standalone', 'direct'].includes(tier)) {
+    return res.status(400).json({ error: "tier must be one of: 'feat', 'standalone', 'direct'" });
+  }
+  try {
+    logger.info(`[sos-tier-summary] Generating ${tier} briefing for ${release}`);
+    const summary = await generateSosTierSummary(payload);
+    return res.json({
+      summary,
+      release,
+      tier,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error(`[sos-tier-summary] Failed for ${release}/${tier}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return res.status(502).json({ error: err.message || 'SoS tier summary generation failed' });
   }
 });
 

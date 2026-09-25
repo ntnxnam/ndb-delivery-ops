@@ -956,6 +956,53 @@ router.get('/project-status', auth, async (req, res) => {
       issueTypeGroups: GROUP_LABELS.map((l) => standaloneGroupsMap[l]),
     };
 
+    // Tier-level outstanding by bucket tag when parent-link attribution is empty.
+    const hasTag = (t, tag) =>
+      typeof t['Components'] === 'string' &&
+      t['Components'].split(',').some((x) => x.trim() === tag);
+
+    const countByTag = (tag) => {
+      const groupsMap = makeGroupsMap();
+      for (const t of tickets) {
+        if (!hasTag(t, tag)) continue;
+        if (FEAT_TYPES.has(t['Issue Type']) || t['Issue Type'] === EPIC_TYPE) continue;
+        countInto(groupsMap[classify(t['Issue Type'])], t);
+      }
+      return GROUP_LABELS.map((l) => groupsMap[l]);
+    };
+
+    const sumOpen = (groups) =>
+      (groups || []).reduce((s, g) => s + (g.outstanding || 0) + (g.toVerify || 0), 0);
+
+    const featByTag = countByTag('work_toward_project');
+    const standaloneByTag = countByTag('work_toward_standalone_epic');
+    const projectsOpen = projects.reduce((s, p) => s + sumOpen(p.issueTypeGroups), 0);
+    const standaloneOpen = standaloneEpics.reduce((s, e) => s + sumOpen(e.issueTypeGroups), 0);
+
+    const rollup = (rows) => {
+      const totals = makeGroupsMap();
+      for (const row of rows) {
+        for (const g of row.issueTypeGroups || []) {
+          totals[g.label].outstanding += g.outstanding || 0;
+          totals[g.label].toVerify += g.toVerify || 0;
+          totals[g.label].closed += g.closed || 0;
+          totals[g.label].total += g.total || 0;
+        }
+      }
+      return GROUP_LABELS.map((l) => totals[l]);
+    };
+
+    const tierOutstanding = {
+      feat: projectsOpen > 0 ? rollup(projects) : featByTag,
+      standalone: standaloneOpen > 0 ? rollup(standaloneEpics) : standaloneByTag,
+      direct: standaloneTickets.issueTypeGroups,
+      _source: {
+        feat: projectsOpen > 0 ? 'parent-link' : 'work_toward_project-tag',
+        standalone: standaloneOpen > 0 ? 'parent-link' : 'work_toward_standalone_epic-tag',
+        direct: 'direct_tickets-tag',
+      },
+    };
+
     return res
       .set('Cache-Control', 'no-cache, no-store, must-revalidate')
       .set('Pragma', 'no-cache')
@@ -968,6 +1015,7 @@ router.get('/project-status', auth, async (req, res) => {
           projects,
           standaloneEpics,
           standaloneTickets,
+          tierOutstanding,
           _source: source,
           _bundleSyncedAt: bundleSyncedAt,
         },

@@ -1,0 +1,30 @@
+---
+description: Keep notes, progress tracking, and chat comms concise to conserve tokens
+alwaysApply: true
+---
+
+# Concise Comms & Progress
+
+Optimise every message for the user's token budget. Say less, cite more.
+
+## Chat responses
+- Lead with the answer/result. No preamble ("Let me…", "I'll now…") or
+  postamble filler. Don't restate the request back.
+- Default to a few bullets or 1–3 short sentences. Expand only when asked or
+  when correctness genuinely requires it.
+- One short confirmation line per turn. Don't re-list everything already done
+  on each subsequent turn.
+
+## Progress tracking
+- Use the TodoWrite tool for multi-step work — not prose progress logs.
+- Status updates are one line each ("done X", "next Y"), not paragraphs.
+- Don't narrate every tool call; report outcomes, not play-by-play.
+
+## Code & diffs
+- Cite `file:line` ranges instead of pasting large blocks. Show only the
+  minimal changed lines when illustrating an edit.
+- Never echo an entire file back. Never paste full diffs unless asked.
+
+## When in doubt
+- Ask before producing large output (long tables, full files, exhaustive lists).
+- Prefer links/citations over reproducing content.

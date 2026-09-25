@@ -11,6 +11,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
 import { useSosHistory } from '../hooks/useSosHistory';
+import { useSosTierSummary, SOS_TIERS } from '../hooks/useSosTierSummary';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { authenticatedPost, authenticatedPut, authenticatedGet } from '../utils/api';
@@ -20,6 +21,8 @@ import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseGantt from './ReleaseGantt';
 import SosEmailBar from './SosEmailBar';
+import SosTierSummaryBox from './SosTierSummaryBox';
+import SosReleaseCharts, { SosRagHeatmap } from './SosReleaseCharts';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -422,7 +425,8 @@ const SOS_COLUMNS = [
   { key: 'summary',    label: 'Summary',    width: '220px' },
   { key: 'status',     label: 'Status',     width: '100px' },
   { key: 'risk',       label: 'Risk',       width: '70px' },
-  { key: 'ccmDate',     label: 'CCM',        width: '140px' },
+  { key: 'fsdsDate',   label: 'FS/DS',      width: '140px' },
+  { key: 'ccmDate',    label: 'CCM',        width: '140px' },
   { key: 'cgDate',     label: 'CG',         width: '140px' },
   { key: 'pgDate',     label: 'PG',         width: '140px' },
   { key: 'assignee',   label: 'Assignee',   width: '110px' },
@@ -430,7 +434,7 @@ const SOS_COLUMNS = [
   { key: 'breakdown',  label: 'Breakdown',  width: '180px' },
 ];
 
-const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
+const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 
 /* ─────────────────────────────────────────────────────────────
    Helpers
@@ -443,16 +447,18 @@ function formatDate(val) {
 }
 
 function getRagColor(riskIndicator) {
-  if (!riskIndicator) return '#9e9e9e';
+  if (!riskIndicator) return RAG_COLORS.NotSet;
   const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '');
-  const key = val.split(' ')[0]; // "Red", "Yellow", "Green"
-  return RAG_COLORS[key] || '#9e9e9e';
+  const key = val.split(' ')[0];
+  return RAG_COLORS[key] || RAG_COLORS.NotSet;
 }
 
 function getRagLabel(riskIndicator) {
-  if (!riskIndicator) return '?';
-  const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '?');
-  return val.split(' ')[0] || '?'; // "Red", "Yellow", "Green"
+  if (!riskIndicator) return 'not set';
+  const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '');
+  const key = val.split(' ')[0];
+  if (key === 'Red' || key === 'Yellow' || key === 'Green') return key;
+  return 'not set';
 }
 
 
@@ -527,7 +533,15 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
           }}
           title={ragLabel}
         />
-        {formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)}
+        {ragLabel === 'not set' ? (
+          <span style={{ marginLeft: 6, fontSize: 11, color: '#9e9e9e' }}>not set</span>
+        ) : (
+          formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)
+        )}
+      </td>
+      {/* FS/DS Done */}
+      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
+        {formatDateWithHistory(item.key, 'fsdsDone', item.customfield_13861, checkpointHistory)}
       </td>
       {/* CC */}
       <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
@@ -644,7 +658,21 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, onRefresh, checkpointHistory = {}, gateData = null }) {
+function ReleaseSection({
+  version,
+  items,
+  breakdownDataMap,
+  loadingBreakdowns = false,
+  jiraBaseUrl,
+  onRefresh,
+  checkpointHistory = {},
+  gateData = null,
+  tierSummaries = null,
+  projectStatus = null,
+  onRetryTier = null,
+  onGenerate = null,
+  generating = false,
+}) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
     if (!gateData || !gateData.gates || !Array.isArray(gateData.gates)) return null;
@@ -682,19 +710,25 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
   const features = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'feature'), [items]);
   const initiatives = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'initiative'), [items]);
 
-  // Derive a rough RAG from items
   const ragCounts = useMemo(() => {
-    const counts = { Red: 0, Yellow: 0, Green: 0 };
+    const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
     items.forEach((i) => {
       const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
-      const v = raw.split(' ')[0]; // normalize "Red - Big Risk to Plan" → "Red"
-      if (v in counts) counts[v]++;
+      const v = String(raw).split(' ')[0];
+      if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
+      else counts.NotSet++;
     });
     return counts;
   }, [items]);
 
-  const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : 'Green';
-  const ragColor = RAG_COLORS[overallRag] || '#9e9e9e';
+  const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : ragCounts.Green > 0 ? 'Green' : 'NotSet';
+  const ragColor = RAG_COLORS[overallRag] || RAG_COLORS.NotSet;
+
+  const TIER_TITLES = {
+    feat: 'FEAT Work',
+    standalone: 'Standalone Epics',
+    direct: 'Direct Tickets',
+  };
 
   return (
     <div style={{
@@ -711,23 +745,62 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
                 background: ragColor, color: '#fff', borderRadius: '4px',
                 padding: '1px 8px', fontSize: '11px', fontWeight: 700,
               }}>
-                {overallRag}
+                {overallRag === 'NotSet' ? 'not set' : overallRag}
               </span>
             )}
           </div>
           <GateDateStrip ganttConfig={ganttConfig} />
         </div>
-        <button
-          onClick={onRefresh}
-          title="Refresh from JIRA"
-          style={{
-            fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
-            background: '#fff', color: '#555', cursor: 'pointer', padding: '3px 8px',
-          }}
-        >
-          ↻ Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onGenerate && (
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={generating}
+              title={`Team-exec briefing for FEAT / Standalone / Direct — ${version} only`}
+              style={{
+                fontSize: '11px', border: '1px solid #0d47a1', borderRadius: '4px',
+                background: generating ? '#e3f2fd' : '#0d47a1',
+                color: generating ? '#0d47a1' : '#fff',
+                cursor: generating ? 'not-allowed' : 'pointer',
+                padding: '3px 10px', fontWeight: 600,
+              }}
+            >
+              {generating ? '✦ Generating…' : '✦ Generate Exec Summary'}
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            title="Refresh from JIRA"
+            style={{
+              fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
+              background: '#fff', color: '#555', cursor: 'pointer', padding: '3px 8px',
+            }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+        {SOS_TIERS.map((tier) => (
+          <SosTierSummaryBox
+            key={tier}
+            title={TIER_TITLES[tier]}
+            tierState={tierSummaries?.[tier] || { state: 'idle' }}
+            onRetry={onRetryTier ? () => onRetryTier(tier) : null}
+          />
+        ))}
+      </div>
+
+      <SosReleaseCharts
+        ragCounts={ragCounts}
+        gateData={gateData}
+        projectStatus={projectStatus}
+        items={items}
+        release={version}
+        jiraBaseUrl={jiraBaseUrl}
+      />
 
       {/* Features */}
       <CollapsibleSection title="Features" count={features.length} accentColor="#1565c0">
@@ -764,7 +837,8 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
 
 function SosSummaryPage() {
   const { jiraBaseUrl } = useJiraConfig();
-  const { selectedTeamId } = useTeam();
+  const { selectedTeamId, selectedTeam } = useTeam();
+  const productId = selectedTeam?.id || selectedTeam?.productId || selectedTeamId || '';
 
   const {
     byVersion,
@@ -783,6 +857,16 @@ function SosSummaryPage() {
 
   const { checkpointHistory, fetchHistory } = useSosHistory();
 
+  const {
+    tierSummaries,
+    projectStatusByRelease,
+    generating,
+    generatingRelease,
+    generateError,
+    generateForRelease,
+    retryTier,
+  } = useSosTierSummary();
+
   // Sort versions: NDB-2.12 before NDB-2.11 etc, Unversioned last
   const sortedVersions = useMemo(() => {
     return Object.keys(byVersion).sort((a, b) => {
@@ -791,6 +875,11 @@ function SosSummaryPage() {
       return b.localeCompare(a, undefined, { numeric: true });
     });
   }, [byVersion]);
+
+  const activeVersions = useMemo(
+    () => sortedVersions.filter((v) => !PLACEHOLDER_VERSIONS.has(String(v).trim().toLowerCase())),
+    [sortedVersions]
+  );
 
   // Fetch gate data for all active releases
   const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
@@ -883,6 +972,31 @@ function SosSummaryPage() {
     runBatch(allItems, gateDataMap);
   }, [byVersion, gateDataMap, runBatch]);
 
+  const handleGenerateExecSummary = useCallback((version) => {
+    if (!productId || !version) return;
+    generateForRelease({
+      productId,
+      release: version,
+      items: byVersion[version] || [],
+      gateData: gateDataMap[version] || null,
+      breakdownDataMap,
+      checkpointHistory,
+    });
+  }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, generateForRelease]);
+
+  const handleRetryTier = useCallback((version, tier) => {
+    if (!productId) return;
+    retryTier({
+      productId,
+      release: version,
+      tier,
+      items: byVersion[version] || [],
+      gateData: gateDataMap[version] || null,
+      breakdownDataMap,
+      checkpointHistory,
+    });
+  }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, retryTier]);
+
   return (
     <div>
         {/* Page header */}
@@ -929,6 +1043,7 @@ function SosSummaryPage() {
               checkpointHistory={checkpointHistory}
               jiraBaseUrl={jiraBaseUrl}
               sortedVersions={sortedVersions}
+              tierSummaries={tierSummaries}
               disabled={loading || sortedVersions.length === 0}
             />
             <button
@@ -980,9 +1095,19 @@ function SosSummaryPage() {
           <p style={{ color: '#aaa', fontSize: '13px' }}>No items found. Click ↻ Refresh All to load from JIRA.</p>
         )}
 
+        {generateError && (
+          <p style={{ color: '#d32f2f', fontSize: '12px', marginBottom: 12 }}>{generateError}</p>
+        )}
+
         {Object.keys(releaseDatesConfig).length > 0 && (
           <ReleaseGantt releases={releaseDatesConfig} />
         )}
+
+        <SosRagHeatmap
+          byVersion={byVersion}
+          sortedVersions={activeVersions}
+          defaultOpen={false}
+        />
 
         <BulkReviewPanel
           pendingReviews={pendingReviews}
@@ -1004,6 +1129,11 @@ function SosSummaryPage() {
             onRefresh={() => fetchAll(selectedTeamId)}
             checkpointHistory={checkpointHistory}
             gateData={gateDataMap[version] || null}
+            tierSummaries={tierSummaries[version] || null}
+            projectStatus={projectStatusByRelease[version] || null}
+            onRetryTier={(tier) => handleRetryTier(version, tier)}
+            onGenerate={() => handleGenerateExecSummary(version)}
+            generating={generating && generatingRelease === version}
           />
         ))}
     </div>

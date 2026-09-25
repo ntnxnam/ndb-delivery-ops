@@ -535,12 +535,264 @@ async function generateReleaseSummary(intelligence) {
   return trimmed;
 }
 
+// ── SoS work-tier briefing (team-exec density, one release × one tier) ────────
+
+const TIER_LABELS = {
+  feat: 'FEAT Work',
+  standalone: 'Standalone Epics',
+  direct: 'Direct Tickets',
+};
+
+/**
+ * Team-exec SoS box: state-of-business for one work tier.
+ * Not the per-feature VP prompt — aggregates + top critical items only.
+ * Audience: team-exec / director (~15 seconds).
+ */
+const SOS_TIER_SYSTEM_PROMPT = `You are a senior TPM writing a Scrum-of-Scrums work-tier briefing for engineering leadership (team-exec). They have minutes, not hours. Answer: is this slice of the release healthy for the business — and if not, what to escalate.
+
+OUTPUT FORMAT (exact order; omit empty sections including their headers):
+
+## <Tier Name> — <RELEASE>
+
+🔴 TLDR: …     OR     🟡 TLDR: …     OR     🟢 TLDR: …
+(Use EXACTLY one emoji — 🔴 or 🟡 or 🟢 — immediately before TLDR. Never write 🔴/🟡/🟢 as a menu of options.)
+1–2 sentences. Verdict first (RED/YELLOW/GREEN), then the dominant business risk in plain English.
+If GREEN with no material risk: "On track — no blocking issues."
+When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (never "all four" without naming every key).
+
+⚠️ Call-outs:   ← MANDATORY when CALL_OUTS below is non-empty. Copy lines/keys verbatim. One bullet per callout row.
+• Past gate lagging — <this release's most recently elapsed gate> (<date>): KEY1, …  (status not at expected clearance — CCM→Code Complete Met, CG→Commit Gate Met, PG→Promotion Gate Met, GA→Closed)
+• Keep an eye — dates past next gate <upcoming gate> (<date>): KEY1, …
+• Risk Indicator not set (N): KEY1, KEY2, …
+• Stale status updates (≥14d): KEY1, KEY2, …
+• <Date field> moved (last 7d): KEY1, KEY2, …
+(Omit this whole section only when CALL_OUTS says none.)
+
+📋 Key Risks:
+• ≤3 bullets. Each must cite a SOURCE from CRITICAL_ITEMS, OUTSTANDING, CALL_OUTS, RAG, or P0/MUSTFIX. Name ticket keys only from VALID TICKET KEYS.
+
+👁 Keep an eye:
+• Include when CALL_OUTS.datesPastNextGate is non-empty — list those keys vs the upcoming gate. Else omit section.
+
+✅ Next Owner Actions:
+• ≤2 bullets. Format: <owner or role> — <specific ask>. No "monitor" or "follow up".
+• For Risk Indicator, Requirements Done, FS/DS Done, Test Plan, or gate dates: owner role MUST be "FEAT Manager" — never Product Owner, Product Manager, or Product Management.
+• For past-gate lagging: FEAT Manager — advance status to the expected clearance named in CALL_OUTS (whatever past gate this release is on).
+
+RULES:
+- Under 180 words total (Call-outs keys may push slightly over — keep keys complete).
+- Use ONLY numbers and keys in the user message. Never invent tickets, owners, or dates.
+- Prefer CRITICAL_ITEMS, CALL_OUTS (esp. past-gate lagging), and P0/MUSTFIX over volume narration.
+- Past gate and next gate come from THIS release's calendar in CALL_OUTS — never assume CG or PG.
+- Risk Indicator not set is a first-class callout when CALL_OUTS.riskNotSet.count > 0 — always include the Call-outs bullet with every key.
+- Never output scoring rationale, banners, or "Here is the summary".
+
+RAG VERDICT (first match wins):
+- If ITEM_COUNT is 0 and OUTSTANDING is none and CRITICAL_ITEMS is none: do NOT invent GREEN/On track. Output only the ## heading and one line: "No items in this tier for this release." Omit TLDR, Call-outs, Key Risks, and Actions.
+- RED if OPEN_P0 > 0, OR past-gate lagging count > 0, OR Red RAG dominates the tier, OR days to next gate ≤ 14 with material outstanding Bugs/Tests
+- YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR dates past next gate > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material
+- GREEN only when the tier has items and Red≈0, Yellow negligible, P0=0, must-fix=0, NotSet≈0, no past-gate lagging, no dominant open-work risk
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.
+- Counts of NotSet / stale / date-moved / gate-lagging items MUST equal the length of the key list you print from CALL_OUTS.`;
+
+function extractKeysFromItems(criticalItems, extraKeys = []) {
+  const seen = new Set();
+  const keys = [];
+  const push = (k) => {
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    keys.push(k);
+  };
+  for (const item of criticalItems || []) push(item?.key);
+  for (const k of extraKeys || []) push(k);
+  return keys;
+}
+
+function collectCalloutKeys(callouts) {
+  const keys = [];
+  if (!callouts) return keys;
+  for (const k of callouts.riskNotSet?.keys || []) keys.push(k);
+  for (const k of callouts.staleStatusUpdates?.keys || []) keys.push(k);
+  for (const row of callouts.dateMovesLast7d || []) {
+    for (const k of row.keys || []) keys.push(k);
+  }
+  for (const k of callouts.pastGateLagging?.keys || []) keys.push(k);
+  for (const k of callouts.datesPastNextGate?.keys || []) keys.push(k);
+  return keys;
+}
+
+function formatCalloutsBlock(callouts) {
+  if (!callouts) return '  (none)';
+  const lines = [];
+  const past = callouts.pastGateLagging;
+  if (past?.count > 0 && past.keys?.length && past.gate) {
+    lines.push(
+      `  Past gate lagging — ${past.gate.label || past.gate.kind} (${past.gate.iso}) ` +
+      `passed ${past.gate.daysAgo ?? '?'}d ago; status not yet "${past.gate.expectedStatus}" ` +
+      `(${past.count}): ${past.keys.join(', ')}`
+    );
+  }
+  const next = callouts.datesPastNextGate;
+  if (next?.count > 0 && next.keys?.length && next.gate) {
+    lines.push(
+      `  Keep an eye — item dates past next gate ${next.gate.label || next.gate.kind} ` +
+      `(${next.gate.iso}, ${next.gate.daysUntil ?? '?'}d out) (${next.count}): ${next.keys.join(', ')}`
+    );
+  }
+  const notSet = callouts.riskNotSet;
+  if (notSet?.count > 0 && notSet.keys?.length) {
+    lines.push(`  Risk Indicator not set (${notSet.count}): ${notSet.keys.join(', ')}`);
+  }
+  const stale = callouts.staleStatusUpdates;
+  if (stale?.count > 0 && stale.keys?.length) {
+    const days = stale.thresholdDays || 14;
+    lines.push(`  Stale status updates (≥${days}d) (${stale.count}): ${stale.keys.join(', ')}`);
+  }
+  for (const row of callouts.dateMovesLast7d || []) {
+    if (!row.keys?.length) continue;
+    lines.push(`  ${row.label || row.field} moved (last 7d) (${row.keys.length}): ${row.keys.join(', ')}`);
+  }
+  const gc = callouts.gateContext;
+  if (gc?.pastGate || gc?.nextGate) {
+    lines.push(
+      `  Gate calendar: past=${gc.pastGate ? `${gc.pastGate.kind}@${gc.pastGate.iso}` : 'none'}; ` +
+      `next=${gc.nextGate ? `${gc.nextGate.kind}@${gc.nextGate.iso}` : 'none'}`
+    );
+  }
+  return lines.length ? lines.join('\n') : '  (none)';
+}
+
+/**
+ * Build user prompt for a SoS tier briefing — structured facts, not a corpus dump.
+ * @param {object} payload
+ */
+function buildSosTierPrompt(payload) {
+  const {
+    release,
+    tier,
+    ragCounts = {},
+    itemCount = 0,
+    outstandingByType = {},
+    gateDates = {},
+    criticalItems = [],
+    callouts = null,
+    p0Count = 0,
+    mustFixCount = 0,
+    p0Keys = [],
+    mustFixKeys = [],
+  } = payload || {};
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tierLabel = TIER_LABELS[tier] || tier || 'Unknown Tier';
+  const validKeys = extractKeysFromItems(
+    criticalItems,
+    [...p0Keys, ...mustFixKeys, ...collectCalloutKeys(callouts)]
+  );
+
+  const keyReferenceBlock = validKeys.length > 0
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n` +
+      validKeys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')
+    : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+
+  const outstandingLines = Object.entries(outstandingByType)
+    .filter(([, n]) => n != null && Number(n) > 0)
+    .map(([label, n]) => `  ${label}: ${n}`)
+    .join('\n') || '  (none open)';
+
+  const criticalLines = (criticalItems || []).length > 0
+    ? (criticalItems || []).slice(0, 8).map((c, i) => {
+      const rag = c.rag || 'NotSet';
+      const line = (c.tldr || c.summary || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+      return `  ${i + 1}. [${c.key}] ${rag} — ${line || '(no TLDR on screen)'}`;
+    }).join('\n')
+    : '  (none — synthesize from RAG / OUTSTANDING / CALL_OUTS / P0 / MUSTFIX only)';
+
+  return `TODAY: ${today}
+RELEASE: ${release}
+TIER: ${tierLabel}
+ITEM_COUNT: ${itemCount}
+RAG: Red=${ragCounts.Red ?? 0} Yellow=${ragCounts.Yellow ?? 0} Green=${ragCounts.Green ?? 0} NotSet=${ragCounts.NotSet ?? 0}
+OPEN_P0: ${p0Count}
+OPEN_MUSTFIX: ${mustFixCount}
+CG_DATE: ${gateDates.cgDate || 'unknown'} (days=${gateDates.daysToCommitGate ?? 'unknown'})
+PG_DATE: ${gateDates.pgDate || 'unknown'} (days=${gateDates.daysToPromotionGate ?? 'unknown'})
+
+${keyReferenceBlock}
+
+OUTSTANDING BY ISSUE TYPE (this tier):
+${outstandingLines}
+
+CRITICAL_ITEMS (top risks already on screen — key, RAG, one-line TLDR):
+${criticalLines}
+
+CALL_OUTS (copy keys exactly when non-empty — counts must match listed keys):
+${formatCalloutsBlock(callouts)}
+
+OWNER ROLE HINT: date/risk hygiene asks → FEAT Manager (not Product Owner / Product Manager).
+
+Write the briefing for ${tierLabel} — ${release} now. Answer state-of-business for this slice only.
+When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+/**
+ * Generate a SoS work-tier AI summary from a tiny structured packet.
+ * No JIRA — payload fully provided by the caller.
+ *
+ * @param {object} payload
+ * @returns {Promise<string>}
+ */
+async function generateSosTierSummary(payload) {
+  if (!payload?.release || !payload?.tier) {
+    throw new Error('release and tier are required for SoS tier summary');
+  }
+  if (!TIER_LABELS[payload.tier]) {
+    throw new Error(`tier must be one of: ${Object.keys(TIER_LABELS).join(', ')}`);
+  }
+  const itemCount = Number(payload.itemCount) || 0;
+  const openCount = Object.values(payload.outstandingByType || {})
+    .reduce((s, n) => s + (Number(n) || 0), 0);
+  const criticalCount = (payload.criticalItems || []).length;
+  if (itemCount === 0 && openCount === 0 && criticalCount === 0) {
+    const label = TIER_LABELS[payload.tier];
+    return `## ${label} — ${payload.release}\n\nNo items in this tier for this release.`;
+  }
+  const messages = [
+    { role: 'system', content: SOS_TIER_SYSTEM_PROMPT },
+    { role: 'user', content: buildSosTierPrompt(payload) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error('NAI returned an empty SoS tier summary after trim');
+  }
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
+  generateSosTierSummary,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
+  SOS_TIER_SYSTEM_PROMPT,
   // Exposed for testing
-  _internals: { buildUserPrompt, buildTicketContext, buildGateGapsLine, buildReleaseContextBlock, buildReleaseSummaryPrompt },
+  _internals: {
+    buildUserPrompt,
+    buildTicketContext,
+    buildGateGapsLine,
+    buildReleaseContextBlock,
+    buildReleaseSummaryPrompt,
+    buildSosTierPrompt,
+    extractKeysFromItems,
+    collectCalloutKeys,
+    formatCalloutsBlock,
+    TIER_LABELS,
+  },
 };
