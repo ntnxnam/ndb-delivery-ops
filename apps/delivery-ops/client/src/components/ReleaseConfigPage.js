@@ -2,12 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Toast } from '../shared/components/Toast';
 import ReleaseGantt from './ReleaseGantt';
 
-// Normalise a ccmXGate value: config may store it as an object (new) or array (legacy).
-function toGateArray(val) {
-  if (!val) return [];
-  return Array.isArray(val) ? val : [val];
-}
-
 /**
  * Gate column definitions.
  *
@@ -30,32 +24,38 @@ const GATE_COLUMNS = [
     key: 'ccm',
     label: 'CCM',
     isGA: false,
-    getAll: cfg => [
-      ...toGateArray(cfg?.ccm1Gate),
-      ...toGateArray(cfg?.ccm2Gate),
-    ].filter(x => x?.date),
-    getCurrent: cfg => {
-      const all = [...toGateArray(cfg?.ccm1Gate), ...toGateArray(cfg?.ccm2Gate)].filter(x => x?.date);
-      return all[all.length - 1]?.date || '';
+    // Collect all ccm*Gate slots dynamically so ccm3Gate, ccm4Gate, etc. are never dropped.
+    _ccmSlots: cfg => {
+      const nums = Object.keys(cfg || {})
+        .filter(k => /^ccm\d+Gate$/.test(k))
+        .map(k => parseInt(k.replace('ccm', '').replace('Gate', ''), 10))
+        .sort((a, b) => a - b);
+      return nums.length ? nums.map(n => `ccm${n}Gate`) : ['ccm1Gate'];
     },
-    setCurrent: (cfg, v) => ({
-      ...cfg,
-      ccm2Gate: v ? { label: 'Code Complete Met', date: v, color: '#de350b', style: 'solid' } : null,
-    }),
-    stampReason: (cfg, r) => {
-      const arr = toGateArray(cfg?.ccm2Gate).length
-        ? toGateArray(cfg?.ccm2Gate)
-        : toGateArray(cfg?.ccm1Gate);
-      if (!arr.length) return cfg;
-      const which = toGateArray(cfg?.ccm2Gate).length ? 'ccm2Gate' : 'ccm1Gate';
-      const currentVal = cfg[which];
-      // For object format, update the object directly; for array format, update last element
-      if (Array.isArray(currentVal)) {
-        const updated = [...currentVal];
-        updated[updated.length - 1] = { ...updated[updated.length - 1], reason: r };
-        return { ...cfg, [which]: updated };
+    getAll: function(cfg) {
+      return this._ccmSlots(cfg).map(k => cfg?.[k]).filter(x => x?.date);
+    },
+    getCurrent: function(cfg) {
+      const slots = this._ccmSlots(cfg);
+      const last = [...slots].reverse().find(k => cfg?.[k]?.date);
+      return last ? cfg[last].date : '';
+    },
+    setCurrent: function(cfg, v) {
+      const slots = this._ccmSlots(cfg);
+      const last = [...slots].reverse().find(k => cfg?.[k]?.date);
+      if (!last) {
+        return { ...cfg, ccm1Gate: v ? { label: 'Code Complete', date: v, color: '#de350b', style: 'solid' } : null };
       }
-      return { ...cfg, [which]: { ...currentVal, reason: r } };
+      const nextNum = parseInt(last.replace('ccm', '').replace('Gate', ''), 10) + 1;
+      const nextKey = `ccm${nextNum}Gate`;
+      // If the last slot already has this value, update in place; otherwise push a new slot
+      if (cfg[last]?.date === v) return cfg;
+      return { ...cfg, [nextKey]: v ? { label: `Code Complete ${nextNum}`, date: v, color: '#de350b', style: 'solid' } : null };
+    },
+    stampReason: function(cfg, r) {
+      const slots = this._ccmSlots(cfg);
+      const slot = [...slots].reverse().find(k => cfg?.[k]?.date);
+      return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
     },
   },
   {
@@ -117,34 +117,50 @@ const GATE_COLUMNS = [
     key: 'ga',
     label: 'GA',
     isGA: true,
-    getAll: cfg => [
-      ...(cfg?.gaOverflow || []),
-      cfg?.ga1,
-      cfg?.ga2,
-      cfg?.ga3,
-    ].filter(x => x?.date),
-    getCurrent: cfg => cfg?.ga3?.date || cfg?.ga2?.date || cfg?.ga1?.date || '',
-    setCurrent: (cfg, v) => {
-      const slots = ['ga1', 'ga2', 'ga3'];
+    // Collect all ga* slots dynamically so ga4, ga5, etc. are never dropped.
+    _gaSlots: cfg => {
+      const nums = Object.keys(cfg || {})
+        .filter(k => /^ga\d+$/.test(k))
+        .map(k => parseInt(k.slice(2), 10))
+        .sort((a, b) => a - b);
+      return nums.length ? nums.map(n => `ga${n}`) : ['ga1'];
+    },
+    getAll: function(cfg) {
+      const slots = this._gaSlots(cfg);
+      return [
+        ...(cfg?.gaOverflow || []),
+        ...slots.map(k => cfg?.[k]),
+      ].filter(x => x?.date);
+    },
+    getCurrent: function(cfg) {
+      const slots = this._gaSlots(cfg);
+      const last = [...slots].reverse().find(k => cfg?.[k]?.date);
+      return last ? cfg[last].date : '';
+    },
+    setCurrent: function(cfg, v) {
+      const slots = this._gaSlots(cfg);
       const last  = [...slots].reverse().find(k => cfg?.[k]?.date);
       if (!last) return { ...cfg, ga1: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
       const idx  = slots.indexOf(last);
       const next = slots[Math.min(idx + 1, slots.length - 1)];
       if (next === last) {
-        // All named slots full — push oldest into overflow (unlimited history), rotate, set newest
-        const overflow = [...(cfg.gaOverflow || []), cfg.ga1].filter(x => x?.date);
+        // All named slots full — push oldest into overflow, rotate, set newest
+        const overflow = [...(cfg.gaOverflow || []), cfg[slots[0]]].filter(x => x?.date);
+        const rotated = {};
+        slots.forEach((k, i) => { rotated[k] = i < slots.length - 1 ? cfg[slots[i + 1]] : null; });
+        const newSlotKey = `ga${parseInt(slots[slots.length - 1].slice(2), 10) + 1}`;
         return {
           ...cfg,
           gaOverflow: overflow,
-          ga1: cfg.ga2,
-          ga2: cfg.ga3,
-          ga3: v ? { ...(cfg.ga3 || {}), date: v, reason: undefined } : null,
+          ...rotated,
+          [newSlotKey]: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null,
         };
       }
       return { ...cfg, [next]: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
     },
-    stampReason: (cfg, r) => {
-      const slot = ['ga3','ga2','ga1'].find(k => cfg?.[k]?.date);
+    stampReason: function(cfg, r) {
+      const slots = this._gaSlots(cfg);
+      const slot = [...slots].reverse().find(k => cfg?.[k]?.date);
       return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
     },
   },

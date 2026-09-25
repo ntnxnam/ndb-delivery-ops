@@ -637,7 +637,7 @@ async function sendGaChangedEmail({ version, oldGaDate, newGaDate, reason, chang
 /**
  * Create or update release dates configuration
  * POST /api/config/release-dates
- * Body: { version, ecDate, ccm1Gate[], ccm2Gate[], codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, ga1, ga2, reason }
+ * Body: { version, ecDate, ccm1Gate[], ccm2Gate[], codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, ga1, ga2, reason, ...anyExtraGateFields }
  */
 router.post('/release-dates', express.json(), (req, res) => {
   const username = getUsername(req);
@@ -646,11 +646,15 @@ router.post('/release-dates', express.json(), (req, res) => {
     return res.status(403).json({ error: 'Access denied. You are not authorized to manage release configuration.' });
   }
 
-  const { version, ecDate, ccm1Gate, ccm2Gate, codeFreeze, commitGate1, commitGate2, promotionGate1, promotionGate2, promotionGate3, promotionGateOverflow, ga1, ga2, ga3, gaOverflow, reason } = req.body;
-  
+  // Pull out non-gate fields; everything else in the body is treated as a gate/date field.
+  const { version, reason, dateHistory: _ignoreClientHistory, ...gateFields } = req.body || {};
+
   if (!version) {
     return res.status(400).json({ error: 'Release version is required' });
   }
+
+  // Destructure known gates for validation/side-effects — still accept any unknown ones below.
+  const { ecDate, ccm1Gate, ccm2Gate, ga1, ga2, ga3 } = gateFields;
 
   try {
     const config = loadReleaseDatesConfig();
@@ -666,22 +670,21 @@ router.post('/release-dates', express.json(), (req, res) => {
       return val.date ? val : null;
     }
 
-    // Create release configuration object
-    const releaseConfig = {
-      ecDate: ecDate || null,
-      ccm1Gate: normaliseGate(ccm1Gate),
-      ccm2Gate: normaliseGate(ccm2Gate),
-      codeFreeze: codeFreeze || null,
-      commitGate1: commitGate1 || null,
-      commitGate2: commitGate2 || null,
-      promotionGate1: promotionGate1 || null,
-      promotionGate2: promotionGate2 || null,
-      promotionGate3: promotionGate3 || null,
-      ga1: ga1 || null,
-      ga2: ga2 || null,
-      ga3: ga3 || null
-    };
-    
+    // Build release config:
+    // 1. Start from the existing saved config so unknown fields (ga4, ccm3Gate, overflow, etc.) survive.
+    // 2. Apply all gate fields sent by the client on top (null-safe).
+    // 3. Normalise ccm* which may arrive as arrays from legacy callers.
+    const SKIP_KEYS = new Set(['version', 'reason', 'dateHistory']);
+    const releaseConfig = { ...previousConfig };
+    for (const [key, val] of Object.entries(gateFields)) {
+      if (SKIP_KEYS.has(key)) continue;
+      if (key === 'ccm1Gate' || key === 'ccm2Gate') {
+        releaseConfig[key] = normaliseGate(val);
+      } else {
+        releaseConfig[key] = val ?? null;
+      }
+    }
+
     // Carry forward existing date history and append any dates that changed
     const prevDateHistory = previousConfig.dateHistory || {};
     const newDateHistory = { ...prevDateHistory };
@@ -695,10 +698,9 @@ router.post('/release-dates', express.json(), (req, res) => {
       }
     }
 
-    // Simple date fields
+    // Record history for all gate fields present in the incoming payload
     recordHistory('ecDate', previousConfig.ecDate, ecDate);
-    // Object gate fields (ccm1Gate, ccm2Gate are now objects like all other gates)
-    ['codeFreeze','ccm1Gate','ccm2Gate','commitGate1','commitGate2','promotionGate1','promotionGate2','promotionGate3','ga1','ga2','ga3'].forEach(key => {  // eslint-disable-line
+    Object.keys(gateFields).filter(k => k !== 'ecDate').forEach(key => {
       recordHistory(key, previousConfig[key]?.date, releaseConfig[key]?.date);
     });
 
