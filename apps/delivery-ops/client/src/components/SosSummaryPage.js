@@ -423,17 +423,11 @@ function BulkReviewPanel({ pendingReviews, onPushOne, onDiscardOne, onPushAll, o
 }
 
 const SOS_COLUMNS = [
-  { key: 'key',        label: 'Key',        width: '90px' },
-  { key: 'summary',    label: 'Summary',    width: '220px' },
-  { key: 'status',     label: 'Status',     width: '100px' },
-  { key: 'risk',       label: 'Risk',       width: '70px' },
-  { key: 'fsdsDate',   label: 'FS/DS',      width: '140px' },
-  { key: 'ccmDate',    label: 'CCM',        width: '140px' },
-  { key: 'cgDate',     label: 'CG',         width: '140px' },
-  { key: 'pgDate',     label: 'PG',         width: '140px' },
-  { key: 'assignee',   label: 'Assignee',   width: '110px' },
-  { key: 'aiSummary',  label: 'AI Summary', width: '260px' },
-  { key: 'breakdown',  label: 'Breakdown',  width: '180px' },
+  { key: 'identity',   label: 'Feature / Initiative', width: '200px' },
+  { key: 'state',      label: 'State',                width: '90px'  },
+  { key: 'dates',      label: 'Dates',                width: '130px' },
+  { key: 'aiSummary',  label: 'AI Summary',           width: '300px' },
+  { key: 'breakdown',  label: 'Breakdown',            width: '180px' },
 ];
 
 const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
@@ -501,68 +495,84 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
 
+  // Date rows: label → field mapping for the stacked Dates cell
+  const DATE_ROWS = [
+    { label: 'FS/DS', field: 'fsdsDone',     raw: item.customfield_13861 },
+    { label: 'CCM',   field: 'codeComplete',  raw: item.customfield_11067 },
+    { label: 'CG',    field: 'commitGate',    raw: item.customfield_35863 },
+    { label: 'PG',    field: 'promotionGate', raw: item.customfield_35864 },
+  ];
+
   return (
     <tr style={{ borderBottom: '1px solid #eee', verticalAlign: 'top' }}>
-      {/* Key */}
-      <td style={{ padding: '6px 8px', width: '90px', whiteSpace: 'nowrap' }}>
+
+      {/* ── Identity: key + summary + assignee stacked ── */}
+      <td style={{ padding: '8px 10px', width: '200px' }}>
         <a
-          href={jiraBaseUrl ? `${jiraBaseUrl}/browse/${item.key}` : `#`}
+          href={jiraBaseUrl ? `${jiraBaseUrl}/browse/${item.key}` : '#'}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: '#1565c0', fontSize: '12px', fontWeight: 600 }}
+          style={{ color: '#1565c0', fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '3px' }}
         >
           {item.key}
         </a>
-      </td>
-      {/* Summary */}
-      <td style={{ padding: '6px 8px', fontSize: '12px', maxWidth: '220px' }}>
-        <span title={item.summary}>{item.summary}</span>
-      </td>
-      {/* Status */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#444' }}>
-        {item.status || '—'}
-      </td>
-      {/* Risk — RAG dot plus a movement trail when the indicator has changed */}
-      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            width: '14px',
-            height: '14px',
-            borderRadius: '50%',
-            background: ragColor,
-            verticalAlign: 'middle',
-          }}
-          title={ragLabel}
-        />
-        {ragLabel === 'not set' ? (
-          <span style={{ marginLeft: 6, fontSize: 11, color: '#9e9e9e' }}>not set</span>
-        ) : (
-          formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)
+        <div style={{ fontSize: '11px', color: '#333', lineHeight: '1.4', marginBottom: '4px' }}
+             title={item.summary}>
+          {item.summary}
+        </div>
+        {item.assignee && (
+          <div style={{ fontSize: '10px', color: '#888' }}>
+            👤 {item.assignee}
+          </div>
         )}
       </td>
-      {/* FS/DS Done */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'fsdsDone', item.customfield_13861, checkpointHistory)}
+
+      {/* ── State: RAG dot + status stacked ── */}
+      <td style={{ padding: '8px 10px', width: '90px', verticalAlign: 'top' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+          <span
+            style={{
+              display: 'inline-block', width: '10px', height: '10px',
+              borderRadius: '50%', background: ragColor, flexShrink: 0,
+            }}
+            title={ragLabel}
+          />
+          <span style={{ fontSize: '11px', fontWeight: 600, color: ragColor }}>
+            {ragLabel === 'not set' ? <span style={{ color: '#bbb' }}>—</span> : ragLabel}
+          </span>
+        </div>
+        {ragLabel !== 'not set' && (
+          <div style={{ fontSize: '10px', color: '#888' }}>
+            {formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)}
+          </div>
+        )}
+        <div style={{ fontSize: '10px', color: '#555', marginTop: '4px', fontStyle: 'italic' }}>
+          {item.status || '—'}
+        </div>
       </td>
-      {/* CC */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'codeComplete', item.customfield_11067, checkpointHistory)}
+
+      {/* ── Dates: FS/DS / CCM / CG / PG stacked ── */}
+      <td style={{ padding: '8px 10px', width: '130px', verticalAlign: 'top' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          {DATE_ROWS.map(({ label, field, raw }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span style={{
+                fontSize: '9px', fontWeight: 700, color: '#888',
+                textTransform: 'uppercase', letterSpacing: '0.4px',
+                minWidth: '30px', flexShrink: 0,
+              }}>
+                {label}
+              </span>
+              <span style={{ fontSize: '11px', color: raw ? '#333' : '#ccc' }}>
+                {raw ? formatDateWithHistory(item.key, field, raw, checkpointHistory) : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
       </td>
-      {/* CG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'commitGate', item.customfield_35863, checkpointHistory)}
-      </td>
-      {/* PG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'promotionGate', item.customfield_35864, checkpointHistory)}
-      </td>
-      {/* Assignee */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#444', whiteSpace: 'nowrap' }}>
-        {item.assignee || '—'}
-      </td>
-      {/* AI Exec Summary */}
-      <td style={{ padding: '6px 8px', minWidth: '260px' }}>
+
+      {/* ── AI Exec Summary ── */}
+      <td style={{ padding: '8px 10px', verticalAlign: 'top' }}>
         <ExecSummaryCell
           item={item}
           selectedVersion={version}
@@ -571,8 +581,9 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
           releaseContext={null}
         />
       </td>
-      {/* Task Breakdown */}
-      <td style={{ padding: '6px 8px', minWidth: '180px' }}>
+
+      {/* ── Task Breakdown ── */}
+      <td style={{ padding: '8px 10px', width: '180px', verticalAlign: 'top' }}>
         <TaskBreakdownCell
           jiraKey={item.key}
           breakdownData={breakdown}
@@ -580,6 +591,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
           compact={true}
         />
       </td>
+
     </tr>
   );
 });
@@ -595,7 +607,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, loadingB
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '1250px' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '820px' }}>
         <thead>
           <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
             {SOS_COLUMNS.map((col) => (
