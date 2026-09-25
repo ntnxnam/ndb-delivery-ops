@@ -22,7 +22,8 @@ import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseGantt from './ReleaseGantt';
 import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
-import SosReleaseCharts, { SosRagHeatmap } from './SosReleaseCharts';
+import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
+import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -672,6 +673,9 @@ function ReleaseSection({
   onRetryTier = null,
   onGenerate = null,
   generating = false,
+  kpiData = null,
+  kpiLoading = false,
+  kpiError = null,
 }) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
@@ -750,6 +754,15 @@ function ReleaseSection({
             )}
           </div>
           <GateDateStrip ganttConfig={ganttConfig} />
+          {/* KPI breakdown per release — shown at top of each release section */}
+          {(kpiData || kpiLoading || kpiError) && (
+            <KpiBreakdownStrip
+              kpiData={kpiData}
+              loading={kpiLoading}
+              error={kpiError}
+              jiraBaseUrl={jiraBaseUrl}
+            />
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {onGenerate && (
@@ -857,6 +870,9 @@ function SosSummaryPage() {
 
   const { checkpointHistory, fetchHistory } = useSosHistory();
 
+  // KPI breakdown per release — loaded once activeVersions are known
+  const { dataByRelease: kpiDataByRelease, loadingRelease: kpiLoadingByRelease, errorByRelease: kpiErrorByRelease, load: loadKpiForRelease } = useReleaseKpiBreakdown();
+
   const {
     tierSummaries,
     projectStatusByRelease,
@@ -889,6 +905,14 @@ function SosSummaryPage() {
     if (!selectedTeamId) return;
     fetchAll(selectedTeamId);
   }, [fetchAll, selectedTeamId]);
+
+  // Load KPI breakdown for each active release (lazy — fires once per version)
+  useEffect(() => {
+    if (!selectedTeamId || activeVersions.length === 0) return;
+    activeVersions.forEach((v) => {
+      loadKpiForRelease(v, selectedTeamId);
+    });
+  }, [activeVersions, selectedTeamId, loadKpiForRelease]);
 
   // All items that need a summary (for batch button label)
   const needsCount = useMemo(() => {
@@ -1200,6 +1224,9 @@ function SosSummaryPage() {
             onRetryTier={(tier) => handleRetryTier(version, tier)}
             onGenerate={() => handleGenerateExecSummary(version)}
             generating={generating && generatingRelease === version}
+            kpiData={kpiDataByRelease[version] || null}
+            kpiLoading={kpiLoadingByRelease[version] || false}
+            kpiError={kpiErrorByRelease[version] || null}
           />
         ))}
     </div>

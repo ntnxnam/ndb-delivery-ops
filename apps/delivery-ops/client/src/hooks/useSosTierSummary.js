@@ -380,6 +380,31 @@ export function assembleTierForRelease({
     ? groupsToTotals(tierOutstanding.direct)
     : sumOutstandingByType(standaloneTickets ? [standaloneTickets.issueTypeGroups] : []);
 
+  // Derive a meaningful RAG for direct tickets from outstanding open work.
+  // We have no per-ticket risk indicator for direct tickets, so we synthesise:
+  //   RED    — any Bugs outstanding (direct bugs = highest risk)
+  //   YELLOW — any other open work (Improvement / Dev Code / Test / other)
+  //   GREEN  — total open is zero
+  const directTotalOpen = Object.values(directOutstanding).reduce((s, n) => s + n, 0);
+  const directBugsOpen  = directOutstanding['Bug'] || 0;
+  const directRagCounts = directTotalOpen === 0
+    ? { Red: 0, Yellow: 0, Green: 1, NotSet: 0 }
+    : directBugsOpen > 0
+      ? { Red: 1, Yellow: directTotalOpen - directBugsOpen > 0 ? 1 : 0, Green: 0, NotSet: 0 }
+      : { Red: 0, Yellow: 1, Green: 0, NotSet: 0 };
+
+  // Build a synthetic callouts block so the model can surface open-work risk.
+  // Direct tickets have no Risk Indicator or status-update dates; we mark every
+  // open ticket bucket as "NotSet" so the prompt sees the right count.
+  const directItemCount = standaloneTickets
+    ? (standaloneTickets.issueTypeGroups || []).reduce((s, g) => s + (g.total || 0), 0)
+    : 0;
+  const directCallouts = {
+    ...buildTierCallouts([], checkpointHistory, releaseGates),
+    // Represent total open count as NotSet (no per-ticket keys available here)
+    riskNotSet: { count: directTotalOpen, keys: [] },
+  };
+
   const criticalItems = buildCriticalItems(features);
   const releaseGates = resolveReleaseGateContext(gateData);
   const featCallouts = buildTierCallouts(features, checkpointHistory, releaseGates);
@@ -428,13 +453,11 @@ export function assembleTierForRelease({
     direct: {
       ...shared,
       tier: 'direct',
-      ragCounts: { Red: 0, Yellow: 0, Green: 0, NotSet: 0 },
-      itemCount: standaloneTickets
-        ? (standaloneTickets.issueTypeGroups || []).reduce((s, g) => s + (g.total || 0), 0)
-        : 0,
+      ragCounts: directRagCounts,
+      itemCount: directItemCount,
       outstandingByType: directOutstanding,
       criticalItems: [],
-      callouts: buildTierCallouts([], checkpointHistory, releaseGates),
+      callouts: directCallouts,
     },
   };
 }

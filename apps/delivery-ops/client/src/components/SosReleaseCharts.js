@@ -327,6 +327,176 @@ function OutstandingStacks({ projectStatus, release, jiraBaseUrl }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   KpiBreakdownStrip — compact KPI chips shown at the top of each
+   ReleaseSection. Shows total / done / open for each configured KPI.
+   Props:
+     kpiData   — { [kpiId]: { name, total, done, open, links } | { error } }
+     loading   — bool
+     error     — string|null
+     jiraBaseUrl — string
+───────────────────────────────────────────────────────────── */
+
+export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
+  if (loading) {
+    return (
+      <div style={{ fontSize: 11, color: '#888', padding: '6px 0' }}>
+        Loading KPIs…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div style={{ fontSize: 11, color: '#d32f2f', padding: '6px 0' }}>
+        KPI load error: {error}
+      </div>
+    );
+  }
+  if (!kpiData || Object.keys(kpiData).length === 0) return null;
+
+  const entries = Object.entries(kpiData);
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8,
+      padding: '8px 0 4px',
+    }}>
+      {entries.map(([kpiId, kpi]) => {
+        if (kpi.error) {
+          return (
+            <div
+              key={kpiId}
+              title={`KPI error: ${kpi.error}`}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 4,
+                border: '1px solid #f5c6cb',
+                background: '#fff5f5',
+                fontSize: 11,
+                color: '#d32f2f',
+              }}
+            >
+              {kpiId}: error
+            </div>
+          );
+        }
+
+        const total = kpi.total ?? 0;
+        const done  = kpi.done  ?? 0;
+        const open  = kpi.open  ?? 0;
+        const pct   = total > 0 ? Math.round((done / total) * 100) : null;
+
+        const rag = open === 0 && total > 0
+          ? 'green'
+          : open > 0 && pct !== null && pct >= 75
+            ? 'yellow'
+            : open > 0
+              ? 'neutral'
+              : 'neutral';
+
+        const borderColor = rag === 'green'
+          ? '#c3e6cb'
+          : rag === 'yellow'
+            ? '#ffeeba'
+            : '#dee2e6';
+        const bgColor = rag === 'green'
+          ? '#f0fff4'
+          : rag === 'yellow'
+            ? '#fffdf0'
+            : '#f8f9fa';
+
+        const openHref = kpi.links?.open
+          ? jiraSearchUrl(jiraBaseUrl, kpi.links.open)
+          : null;
+        const doneHref = kpi.links?.done
+          ? jiraSearchUrl(jiraBaseUrl, kpi.links.done)
+          : null;
+        const totalHref = kpi.links?.total
+          ? jiraSearchUrl(jiraBaseUrl, kpi.links.total)
+          : null;
+
+        return (
+          <div
+            key={kpiId}
+            style={{
+              padding: '5px 10px',
+              borderRadius: 6,
+              border: `1px solid ${borderColor}`,
+              background: bgColor,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              minWidth: 100,
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              {kpi.name || kpiId}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Total */}
+              {totalHref ? (
+                <a href={totalHref} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', textDecoration: 'none' }}
+                  title={`Total: ${total} — open in JIRA`}
+                >
+                  {total}
+                </a>
+              ) : (
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{total}</span>
+              )}
+              <span style={{ fontSize: 10, color: '#888' }}>total</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
+              {/* Done */}
+              {doneHref ? (
+                <a href={doneHref} target="_blank" rel="noopener noreferrer"
+                  style={{ color: '#388e3c', textDecoration: 'none', fontWeight: 600 }}
+                  title={`Done: ${done} — open in JIRA`}
+                >
+                  ✓ {done}
+                </a>
+              ) : (
+                <span style={{ color: '#388e3c', fontWeight: 600 }}>✓ {done}</span>
+              )}
+              {/* Open */}
+              {openHref ? (
+                <a href={openHref} target="_blank" rel="noopener noreferrer"
+                  style={{ color: open > 0 ? '#d32f2f' : '#888', textDecoration: 'none', fontWeight: 600 }}
+                  title={`Open: ${open} — open in JIRA`}
+                >
+                  ○ {open}
+                </a>
+              ) : (
+                <span style={{ color: open > 0 ? '#d32f2f' : '#888', fontWeight: 600 }}>○ {open}</span>
+              )}
+              {/* % done */}
+              {pct !== null && (
+                <span style={{ color: '#888' }}>{pct}%</span>
+              )}
+            </div>
+            {/* Progress bar */}
+            {total > 0 && (
+              <div style={{ height: 3, background: '#e0e0e0', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
+                <div
+                  style={{
+                    width: `${(done / total) * 100}%`,
+                    height: '100%',
+                    background: rag === 'green' ? '#388e3c' : rag === 'yellow' ? '#f57c00' : '#1565c0',
+                    borderRadius: 2,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SosReleaseCharts({
   ragCounts,
   gateData,
