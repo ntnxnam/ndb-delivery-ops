@@ -393,6 +393,9 @@ export function assembleTierForRelease({
       ? { Red: 1, Yellow: directTotalOpen - directBugsOpen > 0 ? 1 : 0, Green: 0, NotSet: 0 }
       : { Red: 0, Yellow: 1, Green: 0, NotSet: 0 };
 
+  const criticalItems = buildCriticalItems(features);
+  const releaseGates = resolveReleaseGateContext(gateData);
+
   // Build a synthetic callouts block so the model can surface open-work risk.
   // Direct tickets have no Risk Indicator or status-update dates; we mark every
   // open ticket bucket as "NotSet" so the prompt sees the right count.
@@ -404,9 +407,6 @@ export function assembleTierForRelease({
     // Represent total open count as NotSet (no per-ticket keys available here)
     riskNotSet: { count: directTotalOpen, keys: [] },
   };
-
-  const criticalItems = buildCriticalItems(features);
-  const releaseGates = resolveReleaseGateContext(gateData);
   const featCallouts = buildTierCallouts(features, checkpointHistory, releaseGates);
 
   // Standalone epics have no Risk Indicator on the SoS table — treat every
