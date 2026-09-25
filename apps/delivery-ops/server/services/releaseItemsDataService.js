@@ -43,7 +43,7 @@ const RELEASE_ITEMS_CONFIG = {
     'customfield_11068', 'customfield_35863', 'customfield_35864',
     'customfield_14463', 'customfield_31460', 'customfield_14464',
     'customfield_14465', 'customfield_23073', 'customfield_45660',
-    'customfield_23560', 'customfield_38460', 'customfield_15160',
+    'customfield_23560', 'customfield_38460', 'customfield_15160', 'components',
   ].join(','),
 };
 
@@ -109,6 +109,8 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
         if (raw && typeof raw === 'object') return raw.value || null;
         return typeof raw === 'string' ? raw : null;
       })(),
+      // Standard JIRA components field — array of component names
+      components: (issue.fields.components || []).map((c) => c.name).filter(Boolean),
     };
   });
 }

@@ -10,6 +10,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
+import { useEraComponents } from '../hooks/useEraComponents';
 import { useSosHistory } from '../hooks/useSosHistory';
 import { useSosTierSummary, SOS_TIERS } from '../hooks/useSosTierSummary';
 import { useTeam } from '../contexts/TeamContext';
@@ -1067,21 +1068,20 @@ function SosSummaryPage() {
   // Component filter — derive distinct values from all loaded items
   const [selectedComponent, setSelectedComponent] = useState('');
 
-  // Component filter — driven by CF[15160] Primary Component (first value), server-mapped to item.primaryComponent
-  const allComponentOptions = useMemo(() => {
-    const seen = new Set();
-    for (const items of Object.values(byVersion)) {
-      for (const item of items) {
-        const pc = item.primaryComponent;
-        if (pc) seen.add(pc);
-      }
-    }
-    return Array.from(seen).sort();
-  }, [byVersion]);
+  // Component filter — full ERA component list from /api/component/list (CF[15160] + JIRA components field)
+  const { components: eraComponents } = useEraComponents();
 
   const filterItemsByComponent = useCallback((items) => {
     if (!selectedComponent) return items;
-    return items.filter((item) => item.primaryComponent === selectedComponent);
+    return items.filter((item) => {
+      // Match Primary Component (CF[15160])
+      if (item.primaryComponent === selectedComponent) return true;
+      // Match JIRA standard components field
+      const comps = item.components;
+      if (Array.isArray(comps)) return comps.some((c) => (typeof c === 'string' ? c : (c?.name || '')) === selectedComponent);
+      if (typeof comps === 'string') return comps === selectedComponent;
+      return false;
+    });
   }, [selectedComponent]);
 
   const handleBatchGenerate = useCallback(() => {
@@ -1184,10 +1184,10 @@ function SosSummaryPage() {
               )}
             </div>
 
-            {/* Component filter */}
-            {allComponentOptions.length > 0 && (
+            {/* Component filter — full ERA list from /api/component/list */}
+            {eraComponents.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Primary Component:</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Component:</span>
                 <select
                   value={selectedComponent}
                   onChange={(e) => setSelectedComponent(e.target.value)}
@@ -1198,7 +1198,7 @@ function SosSummaryPage() {
                   }}
                 >
                   <option value="">All</option>
-                  {allComponentOptions.map((c) => (
+                  {eraComponents.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
