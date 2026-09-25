@@ -1018,6 +1018,52 @@ function SosSummaryPage() {
     }
   }, [selectedTeamId, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
 
+  // ── Filters ────────────────────────────────────────────────────────────────
+
+  // Release filter — which versions to show
+  const [selectedVersions, setSelectedVersions] = useState([]); // empty = all
+
+  const toggleVersion = useCallback((v) => {
+    setSelectedVersions((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    );
+  }, []);
+
+  // RAG filter — drive by overall RAG of each release section
+  const RAG_FILTER_OPTIONS = ['Red', 'Yellow', 'Green', 'NotSet'];
+  const [selectedRags, setSelectedRags] = useState([]); // empty = all
+
+  const toggleRag = useCallback((r) => {
+    setSelectedRags((prev) =>
+      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
+    );
+  }, []);
+
+  // Pre-compute per-release overall RAG so the release filter can use it
+  const releaseRagMap = useMemo(() => {
+    const map = {};
+    for (const [version, items] of Object.entries(byVersion)) {
+      const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
+      items.forEach((i) => {
+        const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
+        const v = String(raw).split(' ')[0];
+        if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
+        else counts.NotSet++;
+      });
+      map[version] = counts.Red > 0 ? 'Red' : counts.Yellow > 0 ? 'Yellow' : counts.Green > 0 ? 'Green' : 'NotSet';
+    }
+    return map;
+  }, [byVersion]);
+
+  // Versions visible after both filters applied
+  const visibleVersions = useMemo(() => {
+    return sortedVersions.filter((v) => {
+      if (selectedVersions.length > 0 && !selectedVersions.includes(v)) return false;
+      if (selectedRags.length > 0 && !selectedRags.includes(releaseRagMap[v])) return false;
+      return true;
+    });
+  }, [sortedVersions, selectedVersions, selectedRags, releaseRagMap]);
+
   // Component filter — derive distinct values from all loaded items
   const [selectedComponent, setSelectedComponent] = useState('');
 
@@ -1081,37 +1127,108 @@ function SosSummaryPage() {
     });
   }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, retryTier]);
 
+  const RAG_CHIP_STYLE = (rag, active) => ({
+    display: 'inline-flex', alignItems: 'center', gap: '4px',
+    padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700,
+    cursor: 'pointer', userSelect: 'none',
+    border: `1px solid ${RAG_COLORS[rag] || '#9e9e9e'}`,
+    background: active ? (RAG_COLORS[rag] || '#9e9e9e') : '#fff',
+    color: active ? '#fff' : (RAG_COLORS[rag] || '#9e9e9e'),
+    transition: 'all 0.15s',
+  });
+
+  const RAG_LABELS = { Red: 'Red', Yellow: 'Yellow', Green: 'Green', NotSet: 'Not Set' };
+
   return (
     <div>
-        {/* Component filter — first dropdown */}
-        {allComponentOptions.length > 0 && (
-          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#555' }}>Component:</label>
-            <select
-              value={selectedComponent}
-              onChange={(e) => setSelectedComponent(e.target.value)}
-              style={{
-                fontSize: '12px', padding: '4px 8px', borderRadius: '4px',
-                border: '1px solid #ced4da', background: '#fff', color: '#333',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="">All components</option>
-              {allComponentOptions.map((c) => (
-                <option key={c} value={c}>{c}</option>
+        {/* ── Filter bar ─────────────────────────────────────────── */}
+        {sortedVersions.length > 0 && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px',
+            marginBottom: '14px', padding: '8px 12px',
+            background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '6px',
+          }}>
+
+            {/* Release filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Release:</span>
+              {sortedVersions.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => toggleVersion(v)}
+                  style={{
+                    padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
+                    cursor: 'pointer', border: '1px solid #6a1b9a', userSelect: 'none',
+                    background: selectedVersions.includes(v) ? '#6a1b9a' : '#fff',
+                    color: selectedVersions.includes(v) ? '#fff' : '#6a1b9a',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {v}
+                </button>
               ))}
-            </select>
-            {selectedComponent && (
-              <button
-                type="button"
-                onClick={() => setSelectedComponent('')}
-                style={{
-                  fontSize: '11px', border: '1px solid #adb5bd', borderRadius: '4px',
-                  background: '#fff', color: '#666', cursor: 'pointer', padding: '2px 8px',
-                }}
-              >
-                ✕ Clear
-              </button>
+              {selectedVersions.length > 0 && (
+                <button type="button" onClick={() => setSelectedVersions([])}
+                  style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                  ✕ clear
+                </button>
+              )}
+            </div>
+
+            {/* RAG filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>RAG:</span>
+              {RAG_FILTER_OPTIONS.map((rag) => (
+                <button
+                  key={rag}
+                  type="button"
+                  onClick={() => toggleRag(rag)}
+                  style={RAG_CHIP_STYLE(rag, selectedRags.includes(rag))}
+                >
+                  {RAG_LABELS[rag]}
+                </button>
+              ))}
+              {selectedRags.length > 0 && (
+                <button type="button" onClick={() => setSelectedRags([])}
+                  style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                  ✕ clear
+                </button>
+              )}
+            </div>
+
+            {/* Component filter */}
+            {allComponentOptions.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Component:</span>
+                <select
+                  value={selectedComponent}
+                  onChange={(e) => setSelectedComponent(e.target.value)}
+                  style={{
+                    fontSize: '12px', padding: '3px 8px', borderRadius: '4px',
+                    border: '1px solid #ced4da', background: '#fff', color: '#333',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">All</option>
+                  {allComponentOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {selectedComponent && (
+                  <button type="button" onClick={() => setSelectedComponent('')}
+                    style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active filter summary */}
+            {(selectedVersions.length > 0 || selectedRags.length > 0 || selectedComponent) && (
+              <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>
+                Showing {visibleVersions.length} of {sortedVersions.length} releases
+              </span>
             )}
           </div>
         )}
@@ -1211,6 +1328,9 @@ function SosSummaryPage() {
         {!loading && !error && sortedVersions.length === 0 && (
           <p style={{ color: '#aaa', fontSize: '13px' }}>No items found. Click ↻ Refresh All to load from JIRA.</p>
         )}
+        {!loading && !error && sortedVersions.length > 0 && visibleVersions.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px' }}>No releases match the active filters.</p>
+        )}
 
         {generateError && (
           <p style={{ color: '#d32f2f', fontSize: '12px', marginBottom: 12 }}>{generateError}</p>
@@ -1231,7 +1351,7 @@ function SosSummaryPage() {
           onRegenerateOne={regenerateOne}
         />
 
-        {sortedVersions.map((version) => (
+        {visibleVersions.map((version) => (
           <ReleaseSection
             key={version}
             version={version}
