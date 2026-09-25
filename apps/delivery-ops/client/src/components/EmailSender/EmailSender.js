@@ -27,6 +27,20 @@ function validateHighlightsLowlightsSections(html) {
   return { valid: missingSections.length === 0, missingSections };
 }
 
+const WEEKLY_UPDATE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatWeeklyUpdateDate(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = WEEKLY_UPDATE_MONTHS[date.getMonth()];
+  return `${day}/${month}/${date.getFullYear()}`;
+}
+
+function buildWeeklyUpdateSubject({ issueType, summary, fixVersions }) {
+  const release = String(fixVersions || '').trim();
+  const releasePart = release && release !== 'N/A' ? ` - ${release}` : '';
+  return `${issueType} - ${summary}${releasePart} - Weekly Update - ${formatWeeklyUpdateDate()}`;
+}
+
 function EmailSender({ onLogout: _onLogout }) {
   const [additionalDetails, setAdditionalDetails] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
@@ -334,16 +348,9 @@ function EmailSender({ onLogout: _onLogout }) {
         message: `Valid: ${response.data.issueType} - ${response.data.summary}`
       });
       
-      // Auto-populate email subject line with current date
+      // Auto-populate email subject: type, summary, release, weekly update, date
       if (response.data.issueType && response.data.summary) {
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames[today.getMonth()];
-        const year = today.getFullYear();
-        const dateStr = `${day}/${month}/${year}`;
-        const subject = `${response.data.issueType} - ${response.data.summary} - Weekly Update - ${dateStr}`;
-        setEmailSubject(subject);
+        setEmailSubject(buildWeeklyUpdateSubject(response.data));
       }
       
       return true;
@@ -440,16 +447,9 @@ function EmailSender({ onLogout: _onLogout }) {
           });
         }
         
-        // Auto-populate email subject line from fetched data with current date
+        // Auto-populate email subject from fetched ticket, including fix version
         if (response.data.data.issueType && response.data.data.summary) {
-          const today = new Date();
-          const day = String(today.getDate()).padStart(2, '0');
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const month = monthNames[today.getMonth()];
-          const year = today.getFullYear();
-          const dateStr = `${day}/${month}/${year}`;
-          const subject = `${response.data.data.issueType} - ${response.data.data.summary} - Weekly Update - ${dateStr}`;
-          setEmailSubject(subject);
+          setEmailSubject(buildWeeklyUpdateSubject(response.data.data));
         }
         
         setSuccess('JIRA ticket data fetched successfully');

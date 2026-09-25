@@ -114,7 +114,7 @@ router.post('/validate', validateJiraTokenMiddleware, async (req, res) => {
       const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
-          fields: 'issuetype,summary,status'
+          fields: 'issuetype,summary,status,fixVersions'
         }
       });
 
@@ -142,12 +142,16 @@ router.post('/validate', validateJiraTokenMiddleware, async (req, res) => {
         });
       }
       
+      const fixVersionNames = response.data.fields?.fixVersions;
       return res.json({
         valid: true,
         issueType: issueType,
         summary: response.data.fields?.summary || 'N/A',
         status: response.data.fields?.status?.name || 'N/A',
-        key: response.data.key
+        key: response.data.key,
+        fixVersions: Array.isArray(fixVersionNames) && fixVersionNames.length > 0
+          ? fixVersionNames.map(v => v.name).filter(Boolean).join(', ')
+          : 'N/A'
       });
     } catch (apiError) {
       console.error('JIRA validation error:', apiError.message);

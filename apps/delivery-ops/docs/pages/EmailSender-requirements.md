@@ -34,7 +34,7 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 3. **Release selector** — dropdown populated from JIRA (`/api/jira/releases`); selection drives JIRA data injection.
 4. **Rich text editor** (ReactQuill) — pre-filled with extracted content + JIRA snippet; fully editable.
 5. **Recipient fields** — To / CC text inputs; comma-separated email addresses.
-6. **Subject field** — editable; pre-populated with release name + date.
+6. **Subject field** — editable; pre-populated as `{issue type} - {summary} - {fix version} - Weekly Update - {dd/Mmm/yyyy}`. Fix version is omitted when the ticket has none.
 7. **Send button** — disabled while loading; shows spinner; on success shows toast, on failure shows error message.
 8. **Outlook fallback** — copy-to-clipboard button for HTML body for users whose email client strips rich text.
 

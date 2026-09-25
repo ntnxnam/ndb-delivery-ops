@@ -1,6 +1,8 @@
 ### POST /api/jira/validate
-**Purpose**: Validate JIRA credentials and session token before page operations.
+**Purpose**: Validate a Feature / Initiative / X-FEAT / Capability key before the Email Sender fetch.
 **Auth**: required
+
+**Response**: `{ valid, issueType, summary, status, key, fixVersions }` — `fixVersions` is a comma-separated name list, or `N/A`.
 
 ### POST /api/jira/fetch-all-jira-tickets
 **Purpose**: Fetch cross-project ticket payload used by multiple pages.
