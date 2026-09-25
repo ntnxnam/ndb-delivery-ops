@@ -2,21 +2,20 @@
   "defaultCC": [
     "namratha.singh@nutanix.com",
     "ashish.kumar@nutanix.com",
-    "Team-BharatKumar-Beedu-DirectReports@nutanix.com",
-    "Team-Ashish-Kumar-Org@nutanix.com",
     "jovan.cukalovic@nutanix.com",
     "ndb-pm@nutanix.com",
-    "NDB_Designers@nutanix.com",
     "sneha.kulkarni@nutanix.com"
   ],
   "optionalCCRecipients": [
     "namratha.singh",
     "bharat",
-    "ahmad.elayat",
     "ashish.kumar",
     "nkumar",
     "anil.madan",
-    "jovan.cukalovic"
+    "jovan.cukalovic",
+    "Team-BharatKumar-Beedu-DirectReports@nutanix.com",
+    "Team-Ashish-Kumar-Org@nutanix.com",
+    "NDB_Designers@nutanix.com"
   ],
   "projectTeamFields": [
     { "id": "assignee", "label": "Assignee" },
