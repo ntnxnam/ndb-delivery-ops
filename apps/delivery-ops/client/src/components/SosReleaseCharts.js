@@ -422,8 +422,8 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
             </div>
             {/* Divider */}
             <div style={{ height: 1, background: '#e9ecef', margin: '2px 0' }} />
-            {/* Rows: closed → TBV → open → others */}
-            {ROW_DEFS.map(({ icon, label, count, color, href, title }) => (
+            {/* Rows: only render if count > 0, except open which always shows */}
+            {ROW_DEFS.filter(({ label, count }) => count > 0 || label === 'open').map(({ icon, label, count, color, href, title }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
                 <span style={{ color, fontWeight: 700, width: 10, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
                 <Num count={count} href={href} color={color} title={title} />
