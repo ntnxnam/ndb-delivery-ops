@@ -19,7 +19,6 @@ import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { formatRiskWithHistory } from '../utils/riskHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
-import ReleaseGantt from './GanttStyle2';
 import ReleaseVersionGantt from './ReleaseVersionGantt';
 import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
@@ -126,8 +125,7 @@ function useMultiReleaseGateData(releases) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Hook: useReleaseDatesConfig — loads the same config that
-   ReleaseConfigPage uses, so we can feed ReleaseGantt
+   Hook: useReleaseDatesConfig — loads release gate dates config
 ───────────────────────────────────────────────────────────── */
 
 function useReleaseDatesConfig() {
@@ -1216,10 +1214,6 @@ function SosSummaryPage() {
 
         {generateError && (
           <p style={{ color: '#d32f2f', fontSize: '12px', marginBottom: 12 }}>{generateError}</p>
-        )}
-
-        {Object.keys(releaseDatesConfig).length > 0 && (
-          <ReleaseGantt releases={releaseDatesConfig} />
         )}
 
         <SosRagHeatmap
