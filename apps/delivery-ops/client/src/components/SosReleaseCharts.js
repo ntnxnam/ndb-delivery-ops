@@ -362,119 +362,84 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
         // Individual KPI failed — skip its chip entirely
         if (kpi.error) return null;
 
-        const total = kpi.total ?? 0;
-        const done  = kpi.done  ?? 0;
-        const open  = kpi.open  ?? 0;
-        const pct   = total > 0 ? Math.round((done / total) * 100) : null;
+        const total    = kpi.total    ?? 0;
+        const closed   = kpi.closed   ?? 0;
+        const resolved = kpi.resolved ?? 0;  // TBV
+        const others   = kpi.others   ?? 0;
+        const open     = kpi.open     ?? 0;
 
         const rag = open === 0 && total > 0
           ? 'green'
-          : open > 0 && pct !== null && pct >= 75
+          : open > 0 && total > 0 && ((closed + resolved) / total) >= 0.75
             ? 'yellow'
             : open > 0
               ? 'neutral'
               : 'neutral';
 
-        const borderColor = rag === 'green'
-          ? '#c3e6cb'
-          : rag === 'yellow'
-            ? '#ffeeba'
-            : '#dee2e6';
-        const bgColor = rag === 'green'
-          ? '#f0fff4'
-          : rag === 'yellow'
-            ? '#fffdf0'
-            : '#f8f9fa';
+        const borderColor = rag === 'green' ? '#c3e6cb' : rag === 'yellow' ? '#ffeeba' : '#dee2e6';
+        const bgColor     = rag === 'green' ? '#f0fff4' : rag === 'yellow' ? '#fffdf0'  : '#f8f9fa';
 
-        const openHref = kpi.links?.open
-          ? jiraSearchUrl(jiraBaseUrl, kpi.links.open)
+        const link = (bucket) => kpi.links?.[bucket]
+          ? jiraSearchUrl(jiraBaseUrl, kpi.links[bucket])
           : null;
-        const doneHref = kpi.links?.done
-          ? jiraSearchUrl(jiraBaseUrl, kpi.links.done)
-          : null;
-        const totalHref = kpi.links?.total
-          ? jiraSearchUrl(jiraBaseUrl, kpi.links.total)
-          : null;
+
+        const Num = ({ count, href, color, title }) => href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer"
+            style={{ color, textDecoration: 'none', fontWeight: 600 }} title={title}>
+            {count}
+          </a>
+        ) : <span style={{ color, fontWeight: 600 }}>{count}</span>;
+
+        const ROW_DEFS = [
+          { icon: '✓', label: 'closed',   count: closed,   color: '#388e3c', href: link('closed'),   title: 'Fixed / Done / Complete — shipped' },
+          { icon: '~', label: 'TBV',      count: resolved, color: '#f57c00', href: link('resolved'), title: 'Resolved — To Be Verified by QA' },
+          { icon: '○', label: 'open',     count: open,     color: open > 0 ? '#d32f2f' : '#aaa', href: link('open'), title: 'Truly open (resolution is EMPTY)' },
+          { icon: '—', label: 'others',   count: others,   color: '#9e9e9e', href: link('others'),   title: 'Cannot Reproduce / Duplicate / Won\'t Fix etc.' },
+        ];
 
         return (
           <div
             key={kpiId}
             style={{
-              padding: '5px 10px',
+              padding: '6px 10px',
               borderRadius: 6,
               border: `1px solid ${borderColor}`,
               background: bgColor,
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
-              minWidth: 100,
+              minWidth: 110,
             }}
           >
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+            {/* Name */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 2 }}>
               {kpi.name || kpiId}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {/* Total */}
-              {totalHref ? (
-                <a href={totalHref} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', textDecoration: 'none' }}
-                  title={`Total: ${total} — open in JIRA`}
-                >
-                  {total}
-                </a>
-              ) : (
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{total}</span>
-              )}
-              <span style={{ fontSize: 10, color: '#888' }}>total</span>
+            {/* Total */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
+              <Num count={total} href={link('total')} color="#1a1a2e" title="Total" />
+              <span style={{ fontSize: 10, color: '#aaa' }}>total</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, marginTop: 2 }}>
-              {/* Resolved / closed (done family: Fixed, Done, Resolved, Complete) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: '#388e3c', fontWeight: 700, fontSize: 11 }}>✓</span>
-                {doneHref ? (
-                  <a href={doneHref} target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#388e3c', textDecoration: 'none', fontWeight: 600 }}
-                    title="Resolved / closed — open in JIRA"
-                  >
-                    {done}
-                  </a>
-                ) : (
-                  <span style={{ color: '#388e3c', fontWeight: 600 }}>{done}</span>
-                )}
-                <span style={{ color: '#aaa' }}>resolved</span>
+            {/* Divider */}
+            <div style={{ height: 1, background: '#e9ecef', margin: '2px 0' }} />
+            {/* Rows: closed → TBV → open → others */}
+            {ROW_DEFS.map(({ icon, label, count, color, href, title }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
+                <span style={{ color, fontWeight: 700, width: 10, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+                <Num count={count} href={href} color={color} title={title} />
+                <span style={{ color: '#bbb' }}>{label}</span>
               </div>
-              {/* Open / others */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: open > 0 ? '#d32f2f' : '#bbb', fontWeight: 700, fontSize: 11 }}>○</span>
-                {openHref ? (
-                  <a href={openHref} target="_blank" rel="noopener noreferrer"
-                    style={{ color: open > 0 ? '#d32f2f' : '#888', textDecoration: 'none', fontWeight: 600 }}
-                    title="Open / others — open in JIRA"
-                  >
-                    {open}
-                  </a>
-                ) : (
-                  <span style={{ color: open > 0 ? '#d32f2f' : '#888', fontWeight: 600 }}>{open}</span>
-                )}
-                <span style={{ color: '#aaa' }}>open</span>
-              </div>
-              {/* % resolved */}
-              {pct !== null && (
-                <div style={{ color: '#888', marginTop: 1 }}>{pct}% done</div>
-              )}
-            </div>
-            {/* Progress bar */}
+            ))}
+            {/* Progress bar — closed+TBV / total */}
             {total > 0 && (
-              <div style={{ height: 3, background: '#e0e0e0', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
-                <div
-                  style={{
-                    width: `${(done / total) * 100}%`,
-                    height: '100%',
-                    background: rag === 'green' ? '#388e3c' : rag === 'yellow' ? '#f57c00' : '#1565c0',
-                    borderRadius: 2,
-                    transition: 'width 0.3s ease',
-                  }}
-                />
+              <div style={{ height: 3, background: '#e0e0e0', borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
+                <div style={{
+                  width: `${((closed + resolved) / total) * 100}%`,
+                  height: '100%',
+                  background: rag === 'green' ? '#388e3c' : rag === 'yellow' ? '#f57c00' : '#1565c0',
+                  borderRadius: 2,
+                  transition: 'width 0.3s ease',
+                }} />
               </div>
             )}
           </div>

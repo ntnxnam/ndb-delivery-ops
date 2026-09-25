@@ -117,8 +117,15 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
     base = `(${resolved})`;
   }
 
-  if (bucket === 'done') return `${base} and resolution in (Fixed, Done, Resolved, Complete)`;
-  if (bucket === 'open') return `${base} and status not in (Done, Closed)`;
+  // Four resolution buckets (per velocity-resolution-categories):
+  //   closed   = positive resolutions — work actually shipped
+  //   resolved = status Resolved — TBV (To Be Verified by QA)
+  //   others   = negative resolutions (Dupe, Not Repro, Won't Fix, etc.)
+  //   open     = truly unresolved (resolution is EMPTY)
+  if (bucket === 'closed')   return `${base} and resolution in (Fixed, Done, Complete)`;
+  if (bucket === 'resolved') return `${base} and resolution = Resolved`;
+  if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid, "Works as Designed")`;
+  if (bucket === 'open')     return `${base} and resolution is EMPTY`;
   return base; // total
 }
 
@@ -146,26 +153,34 @@ async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId 
         if (kpi.excludeDeferred) jql = appendDeferredExclusion(jql, releaseVersion);
         return jql;
       };
-      const [totalJql, doneJql, openJql] = await Promise.all([
+      const [totalJql, closedJql, resolvedJql, othersJql, openJql] = await Promise.all([
         buildBucket('total'),
-        buildBucket('done'),
+        buildBucket('closed'),
+        buildBucket('resolved'),
+        buildBucket('others'),
         buildBucket('open'),
       ]);
       if (!totalJql) {
         results[kpi.id] = { error: 'Could not resolve query (check release base filter)' };
         continue;
       }
-      const [total, done, open] = await Promise.all([
+      const [total, closed, resolved, others, open] = await Promise.all([
         jira.searchCount(totalJql),
-        doneJql ? jira.searchCount(doneJql) : Promise.resolve(0),
-        openJql ? jira.searchCount(openJql) : Promise.resolve(0),
+        closedJql  ? jira.searchCount(closedJql)  : Promise.resolve(0),
+        resolvedJql ? jira.searchCount(resolvedJql) : Promise.resolve(0),
+        othersJql  ? jira.searchCount(othersJql)  : Promise.resolve(0),
+        openJql    ? jira.searchCount(openJql)    : Promise.resolve(0),
       ]);
       results[kpi.id] = {
         name: kpi.name,
-        total: total || 0,
-        done: done || 0,
-        open: open || 0,
-        links: { total: totalJql, done: doneJql, open: openJql },
+        total:    total    || 0,
+        closed:   closed   || 0,  // Fixed / Done / Complete — shipped
+        resolved: resolved || 0,  // Resolved — TBV (awaiting QA verify)
+        others:   others   || 0,  // Dupe, Not Repro, Won't Fix, etc.
+        open:     open     || 0,  // resolution is EMPTY
+        // legacy alias so existing consumers don't break
+        done: (closed || 0) + (resolved || 0),
+        links: { total: totalJql, closed: closedJql, resolved: resolvedJql, others: othersJql, open: openJql },
       };
     } catch (err) {
       const message = err.response?.data?.errorMessages?.[0] || err.response?.data?.message || err.message || 'Query failed';
