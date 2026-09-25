@@ -54,7 +54,7 @@ function generateFilterChain(version, excludeVersion) {
     {
       order: 5,
       name: filter5Name,
-      jql: `((fixVersion in (${v}) OR affectedVersion in (${v})) AND ${excludeClause}) OR filter in (${filter4Name}) AND status != Cancelled ORDER BY rank ASC`,
+      jql: `((fixVersion in (${v}) OR affectedVersion in (${v})) AND ${excludeClause}) OR filter in (${filter4Name}) OR issueFunction in portfolioChildrenOf("fixVersion=${v} and type=Epic and \\"Parent Link\\" IS EMPTY") OR (fixVersion = ${v} and type=Epic and "Parent Link" is EMPTY) AND status != Cancelled`,
       dependsOn: [filter4Name],
     },
   ];
