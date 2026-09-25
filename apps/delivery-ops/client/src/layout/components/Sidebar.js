@@ -126,6 +126,12 @@ export const Sidebar = () => {
       description: 'Component health, actionable metrics, deferral trends'
     },
     {
+      path: '/kpis',
+      label: 'KPIs',
+      icon: '📈',
+      description: 'KPI dashboard'
+    },
+    {
       path: '/chatbot',
       label: 'AI Chatbot',
       icon: '💬',
