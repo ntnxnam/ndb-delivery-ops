@@ -80,6 +80,14 @@ export interface TicketLite {
   issueType?: string;
 }
 
+export interface SchedulePressure {
+  ecDate: string;
+  gaDate: string;
+  windowDays: number;
+  elapsedDays: number;
+  elapsedPct: number;
+}
+
 export interface ReleaseIntelligence {
   version: string;
   totalFeatures: number;
@@ -88,7 +96,12 @@ export interface ReleaseIntelligence {
   mustFixTickets: TicketLite[];
   phaseDist: Record<string, number>;
   selfReportedRisk: Record<'red' | 'yellow' | 'green' | 'notSet', number>;
-  dateMetrics: { daysFromCutoff?: number | null } | null;
+  dateMetrics: {
+    daysFromCutoff?: number | null;
+    ecDate?: string | null;
+    gaDate?: string | null;
+    schedulePressure?: SchedulePressure | null;
+  } | null;
   buckets: Record<FeatureBucket, FeatureRecord[]>;
   health: ReleaseHealthResult;
   generatedAt: string;
@@ -192,7 +205,13 @@ export function assembleReleaseIntelligence(input: {
   featureRecords: FeatureRecord[];
   p0Bugs: TicketLite[];
   mustFixTickets: TicketLite[];
-  dateMetrics: { daysFromCutoff?: number | null } | null;
+  dateMetrics: {
+    daysFromCutoff?: number | null;
+    ecDate?: string | null;
+    gaDate?: string | null;
+    schedulePressure?: SchedulePressure | null;
+    [key: string]: unknown;
+  } | null;
   generatedAt?: string;
 }): ReleaseIntelligence {
   const buckets: Record<FeatureBucket, FeatureRecord[]> = {
@@ -233,7 +252,14 @@ export function assembleReleaseIntelligence(input: {
     mustFixTickets: input.mustFixTickets,
     phaseDist,
     selfReportedRisk,
-    dateMetrics: input.dateMetrics,
+    dateMetrics: input.dateMetrics
+      ? {
+          daysFromCutoff: input.dateMetrics.daysFromCutoff ?? null,
+          ecDate: (input.dateMetrics.ecDate as string | null | undefined) ?? null,
+          gaDate: (input.dateMetrics.gaDate as string | null | undefined) ?? null,
+          schedulePressure: (input.dateMetrics.schedulePressure as SchedulePressure | null | undefined) ?? null,
+        }
+      : null,
     buckets,
     health,
     generatedAt: input.generatedAt || new Date().toISOString(),

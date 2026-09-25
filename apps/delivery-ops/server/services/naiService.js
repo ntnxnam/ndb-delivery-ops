@@ -420,6 +420,35 @@ Never fabricate owner names or dates not present in the data. Under 400 words to
  * Build the user prompt for a release-level AI summary.
  * @param {object} intelligence - Output of releaseAiSummaryService.buildReleaseIntelligence
  */
+function buildSchedulePressureBlock(intelligence) {
+  const { totalFeatures, buckets, dateMetrics } = intelligence;
+  const sp = dateMetrics?.schedulePressure;
+  if (!sp || !sp.ecDate || !sp.gaDate || sp.windowDays == null) return null;
+
+  // Features not yet in a "clear" state (Shipped / PG Met)
+  const clearCount = (buckets?.clear || []).length;
+  const notClearCount = totalFeatures - clearCount;
+  const outstandingPct = totalFeatures > 0
+    ? Math.round((notClearCount / totalFeatures) * 100)
+    : 0;
+
+  const gap = outstandingPct - sp.elapsedPct;
+  const pressureFlag = gap > 0
+    ? `⚠️ BEHIND SCHEDULE: ${outstandingPct}% work outstanding vs ${sp.elapsedPct}% time elapsed — ${gap}pp gap.`
+    : gap === 0
+      ? `On pace: work outstanding matches time elapsed (${outstandingPct}% each).`
+      : `Ahead of pace: ${outstandingPct}% work outstanding vs ${sp.elapsedPct}% time elapsed (${Math.abs(gap)}pp buffer).`;
+
+  return [
+    'SCHEDULE PRESSURE (EC → GA time vs outstanding work — use to calibrate urgency in Release Health prose):',
+    `  EC date: ${sp.ecDate} | GA date: ${sp.gaDate}`,
+    `  Release window: ${sp.windowDays} days | Elapsed: ${sp.elapsedDays} days (${sp.elapsedPct}%)`,
+    `  Committed features: ${totalFeatures} | Not-yet-clear (not Shipped/PG Met): ${notClearCount} (${outstandingPct}%)`,
+    `  ${pressureFlag}`,
+    '  Calibration rule: when outstanding% significantly exceeds elapsed%, escalate urgency language — this release is running out of runway.',
+  ].join('\n');
+}
+
 function buildReleaseSummaryPrompt(intelligence) {
   const { version, totalFeatures, p0Bugs = [], mustFixTickets = [],
           phaseDist, selfReportedRisk, dateMetrics, buckets } = intelligence;
@@ -496,6 +525,8 @@ function buildReleaseSummaryPrompt(intelligence) {
     `CLEAR (PG Met / Shipped): ${buckets['clear']?.length ?? 0} features`,
   ].join('\n\n');
 
+  const schedulePressureBlock = buildSchedulePressureBlock(intelligence);
+
   return `${headerLines}
 
 ${keyReferenceBlock}
@@ -510,7 +541,7 @@ ${p0Block}
 
 ${mustFixBlock}
 
-FEATURE BUCKETS (primary signal — grounded in release calendar dates):
+${schedulePressureBlock ? schedulePressureBlock + '\n\n' : ''}FEATURE BUCKETS (primary signal — grounded in release calendar dates):
 ${bucketsBlock}
 
 Write the three-section release briefing now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
@@ -559,6 +590,7 @@ OUTPUT FORMAT (exact order; omit empty sections including their headers):
 1–2 sentences. Verdict first (RED/YELLOW/GREEN), then the dominant business risk in plain English.
 If GREEN with no material risk: "On track — no blocking issues."
 When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (never "all four" without naming every key).
+TLDR must NOT cite "items past next gate" as a risk unless the gate is ≤14 days away or there is a corroborating signal (e.g. high outstanding work, Red RAG). Items scheduled beyond the upcoming gate are a planning observation, not a blocker.
 
 ⚠️ Call-outs:   ← MANDATORY when CALL_OUTS below is non-empty. Copy lines/keys verbatim. One bullet per callout row.
 • Past gate lagging — <this release's most recently elapsed gate> (<date>): KEY1, …  (status not at expected clearance — CCM→Code Complete Met, CG→Commit Gate Met, PG→Promotion Gate Met, GA→Closed)
@@ -573,13 +605,16 @@ When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (n
 
 👁 Keep an eye:
 • Include when CALL_OUTS.datesPastNextGate is non-empty — list those keys vs the upcoming gate. Else omit section.
+• IMPORTANT: items whose own gate date falls after the release's upcoming gate are NOT a risk by themselves — they are simply scheduled beyond that gate. Only escalate to Key Risks if the gate is ≤14 days away AND outstanding work is high, OR if the item's date is so far past the gate that it signals a planning gap. Never frame "dates past next gate" alone as a risk or include it in Key Risks without a corroborating signal.
 
 ✅ Next Owner Actions:
 • ≤2 bullets. Format: <owner or role> — <specific ask>. No "monitor" or "follow up".
 • Owner role depends on TIER (see OWNER ROLE HINT in the user message):
-  - FEAT Work / Standalone Epics: "FEAT Manager" for Risk Indicator, Requirements Done, FS/DS Done, Test Plan, gate dates, past-gate clearance — never Product Owner / Product Manager / Product Management.
+  - FEAT Work: "FEAT Manager" for Risk Indicator, Requirements Done, FS/DS Done, Test Plan, gate dates, past-gate clearance — never Product Owner / Product Manager / Product Management.
+  - Standalone Epics: "Team Manager" (engineering team manager / EM) — never FEAT Manager. Standalone Epics are owned at the team level, not the feature-program level.
   - Direct Tickets: "Manager" (engineering / assignee manager) — never FEAT Manager (direct tickets have no FEAT Manager).
-• For past-gate lagging on FEAT/Standalone: FEAT Manager — advance status to the expected clearance named in CALL_OUTS.
+• For past-gate lagging on FEAT: FEAT Manager — advance status to the expected clearance named in CALL_OUTS.
+• For past-gate lagging on Standalone Epics: Team Manager — advance status to the expected clearance.
 • For Direct Tickets backlog / open Bugs: Manager — triage and prioritize.
 
 RULES:
@@ -588,12 +623,13 @@ RULES:
 - Prefer CRITICAL_ITEMS, CALL_OUTS (esp. past-gate lagging), and P0/MUSTFIX over volume narration.
 - Past gate and next gate come from THIS release's calendar in CALL_OUTS — never assume CG or PG.
 - Risk Indicator not set is a first-class callout when CALL_OUTS.riskNotSet.count > 0 — always include the Call-outs bullet with every key.
+- Risk Indicator not set matters even for closed/resolved tickets: a missing Risk Indicator prevents retrospective risk-pattern analysis and blocks downstream release planning that depends on historical signal. When flagging NotSet on closed tickets, state: "blocks downstream planning — risk signal needed even for completed work."
 - Never output scoring rationale, banners, or "Here is the summary".
 
 RAG VERDICT (first match wins):
 - If ITEM_COUNT is 0 and OUTSTANDING is none and CRITICAL_ITEMS is none: do NOT invent GREEN/On track. Output only the ## heading and one line: "No items in this tier for this release." Omit TLDR, Call-outs, Key Risks, and Actions.
 - RED if OPEN_P0 > 0, OR past-gate lagging count > 0, OR Red RAG dominates the tier, OR days to next gate ≤ 14 with material outstanding Bugs/Tests
-- YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR dates past next gate > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material
+- YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material, OR (dates past next gate > 0 AND gate is ≤14 days away). Do NOT set YELLOW solely because items have dates past the next gate when the gate is still >14 days out — those items are simply scheduled beyond that gate, which is a planning fact not a risk.
 - GREEN only when the tier has items and Red≈0, Yellow negligible, P0=0, must-fix=0, NotSet≈0, no past-gate lagging, no dominant open-work risk
 
 ⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
@@ -717,7 +753,9 @@ function buildSosTierPrompt(payload) {
 
   const ownerHint = tier === 'direct'
     ? 'OWNER ROLE HINT: Direct Tickets → Manager (engineering / assignee manager). Never FEAT Manager, Product Owner, or Product Manager.'
-    : 'OWNER ROLE HINT: FEAT Work / Standalone → FEAT Manager for date/risk/gate hygiene (not Product Owner / Product Manager).';
+    : tier === 'standalone'
+      ? 'OWNER ROLE HINT: Standalone Epics → Team Manager (engineering team manager / EM) for Risk Indicator, gate dates, and status hygiene. Never FEAT Manager, Product Owner, or Product Manager.'
+      : 'OWNER ROLE HINT: FEAT Work → FEAT Manager for Risk Indicator, date/gate hygiene (not Product Owner / Product Manager).';
 
   return `TODAY: ${today}
 RELEASE: ${release}
@@ -796,6 +834,7 @@ module.exports = {
     buildGateGapsLine,
     buildReleaseContextBlock,
     buildReleaseSummaryPrompt,
+    buildSchedulePressureBlock,
     buildSosTierPrompt,
     extractKeysFromItems,
     collectCalloutKeys,
