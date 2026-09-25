@@ -125,7 +125,7 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
   if (bucket === 'closed')   return `${base} and status = Closed and resolution in (Fixed, Done, Resolved, Complete)`;
   if (bucket === 'resolved') return `${base} and status = Resolved and resolution is not EMPTY`;
   if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid, "Works as Designed")`;
-  if (bucket === 'open')     return `${base} and resolution is EMPTY and status not in (Resolved, Closed)`;
+  if (bucket === 'open')     return `${base} and status not in (Resolved, Closed)`;
   return base; // total
 }
 
