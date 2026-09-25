@@ -1067,19 +1067,13 @@ function SosSummaryPage() {
   // Component filter — derive distinct values from all loaded items
   const [selectedComponent, setSelectedComponent] = useState('');
 
+  // Component filter — driven by CF[15160] Primary Component (first value), server-mapped to item.primaryComponent
   const allComponentOptions = useMemo(() => {
     const seen = new Set();
     for (const items of Object.values(byVersion)) {
       for (const item of items) {
-        const comps = item.components;
-        if (Array.isArray(comps)) {
-          comps.forEach((c) => {
-            const name = typeof c === 'string' ? c : (c?.name || '');
-            if (name) seen.add(name);
-          });
-        } else if (typeof comps === 'string' && comps) {
-          seen.add(comps);
-        }
+        const pc = item.primaryComponent;
+        if (pc) seen.add(pc);
       }
     }
     return Array.from(seen).sort();
@@ -1087,14 +1081,7 @@ function SosSummaryPage() {
 
   const filterItemsByComponent = useCallback((items) => {
     if (!selectedComponent) return items;
-    return items.filter((item) => {
-      const comps = item.components;
-      if (Array.isArray(comps)) {
-        return comps.some((c) => (typeof c === 'string' ? c : (c?.name || '')) === selectedComponent);
-      }
-      if (typeof comps === 'string') return comps === selectedComponent;
-      return false;
-    });
+    return items.filter((item) => item.primaryComponent === selectedComponent);
   }, [selectedComponent]);
 
   const handleBatchGenerate = useCallback(() => {
@@ -1200,7 +1187,7 @@ function SosSummaryPage() {
             {/* Component filter */}
             {allComponentOptions.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Component:</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Primary Component:</span>
                 <select
                   value={selectedComponent}
                   onChange={(e) => setSelectedComponent(e.target.value)}

@@ -43,7 +43,7 @@ const RELEASE_ITEMS_CONFIG = {
     'customfield_11068', 'customfield_35863', 'customfield_35864',
     'customfield_14463', 'customfield_31460', 'customfield_14464',
     'customfield_14465', 'customfield_23073', 'customfield_45660',
-    'customfield_23560', 'customfield_38460',
+    'customfield_23560', 'customfield_38460', 'customfield_15160',
   ].join(','),
 };
 
@@ -102,6 +102,13 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       customfield_45660: issue.fields.customfield_45660,
       customfield_23560: riskIndicator,
       customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
+      // Primary Component (CF[15160]) — array of {value} objects; expose first value as string
+      primaryComponent: (() => {
+        const raw = issue.fields.customfield_15160;
+        if (Array.isArray(raw) && raw.length > 0) return raw[0]?.value || raw[0] || null;
+        if (raw && typeof raw === 'object') return raw.value || null;
+        return typeof raw === 'string' ? raw : null;
+      })(),
     };
   });
 }
