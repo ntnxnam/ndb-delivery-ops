@@ -19,7 +19,8 @@ import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { formatRiskWithHistory } from '../utils/riskHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
-import ReleaseGantt from './ReleaseGantt';
+import ReleaseGantt from './GanttStyle2';
+import ReleaseVersionGantt from './ReleaseVersionGantt';
 import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
 import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
@@ -676,6 +677,7 @@ function ReleaseSection({
   kpiData = null,
   kpiLoading = false,
   kpiError = null,
+  ganttConfigFromDates = null,  // Per-version config from /api/config/release-dates (drives ReleaseVersionGantt)
 }) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
@@ -754,8 +756,8 @@ function ReleaseSection({
             )}
           </div>
           <GateDateStrip ganttConfig={ganttConfig} />
-          {/* KPI breakdown per release — shown at top of each release section */}
-          {(kpiData || kpiLoading || kpiError) && (
+          {/* KPI breakdown per release — only mount when loading or data is present; errors are silently suppressed inside KpiBreakdownStrip */}
+          {(kpiData || kpiLoading) && (
             <KpiBreakdownStrip
               kpiData={kpiData}
               loading={kpiLoading}
@@ -794,6 +796,23 @@ function ReleaseSection({
           </button>
         </div>
       </div>
+
+      {/* Per-release gate timeline — reuses ReleaseVersionGantt (timelineOnly) so the
+          visual language (binding vs soft gates, Today bubble, proportional spacing)
+          is identical to Project Status. Only shown when release-dates config exists. */}
+      {ganttConfigFromDates && (
+        <div style={{ marginBottom: '12px' }}>
+          <ReleaseVersionGantt
+            ganttConfig={ganttConfigFromDates}
+            selectedVersion={version}
+            items={{ commit: [], longTermFunded: [] }}
+            checkpointHistory={{}}
+            sortItems={(arr) => arr}
+            sprintDates={[]}
+            timelineOnly={true}
+          />
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
         {SOS_TIERS.map((tier) => (
@@ -1227,6 +1246,7 @@ function SosSummaryPage() {
             kpiData={kpiDataByRelease[version] || null}
             kpiLoading={kpiLoadingByRelease[version] || false}
             kpiError={kpiErrorByRelease[version] || null}
+            ganttConfigFromDates={releaseDatesConfig[version] || null}
           />
         ))}
     </div>
