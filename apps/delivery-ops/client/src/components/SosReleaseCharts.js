@@ -345,13 +345,8 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
       </div>
     );
   }
-  if (error) {
-    return (
-      <div style={{ fontSize: 11, color: '#d32f2f', padding: '6px 0' }}>
-        KPI load error: {error}
-      </div>
-    );
-  }
+  // If the whole KPI load failed, hide the strip silently (don't pollute the SoS view)
+  if (error) return null;
   if (!kpiData || Object.keys(kpiData).length === 0) return null;
 
   const entries = Object.entries(kpiData);
@@ -364,24 +359,8 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
       padding: '8px 0 4px',
     }}>
       {entries.map(([kpiId, kpi]) => {
-        if (kpi.error) {
-          return (
-            <div
-              key={kpiId}
-              title={`KPI error: ${kpi.error}`}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                border: '1px solid #f5c6cb',
-                background: '#fff5f5',
-                fontSize: 11,
-                color: '#d32f2f',
-              }}
-            >
-              {kpiId}: error
-            </div>
-          );
-        }
+        // Individual KPI failed — skip its chip entirely
+        if (kpi.error) return null;
 
         const total = kpi.total ?? 0;
         const done  = kpi.done  ?? 0;
@@ -448,32 +427,40 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
               )}
               <span style={{ fontSize: 10, color: '#888' }}>total</span>
             </div>
-            <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
-              {/* Done */}
-              {doneHref ? (
-                <a href={doneHref} target="_blank" rel="noopener noreferrer"
-                  style={{ color: '#388e3c', textDecoration: 'none', fontWeight: 600 }}
-                  title={`Done: ${done} — open in JIRA`}
-                >
-                  ✓ {done}
-                </a>
-              ) : (
-                <span style={{ color: '#388e3c', fontWeight: 600 }}>✓ {done}</span>
-              )}
-              {/* Open */}
-              {openHref ? (
-                <a href={openHref} target="_blank" rel="noopener noreferrer"
-                  style={{ color: open > 0 ? '#d32f2f' : '#888', textDecoration: 'none', fontWeight: 600 }}
-                  title={`Open: ${open} — open in JIRA`}
-                >
-                  ○ {open}
-                </a>
-              ) : (
-                <span style={{ color: open > 0 ? '#d32f2f' : '#888', fontWeight: 600 }}>○ {open}</span>
-              )}
-              {/* % done */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, marginTop: 2 }}>
+              {/* Resolved / closed (done family: Fixed, Done, Resolved, Complete) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ color: '#388e3c', fontWeight: 700, fontSize: 11 }}>✓</span>
+                {doneHref ? (
+                  <a href={doneHref} target="_blank" rel="noopener noreferrer"
+                    style={{ color: '#388e3c', textDecoration: 'none', fontWeight: 600 }}
+                    title="Resolved / closed — open in JIRA"
+                  >
+                    {done}
+                  </a>
+                ) : (
+                  <span style={{ color: '#388e3c', fontWeight: 600 }}>{done}</span>
+                )}
+                <span style={{ color: '#aaa' }}>resolved</span>
+              </div>
+              {/* Open / others */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ color: open > 0 ? '#d32f2f' : '#bbb', fontWeight: 700, fontSize: 11 }}>○</span>
+                {openHref ? (
+                  <a href={openHref} target="_blank" rel="noopener noreferrer"
+                    style={{ color: open > 0 ? '#d32f2f' : '#888', textDecoration: 'none', fontWeight: 600 }}
+                    title="Open / others — open in JIRA"
+                  >
+                    {open}
+                  </a>
+                ) : (
+                  <span style={{ color: open > 0 ? '#d32f2f' : '#888', fontWeight: 600 }}>{open}</span>
+                )}
+                <span style={{ color: '#aaa' }}>open</span>
+              </div>
+              {/* % resolved */}
               {pct !== null && (
-                <span style={{ color: '#888' }}>{pct}%</span>
+                <div style={{ color: '#888', marginTop: 1 }}>{pct}% done</div>
               )}
             </div>
             {/* Progress bar */}
