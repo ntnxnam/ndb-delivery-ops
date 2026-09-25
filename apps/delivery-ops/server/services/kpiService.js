@@ -119,13 +119,15 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
 
   // Four resolution buckets (per velocity-resolution-categories):
   //   closed   = positive resolutions — work actually shipped
-  //   resolved = status Resolved — TBV (To Be Verified by QA)
+  //             resolution in (Fixed, Done, Resolved, Complete)
+  //             NOTE: resolution=Resolved is positive. status=Resolved is TBV (different field).
+  //   tbv      = status = Resolved AND resolution is EMPTY — dev done, QA pending
   //   others   = negative resolutions (Dupe, Not Repro, Won't Fix, etc.)
-  //   open     = truly unresolved (resolution is EMPTY)
-  if (bucket === 'closed')   return `${base} and resolution in (Fixed, Done, Complete)`;
-  if (bucket === 'resolved') return `${base} and resolution = Resolved`;
+  //   open     = truly unresolved (resolution is EMPTY AND status != Resolved)
+  if (bucket === 'closed')   return `${base} and resolution in (Fixed, Done, Resolved, Complete)`;
+  if (bucket === 'resolved') return `${base} and status = Resolved and resolution is EMPTY`;
   if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid, "Works as Designed")`;
-  if (bucket === 'open')     return `${base} and resolution is EMPTY`;
+  if (bucket === 'open')     return `${base} and resolution is EMPTY and status != Resolved`;
   return base; // total
 }
 
