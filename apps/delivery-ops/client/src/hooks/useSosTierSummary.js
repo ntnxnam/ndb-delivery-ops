@@ -386,8 +386,11 @@ export function assembleTierForRelease({
 
   // Standalone epics have no Risk Indicator on the SoS table — treat every
   // epic key as NotSet hygiene so the model must list them, not invent "four".
+  // Exclude epics that are already closed/done (e.g. closed in JIRA since last
+  // bundle sync) so they don't appear as "past gate lagging".
+  const DONE_STATUSES_CLIENT = new Set(['fixed', 'done', 'resolved', 'complete', 'closed', 'cancelled']);
   const standaloneItems = (standaloneEpics || [])
-    .filter((e) => e?.projectKey)
+    .filter((e) => e?.projectKey && !DONE_STATUSES_CLIENT.has((e.status || '').toLowerCase()))
     .map((e) => ({ key: e.projectKey, customfield_23560: null, customfield_45660: null, status: e.status || '' }));
   const standaloneCallouts = buildTierCallouts(standaloneItems, checkpointHistory, releaseGates);
 
@@ -444,8 +447,8 @@ export function useSosTierSummary() {
   const [generatingRelease, setGeneratingRelease] = useState(null);
   const [generateError, setGenerateError] = useState(null);
 
-  const fetchProjectStatus = useCallback(async (productId, release) => {
-    if (projectStatusRef.current[release]) return projectStatusRef.current[release];
+  const fetchProjectStatus = useCallback(async (productId, release, { force = false } = {}) => {
+    if (!force && projectStatusRef.current[release]) return projectStatusRef.current[release];
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
     const resp = await authenticatedGet(
@@ -490,7 +493,7 @@ export function useSosTierSummary() {
     });
 
     try {
-      const projectStatus = await fetchProjectStatus(productId, release);
+      const projectStatus = await fetchProjectStatus(productId, release, { force: true });
       const payloads = assembleTierForRelease({
         release,
         items,
@@ -603,7 +606,7 @@ export function useSosTierSummary() {
     }));
 
     try {
-      const projectStatus = await fetchProjectStatus(productId, release);
+      const projectStatus = await fetchProjectStatus(productId, release, { force: true });
       const payloads = assembleTierForRelease({
         release, items, gateData, projectStatus, breakdownDataMap,
         checkpointHistory,

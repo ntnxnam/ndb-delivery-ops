@@ -311,54 +311,54 @@
       }
     },
     "NDB-3.0": {
-      "ecDate": "2026-06-30",
       "conceptCommit1": {
-        "label": "Concept Commit 1 (CC 1)",
+        "label": "Pre-CC (old)",
+        "date": "2026-05-27",
+        "color": "#6c757d",
+        "style": "dotted"
+      },
+      "conceptCommit2": {
+        "label": "Pre-CC",
         "date": "2026-06-04",
         "color": "#6c757d",
         "style": "solid"
       },
-      "ccm1Gate": {
-        "label": "Code Complete 1 (old)",
+      "preEc": {
+        "label": "Pre-EC",
         "date": "2026-07-28",
+        "color": "#6c757d",
+        "style": "solid"
+      },
+      "ecDate": "2026-08-11",
+      "ccm1Gate": {
+        "label": "Code Freeze (old)",
+        "date": "2026-10-13",
         "color": "#de350b",
         "style": "dotted"
       },
       "ccm2Gate": {
-        "label": "Code Complete 2",
-        "date": "2026-08-04",
+        "label": "Code Freeze (DBoC)",
+        "date": "2026-12-17",
         "color": "#de350b",
         "style": "solid"
       },
-      "codeFreeze": {
-        "label": "Code Freeze",
-        "date": "2026-08-11",
-        "color": "#de350b",
-        "style": "dotted"
-      },
       "commitGate1": {
-        "label": "Commit Gate 1 (old)",
-        "date": "2026-10-13",
+        "label": "Commit Gate (old)",
+        "date": "2026-12-08",
         "color": "#ff9800",
         "style": "dotted"
       },
       "commitGate2": {
-        "label": "Commit Gate 2",
-        "date": "2026-11-17",
+        "label": "Commit Gate",
+        "date": "2026-12-15",
         "color": "#ff9800",
         "style": "solid"
       },
       "promotionGate1": {
-        "label": "Promotion Gate 1 (old)",
-        "date": "2026-12-08",
+        "label": "Promotion Gate (old)",
+        "date": "2027-02-02",
         "color": "#9c27b0",
         "style": "dotted"
-      },
-      "promotionGate2": {
-        "label": "Promotion Gate 2",
-        "date": "2026-12-15",
-        "color": "#9c27b0",
-        "style": "solid"
       },
       "deferralComplete": {
         "label": "Deferral Complete",
@@ -367,13 +367,13 @@
         "style": "dotted"
       },
       "ga1": {
-        "label": "General Availability 1 (old)",
+        "label": "GA (old)",
         "date": "2027-02-09",
         "color": "#28a745",
         "style": "dotted"
       },
       "ga2": {
-        "label": "General Availability 2",
+        "label": "GA",
         "date": "2027-03-09",
         "color": "#28a745",
         "style": "solid"

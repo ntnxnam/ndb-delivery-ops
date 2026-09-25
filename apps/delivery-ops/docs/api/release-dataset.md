@@ -281,11 +281,19 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → if empty
     ],
     "standaloneEpics": [],
     "standaloneTickets": { "projectKey": "standalone-tickets", "projectName": "Standalone Tickets (no epic)", "issueTypeGroups": [] },
+    "tierOutstanding": { "feat": [], "standalone": [], "direct": [] },
+    "tierJql": {
+      "feat": "issueFunction in issuesInEpics(\"…\")",
+      "standalone": "issueFunction in issuesInEpics(\"type = Epic AND fixVersion = …\")",
+      "direct": "(fixVersion = … OR affectedVersion = …) AND \"Epic Link\" is EMPTY AND …"
+    },
     "_source": "bundle",
     "_bundleSyncedAt": "2026-06-16T10:00:00Z"
   }
 }
 ```
+
+`tierJql` — payload-bucket JQL for SoS Outstanding-by-type chart click-through (FEAT = `work_toward_project`, Standalone = `work_toward_standalone_epic`, Direct = `direct_tickets`). Client ANDs issue-type + open-status filters; do not use bare `fixVersion = X AND issuetype = Bug`.
 
 `_source` is `"bundle"` when served from disk, `"live"` when the bundle was empty and the endpoint fell back to a live per-release fetch. When `_source` is `"live"`, `_bundleSyncedAt` is `null`. A release with genuinely no tickets returns HTTP 200 with empty `projects` / `standaloneEpics` arrays (not a 404).
 
@@ -300,6 +308,7 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → if empty
 
 > ⚠️ Breaking change 2026-09-09: `/project-status` no longer 404s "run a sync first" on empty disk — it falls back to a live per-release fetch. Callers that special-cased the 404 should treat empty disk as a live read instead.
 > ⚠️ Breaking change 2026-06-16: renamed from `/project-breakdown`. Old path redirects (HTTP 307) to this endpoint for back-compat.
+> Note 2026-09-25: added `tierJql` for authentic Outstanding-by-type chart links (additive; non-breaking).
 
 ---
 

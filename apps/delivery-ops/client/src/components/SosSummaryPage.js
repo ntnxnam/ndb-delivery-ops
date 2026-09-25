@@ -967,6 +967,39 @@ function SosSummaryPage() {
     }
   }, [selectedTeamId, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
 
+  // Component filter — derive distinct values from all loaded items
+  const [selectedComponent, setSelectedComponent] = useState('');
+
+  const allComponentOptions = useMemo(() => {
+    const seen = new Set();
+    for (const items of Object.values(byVersion)) {
+      for (const item of items) {
+        const comps = item.components;
+        if (Array.isArray(comps)) {
+          comps.forEach((c) => {
+            const name = typeof c === 'string' ? c : (c?.name || '');
+            if (name) seen.add(name);
+          });
+        } else if (typeof comps === 'string' && comps) {
+          seen.add(comps);
+        }
+      }
+    }
+    return Array.from(seen).sort();
+  }, [byVersion]);
+
+  const filterItemsByComponent = useCallback((items) => {
+    if (!selectedComponent) return items;
+    return items.filter((item) => {
+      const comps = item.components;
+      if (Array.isArray(comps)) {
+        return comps.some((c) => (typeof c === 'string' ? c : (c?.name || '')) === selectedComponent);
+      }
+      if (typeof comps === 'string') return comps === selectedComponent;
+      return false;
+    });
+  }, [selectedComponent]);
+
   const handleBatchGenerate = useCallback(() => {
     const allItems = Object.values(byVersion).flat();
     runBatch(allItems, gateDataMap);
@@ -999,6 +1032,39 @@ function SosSummaryPage() {
 
   return (
     <div>
+        {/* Component filter — first dropdown */}
+        {allComponentOptions.length > 0 && (
+          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#555' }}>Component:</label>
+            <select
+              value={selectedComponent}
+              onChange={(e) => setSelectedComponent(e.target.value)}
+              style={{
+                fontSize: '12px', padding: '4px 8px', borderRadius: '4px',
+                border: '1px solid #ced4da', background: '#fff', color: '#333',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="">All components</option>
+              {allComponentOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            {selectedComponent && (
+              <button
+                type="button"
+                onClick={() => setSelectedComponent('')}
+                style={{
+                  fontSize: '11px', border: '1px solid #adb5bd', borderRadius: '4px',
+                  background: '#fff', color: '#666', cursor: 'pointer', padding: '2px 8px',
+                }}
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Page header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
@@ -1122,7 +1188,7 @@ function SosSummaryPage() {
           <ReleaseSection
             key={version}
             version={version}
-            items={byVersion[version] || []}
+            items={filterItemsByComponent(byVersion[version] || [])}
             breakdownDataMap={breakdownDataMap}
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}

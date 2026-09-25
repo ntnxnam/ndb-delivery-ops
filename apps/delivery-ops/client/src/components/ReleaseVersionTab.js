@@ -32,7 +32,6 @@ import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
 import { useGateTimeline } from '../release/hooks/useGateTimeline';
 import { GateChipStrip } from '../design-system';
 import ReleaseSummaryPanel from './ReleaseSummaryPanel';
-import { TeamSelector } from '../layout/components/TeamSelector';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
@@ -1480,7 +1479,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           onDownload={handleDownload}
           onGenerateBriefing={handleGenerateBriefing}
           briefingState={briefingState}
-          teamSelector={<TeamSelector variant="page" id="project-status-team-select" />}
+
         />
       </div>
       

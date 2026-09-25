@@ -914,10 +914,13 @@ router.get('/project-status', auth, async (req, res) => {
     });
 
     // ── TIER 2: Standalone Epics (no Portfolio Parent Key) ────────────────
+    // Exclude closed/done/cancelled epics — they no longer need tracking.
     const standaloneEpicTickets = tickets.filter(
       (t) => t['Issue Type'] === EPIC_TYPE && !t['Portfolio Parent Key'] &&
              typeof t['Components'] === 'string' &&
-             t['Components'].includes('standalone_epics')
+             t['Components'].includes('standalone_epics') &&
+             !DONE_STATUSES.has(t['Status'] || '') &&
+             (t['Status'] || '').toLowerCase() !== 'cancelled'
     );
 
     const standaloneEpics = standaloneEpicTickets.map((epic) => {
@@ -937,6 +940,7 @@ router.get('/project-status', auth, async (req, res) => {
         projectKey: epicKey,
         projectName: epic['Summary'] || epicKey,
         issueTypeGroups,
+        status: epic['Status'] || '',
       };
     });
 
@@ -1003,6 +1007,23 @@ router.get('/project-status', auth, async (req, res) => {
       },
     };
 
+    // Click-through JQL for Outstanding-by-type chart (payload buckets, not
+    // bare fixVersion). Client ANDs issuetype + open-status filter.
+    let tierJql = { feat: null, standalone: null, direct: null };
+    try {
+      const { getComponentQueries } = shared;
+      if (typeof getComponentQueries === 'function') {
+        const buckets = getComponentQueries(release, false);
+        tierJql = {
+          feat: buckets.work_toward_project || null,
+          standalone: buckets.work_toward_standalone_epic || null,
+          direct: buckets.direct_tickets || null,
+        };
+      }
+    } catch (jqlErr) {
+      console.warn('[release-dataset] /project-status tierJql build failed:', jqlErr.message);
+    }
+
     return res
       .set('Cache-Control', 'no-cache, no-store, must-revalidate')
       .set('Pragma', 'no-cache')
@@ -1016,6 +1037,7 @@ router.get('/project-status', auth, async (req, res) => {
           standaloneEpics,
           standaloneTickets,
           tierOutstanding,
+          tierJql,
           _source: source,
           _bundleSyncedAt: bundleSyncedAt,
         },

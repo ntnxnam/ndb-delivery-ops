@@ -31,6 +31,16 @@ const TYPE_JQL = {
     'issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability, Bug, Improvement, Task, "Unit Test", Test)',
 };
 
+/** Matches chart open count = outstanding + toVerify (excludes Done-family). */
+const OPEN_STATUS_JQL =
+  'status not in (Fixed, Done, Resolved, Complete, Closed, Cancelled, Backlog)';
+
+const TIER_JQL_KEY = {
+  'FEAT Work': 'feat',
+  Standalone: 'standalone',
+  Direct: 'direct',
+};
+
 function sumOutstanding(groups) {
   const totals = {};
   for (const g of groups || []) {
@@ -256,9 +266,12 @@ function OutstandingStacks({ projectStatus, release, jiraBaseUrl }) {
     1
   );
 
-  const typeHref = (typeLabel) => {
-    if (!release || !TYPE_JQL[typeLabel]) return '';
-    const jql = `fixVersion = "${release}" AND ${TYPE_JQL[typeLabel]} AND statusCategory != Done`;
+  const typeHref = (tierLabel, typeLabel) => {
+    const bucketKey = TIER_JQL_KEY[tierLabel];
+    const base = projectStatus?.tierJql?.[bucketKey];
+    const typeClause = TYPE_JQL[typeLabel];
+    if (!base || !typeClause) return '';
+    const jql = `(${base}) AND (${typeClause}) AND ${OPEN_STATUS_JQL}`;
     return jiraSearchUrl(jiraBaseUrl, jql);
   };
 
@@ -280,13 +293,13 @@ function OutstandingStacks({ projectStatus, release, jiraBaseUrl }) {
               {TYPE_ORDER.map((k) => {
                 const n = totals[k] || 0;
                 if (!n || !total) return null;
-                const href = typeHref(k);
+                const href = typeHref(label, k);
                 return (
                   <div
                     key={k}
                     role={href ? 'link' : undefined}
                     tabIndex={href ? 0 : undefined}
-                    title={`${k}: ${n} — open in JIRA`}
+                    title={`${label} · ${k}: ${n} — open in JIRA`}
                     onClick={(e) => { e.stopPropagation(); openJira(href); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openJira(href); }}
                     style={{
@@ -303,26 +316,12 @@ function OutstandingStacks({ projectStatus, release, jiraBaseUrl }) {
         );
       })}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-        {TYPE_ORDER.map((k) => {
-          const href = typeHref(k);
-          return (
-            <a
-              key={k}
-              href={href || undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => { if (!href) e.preventDefault(); }}
-              style={{
-                fontSize: 9, color: '#666', display: 'inline-flex', alignItems: 'center', gap: 3,
-                textDecoration: 'none', cursor: href ? 'pointer' : 'default',
-              }}
-              title={href ? `Open ${k} in JIRA` : undefined}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: TYPE_COLORS[k] }} />
-              {k}
-            </a>
-          );
-        })}
+        {TYPE_ORDER.map((k) => (
+          <span key={k} style={{ fontSize: 9, color: '#666', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: TYPE_COLORS[k] }} />
+            {k}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -357,12 +356,7 @@ export default function SosReleaseCharts({
         </div>
         <GateCountdown gateData={gateData} release={release} jiraBaseUrl={jiraBaseUrl} />
       </div>
-      <div style={{ flex: '1 1 220px' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
-          Outstanding by type
-        </div>
-        <OutstandingStacks projectStatus={projectStatus} release={release} jiraBaseUrl={jiraBaseUrl} />
-      </div>
+      {/* Outstanding by type bucket breakdown hidden — replaced by Component filter */}
     </div>
   );
 }

@@ -576,8 +576,11 @@ When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (n
 
 ✅ Next Owner Actions:
 • ≤2 bullets. Format: <owner or role> — <specific ask>. No "monitor" or "follow up".
-• For Risk Indicator, Requirements Done, FS/DS Done, Test Plan, or gate dates: owner role MUST be "FEAT Manager" — never Product Owner, Product Manager, or Product Management.
-• For past-gate lagging: FEAT Manager — advance status to the expected clearance named in CALL_OUTS (whatever past gate this release is on).
+• Owner role depends on TIER (see OWNER ROLE HINT in the user message):
+  - FEAT Work / Standalone Epics: "FEAT Manager" for Risk Indicator, Requirements Done, FS/DS Done, Test Plan, gate dates, past-gate clearance — never Product Owner / Product Manager / Product Management.
+  - Direct Tickets: "Manager" (engineering / assignee manager) — never FEAT Manager (direct tickets have no FEAT Manager).
+• For past-gate lagging on FEAT/Standalone: FEAT Manager — advance status to the expected clearance named in CALL_OUTS.
+• For Direct Tickets backlog / open Bugs: Manager — triage and prioritize.
 
 RULES:
 - Under 180 words total (Call-outs keys may push slightly over — keep keys complete).
@@ -712,6 +715,10 @@ function buildSosTierPrompt(payload) {
     }).join('\n')
     : '  (none — synthesize from RAG / OUTSTANDING / CALL_OUTS / P0 / MUSTFIX only)';
 
+  const ownerHint = tier === 'direct'
+    ? 'OWNER ROLE HINT: Direct Tickets → Manager (engineering / assignee manager). Never FEAT Manager, Product Owner, or Product Manager.'
+    : 'OWNER ROLE HINT: FEAT Work / Standalone → FEAT Manager for date/risk/gate hygiene (not Product Owner / Product Manager).';
+
   return `TODAY: ${today}
 RELEASE: ${release}
 TIER: ${tierLabel}
@@ -733,7 +740,7 @@ ${criticalLines}
 CALL_OUTS (copy keys exactly when non-empty — counts must match listed keys):
 ${formatCalloutsBlock(callouts)}
 
-OWNER ROLE HINT: date/risk hygiene asks → FEAT Manager (not Product Owner / Product Manager).
+${ownerHint}
 
 Write the briefing for ${tierLabel} — ${release} now. Answer state-of-business for this slice only.
 When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
