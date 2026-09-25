@@ -102,12 +102,15 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       customfield_45660: issue.fields.customfield_45660,
       customfield_23560: riskIndicator,
       customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
-      // Primary Component (CF[15160]) — array of {value} objects; expose first value as string
+      // Primary Component (CF[15160]) — cascading select: { value: "Parent", child: { value: "Child" } }
+      // Expose as { parent, child } so the UI can filter on either level.
       primaryComponent: (() => {
         const raw = issue.fields.customfield_15160;
-        if (Array.isArray(raw) && raw.length > 0) return raw[0]?.value || raw[0] || null;
-        if (raw && typeof raw === 'object') return raw.value || null;
-        return typeof raw === 'string' ? raw : null;
+        if (!raw || typeof raw !== 'object') return null;
+        return {
+          parent: raw.value || null,
+          child: raw.child?.value || null,
+        };
       })(),
       // Standard JIRA components field — array of component names
       components: (issue.fields.components || []).map((c) => c.name).filter(Boolean),

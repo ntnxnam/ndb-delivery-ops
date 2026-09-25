@@ -1074,8 +1074,9 @@ function SosSummaryPage() {
   const filterItemsByComponent = useCallback((items) => {
     if (!selectedComponent) return items;
     return items.filter((item) => {
-      // Match Primary Component (CF[15160])
-      if (item.primaryComponent === selectedComponent) return true;
+      // Match CF[15160] Primary Component (cascading select — match on parent value)
+      const pc = item.primaryComponent;
+      if (pc && (pc.parent === selectedComponent || pc.child === selectedComponent)) return true;
       // Match JIRA standard components field
       const comps = item.components;
       if (Array.isArray(comps)) return comps.some((c) => (typeof c === 'string' ? c : (c?.name || '')) === selectedComponent);
