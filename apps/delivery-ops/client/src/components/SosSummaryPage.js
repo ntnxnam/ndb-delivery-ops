@@ -553,22 +553,20 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
 
       {/* ── Dates: FS/DS / CCM / CG / PG stacked ── */}
       <td style={{ padding: '8px 10px', width: '130px', verticalAlign: 'top' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          {DATE_ROWS.map(({ label, field, raw }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span style={{
-                fontSize: '9px', fontWeight: 700, color: '#888',
-                textTransform: 'uppercase', letterSpacing: '0.4px',
-                minWidth: '30px', flexShrink: 0,
-              }}>
-                {label}
-              </span>
-              <span style={{ fontSize: '11px', color: raw ? '#333' : '#ccc' }}>
-                {raw ? formatDateWithHistory(item.key, field, raw, checkpointHistory) : '—'}
-              </span>
-            </div>
-          ))}
-        </div>
+        {DATE_ROWS.map(({ label, field, raw }) => (
+          <div key={label} style={{ marginBottom: '6px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              {label}
+            </span>
+            <span style={{ fontSize: '11px' }}>
+              {raw ? formatDateWithHistory(item.key, field, raw, checkpointHistory) : <span style={{ color: '#ccc' }}>—</span>}
+            </span>
+          </div>
+        ))}
       </td>
 
       {/* ── AI Exec Summary ── */}
