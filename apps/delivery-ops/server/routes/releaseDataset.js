@@ -792,6 +792,226 @@ router.get('/outstanding', auth, async (req, res) => {
  *   { success, data: { productId, release, projects, standaloneEpics,
  *                      standaloneTickets, _source: 'bundle' | 'live' } }
  */
+
+/**
+ * POST /api/release-dataset/component-counts
+ *
+ * Live JIRA count breakdown by component for a release's Outstanding and
+ * To-Be-Verified donuts. Counts come from JIRA directly (not the cached
+ * bundle), using the saved filter `{release}-All` — same pattern as
+ * retroService — so numbers always match click-through URLs.
+ *
+ * Request body: { productId, release }
+ *
+ * Response:
+ *   { success, outstanding: [{name, count}], tbv: [{name, count}],
+ *     jql: { outstanding, tbv } }
+ *   sorted desc, top 15 each. `jql` is the exact base the client ANDs
+ *   `component = "…"` onto for authenticity links.
+ */
+router.post('/component-counts', auth, async (req, res) => {
+  try {
+    const productId = (req.body?.productId || '').toString().trim();
+    const release = (req.body?.release || '').toString().trim();
+    if (!productId || !release) {
+      return res.status(400).json({ success: false, error: 'productId and release are required' });
+    }
+
+    const userJiraPat = extractToken(req);
+    if (!userJiraPat) {
+      return res.status(401).json({ success: false, error: 'JIRA Bearer token required' });
+    }
+
+    const shared = await getShared();
+    const { JiraConnector, loadEnv, getProductService } = shared;
+    const productService = getProductService(PRODUCT_CONFIG_PATH);
+    try {
+      productService.getProduct(productId);
+    } catch (e) {
+      return res.status(400).json({ success: false, error: `Unknown productId '${productId}': ${e.message}` });
+    }
+
+    const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
+    const jira = new JiraConnector(env);
+
+    // Same saved-filter pattern as retroService: filter = "{release}-All".
+    const releaseFilter = `filter = "${release}-All"`;
+    const outstandingJql =
+      `${releaseFilter} AND status not in (Closed, Cancelled)` +
+      ` AND issueType not in (X-FEAT, Capability, Feature, Initiative, Epic)`;
+    const tbvJql =
+      `${releaseFilter} AND status = Resolved AND resolution is not EMPTY` +
+      ` AND issueType in (Bug, Improvement)`;
+
+    // Validate both bases independently so we surface a clear filter error.
+    const validateBase = async (jql, label) => {
+      try {
+        await jira.searchCount(jql);
+        return null;
+      } catch (e) {
+        const wrapped = JiraConnector.wrapError(e);
+        const msg = wrapped?.message || e?.message || String(e);
+        console.warn(`[release-dataset] /component-counts ${label} JQL failed:`, msg);
+        return msg;
+      }
+    };
+
+    const outstandingErr = await validateBase(outstandingJql, 'outstanding');
+    if (outstandingErr) {
+      const filterMissing = /filter|does not exist|unknown/i.test(outstandingErr);
+      return res.status(filterMissing ? 404 : 502).json({
+        success: false,
+        error: filterMissing
+          ? `Saved JIRA filter "${release}-All" not found or inaccessible`
+          : `Outstanding query failed: ${outstandingErr}`,
+      });
+    }
+
+    let tbvJqlEffective = tbvJql;
+    const tbvErr = await validateBase(tbvJql, 'tbv');
+    if (tbvErr) {
+      // Fallback closer to the user-confirmed shape (no resolution clause).
+      const tbvFallback =
+        `${releaseFilter} AND status = Resolved` +
+        ` AND issueType in (Bug, Improvement)`;
+      const tbvFallbackErr = await validateBase(tbvFallback, 'tbv-fallback');
+      if (tbvFallbackErr) {
+        console.warn('[release-dataset] /component-counts TBV JQL unusable; returning empty TBV');
+        tbvJqlEffective = null;
+      } else {
+        tbvJqlEffective = tbvFallback;
+      }
+    }
+
+    // Discover names via POST /search (GET + long JQL often 400s). Page size
+    // 100 stays under typical JIRA DC maxResults caps. Do NOT use searchAll —
+    // it throws when total > maxIssues.
+    const discoverComponentNames = async (jqlBase) => {
+      if (!jqlBase) return [];
+      const nameSet = new Set();
+      const pageSize = 100;
+      const maxPages = 20; // up to 2k tickets for name discovery
+      let startAt = 0;
+      for (let page = 0; page < maxPages; page++) {
+        let searchRes;
+        try {
+          searchRes = await jira.post('/rest/api/2/search', {
+            jql: jqlBase,
+            fields: ['components'],
+            maxResults: pageSize,
+            startAt,
+          });
+        } catch (e) {
+          const wrapped = JiraConnector.wrapError(e);
+          const msg = wrapped.message || e?.message || String(e);
+          console.warn('[release-dataset] /component-counts discover page failed:', msg, {
+            startAt,
+            jqlPreview: jqlBase.slice(0, 120),
+          });
+          throw wrapped;
+        }
+        const issues = searchRes.data?.issues || [];
+        for (const issue of issues) {
+          const comps = issue?.fields?.components || [];
+          if (!comps.length) nameSet.add('(none)');
+          for (const c of comps) {
+            if (c?.name) nameSet.add(c.name);
+          }
+        }
+        startAt += issues.length;
+        const total = searchRes.data?.total ?? startAt;
+        if (issues.length < pageSize || startAt >= total) break;
+      }
+      return [...nameSet];
+    };
+
+    let outstandingNames = [];
+    let tbvNames = [];
+    try {
+      outstandingNames = await discoverComponentNames(outstandingJql);
+    } catch (e) {
+      const msg = e?.message || String(e);
+      console.warn('[release-dataset] /component-counts outstanding discover failed:', msg);
+      return res.status(502).json({
+        success: false,
+        error: `Failed to discover components: ${msg}`,
+      });
+    }
+    if (tbvJqlEffective) {
+      try {
+        tbvNames = await discoverComponentNames(tbvJqlEffective);
+      } catch (e) {
+        console.warn(
+          '[release-dataset] /component-counts TBV discover failed:',
+          e?.message || e
+        );
+        tbvNames = [];
+      }
+    }
+
+    const COUNT_CONCURRENCY = 8;
+    const runPool = async (items, worker) => {
+      const out = new Array(items.length);
+      let next = 0;
+      const runners = Array.from(
+        { length: Math.min(COUNT_CONCURRENCY, Math.max(items.length, 1)) },
+        async () => {
+          while (next < items.length) {
+            const i = next++;
+            out[i] = await worker(items[i]);
+          }
+        }
+      );
+      await Promise.all(runners);
+      return out;
+    };
+
+    const countByComponent = async (jqlBase, componentNames) => {
+      if (!jqlBase || !componentNames.length) return [];
+      const results = await runPool(componentNames, async (name) => {
+        const clause = name === '(none)'
+          ? 'component is EMPTY'
+          : `component = "${String(name).replace(/"/g, '\\"')}"`;
+        const jql = `${jqlBase} AND ${clause}`;
+        try {
+          const count = await jira.searchCount(jql);
+          return { name, count };
+        } catch {
+          return { name, count: 0 };
+        }
+      });
+      return results
+        .filter((r) => r.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+    };
+
+    const [outstanding, tbv] = await Promise.all([
+      countByComponent(outstandingJql, outstandingNames),
+      tbvJqlEffective
+        ? countByComponent(tbvJqlEffective, tbvNames)
+        : Promise.resolve([]),
+    ]);
+
+    return res.json({
+      success: true,
+      outstanding,
+      tbv,
+      jql: {
+        outstanding: outstandingJql,
+        tbv: tbvJqlEffective || tbvJql,
+      },
+    });
+  } catch (e) {
+    console.error('[release-dataset] /component-counts error:', e?.message || e);
+    const status = e.statusCode || e.response?.status || 500;
+    return res.status(status).json({
+      success: false,
+      error: e.publicError || e?.message || 'Component counts failed',
+    });
+  }
+});
+
 router.get('/project-status', auth, async (req, res) => {
   try {
     const productId = (req.query.productId || '').toString();
@@ -1009,6 +1229,8 @@ router.get('/project-status', auth, async (req, res) => {
 
     // Click-through JQL for Outstanding-by-type chart (payload buckets, not
     // bare fixVersion). Client ANDs issuetype + open-status filter.
+    // Component donut counts come from POST /component-counts (live JIRA),
+    // not from this bundle — see that endpoint.
     let tierJql = { feat: null, standalone: null, direct: null };
     try {
       const { getComponentQueries } = shared;

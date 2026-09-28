@@ -593,18 +593,19 @@ When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (n
 TLDR must NOT cite "items past next gate" as a risk unless the gate is ≤14 days away or there is a corroborating signal (e.g. high outstanding work, Red RAG). Items scheduled beyond the upcoming gate are a planning observation, not a blocker.
 
 ⚠️ Call-outs:   ← MANDATORY when CALL_OUTS below is non-empty. Copy lines/keys verbatim. One bullet per callout row.
-• Past gate lagging — <this release's most recently elapsed gate> (<date>): KEY1, …  (status not at expected clearance — CCM→Code Complete Met, CG→Commit Gate Met, PG→Promotion Gate Met, GA→Closed)
-• Keep an eye — dates past next gate <upcoming gate> (<date>): KEY1, …
+• Past gate lagging — <this release's most recently elapsed gate> (<date>): KEY1, …  (FEAT Work only — status not at expected clearance — CCM→Code Complete Met, CG→Commit Gate Met, PG→Promotion Gate Met, GA→Closed)
+• Not done by CG (<date>, Nd until/past CG) — N item(s) still open  (Standalone Epics / Direct Tickets only — these tiers have no gate date fields; rule is all items must be closed by CG)
 • Risk Indicator not set (N): KEY1, KEY2, …
 • Stale status updates (≥14d): KEY1, KEY2, …
 • <Date field> moved (last 7d): KEY1, KEY2, …
-(Omit this whole section only when CALL_OUTS says none.)
+(Omit this whole section only when CALL_OUTS says none. Do NOT include a "Keep an eye" / datesPastNextGate bullet for Standalone Epics or Direct Tickets — that check does not apply to those tiers.)
 
 📋 Key Risks:
 • ≤3 bullets. Each must cite a SOURCE from CRITICAL_ITEMS, OUTSTANDING, CALL_OUTS, RAG, or P0/MUSTFIX. Name ticket keys only from VALID TICKET KEYS.
 
 👁 Keep an eye:
-• Include when CALL_OUTS.datesPastNextGate is non-empty — list those keys vs the upcoming gate. Else omit section.
+• For FEAT Work only: include when CALL_OUTS.datesPastNextGate is non-empty — list those keys vs the upcoming gate. Else omit section.
+• For Standalone Epics / Direct Tickets: omit this section entirely — datesPastNextGate does not apply to these tiers.
 • IMPORTANT: items whose own gate date falls after the release's upcoming gate are NOT a risk by themselves — they are simply scheduled beyond that gate. Only escalate to Key Risks if the gate is ≤14 days away AND outstanding work is high, OR if the item's date is so far past the gate that it signals a planning gap. Never frame "dates past next gate" alone as a risk or include it in Key Risks without a corroborating signal.
 
 ✅ Next Owner Actions:
@@ -626,11 +627,18 @@ RULES:
 - Risk Indicator not set matters even for closed/resolved tickets: a missing Risk Indicator prevents retrospective risk-pattern analysis and blocks downstream release planning that depends on historical signal. When flagging NotSet on closed tickets, state: "blocks downstream planning — risk signal needed even for completed work."
 - Never output scoring rationale, banners, or "Here is the summary".
 
+GATE RULES BY TIER:
+- FEAT Work: uses CG/PG date field comparisons. Past-gate lagging and dates-past-next-gate apply.
+- Standalone Epics and Direct Tickets: have NO CG/PG date fields. The ONLY gate rule is: all items must be done (closed/fixed/resolved) by the CG date. Use CALL_OUTS "Not done by CG" count as the primary risk signal. Never mention "dates past next gate" or "past gate lagging" for these tiers — those checks do not apply.
+
 RAG VERDICT (first match wins):
 - If ITEM_COUNT is 0 and OUTSTANDING is none and CRITICAL_ITEMS is none: do NOT invent GREEN/On track. Output only the ## heading and one line: "No items in this tier for this release." Omit TLDR, Call-outs, Key Risks, and Actions.
-- RED if OPEN_P0 > 0, OR past-gate lagging count > 0, OR Red RAG dominates the tier, OR days to next gate ≤ 14 with material outstanding Bugs/Tests
-- YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material, OR (dates past next gate > 0 AND gate is ≤14 days away). Do NOT set YELLOW solely because items have dates past the next gate when the gate is still >14 days out — those items are simply scheduled beyond that gate, which is a planning fact not a risk.
-- GREEN only when the tier has items and Red≈0, Yellow negligible, P0=0, must-fix=0, NotSet≈0, no past-gate lagging, no dominant open-work risk
+- For FEAT Work — RED if OPEN_P0 > 0, OR past-gate lagging count > 0, OR Red RAG dominates the tier, OR days to next gate ≤ 14 with material outstanding Bugs/Tests
+- For FEAT Work — YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material, OR (dates past next gate > 0 AND gate is ≤14 days away). Do NOT set YELLOW solely because items have dates past the next gate when the gate is still >14 days out.
+- For Standalone Epics / Direct Tickets — RED if "Not done by CG" count > 0 AND CG is ≤14 days away (or already past)
+- For Standalone Epics / Direct Tickets — YELLOW if "Not done by CG" count > 0 AND CG is >14 days away
+- For Standalone Epics / Direct Tickets — GREEN only when "Not done by CG" count = 0 (all items closed)
+- GREEN for FEAT Work only when Red≈0, Yellow negligible, P0=0, must-fix=0, NotSet≈0, no past-gate lagging, no dominant open-work risk
 
 ⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
 - Copy ticket keys character-for-character from VALID TICKET KEYS.
@@ -668,6 +676,8 @@ function collectCalloutKeys(callouts) {
 function formatCalloutsBlock(callouts) {
   if (!callouts) return '  (none)';
   const lines = [];
+
+  // ── FEAT Work: phase-based gate checks ──────────────────────────────────
   const past = callouts.pastGateLagging;
   if (past?.count > 0 && past.keys?.length && past.gate) {
     lines.push(
@@ -683,6 +693,21 @@ function formatCalloutsBlock(callouts) {
       `(${next.gate.iso}, ${next.gate.daysUntil ?? '?'}d out) (${next.count}): ${next.keys.join(', ')}`
     );
   }
+
+  // ── Standalone Epics / Direct Tickets: done-by-CG check ─────────────────
+  // These tiers have no CG/PG date fields; the only gate rule is all items
+  // must reach done-status by the CG date.
+  const notDone = callouts.notDoneByCg;
+  if (notDone?.count > 0 && notDone.gate) {
+    const daysStr = notDone.gate.daysUntil != null
+      ? `, ${notDone.gate.daysUntil}d ${notDone.gate.daysUntil >= 0 ? 'until' : 'past'} CG`
+      : '';
+    const keyStr = notDone.keys?.length ? `: ${notDone.keys.join(', ')}` : ' (no per-ticket keys available)';
+    lines.push(
+      `  Not done by CG (${notDone.gate.iso}${daysStr}) — ${notDone.count} item(s) still open${keyStr}`
+    );
+  }
+
   const notSet = callouts.riskNotSet;
   if (notSet?.count > 0 && notSet.keys?.length) {
     lines.push(`  Risk Indicator not set (${notSet.count}): ${notSet.keys.join(', ')}`);

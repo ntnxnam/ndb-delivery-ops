@@ -11,45 +11,9 @@
 import React, { useMemo, useState } from 'react';
 import { jiraSearchUrl } from '../release/services/releaseBriefService';
 import { classifyRiskWord } from '../hooks/useSosTierSummary';
+import { useComponentCounts } from '../hooks/useComponentCounts';
 
 const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
-const TYPE_COLORS = {
-  Bug: '#d62728',
-  Improvement: '#ff7f0e',
-  'Dev Code': '#1f77b4',
-  Test: '#2ca02c',
-  'Everything Else': '#7f7f7f',
-};
-const TYPE_ORDER = ['Bug', 'Improvement', 'Dev Code', 'Test', 'Everything Else'];
-
-const TYPE_JQL = {
-  Bug: 'issuetype = Bug',
-  Improvement: 'issuetype = Improvement',
-  'Dev Code': 'issuetype in (Task, "Unit Test")',
-  Test: 'issuetype = Test',
-  'Everything Else':
-    'issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability, Bug, Improvement, Task, "Unit Test", Test)',
-};
-
-/** Matches chart open count = outstanding + toVerify (excludes Done-family). */
-const OPEN_STATUS_JQL =
-  'status not in (Fixed, Done, Resolved, Complete, Closed, Cancelled, Backlog)';
-
-const TIER_JQL_KEY = {
-  'FEAT Work': 'feat',
-  Standalone: 'standalone',
-  Direct: 'direct',
-};
-
-function sumOutstanding(groups) {
-  const totals = {};
-  for (const g of groups || []) {
-    if (!g?.label || g.label === 'Project Hierarchy') continue;
-    const open = (g.outstanding || 0) + (g.toVerify || 0);
-    totals[g.label] = (totals[g.label] || 0) + open;
-  }
-  return totals;
-}
 
 function openJira(url) {
   if (!url) return;
@@ -166,13 +130,12 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
 }
 
 function GateCountdown({ gateData, release, jiraBaseUrl }) {
-  const bars = useMemo(() => {
+  const gates = useMemo(() => {
     if (!gateData?.gates?.length) return [];
     const today = Date.now();
     return ['CG', 'PG', 'GA']
       .map((kind) => {
-        // Pick the latest solid gate of this kind (dotted = superseded/planned).
-        // Fall back to the latest entry of any style if no solid one exists.
+        // Pick the latest solid gate of this kind; fall back to any style.
         const allOfKind = gateData.gates.filter(
           (x) => String(x.kind || '').toUpperCase() === kind && x.iso,
         );
@@ -188,23 +151,30 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
       .filter(Boolean);
   }, [gateData]);
 
-  if (bars.length === 0) {
+  if (gates.length === 0) {
     return <div style={{ fontSize: 11, color: '#aaa' }}>No gate dates</div>;
   }
 
-  const maxAbs = Math.max(...bars.map((b) => Math.abs(b.days)), 1);
   const releaseJql = release
     ? `fixVersion = "${release}" AND issuetype in (Feature, Initiative) AND status != Cancelled`
     : null;
   const href = jiraSearchUrl(jiraBaseUrl, releaseJql);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 160 }}>
-      {bars.map(({ kind, iso, days }) => {
-        const pct = Math.min(100, Math.round((Math.abs(days) / maxAbs) * 100));
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+      {gates.map(({ kind, iso, days }) => {
         const past = days < 0;
-        const urgent = !past && days <= 14;
-        const color = past ? '#d32f2f' : urgent ? '#f57c00' : '#388e3c';
+        // Green → Yellow (≤30d) → Red (≤14d) → dark red (past)
+        const color = past
+          ? '#b71c1c'
+          : days <= 14
+          ? '#d32f2f'
+          : days <= 30
+          ? '#f57c00'
+          : '#388e3c';
+        const label = past
+          ? `${Math.abs(days)}d overdue`
+          : `${days}d`;
         return (
           <div
             key={kind}
@@ -215,14 +185,12 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
             style={{ cursor: href ? 'pointer' : 'default' }}
             title={href ? `Open ${release} features in JIRA` : undefined}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#555', marginBottom: 2 }}>
-              <span style={{ fontWeight: 700 }}>{kind}</span>
-              <span>
-                {past ? `${Math.abs(days)}d past` : `${days}d`} · {iso}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 24 }}>{kind}</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1, letterSpacing: '-0.5px' }}>
+                {label}
               </span>
-            </div>
-            <div style={{ height: 8, background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4 }} />
+              <span style={{ fontSize: 10, color: '#888', whiteSpace: 'nowrap' }}>{iso}</span>
             </div>
           </div>
         );
@@ -231,103 +199,118 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
   );
 }
 
-function OutstandingStacks({ projectStatus, release, jiraBaseUrl }) {
-  const rows = useMemo(() => {
-    if (!projectStatus) return [];
+// ── colour palette for component donuts (cycles if > N components) ───────
+const DONUT_PALETTE = [
+  '#1565c0','#d32f2f','#2e7d32','#f57c00','#6a1b9a',
+  '#00838f','#ad1457','#558b2f','#4527a0','#00695c',
+  '#e65100','#283593','#880e4f','#1b5e20','#bf360c',
+];
 
-    const tier = projectStatus.tierOutstanding;
-    if (tier?.feat || tier?.standalone || tier?.direct) {
-      return [
-        { label: 'FEAT Work', totals: sumOutstanding(tier.feat) },
-        { label: 'Standalone', totals: sumOutstanding(tier.standalone) },
-        { label: 'Direct', totals: sumOutstanding(tier.direct) },
-      ];
-    }
+/**
+ * ComponentDonut — a single labelled donut showing open count by JIRA component.
+ * rows: [{ name, count }] sorted by count desc.
+ * label: chart title string.
+ * jqlBase: base JQL to open in JIRA on slice click.
+ */
+function ComponentDonut({ rows, label, jqlBase, jiraBaseUrl }) {
+  const [hovered, setHovered] = useState(null);
 
-    const featTotals = {};
-    for (const p of projectStatus.projects || []) {
-      const t = sumOutstanding(p.issueTypeGroups);
-      for (const [k, v] of Object.entries(t)) featTotals[k] = (featTotals[k] || 0) + v;
-    }
-    const standaloneTotals = {};
-    for (const e of projectStatus.standaloneEpics || []) {
-      const t = sumOutstanding(e.issueTypeGroups);
-      for (const [k, v] of Object.entries(t)) standaloneTotals[k] = (standaloneTotals[k] || 0) + v;
-    }
-    const directTotals = sumOutstanding(projectStatus.standaloneTickets?.issueTypeGroups);
-
-    return [
-      { label: 'FEAT Work', totals: featTotals },
-      { label: 'Standalone', totals: standaloneTotals },
-      { label: 'Direct', totals: directTotals },
-    ];
-  }, [projectStatus]);
-
-  if (!projectStatus) {
-    return <div style={{ fontSize: 11, color: '#aaa' }}>Generate Exec Summary to load outstanding breakdown</div>;
+  if (!rows || rows.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', width: 130 }}>
+        <div style={{ marginBottom: 4, fontWeight: 700, color: '#888', textTransform: 'uppercase', fontSize: 10 }}>{label}</div>
+        no data
+      </div>
+    );
   }
 
-  const maxTotal = Math.max(
-    ...rows.map((r) => TYPE_ORDER.reduce((s, k) => s + (r.totals[k] || 0), 0)),
-    1
-  );
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  const r = 30; // donut radius
+  const stroke = 12;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
 
-  const typeHref = (tierLabel, typeLabel) => {
-    const bucketKey = TIER_JQL_KEY[tierLabel];
-    const base = projectStatus?.tierJql?.[bucketKey];
-    const typeClause = TYPE_JQL[typeLabel];
-    if (!base || !typeClause) return '';
-    const jql = `(${base}) AND (${typeClause}) AND ${OPEN_STATUS_JQL}`;
-    return jiraSearchUrl(jiraBaseUrl, jql);
-  };
+  const slices = rows.map((row, i) => {
+    const len = (row.count / total) * c;
+    const color = DONUT_PALETTE[i % DONUT_PALETTE.length];
+    const slice = { ...row, len, offset, color };
+    offset += len;
+    return slice;
+  });
+
+  const active = hovered !== null ? slices[hovered] : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 200 }}>
-      {rows.map(({ label, totals }) => {
-        const total = TYPE_ORDER.reduce((s, k) => s + (totals[k] || 0), 0);
-        return (
-          <div key={label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#555', marginBottom: 2 }}>
-              <span style={{ fontWeight: 700 }}>{label}</span>
-              <span>{total} open</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 130 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', marginBottom: 4 }}>
+        {label}
+      </div>
+      <svg width="84" height="84" viewBox="0 0 84 84">
+        <g transform="translate(42,42)">
+          {slices.map((s, i) => {
+            const jql = jqlBase
+              + (s.name !== '(none)' ? ` AND component = "${s.name}"` : ' AND component is EMPTY');
+            const href = jiraSearchUrl(jiraBaseUrl, jql);
+            return (
+              <circle
+                key={s.name}
+                r={r}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={hovered === i ? stroke + 3 : stroke}
+                strokeDasharray={`${s.len} ${c - s.len}`}
+                strokeDashoffset={-s.offset}
+                transform="rotate(-90)"
+                style={{ cursor: href ? 'pointer' : 'default', transition: 'stroke-width 0.1s' }}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => openJira(href)}
+              >
+                <title>{`${s.name}: ${s.count} (${Math.round((s.count/total)*100)}%)`}</title>
+              </circle>
+            );
+          })}
+          {/* centre label */}
+          <text textAnchor="middle" dy="-3" style={{ fontSize: 11, fontWeight: 700, fill: '#333', pointerEvents: 'none' }}>
+            {active ? active.count : total}
+          </text>
+          <text textAnchor="middle" dy="10" style={{ fontSize: 8, fill: '#888', pointerEvents: 'none' }}>
+            {active ? '' : 'total'}
+          </text>
+        </g>
+      </svg>
+      {/* legend — top 6 only to keep it compact */}
+      <div style={{ marginTop: 6, width: '100%' }}>
+        {slices.slice(0, 6).map((s, i) => {
+          const jql = jqlBase
+            + (s.name !== '(none)' ? ` AND component = "${s.name}"` : ' AND component is EMPTY');
+          const href = jiraSearchUrl(jiraBaseUrl, jql);
+          return (
+            <div
+              key={s.name}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: 9, color: '#555', marginBottom: 2,
+                background: hovered === i ? '#f5f5f5' : 'transparent',
+                borderRadius: 3, padding: '1px 2px',
+                cursor: href ? 'pointer' : 'default',
+              }}
+              onClick={() => openJira(href)}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={s.name}>
+                {s.name}
+              </span>
+              <span style={{ fontWeight: 600, color: '#333', flexShrink: 0 }}>{s.count}</span>
             </div>
-            <div style={{
-              display: 'flex', height: 12, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden',
-              width: `${Math.max(8, Math.round((total / maxTotal) * 100))}%`,
-              minWidth: total > 0 ? 40 : 8,
-            }}>
-              {TYPE_ORDER.map((k) => {
-                const n = totals[k] || 0;
-                if (!n || !total) return null;
-                const href = typeHref(label, k);
-                return (
-                  <div
-                    key={k}
-                    role={href ? 'link' : undefined}
-                    tabIndex={href ? 0 : undefined}
-                    title={`${label} · ${k}: ${n} — open in JIRA`}
-                    onClick={(e) => { e.stopPropagation(); openJira(href); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openJira(href); }}
-                    style={{
-                      width: `${(n / total) * 100}%`,
-                      background: TYPE_COLORS[k],
-                      height: '100%',
-                      cursor: href ? 'pointer' : 'default',
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-        {TYPE_ORDER.map((k) => (
-          <span key={k} style={{ fontSize: 9, color: '#666', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: TYPE_COLORS[k] }} />
-            {k}
-          </span>
-        ))}
+          );
+        })}
+        {slices.length > 6 && (
+          <div style={{ fontSize: 9, color: '#aaa', marginTop: 2 }}>+{slices.length - 6} more</div>
+        )}
       </div>
     </div>
   );
@@ -485,14 +468,47 @@ export function KpiBreakdownStrip({ kpiData, loading, error, jiraBaseUrl }) {
   );
 }
 
+/**
+ * Build click-through JQL bases matching POST /component-counts.
+ * Same `{release}-All` saved filter so counts and links stay authentic.
+ */
+function buildComponentJqlBases(release) {
+  if (!release) return { outstanding: '', tbv: '' };
+  const releaseFilter = `filter = "${release}-All"`;
+  return {
+    outstanding:
+      `${releaseFilter} AND status not in (Closed, Cancelled)` +
+      ` AND issueType not in (X-FEAT, Capability, Feature, Initiative, Epic)`,
+    tbv:
+      `${releaseFilter} AND status = Resolved AND resolution is not EMPTY` +
+      ` AND issueType in (Bug, Improvement)`,
+  };
+}
+
 export default function SosReleaseCharts({
   ragCounts,
   gateData,
   projectStatus,
   items = [],
   release = '',
+  productId = '',
   jiraBaseUrl = '',
 }) {
+  // Live counts once project-status is available (same trigger as before —
+  // charts load after Fetch brings projectStatus, not only after Exec Summary).
+  const enabled = Boolean(productId && release && projectStatus);
+  const {
+    loading: countsLoading,
+    outstanding: outstandingRows,
+    tbv: tbvRows,
+    jql: liveJql,
+    error: countsError,
+  } = useComponentCounts({ productId, release, enabled });
+
+  const fallbackJql = useMemo(() => buildComponentJqlBases(release), [release]);
+  const outstandingJql = liveJql?.outstanding || fallbackJql.outstanding;
+  const tbvJql = liveJql?.tbv || fallbackJql.tbv;
+
   return (
     <div style={{
       display: 'flex',
@@ -514,7 +530,35 @@ export default function SosReleaseCharts({
         </div>
         <GateCountdown gateData={gateData} release={release} jiraBaseUrl={jiraBaseUrl} />
       </div>
-      {/* Outstanding by type bucket breakdown hidden — replaced by Component filter */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+          Outstanding asks · by component
+        </div>
+        {!enabled ? (
+          <div style={{ fontSize: 11, color: '#aaa' }}>Loading release data…</div>
+        ) : countsLoading && outstandingRows == null && tbvRows == null ? (
+          <div style={{ fontSize: 11, color: '#888' }}>Loading component counts…</div>
+        ) : countsError && outstandingRows == null && tbvRows == null ? (
+          <div style={{ fontSize: 11, color: '#c62828' }} title={countsError}>
+            {countsError}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            <ComponentDonut
+              rows={outstandingRows || []}
+              label="Outstanding"
+              jqlBase={outstandingJql}
+              jiraBaseUrl={jiraBaseUrl}
+            />
+            <ComponentDonut
+              rows={tbvRows || []}
+              label="To Be Verified"
+              jqlBase={tbvJql}
+              jiraBaseUrl={jiraBaseUrl}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

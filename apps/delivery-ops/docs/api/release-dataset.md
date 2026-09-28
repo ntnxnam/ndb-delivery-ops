@@ -295,6 +295,8 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → if empty
 
 `tierJql` — payload-bucket JQL for SoS Outstanding-by-type chart click-through (FEAT = `work_toward_project`, Standalone = `work_toward_standalone_epic`, Direct = `direct_tickets`). Client ANDs issue-type + open-status filters; do not use bare `fixVersion = X AND issuetype = Bug`.
 
+Component Outstanding / TBV donut counts are **not** returned here — use `POST /api/release-dataset/component-counts` (live JIRA via `{release}-All`).
+
 `_source` is `"bundle"` when served from disk, `"live"` when the bundle was empty and the endpoint fell back to a live per-release fetch. When `_source` is `"live"`, `_bundleSyncedAt` is `null`. A release with genuinely no tickets returns HTTP 200 with empty `projects` / `standaloneEpics` arrays (not a 404).
 
 **Error responses**
@@ -306,9 +308,58 @@ Route handler → `ReleaseDatasetCache.loadReleaseLenient(release)` → if empty
 
 **Caching**: Cache-first from disk bundle when present (stale until next sync); otherwise a fresh live JIRA fetch with no write-through.
 
+> ⚠️ Breaking change 2026-09-26: removed `componentOutstanding` / `componentTbv` from this response. Component donuts now use `POST /component-counts` (live `{release}-All` counts).
 > ⚠️ Breaking change 2026-09-09: `/project-status` no longer 404s "run a sync first" on empty disk — it falls back to a live per-release fetch. Callers that special-cased the 404 should treat empty disk as a live read instead.
 > ⚠️ Breaking change 2026-06-16: renamed from `/project-breakdown`. Old path redirects (HTTP 307) to this endpoint for back-compat.
 > Note 2026-09-25: added `tierJql` for authentic Outstanding-by-type chart links (additive; non-breaking).
+
+---
+
+### POST /api/release-dataset/component-counts
+
+**Purpose**: Live JIRA component breakdown for SoS Outstanding / To-Be-Verified donuts. Counts use the saved filter `{release}-All` so they match click-through URLs.
+
+**Auth**: required (JIRA Bearer token)
+
+**Request**
+- Method + path: `POST /api/release-dataset/component-counts`
+- Body:
+  - `productId` (string, required) — product config key
+  - `release` (string, required) — e.g. `NDB-3.0` (drives `filter = "NDB-3.0-All"`)
+- Required headers: `Authorization: Bearer <jira-pat>`
+
+**Server flow**
+Route handler → validate Outstanding / TBV base JQL via `searchCount` → discover names via `POST /rest/api/2/search` (`fields: components`, page size 100) → concurrent `searchCount(base AND component = "…")` (pool of 8) → top 15 by count
+
+**JQL bases (fixed)**
+- Outstanding: `filter = "{release}-All" AND status not in (Closed, Cancelled) AND issueType not in (X-FEAT, Capability, Feature, Initiative, Epic)`
+- TBV: `filter = "{release}-All" AND status = Resolved AND resolution is not EMPTY AND issueType in (Bug, Improvement)`
+
+**Response shape**
+```json
+{
+  "success": true,
+  "outstanding": [{ "name": "NDB-DB-in-Containers", "count": 122 }],
+  "tbv": [{ "name": "Epsilon", "count": 28 }],
+  "jql": {
+    "outstanding": "filter = \"NDB-3.0-All\" AND status not in (Closed, Cancelled) AND …",
+    "tbv": "filter = \"NDB-3.0-All\" AND status = Resolved AND …"
+  }
+}
+```
+
+Client ANDs `component = "Name"` (or `component is EMPTY` for `(none)`) onto `jql.outstanding` / `jql.tbv` for authenticity links.
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `productId` or `release` missing / unknown product | Fix request |
+| 401 | JIRA Bearer token missing | Re-authenticate |
+| 404 | Saved filter `{release}-All` not found / inaccessible | Create the filter in JIRA or show message |
+| 502 | JIRA discover call failed for other reasons | Retry / show error |
+| 500 | Unexpected error | Show error message |
+
+**Caching**: No — always live JIRA counts.
 
 ---
 

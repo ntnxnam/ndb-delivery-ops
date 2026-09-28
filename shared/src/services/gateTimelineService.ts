@@ -36,7 +36,7 @@
 
 // ── Public types ──────────────────────────────────────────────────────────
 
-export type GateKind = 'EC' | 'CCM' | 'CG' | 'PG' | 'GA';
+export type GateKind = 'EC' | 'CCM' | 'CG' | 'PG' | 'GA' | 'SOFT';
 
 export type GateStyle = 'dotted' | 'solid';
 
@@ -89,6 +89,8 @@ const CANONICAL_COLOR: Record<GateKind, string> = {
   CG: '#ff9800',
   PG: '#9c27b0',
   GA: '#28a745',
+  /** Soft / informational gates — neutral grey, no blocking gate semantics. */
+  SOFT: '#6c757d',
 };
 
 const KIND_LABELS: Record<GateKind, string> = {
@@ -97,6 +99,7 @@ const KIND_LABELS: Record<GateKind, string> = {
   CG: 'Commit Gate',
   PG: 'Promotion Gate',
   GA: 'General Availability',
+  SOFT: 'Soft Gate',
 };
 
 // ── Public surface ────────────────────────────────────────────────────────
@@ -152,6 +155,24 @@ export function parseReleaseGateTimeline(
 
     // GA variants live under ga{N}.
     extractNumberedGate(cfg, 'ga', '', 'GA', gates, todayIso);
+
+    // ── Soft / informational gates ──────────────────────────────────────
+    // These are milestones that inform the schedule but are not blocking
+    // release gates (e.g. Deferral Complete, Pre-CC, Concept Commit).
+    // Keys supported:
+    //   deferralComplete         — single object  { label, date, color?, style? }
+    //   conceptCommit{N}         — numbered objects (Pre-CC checkpoints)
+    //   preEc                    — single object
+    const SOFT_SINGLE_KEYS = ['deferralComplete', 'preEc'] as const;
+    for (const key of SOFT_SINGLE_KEYS) {
+      const raw = (cfg as Record<string, unknown>)[key];
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const ev = makeSoftEvent(raw, key, todayIso);
+        if (ev) gates.push(ev);
+      }
+    }
+    // conceptCommit{N} — numbered, same pattern as commitGate{N}
+    extractNumberedSoftGate(cfg, 'conceptCommit', '', gates, todayIso);
   }
 
   gates.sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
@@ -218,6 +239,67 @@ function makeEvent(
     source,
     past: iso <= todayIso,
   };
+}
+
+/**
+ * Build a SOFT GateEvent from a raw config object.
+ * Falls back to the SOFT canonical colour but respects an explicit `color`
+ * in the config (e.g. grey Pre-CC markers already have `#6c757d`).
+ */
+function makeSoftEvent(
+  raw: unknown,
+  source: string,
+  todayIso: string
+): GateEvent | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const date = typeof r.date === 'string' ? r.date : null;
+  if (!date || !isIsoDate(date)) return null;
+  const iso = date.slice(0, 10);
+  const labelRaw =
+    typeof r.label === 'string' && r.label ? r.label : KIND_LABELS.SOFT;
+  const colorRaw =
+    typeof r.color === 'string' && r.color ? r.color : CANONICAL_COLOR.SOFT;
+  const styleRaw = r.style === 'dotted' ? 'dotted' : ('solid' as GateStyle);
+  return {
+    kind: 'SOFT',
+    label: labelRaw,
+    iso,
+    color: colorRaw,
+    style: styleRaw,
+    source,
+    past: iso <= todayIso,
+  };
+}
+
+/**
+ * Extract numbered soft-gate entries (e.g. conceptCommit1, conceptCommit2).
+ * Same looping logic as `extractNumberedGate` but always produces SOFT kind.
+ */
+function extractNumberedSoftGate(
+  cfg: Record<string, unknown>,
+  prefix: string,
+  suffix: string,
+  out: GateEvent[],
+  todayIso: string,
+  maxCycles = 10
+): void {
+  for (let i = 1; i <= maxCycles; i += 1) {
+    const key = `${prefix}${i}${suffix}`;
+    const raw = cfg[key];
+    if (!raw) continue;
+    if (Array.isArray(raw)) {
+      raw.forEach((entry, idx) => {
+        const ev = makeSoftEvent(entry, `${key}[${idx}]`, todayIso);
+        if (ev) out.push(ev);
+      });
+      continue;
+    }
+    if (typeof raw === 'object') {
+      const ev = makeSoftEvent(raw, key, todayIso);
+      if (ev) out.push(ev);
+    }
+  }
 }
 
 function isIsoDate(s: string): boolean {

@@ -292,6 +292,16 @@
   transform: translateY(0);
 }
 
+/* Soft / informational gates (Deferral Complete, Pre-EC, Pre-CC, etc.)
+ * Not blocking — rendered with a dashed border and italic label so they
+ * read as "FYI" rather than a hard gate commitment. */
+.ds-gate-chip--soft {
+  border-style: dashed;
+}
+.ds-gate-chip--soft .ds-gate-chip__label {
+  font-style: italic;
+}
+
 /* ── GateTimeline ────────────────────────────────────────────────────── */
 /* Proportional horizontal timeline of release gates. Same kind-colour
  * vocabulary as GateChipStrip; each marker carries --ds-gate-color
@@ -471,6 +481,19 @@
   background: var(--ds-surface);
   border-color: var(--ds-gate-color);
   box-shadow: none;
+}
+
+/* Soft / informational markers — hollow dot with dashed ring so they
+ * read as "FYI" milestones, visually separate from hard gate dots. */
+.ds-gate-timeline__marker--soft .ds-gate-timeline__dot {
+  background: var(--ds-surface);
+  border-color: var(--ds-gate-color);
+  border-style: dashed;
+  box-shadow: none;
+}
+.ds-gate-timeline__marker--soft .ds-gate-timeline__label {
+  border-style: dashed;
+  font-style: italic;
 }
 
 .ds-gate-timeline__marker--past {

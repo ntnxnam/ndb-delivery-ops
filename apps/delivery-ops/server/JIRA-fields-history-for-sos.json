@@ -2039,10 +2039,11 @@
     "numberOfTimesFSDSDoneDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
     "codeCompleteDateFull": [
-      "2026-06-30"
+      "2026-06-30",
+      "2026-12-17"
     ],
-    "numberOfTimesCodeCompleteDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 24.29,
     "statusUpdateDate": [],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -2052,7 +2053,14 @@
         "changedAt": null
       }
     ],
-    "dateMoveEvents": []
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-28T08:46:36.932+0000",
+        "from": "2026-06-30",
+        "to": "2026-12-17"
+      }
+    ]
   },
   {
     "key": "ERA-62640",

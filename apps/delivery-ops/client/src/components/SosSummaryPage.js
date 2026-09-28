@@ -524,6 +524,19 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
             👤 {item.assignee}
           </div>
         )}
+        {(item.customfield_11065 || item.customfield_11260 || item.customfield_27764) && (
+          <div style={{ fontSize: '10px', color: '#888', marginTop: 2 }}>
+            {item.customfield_11065 && (
+              <div title="Test Lead">🧪 {item.customfield_11065}</div>
+            )}
+            {item.customfield_11260 && (
+              <div title="PM Owner">📋 {item.customfield_11260}</div>
+            )}
+            {item.customfield_27764 && (
+              <div title="Program Mgr">🗂 {item.customfield_27764}</div>
+            )}
+          </div>
+        )}
       </td>
 
       {/* ── State: RAG dot + status stacked ── */}
@@ -687,6 +700,7 @@ function ReleaseSection({
   kpiLoading = false,
   kpiError = null,
   ganttConfigFromDates = null,  // Per-version config from /api/config/release-dates (drives ReleaseVersionGantt)
+  productId = '',
 }) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
@@ -840,6 +854,7 @@ function ReleaseSection({
         projectStatus={projectStatus}
         items={items}
         release={version}
+        productId={productId}
         jiraBaseUrl={jiraBaseUrl}
       />
 
@@ -909,6 +924,7 @@ function SosSummaryPage() {
     generateError,
     generateForRelease,
     retryTier,
+    fetchProjectStatus,
   } = useSosTierSummary();
 
   // Sort versions: NDB-2.12 before NDB-2.11 etc, Unversioned last
@@ -927,6 +943,15 @@ function SosSummaryPage() {
 
   // Fetch gate data for all active releases
   const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
+
+  // Eagerly fetch project-status (component donuts) for every active release
+  // as soon as we know productId + versions — no need to wait for Exec Summary.
+  useEffect(() => {
+    if (!productId || activeVersions.length === 0) return;
+    activeVersions.forEach((v) => {
+      fetchProjectStatus(productId, v).catch(() => {/* silently ignore — chart shows placeholder */});
+    });
+  }, [productId, activeVersions, fetchProjectStatus]);
 
   // Fetch on mount — live JIRA first
   useEffect(() => {
@@ -1359,6 +1384,7 @@ function SosSummaryPage() {
             kpiLoading={kpiLoadingByRelease[version] || false}
             kpiError={kpiErrorByRelease[version] || null}
             ganttConfigFromDates={releaseDatesConfig[version] || null}
+            productId={productId}
           />
         ))}
     </div>

@@ -69,9 +69,20 @@ function linkifyTickets(text, baseKey) {
   return parts;
 }
 
+/**
+ * Strip the leading "## <Tier> — <Release>" heading that the AI always
+ * writes as line 1. The SosTierSummaryBox chrome already shows the tier
+ * name in its header, so rendering it again creates a double-header.
+ */
+function stripTierHeading(text) {
+  if (!text) return text;
+  // Match: ## <anything> — <anything>  (first non-blank line only)
+  return text.replace(/^(\s*## [^\n]*—[^\n]*\n?)/, '');
+}
+
 function SummaryBody({ text }) {
   if (!text) return null;
-  const lines = text.split('\n');
+  const lines = stripTierHeading(text).split('\n');
   const elements = [];
   let key = 0;
 
