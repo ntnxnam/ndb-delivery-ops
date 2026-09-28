@@ -136,7 +136,7 @@ function ReleaseVersionSelector({
             </select>
           ) : (
             <input
-              id="release-version"
+              id="release-version-readonly"
               type="text"
               value={selectedVersion || defaultVersion || ''}
               readOnly
