@@ -7,10 +7,11 @@
 
 const fetch = require('node-fetch');
 
+const aiConfig = require('../config/aiConfig.json');
 const VOODOO_CONFIG = {
-  endpoint: 'https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1/chat/completions',
-  model: 'eng-pool-05',
-  maxTokens: 2048,
+  endpoint: (process.env.AI_API_BASE_URL || aiConfig.baseUrl).replace(/\/$/, '') + '/chat/completions',
+  model: process.env.AI_DEFAULT_MODEL || aiConfig.defaultModel,
+  maxTokens: parseInt(process.env.AI_MAX_TOKENS, 10) || aiConfig.maxTokens,
   temperature: 0.7
 };
 

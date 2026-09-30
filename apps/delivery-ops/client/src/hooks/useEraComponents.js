@@ -1,34 +1,46 @@
 /**
  * useEraComponents
  *
- * Fetches the full ERA project component list from GET /api/component/list.
- * Result is cached in-memory for the session (the server also caches for 1 h).
+ * Component names for the selected team's JIRA project
+ * (GET /api/component/list?productId=). Cached per team for the session.
  * Returns { components: string[], loading, error }
  */
 import { useState, useEffect } from 'react';
 import { authenticatedGet } from '../utils/api';
 
-let _cached = null; // module-level cache so it survives re-renders
+const cache = {};
 
-export function useEraComponents() {
-  const [components, setComponents] = useState(_cached || []);
-  const [loading, setLoading] = useState(!_cached);
+export function useEraComponents(teamId) {
+  const key = (teamId || '').trim();
+  const [components, setComponents] = useState(cache[key] || []);
+  const [loading, setLoading] = useState(Boolean(key) && !cache[key]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (_cached) return; // already loaded
+    if (!key) {
+      setComponents([]);
+      setLoading(false);
+      return undefined;
+    }
+    if (cache[key]) {
+      setComponents(cache[key]);
+      setLoading(false);
+      setError(null);
+      return undefined;
+    }
 
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
-    authenticatedGet('/api/component/list', {}, { jiraToken, username })
+    authenticatedGet('/api/component/list', { productId: key }, { jiraToken, username })
       .then((resp) => {
         if (cancelled) return;
         const names = (resp.data?.components || []).map((c) => c.name).filter(Boolean);
-        _cached = names;
+        cache[key] = names;
         setComponents(names);
       })
       .catch((err) => {
@@ -39,7 +51,7 @@ export function useEraComponents() {
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [key]);
 
   return { components, loading, error };
 }

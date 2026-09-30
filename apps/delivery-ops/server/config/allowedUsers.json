@@ -76,6 +76,23 @@
         "sprintReports": true,
         "kpiTab": true
       }
+    },
+    "ncn": {
+      "admins": [
+        "krunal.jhaveri"
+      ],
+      "allowedUsers": [
+        "krunal.jhaveri",
+        "chandan.thakur"
+      ],
+      "emailSenders": [
+        "krunal.jhaveri"
+      ],
+      "features": {
+        "releaseVersions": true,
+        "sprintReports": true,
+        "kpiTab": true
+      }
     }
   }
 }

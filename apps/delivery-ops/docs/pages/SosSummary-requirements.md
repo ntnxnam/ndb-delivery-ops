@@ -19,6 +19,7 @@ Secondary: `tpm`, `rm` (compose and review flow)
 4. As a Portfolio Manager, I can see configured KPI widgets per release (open P0s, must-fix tickets, etc.) so I have quantitative risk signals alongside qualitative status.
 5. As a Portfolio Manager, I can click Email SoS and send an HTML snapshot of the already-loaded page (including CC/CG/PG date history) via SMTP to the status-sender recipient list, without refetching JIRA.
 6. As a Portfolio Manager, I can refresh data per-release without reloading the entire page.
+7. As a Portfolio Manager, the Component filter lists components from the selected team's JIRA project (NCN → project `NCN`, NDB → project `ERA`). Switching team clears the selection.
 
 ## UI Behaviour
 

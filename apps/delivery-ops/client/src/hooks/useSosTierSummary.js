@@ -205,12 +205,17 @@ function itemDateIso(item, fieldId) {
 export function buildTierCallouts(items, checkpointHistory = {}, gateContext = null, options = {}) {
   const { skipGateDates = false, checkDoneByCg = false, cgDate = null } = options;
   const list = items || [];
-  const CLOSED_STATUSES = new Set(['closed', 'cancelled', 'done', 'fixed', 'resolved', 'complete']);
+  // Statuses where risk indicator is irrelevant — ticket is definitively done/gone.
+  // Source: .cursor/context/jira-workflows-and-resolutions.md §5
+  // NOTE: 'resolved' excluded here because status=Resolved means TBV (awaiting QA),
+  // not closed — but we still skip it for risk-not-set since dev work is complete.
+  const RISK_NOT_SET_EXCLUDE_STATUSES = new Set([
+    'closed', 'cancelled', 'done', 'promotion gate met', 'resolved',
+  ]);
   const notSetKeys = list
     .filter((i) => {
       if (!i?.key) return false;
-      // Exclude tickets that are already closed/done — Risk Indicator is irrelevant for them.
-      if (CLOSED_STATUSES.has((i.status || '').toLowerCase())) return false;
+      if (RISK_NOT_SET_EXCLUDE_STATUSES.has((i.status || '').toLowerCase())) return false;
       return classifyRiskWord(i.customfield_23560) === 'NotSet';
     })
     .map((i) => i.key);

@@ -149,7 +149,7 @@ ${projectSummaries.join('\n')}
 Provide executive summary, predictions, and concrete actions using the provided ticket facts only.`;
 }
 
-async function generateAiVpReport({ version, naiApiKey, jiraToken }) {
+async function generateAiVpReport({ version, jiraToken }) {
   let dateMetrics;
   try {
     const versionConfig = releaseVersionsEmailConfig.releaseGateDates[version];
@@ -232,7 +232,7 @@ async function generateAiVpReport({ version, naiApiKey, jiraToken }) {
       { role: 'user', content: vpPrompt }
     ],
     { maxTokens: 4000, temperature: 0.3, timeoutMs: 60000 },
-    { apiKey: naiApiKey, rejectUnauthorized: false }
+    { rejectUnauthorized: false }
   );
   if (!turn.content) throw new Error('NAI API returned no content');
   return {

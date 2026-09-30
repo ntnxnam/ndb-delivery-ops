@@ -1090,11 +1090,13 @@ function SosSummaryPage() {
     });
   }, [sortedVersions, selectedVersions, selectedRags, releaseRagMap]);
 
-  // Component filter — derive distinct values from all loaded items
+  // Component filter — names from the selected team's JIRA project
   const [selectedComponent, setSelectedComponent] = useState('');
+  const { components: eraComponents } = useEraComponents(productId);
 
-  // Component filter — full ERA component list from /api/component/list (CF[15160] + JIRA components field)
-  const { components: eraComponents } = useEraComponents();
+  useEffect(() => {
+    setSelectedComponent('');
+  }, [productId]);
 
   const filterItemsByComponent = useCallback((items) => {
     if (!selectedComponent) return items;
@@ -1210,7 +1212,7 @@ function SosSummaryPage() {
               )}
             </div>
 
-            {/* Component filter — full ERA list from /api/component/list */}
+            {/* Component filter — selected team's JIRA project */}
             {eraComponents.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Component:</span>

@@ -78,7 +78,7 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
   try {
     console.log('[generate-ai-vp-report] Request received');
 
-    const { version, naiApiKey } = req.body;
+    const { version } = req.body;
     
     if (!version || version.trim() === '') {
       console.log('[generate-ai-vp-report] ERROR: No version parameter provided');
@@ -88,16 +88,8 @@ router.post('/generate-ai-vp-report', validateJiraTokenMiddleware, async (req, r
       });
     }
 
-    if (!naiApiKey || naiApiKey.trim() === '') {
-      console.log('[generate-ai-vp-report] ERROR: No NAI API key provided');
-      return res.status(400).json({
-        success: false,
-        error: 'NAI API key is required'
-      });
-    }
-
     const jiraToken = req.headers.authorization?.replace('Bearer ', '');
-    const data = await aiReportService.generateAiVpReport({ version, naiApiKey, jiraToken });
+    const data = await aiReportService.generateAiVpReport({ version, jiraToken });
     return res.json({ success: true, data });
 
   } catch (error) {

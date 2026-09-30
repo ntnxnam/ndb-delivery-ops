@@ -25,16 +25,17 @@
 export const FEAT_TYPES = new Set(['Feature', 'Initiative', 'X-FEAT', 'X-Feat', 'Capability']);
 const HIGH_SEVERITY = new Set(['P0', 'P1', 'Blocker', 'Critical', 'Blocker - P0', 'Critical - P1']);
 
-// Resolution-based "done" — matches isDoneResolution() in resolutionCategoriesService.ts.
-const DONE_RESOLUTIONS_LC = new Set(['fixed', 'done', 'resolved', 'complete']);
+// Positive resolutions — ticket shipped. What is not positive is negative.
+// Source: .cursor/context/jira-workflows-and-resolutions.md §3
+const POSITIVE_RESOLUTIONS_LC = new Set(['fixed', 'done', 'resolved', 'complete', 'approved']);
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/** Resolution-based done (used for general open/closed counts). */
+/** Resolution-based positive (ticket shipped — used for general open/closed counts). */
 export function isDone(ticket) {
   return (
     ticket['Is Done'] === true ||
-    DONE_RESOLUTIONS_LC.has((ticket['Resolution'] ?? '').toLowerCase())
+    POSITIVE_RESOLUTIONS_LC.has((ticket['Resolution'] ?? '').toLowerCase())
   );
 }
 
@@ -755,7 +756,7 @@ function average(nums) {
 function resolutionCategory(res) {
   const r = (res ?? '').toLowerCase();
   if (!r || r === 'unresolved') return 'Unresolved';
-  if (DONE_RESOLUTIONS_LC.has(r)) return 'Done';
+  if (POSITIVE_RESOLUTIONS_LC.has(r)) return 'Done';
   if (r === 'cannot reproduce' || r === 'duplicate') return 'Dupe or Not Reproducible';
   return 'Others';
 }

@@ -64,6 +64,22 @@
 
 ---
 
+### 1c. `GET /api/component/list?productId=<teamId>`
+
+**Purpose**: Populate the Component filter with components registered on the selected team's JIRA project.
+
+**When called**: On page load and when the team picker changes.
+
+**Request**: query `productId` = selected team id (`ncn`, `ndb`, …).
+
+**Server flow**: `component.js` → `getTeamById(productId).projectKey` → `GET /rest/api/2/project/{projectKey}/components`
+
+**Response**: `{ components: [{ id, name }], count, projectKey, fetchedAt }`
+
+**Caching**: Session, 1 hour, keyed by `projectKey`.
+
+---
+
 ### 2. `POST /api/jira/issue-breakdown`
 
 **Purpose**: Fetch child ticket breakdown (done / in-progress / remaining) per Feature/Initiative key.

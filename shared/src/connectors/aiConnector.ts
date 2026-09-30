@@ -66,28 +66,57 @@ export class AiConnectorError extends Error {
   naiDebug?: Record<string, unknown>;
 }
 
+/**
+ * Non-secret config (endpoint, model, limits) lives in:
+ *   apps/delivery-ops/server/config/aiConfig.json
+ *
+ * The API key is secret and must be set via environment variable:
+ *   AI_API_KEY in server/.env  (retrieve from LastPass)
+ *
+ * Override env vars take precedence over aiConfig.json values:
+ *   AI_API_BASE_URL, AI_DEFAULT_MODEL, AI_MAX_TOKENS, AI_REQUEST_TIMEOUT
+ *
+ * No fallback defaults — every required value must be explicitly configured.
+ */
 function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
-  const baseUrl = (
-    override?.baseUrl ??
-    process.env.AI_API_BASE_URL ??
-    'https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1'
-  ).trim();
+  const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? '').trim();
   if (!baseUrl) {
-    throw new Error('AI_API_BASE_URL is not set. Configure the LLM endpoint for this host.');
+    throw new Error(
+      'AI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+    );
   }
   if (/localhost|127\.0\.0\.1/i.test(baseUrl) && process.env.NODE_ENV === 'production') {
     throw new Error('AI_API_BASE_URL must not be localhost in production');
   }
+
   const apiKey = (override?.apiKey ?? process.env.AI_API_KEY ?? '').trim();
   if (!apiKey) {
-    throw new Error('AI_API_KEY is not set');
+    throw new Error('AI_API_KEY is not set. Retrieve the key from LastPass and set it in server/.env.');
   }
+
+  const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? '').trim();
+  if (!defaultModel) {
+    throw new Error(
+      'AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+    );
+  }
+
+  const maxTokensRaw = override?.maxTokens ?? (process.env.AI_MAX_TOKENS ? parseInt(process.env.AI_MAX_TOKENS, 10) : NaN);
+  if (!maxTokensRaw || isNaN(maxTokensRaw)) {
+    throw new Error('AI_MAX_TOKENS is not set. Set it in server/.env.');
+  }
+
+  const timeoutRaw = override?.timeoutMs ?? (process.env.AI_REQUEST_TIMEOUT ? parseInt(process.env.AI_REQUEST_TIMEOUT, 10) : NaN);
+  if (!timeoutRaw || isNaN(timeoutRaw)) {
+    throw new Error('AI_REQUEST_TIMEOUT is not set. Set it in server/.env.');
+  }
+
   return {
     baseUrl: baseUrl.replace(/\/$/, ''),
     apiKey,
-    defaultModel: override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? 'eng-pool-05',
-    maxTokens: override?.maxTokens ?? parseInt(process.env.AI_MAX_TOKENS || '4096', 10),
-    timeoutMs: override?.timeoutMs ?? parseInt(process.env.AI_REQUEST_TIMEOUT || '30000', 10),
+    defaultModel,
+    maxTokens: maxTokensRaw,
+    timeoutMs: timeoutRaw,
     rejectUnauthorized: override?.rejectUnauthorized ?? false,
   };
 }

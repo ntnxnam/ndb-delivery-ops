@@ -122,7 +122,7 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
   //   tbv      = status = Resolved AND resolution is not EMPTY  (dev done, awaiting QA)
   //   others   = negative resolutions (Dupe, Not Repro, Won't Fix, etc.)
   //   open     = resolution is EMPTY AND status not in (Resolved, Closed)
-  if (bucket === 'closed')   return `${base} and status = Closed and resolution in (Fixed, Done, Resolved, Complete)`;
+  if (bucket === 'closed')   return `${base} and status = Closed and resolution in (Fixed, Done, Resolved, Complete, Approved)`;
   if (bucket === 'resolved') return `${base} and status = Resolved and resolution is not EMPTY`;
   if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid)`;
   if (bucket === 'open')     return `${base} and status not in (Resolved, Closed)`;

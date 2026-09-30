@@ -29,8 +29,10 @@ import {
   getDeferredQuery,
 } from './payloadJqlService.js';
 
-/** Resolutions that count as "done" per velocity-resolution-categories.mdc. */
-const DONE_RESOLUTIONS = '(Fixed, Done, Resolved, Complete)';
+/** Positive resolutions — ticket shipped. What is not positive is negative.
+ * Source: .cursor/context/jira-workflows-and-resolutions.md §3
+ */
+const POSITIVE_RESOLUTIONS = '(Fixed, Done, Resolved, Complete, Approved)';
 
 /** Canonical tile keys. Order matters — the UI renders in this order. */
 export const OUTSTANDING_TILE_KEYS = [
@@ -81,7 +83,7 @@ export function buildOutstandingJqls(
 
   const closedInRelease = buildEngineeringPayloadJql(release, {
     projectKey,
-    extras: [`resolution in ${DONE_RESOLUTIONS}`],
+    extras: [`resolution in ${POSITIVE_RESOLUTIONS}`],
   });
 
   const blockedOpen = buildEngineeringPayloadJql(release, {

@@ -324,7 +324,7 @@
     "numberOfTimesCodeCompleteDateMoved": 4,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
     "statusUpdateDate": [
-      "2026-09-25"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -396,13 +396,15 @@
     "key": "FEAT-19398",
     "codeCompleteDate": [
       "2026-10-10",
-      "2026-10-23"
+      "2026-10-23",
+      "2026-11-06"
     ],
-    "numberofTimesCCMDateMoved": 1,
-    "WeeksDiffbwOldestandLatestCCMDate": 1.86,
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.86,
     "PGCompleteDate": [
       "2026-10-15",
-      "2026-10-23"
+      "2026-10-23",
+      "2026-11-06"
     ],
     "testPlanDate": [
       "2026-07-24",
@@ -424,7 +426,7 @@
     "numberOfTimesCodeCompleteDateMoved": 2,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.86,
     "statusUpdateDate": [
-      "2026-09-23"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -495,6 +497,18 @@
         "changedAt": "2026-08-21T04:56:01.721+0000",
         "from": "2026-10-15",
         "to": "2026-10-23"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-29T11:11:13.344+0000",
+        "from": "2026-10-23",
+        "to": "2026-11-06"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-29T11:11:23.151+0000",
+        "from": "2026-10-23",
+        "to": "2026-11-06"
       }
     ]
   },
@@ -666,7 +680,7 @@
     "numberOfTimesCodeCompleteDateMoved": 6,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
     "statusUpdateDate": [
-      "2026-09-23"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -788,7 +802,7 @@
     "numberOfTimesCodeCompleteDateMoved": 4,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 60,
     "statusUpdateDate": [
-      "2026-09-21"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -989,7 +1003,7 @@
     "numberOfTimesCodeCompleteDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
     "statusUpdateDate": [
-      "2026-09-22"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -1182,7 +1196,7 @@
     "numberOfTimesCodeCompleteDateMoved": 1,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1,
     "statusUpdateDate": [
-      "2026-09-22"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
@@ -1294,7 +1308,7 @@
     "numberOfTimesCodeCompleteDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
     "statusUpdateDate": [
-      "2026-09-22"
+      "2026-09-29"
     ],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,

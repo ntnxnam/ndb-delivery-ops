@@ -67,6 +67,19 @@
         "msp*"
       ],
       "defaultReleaseVersion": "AOS 5.11"
+    },
+    {
+      "id": "ncn",
+      "name": "Nutanix Cloud Native",
+      "projectKey": "NCN",
+      "projectType": "dedicated",
+      "sprintCalendar": {
+        "s1StartIso": "2020-02-20",
+        "sprintDays": 14
+      },
+      "boardId": 4741,
+      "baseFilter": "filter=NCN-All-Base-Filter and statusCategory!=Done",
+      "sprintBaseFilter": "filter=NCN-All-Base-Filter"
     }
   ],
   "defaultTeamId": "ndb"
