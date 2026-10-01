@@ -1,6 +1,6 @@
-# Admin Panel — Data Layer & Middleware Contract
+# Team Management — Data Layer & Middleware Contract
 
-**Route**: `/admin`  
+**Route**: `/team-management` (`/admin` redirects here)  
 **Server routes used**: `server/routes/admin.js`, `server/routes/releaseDataset.js` (cache endpoints)  
 **Config files modified**: `server/config/allowedUsers.json`, `server/config/teamBoardConfig.json`
 

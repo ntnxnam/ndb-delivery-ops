@@ -71,6 +71,7 @@ SoS Summary
 4. Email SoS is disabled while the page is still loading or has no items. Confirm dialog shows the resolved To/CC before send.
 5. The `customfield_23073` (Status Update) raw text is fetched but never rendered directly to the user — it is passed to the AI exec summary pipeline only.
 6. Send does not call JIRA. Corporate SMTP rejects non-`@nutanix.com` addresses (including gmail.com).
+7. The identity cell shows Test Lead (`customfield_11065`). When that field is empty, or holds a different person, QA Contact (`customfield_10860`) is shown as well. A value of `N/A` is treated as empty.
 
 ## Acceptance Criteria
 

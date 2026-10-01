@@ -146,10 +146,10 @@ export const Sidebar = () => {
       newTab: true
     },
     {
-      path: '/admin',
-      label: 'Admin',
+      path: '/team-management',
+      label: 'Team Management',
       icon: '🔧',
-      description: 'Administrative functions'
+      description: 'Add and edit teams'
     }
   ];
 

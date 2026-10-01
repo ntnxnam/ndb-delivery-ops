@@ -136,6 +136,7 @@ Reads `server/config/teamBoardConfig.json` — no JIRA call.
 | 400 | Missing id/name/projectKey | Show required-field error |
 | 400 | Missing or invalid `sprintCalendar` | Prompt to detect from the sprint board |
 | 409 | Team ID already exists | Show "Team ID already in use" |
+| 429 | General rate limit (per user + IP, 15 min window) | Show `message`; wait and retry. Body is JSON: `{ success: false, error, message }` |
 | 500 | File write failure | Show "Config save failed — check server disk" |
 
 ---

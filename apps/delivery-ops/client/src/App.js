@@ -210,16 +210,17 @@ const AuthenticatedApp = () => {
                   } 
                 />
                 
-                <Route 
-                  path="/admin" 
+                <Route
+                  path="/team-management"
                   element={
                     <ProtectedRoute permissions={['admin_panel_access']}>
                       <Layout>
                         <AdminPanel />
                       </Layout>
                     </ProtectedRoute>
-                  } 
+                  }
                 />
+                <Route path="/admin" element={<Navigate to="/team-management" replace />} />
                 
                 <Route
                   path="/design"

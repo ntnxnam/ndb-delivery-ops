@@ -43,7 +43,7 @@ fi
 echo ""
 echo "Fetching JCH tickets from $JIRA_BASE ..."
 
-JQL='project = JCH AND reporter in (namratha.singh, membersOf("Team-BharatKumar-Beedu-Org"), membersOf("Team-Ashish-Kumar-Org")) ORDER BY created DESC'
+JQL='project = JCH AND reporter in (namratha.singh, membersOf("Team-BharatKumar-Beedu-Org"), membersOf("Team-Ashish-Kumar-Org")) AND created >= "2024-03-01" ORDER BY created DESC'
 FIELDS="summary,description,status,assignee,reporter,issuetype,priority,created,updated,resolution,fixVersions,labels"
 PAGE_SIZE=100
 START=0

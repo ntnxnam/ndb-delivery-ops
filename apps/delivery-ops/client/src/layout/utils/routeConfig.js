@@ -163,11 +163,11 @@ export const routeConfig = {
       icon: '🗓️'
     },
     {
-      path: '/admin',
+      path: '/team-management',
       exact: true,
       component: 'AdminPanel',
-      title: 'Admin',
-      description: 'Administrative functions',
+      title: 'Team Management',
+      description: 'Add and edit teams',
       permissions: [PERMISSIONS.ADMIN_PANEL_ACCESS],
       showInNav: true,
       icon: '🔧'

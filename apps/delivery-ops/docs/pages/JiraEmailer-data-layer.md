@@ -30,14 +30,17 @@ Body: { jql, fields, maxResults, startAt }
 ### 2. Send email
 
 ```
-POST /api/email/send
+POST /api/email/send-generic-reminder
 Headers: x-jira-token, x-username
-Body: { to, cc, subject, htmlBody, jql, productId }
+Body: {
+  selectedFieldIdsInOrder, issuesPayload, toRecipients, includeProjectTeam,
+  selectedCCRecipients, subject, fieldLabels, notes, isTest
+}
 ```
 
-**Server flow**: same as Email Sender — `sendEmailHandler.js → sanitize.js → emailService → SMTP`  
-**Additional field vs Email Sender**: `jql` is stored in the email history record for audit  
-**Returns**: `{ success: true, messageId }` or `{ success: false, error }`
+**Server flow**: `sendGenericReminder.js → genericReminderEmailService → emailService.sendEmailDirect → SMTP`  
+**`isTest`**: when `true`, To is only the sender, CC is empty, and the subject is prefixed with `[TEST]`. Optional CC and project-team CC are ignored.  
+**Returns**: `{ success: true, messageId, isTestMode }` or `{ success: false, error }`
 
 ---
 

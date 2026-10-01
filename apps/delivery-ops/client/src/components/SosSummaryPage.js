@@ -36,6 +36,17 @@ const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
 // (they can hold thousands of tickets). Everything else is a real release.
 const PLACEHOLDER_VERSIONS = new Set(['master', 'era future', 'unversioned']);
 
+/** JIRA user field → display string. Empty and the live-fetch sentinel "N/A" are blank. */
+function personName(value) {
+  if (value == null) return null;
+  const text = typeof value === 'string'
+    ? value
+    : (value.displayName || value.name || value.emailAddress || value.email || '');
+  const trimmed = String(text).trim();
+  if (!trimmed || trimmed === 'N/A' || trimmed === '—') return null;
+  return trimmed;
+}
+
 function daysOld(dateVal) {
   if (!dateVal) return null;
   const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
@@ -493,6 +504,10 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
   const breakdown = breakdownDataMap[item.key] || null;
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
+  const testLead = personName(item.customfield_11065);
+  const qaContact = personName(item.customfield_10860);
+  const pmOwner = personName(item.customfield_11260);
+  const programMgr = personName(item.customfield_27764);
 
   // Date rows: label → field mapping for the stacked Dates cell
   const DATE_ROWS = [
@@ -524,16 +539,19 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
             👤 {item.assignee}
           </div>
         )}
-        {(item.customfield_11065 || item.customfield_11260 || item.customfield_27764) && (
+        {(testLead || qaContact || pmOwner || programMgr) && (
           <div style={{ fontSize: '10px', color: '#888', marginTop: 2 }}>
-            {item.customfield_11065 && (
-              <div title="Test Lead">🧪 {item.customfield_11065}</div>
+            {testLead && (
+              <div title="Test Lead">🧪 {testLead}</div>
             )}
-            {item.customfield_11260 && (
-              <div title="PM Owner">📋 {item.customfield_11260}</div>
+            {qaContact && qaContact !== testLead && (
+              <div title="QA Contact">🧪 QA {qaContact}</div>
             )}
-            {item.customfield_27764 && (
-              <div title="Program Mgr">🗂 {item.customfield_27764}</div>
+            {pmOwner && (
+              <div title="PM Owner">📋 {pmOwner}</div>
+            )}
+            {programMgr && (
+              <div title="Program Mgr">🗂 {programMgr}</div>
             )}
           </div>
         )}

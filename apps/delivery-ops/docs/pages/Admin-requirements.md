@@ -1,6 +1,6 @@
-# Admin Panel — Requirements
+# Team Management — Requirements
 
-**Route**: `/admin`  
+**Route**: `/team-management` (`/admin` redirects here)  
 **Component**: `AdminPanel`  
 **Permission**: `ADMIN_PANEL_ACCESS`  
 **Audience**: app admin only (currently: namratha.singh + designated ops leads)
@@ -59,7 +59,7 @@ The Admin Panel provides app configuration and team onboarding management withou
 
 - Requires `ADMIN_PANEL_ACCESS` — only accounts listed in `allowedUsers.json::adminUsers`
 - Sub-actions within Admin (e.g., delete user) have an additional confirm modal
-- Non-admin users attempting to reach `/admin` see a "Permission denied" wall
+- Non-admin users attempting to reach `/team-management` see a "Permission denied" wall
 
 ---
 

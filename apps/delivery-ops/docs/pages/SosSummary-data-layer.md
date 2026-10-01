@@ -211,6 +211,8 @@ Identical to the shape returned by `/api/jira/release-items`. All fields defined
 
 Key fields used by the UI:
 - `key`, `summary`, `status`, `issuetype`, `assignee`
+- `customfield_11065` (Test Lead), `customfield_10860` (QA Contact — shown when Test Lead is empty or a different person)
+- `customfield_11260` (PM Owner), `customfield_27764` (TPM / Program Mgr)
 - `customfield_11067` (CC Date), `customfield_35863` (CG Date), `customfield_35864` (PG Date)
 - `customfield_23560` (Risk Indicator — rendered as RAG chip)
 - `customfield_38460` (AI Executive Summary — displayed in ExecSummaryCell)

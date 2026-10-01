@@ -46,7 +46,7 @@ export const TAB_PERMISSIONS = {
   '/email-history': [PERMISSIONS.EMAIL_HISTORY_VIEW],
   '/sprint-report': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/kpis': [PERMISSIONS.KPI_VIEW],
-  '/admin': [PERMISSIONS.ADMIN_PANEL_ACCESS]
+  '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS]
 };
 
 // Legacy permission array mapping for migration compatibility.

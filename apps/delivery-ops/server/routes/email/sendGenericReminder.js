@@ -71,7 +71,8 @@ function register(router) {
         includeProjectTeam: projectTeamFieldIds,
         selectedCCRecipients,
         subject: subjectInput,
-        notes: notesInput
+        notes: notesInput,
+        isTest: isTest === true
       });
 
       logger.email.sent(
@@ -106,8 +107,9 @@ function register(router) {
 
       return res.json({
         success: true,
-        message: 'Email sent successfully',
-        messageId: result.messageId
+        message: result.isTestMode ? 'Test mode: email sent only to you.' : 'Email sent successfully',
+        messageId: result.messageId,
+        isTestMode: !!result.isTestMode
       });
     } catch (error) {
       console.error('[send-generic-reminder] Error:', error);

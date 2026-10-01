@@ -33,7 +33,8 @@ async function sendGenericReminderEmail(options) {
     includeProjectTeam = [],
     selectedCCRecipients = [],
     subject: subjectInput,
-    notes: notesInput
+    notes: notesInput,
+    isTest = false
   } = options;
 
   const toEmails = toRecipients && String(toRecipients).trim()
@@ -112,15 +113,31 @@ async function sendGenericReminderEmail(options) {
 <body><div class="email-container">${bodyHtml}<div class="table-wrap"><table><thead>${headerRow}</thead><tbody>${tableRows}</tbody></table></div><div class="footer"><p>This is an automated reminder email.</p></div></div></body>
 </html>`;
 
-  const ccList = Array.from(ccEmails).filter(Boolean);
+  let finalTo = toEmailList;
+  let finalCc = Array.from(ccEmails).filter(Boolean);
+  let finalSubject = subject;
+  if (isTest) {
+    finalTo = fromEmail;
+    finalCc = [];
+    if (!String(finalSubject).toLowerCase().startsWith('[test]')) {
+      finalSubject = `[TEST] ${finalSubject}`;
+    }
+  }
+
   const info = await sendEmailDirect({
     replyTo: fromEmail,
-    to: toEmailList,
-    cc: ccList.join(', '),
-    subject,
+    to: finalTo,
+    cc: finalCc.join(', '),
+    subject: finalSubject,
     html: emailHtml
   });
-  return { messageId: info.messageId, subject, toEmails: toEmails.length > 0 ? toEmails : [fromEmail], ccList };
+  return {
+    messageId: info.messageId,
+    subject: finalSubject,
+    toEmails: isTest ? [fromEmail] : (toEmails.length > 0 ? toEmails : [fromEmail]),
+    ccList: finalCc,
+    isTestMode: !!isTest
+  };
 }
 
 module.exports = { sendGenericReminderEmail };

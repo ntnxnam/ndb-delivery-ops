@@ -83,7 +83,7 @@ function AdminPanel() {
         alignItems: 'center',
         height: '256px'
       }}>
-        <div style={{ color: '#6b7280' }}>Loading admin panel...</div>
+        <div style={{ color: '#6b7280' }}>Loading teams...</div>
       </div>
     );
   }
@@ -123,14 +123,14 @@ function AdminPanel() {
             fontWeight: 'bold',
             margin: 0 
           }}>
-            Team Administration
+            Team Management
           </h1>
           <p style={{ 
             color: '#6b7280', 
             marginTop: '4px',
             margin: 0
           }}>
-            Manage teams, users, and permissions
+            Add and edit teams
           </p>
         </div>
         

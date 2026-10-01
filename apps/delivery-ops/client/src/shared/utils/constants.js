@@ -77,7 +77,7 @@ export const ROUTES = {
   EMAIL_HISTORY: '/email-history',
   SPRINT_REPORT: '/sprint-report',
   KPI: '/kpis',
-  ADMIN: '/admin'
+  TEAM_MANAGEMENT: '/team-management'
 };
 
 // HTTP Status Codes

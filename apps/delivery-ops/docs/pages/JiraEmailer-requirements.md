@@ -33,7 +33,7 @@ The JIRA Emailer lets a user write or select a JQL query, preview the resulting 
 3. **Template selector** — dropdown of saved JQL templates from `emailSenderFeatures.js` config
 4. **Column configurator** — drag-reorder list of available JIRA fields to include in email table
 5. **Email compose section** — subject, To, CC, introductory paragraph (plain text)
-6. **Send button** — disabled while query running; success/failure toast
+6. **Send button** — disabled while query running; success/failure toast. **Test mode** checkbox sends only to the logged-in user, with no CC, and prefixes the subject with `[TEST]`.
 7. **Preview toggle** — renders the HTML email preview before send
 
 ---

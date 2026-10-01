@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedPost, authenticatedPut } from '../../utils/api';
+import { getUserFacingMessage } from '../../utils/errorMessages';
 import SprintBoardFields from './SprintBoardFields';
 
 const STEPS = [
@@ -284,30 +285,29 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
         }
       };
 
-      const url = editMode ? `/api/admin/teams/${formData.id}` : '/api/admin/teams';
-      const method = editMode ? 'PUT' : 'POST';
-      
-      const response = await fetch(`${window.location.origin}${url}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jiraToken')}`,
-          'X-Username': localStorage.getItem('username') || ''
-        },
-        body: JSON.stringify(teamData)
-      });
+      const auth = {
+        jiraToken: localStorage.getItem('jiraToken'),
+        username: localStorage.getItem('username') || ''
+      };
+      const response = editMode
+        ? await authenticatedPut(`/api/admin/teams/${formData.id}`, teamData, auth)
+        : await authenticatedPost('/api/admin/teams', teamData, auth);
+      const data = response.data || {};
 
-      const data = await response.json();
-      
       if (data.success) {
         onComplete(data.team);
       } else {
-        throw new Error(data.message || `Failed to ${editMode ? 'update' : 'create'} team`);
+        throw new Error(data.message || data.error || `Failed to ${editMode ? 'update' : 'create'} team`);
       }
     } catch (error) {
+      const body = error.response?.data;
+      const serverMsg = body && typeof body === 'object' ? (body.message || body.error) : null;
       setValidation(prev => ({
         ...prev,
-        createError: error.message || `Failed to ${editMode ? 'update' : 'create'} team`
+        createError: (typeof serverMsg === 'string' && serverMsg)
+          || getUserFacingMessage(error, {
+            fallback: `Failed to ${editMode ? 'update' : 'create'} team`
+          })
       }));
     }
     setLoading(false);
@@ -807,7 +807,7 @@ function TeamOnboardingWizard({ onComplete, onCancel, editMode = false, initialD
         fontWeight: 'bold', 
         marginBottom: '24px' 
       }}>
-        {editMode ? `Edit Team: ${initialData?.name || formData.name}` : 'Team Onboarding Wizard'}
+        {editMode ? `Edit Team: ${initialData?.name || formData.name}` : 'Add team'}
       </h2>
       
       {/* Progress Steps */}

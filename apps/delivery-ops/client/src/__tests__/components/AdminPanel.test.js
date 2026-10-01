@@ -37,7 +37,7 @@ describe('AdminPanel', () => {
       </Wrapper>
     );
 
-    expect(screen.getByText('Loading admin panel...')).toBeInTheDocument();
+    expect(screen.getByText('Loading teams...')).toBeInTheDocument();
   });
 
   it('should render access denied for unauthorized users', async () => {
@@ -94,7 +94,7 @@ describe('AdminPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Team Administration')).toBeInTheDocument();
+      expect(screen.getByText('Team Management')).toBeInTheDocument();
       expect(screen.getByText('NDB')).toBeInTheDocument();
       expect(screen.getByText('DataLens')).toBeInTheDocument();
       expect(screen.getByText('Create New Team')).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe('AdminPanel', () => {
       fireEvent.click(createButton);
     });
 
-    expect(screen.getByText('Team Onboarding Wizard')).toBeInTheDocument();
+    expect(screen.getByText('Add team')).toBeInTheDocument();
   });
 });
 
@@ -139,7 +139,7 @@ describe('TeamOnboardingWizard', () => {
       </Wrapper>
     );
 
-    expect(screen.getByText('Team Onboarding Wizard')).toBeInTheDocument();
+    expect(screen.getByText('Add team')).toBeInTheDocument();
     expect(screen.getByText('Basic Info')).toBeInTheDocument();
     expect(screen.getByLabelText(/Team ID/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Team Name/)).toBeInTheDocument();
