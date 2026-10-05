@@ -1,414 +1,266 @@
 const request = require('supertest');
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 
-// Mock the config files
+const realFs = jest.requireActual('fs');
+
 jest.mock('fs');
-jest.mock('../../config/api', () => ({
-  JIRA_API_V2: {
-    PROJECT: (key) => `https://jira.example.com/rest/api/2/project/${key}`,
-    PROJECT_VERSIONS: (key) => `https://jira.example.com/rest/api/2/project/${key}/versions`,
-    SEARCH: 'https://jira.example.com/rest/api/2/search'
-  }
-}));
 
 jest.mock('../../utils/jiraClient', () => ({
   getJira: jest.fn(),
 }));
 
-const { getJira } = require('../../utils/jiraClient');
-
-// Mock auth service — admin route uses checkFeatureAccess; keep checkAuthorization
-// as a stub so any other consumers that destructure it don't throw.
-jest.mock('../../services/authService', () => ({
-  checkAuthorization: jest.fn(),
-  checkFeatureAccess: jest.fn()
+jest.mock('../../middleware/auth/jira', () => ({
+  validateJiraTokenMiddleware: (req, _res, next) => {
+    req.jiraToken = 'test-token';
+    next();
+  },
 }));
 
-const { checkAuthorization, checkFeatureAccess } = require('../../services/authService');
+jest.mock('../../services/authService', () => ({
+  checkAuthorization: jest.fn(),
+  checkFeatureAccess: jest.fn(),
+}));
+
+const { getJira } = require('../../utils/jiraClient');
+const { checkFeatureAccess } = require('../../services/authService');
 const adminRoutes = require('../../routes/admin');
 
-describe('Admin Routes', () => {
+const CALENDAR = { s1StartIso: '2024-10-23', sprintDays: 21 };
+
+function writtenTeamBoard() {
+  const call = fs.writeFileSync.mock.calls.find(([p]) => String(p).includes('teamBoardConfig.json'));
+  return call ? JSON.parse(call[1]) : null;
+}
+
+function sprintsFrom(startIso, count, days) {
+  const start = new Date(`${startIso}T00:00:00Z`).getTime();
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: `S${i + 1}`,
+    startDate: new Date(start + i * days * 86400000).toISOString(),
+    endDate: new Date(start + (i + 1) * days * 86400000).toISOString(),
+  }));
+}
+
+function fakeJira({ searchIssues, total, boards = [], featureIssues = [], versions = [] }) {
+  const get = jest.fn(async (url, opts = {}) => {
+    if (url === '/rest/api/2/search') {
+      return { data: { total: total ?? searchIssues.length, issues: searchIssues } };
+    }
+    if (url === '/rest/agile/1.0/board') return { data: { values: boards } };
+    const boardMatch = url.match(/^\/rest\/agile\/1\.0\/board\/(\d+)$/);
+    if (boardMatch) return { data: { id: Number(boardMatch[1]), name: `Board ${boardMatch[1]}`, type: 'scrum' } };
+    if (/\/sprint$/.test(url)) {
+      return { data: { values: opts.params?.startAt ? [] : sprintsFrom('2024-10-23', 6, 21), isLast: true } };
+    }
+    if (url.startsWith('/rest/api/2/project/')) return { data: { name: 'Era' } };
+    throw new Error(`unexpected GET ${url}`);
+  });
+  return {
+    get,
+    getProjectVersions: jest.fn().mockResolvedValue(versions),
+    searchAll: jest.fn().mockResolvedValue(featureIssues),
+    searchCount: jest.fn().mockResolvedValue(42),
+  };
+}
+
+describe('Admin routes', () => {
   let app;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     app = express();
     app.use(express.json());
     app.use('/api/admin', adminRoutes);
-
-    // Reset all mocks
-    jest.clearAllMocks();
-
-    // Default auth to authorized
-    checkAuthorization.mockReturnValue({ authorized: true });
     checkFeatureAccess.mockReturnValue({ authorized: true });
 
-    getJira.mockResolvedValue({
-      get: jest.fn(),
-      searchCount: jest.fn().mockResolvedValue(0),
-    });
-
-    // Default file system mocks
-    fs.readFileSync.mockImplementation((filePath) => {
-      if (filePath.includes('teamBoardConfig.json')) {
-        return JSON.stringify({
-          teams: [
-            {
-              id: 'ndb',
-              name: 'NDB',
-              projectKey: 'ERA',
-              projectType: 'dedicated'
-            }
-          ],
-          defaultTeamId: 'ndb'
-        });
-      }
-      if (filePath.includes('allowedUsers.json')) {
-        return JSON.stringify({
-          superAdminUsers: ['admin'],
-          teams: {}
-        });
-      }
-      if (filePath.includes('kpiConfig.json')) {
-        return JSON.stringify({ teams: {} });
-      }
+    fs.readFileSync.mockImplementation((filePath, enc) => {
+      const p = String(filePath);
+      if (p.includes('kpiConfig.json')) return JSON.stringify({ teams: { ndb: [{ id: 'k1' }] } });
+      if (p.includes('jiraFieldsConfig.json')) return realFs.readFileSync(filePath, enc);
       return '{}';
     });
+    fs.writeFileSync.mockReturnValue(undefined);
+  });
 
-    fs.writeFileSync.mockReturnValue(true);
+  describe('auth', () => {
+    it('returns 403 for non-super-admins', async () => {
+      checkFeatureAccess.mockReturnValue({ authorized: false, error: 'Access denied' });
+      await request(app).get('/api/admin/teams').expect(403);
+      await request(app).post('/api/admin/inspect-base-filter').send({ baseFilter: 'x' }).expect(403);
+    });
   });
 
   describe('GET /teams', () => {
-    it('should return teams for authorized users', async () => {
-      const response = await request(app)
-        .get('/api/admin/teams')
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.teams.map((t) => t.id)).toContain('ndb');
-    });
-
-    it('should deny access for unauthorized users', async () => {
-      checkAuthorization.mockReturnValue({ authorized: false, error: 'Access denied' });
-      checkFeatureAccess.mockReturnValue({ authorized: false, error: 'Access denied' });
-
-      await request(app)
-        .get('/api/admin/teams')
-        .expect(403);
+    it('lists teams with derived sprint scope and KPI counts', async () => {
+      const res = await request(app).get('/api/admin/teams').expect(200);
+      const ndb = res.body.teams.find((t) => t.id === 'ndb');
+      expect(ndb.sprintScope).toBe('filter=NDB-All-Base-Filter');
+      expect(ndb.kpiCount).toBe(1);
+      expect(ndb).not.toHaveProperty('userConfig');
+      expect(ndb).not.toHaveProperty('projectType');
     });
   });
 
   describe('POST /teams', () => {
-    it('should create a new dedicated project team', async () => {
-      const newTeam = {
-        id: 'analytics',
-        name: 'Analytics Team',
-        projectKey: 'ANAL',
-        projectType: 'dedicated',
-        baseFilter: 'filter=Analytics-Base',
-        sprintBaseFilter: 'filter=Analytics-Sprint',
-        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 }
-      };
-
-      const response = await request(app)
-        .post('/api/admin/teams')
-        .send(newTeam)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.team.id).toBe('analytics');
-      expect(response.body.team.sprintCalendar).toEqual({
-        s1StartIso: '2024-10-23',
-        sprintDays: 21
-      });
-      expect(fs.writeFileSync).toHaveBeenCalledTimes(3); // teamBoard, allowedUsers, kpi configs
-    });
-
-    it('should create a new parent project team with version patterns', async () => {
-      const newTeam = {
-        id: 'datalens',
-        name: 'DataLens',
-        projectKey: 'ENG',
-        projectType: 'parent',
-        versionPatterns: ['^DataLens.*', '^DL.*'],
-        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 },
-        userConfig: {
-          admins: ['user1'],
-          allowedUsers: ['user1', 'user2'],
-          emailSenders: ['user1'],
-          features: {
-            releaseVersions: true,
-            sprintReports: true,
-            kpiTab: true
-          }
-        }
-      };
-
-      const response = await request(app)
-        .post('/api/admin/teams')
-        .send(newTeam)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.team.versionPatterns).toEqual(['^DataLens.*', '^DL.*']);
-    });
-
-    it('should reject team creation with missing required fields', async () => {
-      const invalidTeam = {
-        name: 'Incomplete Team'
-        // Missing id and projectKey
-      };
-
-      const response = await request(app)
-        .post('/api/admin/teams')
-        .send(invalidTeam)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('required');
-    });
-
-    it('should reject team creation without sprintCalendar', async () => {
-      const response = await request(app)
-        .post('/api/admin/teams')
-        .send({
-          id: 'no-cal',
-          name: 'No Calendar',
-          projectKey: 'ENG'
-        })
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe('sprintCalendar is required');
-    });
-
-    it('should reject duplicate team ids', async () => {
-      const duplicateTeam = {
-        id: 'ndb', // Already exists
-        name: 'Duplicate NDB',
-        projectKey: 'ERA2',
-        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 }
-      };
-
-      const response = await request(app)
-        .post('/api/admin/teams')
-        .send(duplicateTeam)
-        .expect(409);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe('Team already exists');
-    });
-  });
-
-  describe('POST /validate-board', () => {
-    it('collects sprint calendar from the board', async () => {
-      const get = jest.fn()
-        .mockResolvedValueOnce({
-          data: { id: 99, name: 'Prism Infra', type: 'scrum' }
-        })
-        .mockResolvedValueOnce({
-          data: {
-            isLast: true,
-            values: [
-              { id: 1, name: 'S1', startDate: '2024-10-23T00:00:00.000Z', endDate: '2024-11-12T00:00:00.000Z' }
-            ]
-          }
-        });
-      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
-
-      const response = await request(app)
-        .post('/api/admin/validate-board')
-        .send({ boardId: 99, jiraToken: 'test-token' })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.board.name).toBe('Prism Infra');
-      expect(response.body.sprintCalendar).toEqual({
-        s1StartIso: '2024-10-23',
-        sprintDays: 21
-      });
-    });
-
-    it('requires boardId and jiraToken', async () => {
-      const response = await request(app)
-        .post('/api/admin/validate-board')
-        .send({})
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-    });
-  });
-
-  describe('POST /validate-jira-project', () => {
-    it('should validate accessible JIRA project', async () => {
-      const get = jest.fn()
-        .mockResolvedValueOnce({
-          data: {
-            key: 'ERA',
-            name: 'Era Project',
-            projectTypeKey: 'software',
-            lead: { displayName: 'Project Lead' }
-          }
-        })
-        .mockResolvedValueOnce({
-          data: [
-            { name: 'NDB-2.11', released: false, archived: false },
-            { name: 'NDB-2.12', released: false, archived: false }
-          ]
-        });
-      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
-
-      const response = await request(app)
-        .post('/api/admin/validate-jira-project')
-        .send({
-          projectKey: 'ERA',
-          jiraToken: 'test-token'
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.project.key).toBe('ERA');
-      expect(response.body.versions.open).toBe(2);
-    });
-
-    it('should handle invalid project key', async () => {
-      const get = jest.fn().mockRejectedValue({
-        response: {
-          status: 404,
-          data: {
-            errorMessages: ['Project not found']
-          }
-        }
-      });
-      getJira.mockResolvedValue({ get, searchCount: jest.fn() });
-
-      const response = await request(app)
-        .post('/api/admin/validate-jira-project')
-        .send({
-          projectKey: 'INVALID',
-          jiraToken: 'test-token'
-        })
-        .expect(404);
-
-      expect(response.body.success).toBe(false);
-    });
-  });
-
-  describe('POST /validate-filters', () => {
-    it('should validate working JIRA filters', async () => {
-      const searchCount = jest.fn().mockResolvedValue(25);
-      getJira.mockResolvedValue({ get: jest.fn(), searchCount });
-
-      const response = await request(app)
-        .post('/api/admin/validate-filters')
-        .send({
-          filters: [
-            { name: 'BaseFilter', filterQuery: 'filter=Team-Base' },
-            { name: 'SprintFilter', filterQuery: 'filter=Team-Sprint' }
-          ],
-          jiraToken: 'test-token'
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results).toHaveLength(2);
-      expect(response.body.results[0].valid).toBe(true);
-      expect(response.body.results[0].issueCount).toBe(25);
-    });
-
-    it('should detect invalid filters', async () => {
-      const searchCount = jest.fn()
-        .mockResolvedValueOnce(10)
-        .mockRejectedValueOnce({
-          response: {
-            data: {
-              errorMessages: ['Filter does not exist']
-            }
-          }
-        });
-      getJira.mockResolvedValue({ get: jest.fn(), searchCount });
-
-      const response = await request(app)
-        .post('/api/admin/validate-filters')
-        .send({
-          filters: [
-            { name: 'ValidFilter', filterQuery: 'filter=Valid' },
-            { name: 'InvalidFilter', filterQuery: 'filter=Invalid' }
-          ],
-          jiraToken: 'test-token'
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results[0].valid).toBe(true);
-      expect(response.body.results[1].valid).toBe(false);
-    });
-  });
-});
-
-describe('Team Configuration Validation', () => {
-  it('should validate dedicated project configuration', () => {
-    const team = {
-      id: 'ndb',
-      name: 'NDB',
-      projectKey: 'ERA',
-      projectType: 'dedicated'
-    };
-
-    // Dedicated projects don't need version patterns
-    expect(team.versionPatterns).toBeUndefined();
-    expect(team.projectKey).toBeTruthy();
-  });
-
-  it('should validate parent project configuration', () => {
-    const team = {
-      id: 'datalens',
-      name: 'DataLens',
-      projectKey: 'ENG',
+    const body = {
+      name: 'Data Lens Platform',
+      baseFilter: 'filter=DL-All and statusCategory!=Done',
+      projectKey: 'dl',
+      boardId: '77',
+      sprintCalendar: CALENDAR,
+      featureComponents: { DataLens: ['DL-Core', 'DL-Core', ' '] },
       projectType: 'parent',
-      versionPatterns: ['^DataLens.*', '^DL.*']
+      versionPatterns: ['DL*'],
+      sprintBaseFilter: 'filter=DL-All',
     };
 
-    // Parent projects require version patterns
-    expect(team.versionPatterns).toEqual(expect.arrayContaining([
-      expect.stringMatching(/^\^DataLens/),
-      expect.stringMatching(/^\^DL/)
-    ]));
+    it('generates the team code from the name and drops legacy fields', async () => {
+      const res = await request(app).post('/api/admin/teams').send(body).expect(200);
+      expect(res.body.team).toEqual({
+        id: 'data-lens-platform',
+        name: 'Data Lens Platform',
+        baseFilter: 'filter=DL-All and statusCategory!=Done',
+        projectKey: 'DL',
+        boardId: 77,
+        sprintCalendar: CALENDAR,
+        featureComponents: { DataLens: ['DL-Core'] },
+      });
+      const saved = writtenTeamBoard();
+      expect(saved.teams.map((t) => t.id)).toContain('data-lens-platform');
+      const kpiWrite = fs.writeFileSync.mock.calls.find(([p]) => String(p).includes('kpiConfig.json'));
+      expect(JSON.parse(kpiWrite[1]).teams['data-lens-platform']).toEqual([]);
+      expect(fs.writeFileSync.mock.calls.some(([p]) => String(p).includes('allowedUsers.json'))).toBe(false);
+    });
+
+    it('uses an explicit team code when given', async () => {
+      const res = await request(app).post('/api/admin/teams').send({ ...body, id: 'DL' }).expect(200);
+      expect(res.body.team.id).toBe('dl');
+    });
+
+    it('rejects missing base filter, project, or sprint calendar', async () => {
+      await request(app).post('/api/admin/teams').send({ ...body, baseFilter: '' }).expect(400);
+      await request(app).post('/api/admin/teams').send({ ...body, projectKey: undefined }).expect(400);
+      const res = await request(app).post('/api/admin/teams').send({ ...body, sprintCalendar: null }).expect(400);
+      expect(res.body.error).toBe('sprintCalendar is required');
+    });
+
+    it('rejects duplicate team codes', async () => {
+      await request(app).post('/api/admin/teams').send({ ...body, id: 'ndb' }).expect(409);
+    });
   });
-});
 
-describe('Backward Compatibility', () => {
-  it('should handle teams without projectType (defaults to dedicated)', () => {
-    const legacyTeam = {
-      id: 'legacy',
-      name: 'Legacy Team',
-      projectKey: 'LEG'
-      // No projectType specified
-    };
+  describe('PUT /teams/:teamId', () => {
+    it('updates managed fields and keeps unmanaged ones', async () => {
+      const res = await request(app)
+        .put('/api/admin/teams/ndb')
+        .send({ name: 'NDB Renamed', featureComponents: { NDB: ['Era Server'] }, id: 'hacked' })
+        .expect(200);
+      expect(res.body.team.id).toBe('ndb');
+      expect(res.body.team.name).toBe('NDB Renamed');
+      expect(res.body.team.featureComponents).toEqual({ NDB: ['Era Server'] });
+      expect(res.body.team.releasePrefix).toBe('NDB-');
+      expect(res.body.team.companionDisciplines.length).toBeGreaterThan(0);
+    });
 
-    // Should be treated as dedicated project
-    const projectType = legacyTeam.projectType || 'dedicated';
-    expect(projectType).toBe('dedicated');
+    it('returns 404 for unknown teams', async () => {
+      await request(app).put('/api/admin/teams/nope').send({ name: 'x' }).expect(404);
+    });
   });
 
-  it('should preserve existing configuration when updating', () => {
-    const existingTeam = {
-      id: 'existing',
-      name: 'Existing Team',
-      projectKey: 'EXIST',
-      boardId: 1234,
-      baseFilter: 'existing-filter'
-    };
+  describe('POST /inspect-base-filter', () => {
+    it('detects project, versions, board calendar, and feature components', async () => {
+      const jira = fakeJira({
+        total: 1200,
+        searchIssues: [
+          ...Array(8).fill({ fields: { project: { key: 'NCN', name: 'Cloud Native' } } }),
+          ...Array(2).fill({ fields: { project: { key: 'ENG', name: 'Engineering' } } }),
+        ],
+        boards: [{ id: 10, name: 'Other' }, { id: 4741, name: 'NCN Scrum' }],
+        versions: [
+          { name: 'NKP-2.15', released: false },
+          { name: 'NKP-2.14', released: true },
+          { name: 'NKP-2.16', released: false, archived: true },
+        ],
+        featureIssues: [
+          { fields: { components: [{ name: 'NKP' }], customfield_15160: { value: 'NKP', child: { value: 'NKP-Core' } } } },
+          { fields: { components: [{ name: 'NKP' }, { name: 'CSI' }], customfield_15160: { value: 'CSI', child: { value: 'CSI-Driver' } } } },
+        ],
+      });
+      getJira.mockResolvedValue(jira);
 
-    const update = {
-      name: 'Updated Team Name'
-    };
+      const res = await request(app)
+        .post('/api/admin/inspect-base-filter')
+        .send({ baseFilter: 'filter=NCN-All-Base-Filter and statusCategory!=Done', name: 'Cloud Native' })
+        .expect(200);
 
-    const updatedTeam = { ...existingTeam, ...update };
+      expect(res.body.projectKey).toBe('NCN');
+      expect(res.body.projectShare).toBe(80);
+      expect(res.body.issueCount).toBe(1200);
+      expect(res.body.sprintScope).toBe('filter=NCN-All-Base-Filter');
+      expect(res.body.versions).toEqual({ total: 3, unreleasedCount: 1, unreleased: ['NKP-2.15'] });
+      expect(res.body.board.boardId).toBe(4741);
+      expect(res.body.board.sprintCalendar).toEqual({ s1StartIso: '2024-10-23', sprintDays: 21 });
+      expect(res.body.feature.featureComponents).toEqual({ NKP: ['NKP-Core'], CSI: ['CSI-Driver'] });
+      expect(jira.searchAll).toHaveBeenCalledWith(
+        '(filter=NCN-All-Base-Filter and statusCategory!=Done) AND (project = FEAT)',
+        'components,customfield_15160',
+        expect.any(Object)
+      );
+    });
 
-    expect(updatedTeam.projectKey).toBe('EXIST');
-    expect(updatedTeam.boardId).toBe(1234);
-    expect(updatedTeam.name).toBe('Updated Team Name');
+    it('returns 400 when the base filter is empty or matches nothing', async () => {
+      getJira.mockResolvedValue(fakeJira({ searchIssues: [] }));
+      await request(app).post('/api/admin/inspect-base-filter').send({ baseFilter: '  ' }).expect(400);
+      const res = await request(app).post('/api/admin/inspect-base-filter').send({ baseFilter: 'filter=x' }).expect(400);
+      expect(res.body.error).toBe('Base filter matched no tickets');
+    });
+
+    it('returns 400 with the JIRA message for invalid JQL', async () => {
+      const err = Object.assign(new Error('Request failed'), {
+        response: { status: 400, data: { errorMessages: ["The value 'nope' does not exist for the field 'filter'."] } },
+      });
+      getJira.mockResolvedValue({ get: jest.fn().mockRejectedValue(err) });
+      const res = await request(app).post('/api/admin/inspect-base-filter').send({ baseFilter: 'filter=nope' }).expect(400);
+      expect(res.body.error).toBe('Invalid base filter');
+      expect(res.body.message).toContain("does not exist for the field 'filter'");
+    });
+  });
+
+  describe('POST /board-calendar', () => {
+    it('reads the calendar from the given board', async () => {
+      getJira.mockResolvedValue(fakeJira({ searchIssues: [] }));
+      const res = await request(app).post('/api/admin/board-calendar').send({ boardId: 2888 }).expect(200);
+      expect(res.body.boardId).toBe(2888);
+      expect(res.body.sprintCalendar).toEqual({ s1StartIso: '2024-10-23', sprintDays: 21 });
+    });
+
+    it('rejects a non-numeric board id', async () => {
+      getJira.mockResolvedValue(fakeJira({ searchIssues: [] }));
+      await request(app).post('/api/admin/board-calendar').send({ boardId: 'abc' }).expect(400);
+    });
+  });
+
+  describe('POST /test-team-config', () => {
+    it('checks project, versions, base filter, and sprint scope', async () => {
+      const jira = fakeJira({ searchIssues: [], versions: [{ name: 'NDB-2.12', released: false }] });
+      getJira.mockResolvedValue(jira);
+      const res = await request(app).post('/api/admin/test-team-config').send({ teamId: 'ndb' }).expect(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.results.versionAccess.totalVersions).toBe(1);
+      expect(res.body.results.sprintScope.jql).toBe('filter=NDB-All-Base-Filter');
+      expect(jira.searchCount).toHaveBeenCalledWith('filter=NDB-All-Base-Filter');
+    });
+
+    it('requires teamId', async () => {
+      await request(app).post('/api/admin/test-team-config').send({}).expect(400);
+    });
+  });
+
+  describe('removed endpoints', () => {
+    it.each(['validate-jira-project', 'validate-filters', 'validate-board'])('%s is gone', async (route) => {
+      await request(app).post(`/api/admin/${route}`).send({}).expect(404);
+    });
   });
 });

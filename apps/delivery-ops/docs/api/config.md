@@ -9,7 +9,7 @@ This file documents the team-list and team-base-filter endpoints. Other `/api/co
 
 ### GET /api/config/teams
 
-**Purpose**: Return the configured teams (id, name, board, **baseFilter**, sprintBaseFilter, sosBaseFilter) so the shared `TeamContext` can select a team and every page can scope JIRA queries to that team's base query.
+**Purpose**: Return the configured teams (id, name, board, **baseFilter**, sosBaseFilter, sprintCalendar, featureComponents) so the shared `TeamContext` can select a team and every page can scope JIRA queries to that team's base query.
 
 **Auth**: not required (read-only config)
 
@@ -34,7 +34,6 @@ This file documents the team-list and team-base-filter endpoints. Other `/api/co
       "boardId": 2888,
       "projectKey": "ERA",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
-      "sprintBaseFilter": "filter=NDB-All-Base-Filter",
       "sosBaseFilter": "filter=ndb-all-sos"
     }
   ]

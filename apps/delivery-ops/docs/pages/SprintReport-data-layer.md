@@ -15,8 +15,8 @@ GET /api/config/teams
 ```
 
 **Server flow**: `config.js → teamConfig.loadTeamBoardConfig()` — no JIRA call  
-**Returns**: `{ teams: [{ id, name, boardId, baseFilter, sprintBaseFilter, ... }], defaultTeamId }`  
-**Context**: `TeamContext` fetches once on app mount. Sprint JQL is scoped with `sprintBaseFilter` (fallback `baseFilter`) for the selected team.
+**Returns**: `{ teams: [{ id, name, boardId, baseFilter, sprintCalendar, featureComponents, ... }], defaultTeamId }`  
+**Context**: `TeamContext` fetches once on app mount. Sprint JQL is scoped with the sprint scope derived from the selected team's `baseFilter` (ORDER BY and trailing `statusCategory != Done` removed; `getTeamSprintBaseFilter` / `sprintScopeFromBaseFilter`).
 
 ---
 

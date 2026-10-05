@@ -2,7 +2,7 @@
 
 **Route**: `/team-management` (`/admin` redirects here)  
 **Server routes used**: `server/routes/admin.js`, `server/routes/releaseDataset.js` (cache endpoints)  
-**Config files modified**: `server/config/allowedUsers.json`, `server/config/teamBoardConfig.json`
+**Config files modified**: `server/config/allowedUsers.json` (permission groups only), `server/config/teamBoardConfig.json`, `server/config/kpiConfig.json` (new team entry)
 
 ---
 
@@ -59,30 +59,56 @@ Body: { username, group }
 
 ---
 
-### 4. Onboarding wizard — validate JIRA board + collect sprint calendar
+Client hooks: `useTeamAdmin` (list / save / test) and `useTeamDetect` (detect / board calendar), both via `authenticatedGet` / `authenticatedPost` / `authenticatedPut` (request gate). Full contracts: `docs/api/admin.md`.
+
+### 4. Team form — detect settings from the base filter
 
 ```
-POST /api/admin/validate-board
+POST /api/admin/inspect-base-filter
 Headers: Authorization Bearer, X-Username
-Body: { boardId, jiraToken }
+Body: { baseFilter, name?, boardId?, featureProjectKey? }
 ```
 
-**Server flow**: `admin.js → sprintCalendar.collectSprintCalendarFromBoard` → `GET /rest/agile/1.0/board/{boardId}` then paginated `GET /rest/agile/1.0/board/{boardId}/sprint` → infer `{ s1StartIso, sprintDays }`  
-**Returns**: `{ success, board, sprintCalendar, inferredFrom, sprintCount }`
+**Server flow**: `admin.js → teamInspectService.inspectBaseFilter` →
+- `GET /rest/api/2/search` (base filter, `fields=project`, 500 issues) → main project by count
+- `getProjectVersions(project)` → total + unreleased names
+- `GET /rest/agile/1.0/board?projectKeyOrId=&type=scrum` → board pick → `collectSprintCalendarFromBoard`
+- `searchAll("(<baseFilter>) AND project = FEAT", "components,<primaryComponent CF>")` → `{ component: [primaryComponents] }`
+
+**Returns**: `{ baseFilter, sprintScope, issueCount, projects, projectKey, versions, board, feature }`
+
+### 4b. Team form — calendar for a manually chosen board
+
+```
+POST /api/admin/board-calendar
+Body: { boardId }
+```
+
+**Returns**: `{ boardId, boardName, sprintCalendar, inferredFrom, sprintCount }` (or `sprintCalendar: null` + `calendarError`)
 
 ---
 
-### 5. Onboarding wizard — save new team
+### 5. Team form — save team
 
 ```
-POST /api/admin/teams
+POST /api/admin/teams            (create)
+PUT  /api/admin/teams/:teamId    (edit)
 Headers: x-jira-token, x-username
-Body: { id, name, projectKey, projectType, boardId, sprintCalendar: { s1StartIso, sprintDays }, baseFilter, sprintBaseFilter, versionPatterns?, userConfig? }
+Body: { id? (create only), name, baseFilter, projectKey, boardId, sprintCalendar: { s1StartIso, sprintDays }, featureComponents? }
 ```
 
-**Server flow**: `admin.js → loadTeamBoardConfig → appends new team → saveTeamBoardConfig → writes allowedUsers/KPI`  
-**Returns**: `{ success: true, team: { id, name, ... }, message }`  
-**Side effect**: `saveTeamBoardConfig` invalidates the mtime cache so Project Status / version lists see the new team on the next request without a restart. The Admin UI also `upsertTeam`s into `TeamContext`. The new team is **not** auto-applied; the admin clicks **Fetch**. D43: this file is a multi-team registry — Save must persist to disk, not only the browser dropdown.
+**Server flow**: `admin.js → teamAdminService.createTeam / updateTeam` → validate → strip legacy fields → `saveTeamBoardConfig` (create also adds an empty KPI list in `kpiConfig.json`). `allowedUsers.json` is not written.
+**Returns**: `{ success: true, team, message }`
+**Side effect**: `saveTeamBoardConfig` invalidates the mtime cache so Project Status / version lists see the new team on the next request without a restart. The Admin UI also `upsertTeam`s / `updateTeam`s into `TeamContext`. The new team is **not** auto-applied; the admin clicks **Fetch**. D43: this file is a multi-team registry — Save must persist to disk, not only the browser dropdown.
+
+### 5b. Test a saved team
+
+```
+POST /api/admin/test-team-config
+Body: { teamId }
+```
+
+**Returns**: `results.{ projectAccess, versionAccess, baseFilter, sprintScope }`, each `{ valid, ... }`.
 
 ---
 
@@ -142,7 +168,21 @@ Returns a Server-Sent Events stream with progress updates. Admin UI shows live p
 ```
 
 ### `server/config/teamBoardConfig.json`
-One entry per product/team. Written by the onboarding wizard. Used by `teamConfig.js` and `productService`.
+One entry per product/team. Written by the team form. Used by `teamConfig.js` and `productService`.
+
+```json
+{
+  "id": "ncn",
+  "name": "Nutanix Cloud Native",
+  "projectKey": "NCN",
+  "boardId": 4741,
+  "baseFilter": "filter=NCN-All-Base-Filter and statusCategory!=Done",
+  "sprintCalendar": { "s1StartIso": "2020-02-20", "sprintDays": 14 },
+  "featureComponents": { "NKP": ["NKP-Core"], "NDK": ["NDK"] }
+}
+```
+
+The sprint scope is never stored: `sprintScopeFromBaseFilter(baseFilter)` (server `utils/teamScope.js`, shared `utils/teamScope.ts`) removes ORDER BY and a trailing `statusCategory != Done`.
 
 ---
 
@@ -153,6 +193,8 @@ One entry per product/team. Written by the onboarding wizard. Used by `teamConfi
 | Non-admin calling admin endpoints | 403 | "Permission denied" |
 | allowedUsers.json write fails | 500 | "Config save failed — manual edit required" |
 | Removing last admin | 400 | "Cannot remove the last admin user" |
-| Board validation fails | 404 | Wizard shows "Board not found — check ID" |
+| Base filter invalid or matches no tickets | 400 | Team form shows the JIRA message |
+| Board / versions / FEAT lookup fails during Detect | 200 (inline `error` / `calendarError`) | That section shows the error; the rest still renders |
+| Team code already exists | 409 | Team form shows "Team already exists" |
 | Cache clear while sync running | 409 | "Sync in progress — cannot clear cache now" |
 | teamBoardConfig.json write fails | 500 | "Team config save failed" |

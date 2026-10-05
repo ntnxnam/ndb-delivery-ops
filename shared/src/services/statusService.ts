@@ -82,18 +82,15 @@ export class StatusService {
     const versions = await this.jira.getProjectVersions(projectKey);
 
     // "Active" heuristic for Phase D1: not released, not archived, and
-    // (for parent projects) version name matches one of the patterns.
+    // matching the release prefix / pinned names when either is configured.
     const out: Release[] = [];
     for (const v of versions) {
       if (v.archived) continue;
       if (v.released) continue; // shipped
-      const hasScope =
-        (productCfg.projectType === 'parent' && productCfg.versionPatterns?.length) ||
-        productCfg.releasePrefix ||
-        productCfg.activeVersionNames?.length;
+      const hasScope = productCfg.releasePrefix || productCfg.activeVersionNames?.length;
       if (
         hasScope &&
-        !versionBelongsToProduct(productCfg, v.name, {
+        !versionBelongsToProduct(v.name, {
           productPrefix: productCfg.releasePrefix,
           activeVersionNames: productCfg.activeVersionNames,
         })

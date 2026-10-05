@@ -129,18 +129,3 @@ textarea.w-full {
 @media (min-width: 768px) {
   .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
-/* Specific component styling */
-.team-onboarding-wizard {
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.step-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  margin-bottom: 24px;
-}

@@ -77,7 +77,6 @@ const {
   upstreamStatus,
   getDefaultReleaseBaseFilter,
   getTeamConfig,
-  constructParentProjectFilter,
   getConfigOverride,
   getReleaseBaseFilter,
   sendServiceError,

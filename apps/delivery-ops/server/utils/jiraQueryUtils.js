@@ -170,8 +170,8 @@ function buildOptimizedProjectTicketsJQL(projectKeys) {
 
 /**
  * Build a JQL query for a sprint report: tickets in the given sprint, scoped
- * to the team's sprintBaseFilter (which intentionally does NOT exclude
- * resolved/closed issues — sprint reports must count completed work).
+ * to the team's sprint scope (base filter without statusCategory!=Done —
+ * sprint reports must count completed work).
  *
  * @param {number|string} sprintId
  * @param {string} teamId - resolved via teamConfig.getTeamSprintBaseFilter

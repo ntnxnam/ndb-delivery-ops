@@ -54,6 +54,20 @@ export function wrapTeamScope(baseFilter: string | null | undefined, jql: string
   return `(${filter}) AND (${inner})`;
 }
 
+const TRAILING_NOT_DONE =
+  /\s+AND\s+statusCategory\s*(?:!=\s*"?Done"?|not\s+in\s*\(\s*"?Done"?\s*\))\s*$/i;
+
+/**
+ * Sprint reports must count completed work, so the sprint scope is the
+ * team base filter minus a trailing `AND statusCategory != Done`.
+ */
+export function sprintScopeFromBaseFilter(baseFilter: string | null | undefined): string {
+  let filter = typeof baseFilter === 'string' ? baseFilter.trim() : '';
+  const orderMatch = filter.match(TRAILING_ORDER_BY);
+  if (orderMatch && orderMatch.index != null) filter = filter.slice(0, orderMatch.index).trim();
+  return filter.replace(TRAILING_NOT_DONE, '').trim();
+}
+
 export function requireBaseFilter(team: TeamScopeInput | null | undefined): string {
   const filter = typeof team?.baseFilter === 'string' ? team.baseFilter.trim() : '';
   if (!filter) {

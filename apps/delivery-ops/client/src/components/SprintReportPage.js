@@ -1,7 +1,7 @@
 /**
  * Sprint Report page: past sprint report, current sprint report, or trends by team.
  * Team from the shared sidebar selector; sprint JQL is scoped by the team's
- * sprintBaseFilter (or baseFilter). User selects sprint(s) and runs the report.
+ * base filter (minus its Done exclusion). User selects sprint(s) and runs the report.
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -83,7 +83,7 @@ export default function SprintReportPage() {
   const [pastValidationError, setPastValidationError] = useState(null);
   const [refreshingLive, setRefreshingLive] = useState(false);
 
-  const baseFilter = selectedTeam?.baseFilter || selectedTeam?.sprintBaseFilter || '';
+  const baseFilter = selectedTeam?.baseFilter || '';
 
   /**
    * Fetch sprints for the current team. Only used when mode is CURRENT or TRENDS (sprint dropdown / trend picker).
@@ -543,7 +543,7 @@ export default function SprintReportPage() {
     return (
       <TeamRequiredGate
         selectorId="sprint-report-team-select"
-        description="Sprint reports use this team's sprint base query (sprintBaseFilter, falling back to baseFilter)."
+        description="Sprint reports use this team's base filter without its statusCategory != Done clause."
       />
     );
   }

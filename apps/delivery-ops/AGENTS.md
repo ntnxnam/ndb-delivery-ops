@@ -91,7 +91,7 @@ When working in the JIRA routes, do NOT inline these helpers — import them:
 | `extractQIFromItem` | `server/utils/tcmsHelpers.js` |
 | `classifySprintIssue`, `getAddedToSprintAt`, `getSprintsForBoard`, `resolveSprintState` | `server/utils/sprintCache.js` |
 | `normalizeTeamId`, `loadKpiConfigSync`, `getKpisForTeam`, `getTeamBaseFilter`, `getTeamSprintBaseFilter` | `server/utils/teamConfig.js` |
-| `upstreamStatus`, `getDefaultReleaseBaseFilter`, `getTeamConfig`, `constructParentProjectFilter`, `getConfigOverride`, `getReleaseBaseFilter` | `server/utils/jiraRouteHelpers.js` |
+| `upstreamStatus`, `getDefaultReleaseBaseFilter`, `getTeamConfig`, `getConfigOverride`, `getReleaseBaseFilter` | `server/utils/jiraRouteHelpers.js` |
 | `buildOptimizedProjectTicketsJQL`, `buildSprintReportJql`, plus the older `buildCommitItemsJQL`, `buildLongTermItemsJQL`, `buildTaskBreakdownJQL`, `buildAllTicketsJQL`, `getAllItemKeysForVersion` | `server/utils/jiraQueryUtils.js` |
 
 ## JIRA quirks specific to this project

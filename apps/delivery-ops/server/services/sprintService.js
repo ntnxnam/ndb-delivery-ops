@@ -5,6 +5,7 @@ const { runWithConcurrency } = require('../utils/concurrency');
 const { buildSprintReportJql } = require('../utils/jiraQueryUtils');
 const { loadKpiConfigSync, getKpisForTeam, getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
 const { fetchAllChangelogHistories } = require('../utils/changelogPagination');
+const { sprintScopeFromBaseFilter } = require('../utils/teamScope');
 const logger = require('../utils/logger');
 const { getSprintMetrics } = require('../../../../shared/src/domain/sprintMetrics.cjs');
 
@@ -262,7 +263,7 @@ async function getSprintKpiBreakdown({ token, teamId, sprintId, sprintName }) {
   if (!kpis || kpis.length === 0) return { success: true, kpiBreakdown: [], note: 'No KPIs configured for this team.' };
   const pendingQAStatusName = boardConfig().pendingQAStatusName || 'Resolved';
   const completedStatusName = boardConfig().completedStatusName || 'Closed';
-  const sprintBaseFilter = team.sprintBaseFilter || team.baseFilter || '';
+  const sprintBaseFilter = sprintScopeFromBaseFilter(team.baseFilter);
   const trueSprint = sprintBaseFilter ? `(${sprintBaseFilter}) AND sprint in ("${sprintName}")` : `sprint in ("${sprintName}")`;
   const kpiTasks = kpis.map((kpi) => async () => {
     const kpiJql = `(${trueSprint}) AND (${kpi.baseQuery})`;

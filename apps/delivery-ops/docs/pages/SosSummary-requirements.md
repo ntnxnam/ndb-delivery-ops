@@ -65,7 +65,7 @@ SoS Summary
 
 ## Edge Cases
 
-1. If `sosBaseFilter` is not configured for the active team, show an admin warning banner and fall back to `sprintBaseFilter`.
+1. If `sosBaseFilter` is not configured for the active team, show an admin warning banner and fall back to the team `baseFilter`.
 2. If a release has more than 500 Features/Initiatives (pagination cap), show a warning count.
 3. KPI widgets that fail to resolve their JIRA filter show a "Filter not found" state without breaking the rest of the page.
 4. Email SoS is disabled while the page is still loading or has no items. Confirm dialog shows the resolved To/CC before send.

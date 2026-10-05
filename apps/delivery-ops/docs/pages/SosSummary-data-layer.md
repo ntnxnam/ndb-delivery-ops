@@ -241,7 +241,7 @@ The page is routed through the shared `Layout` / `ReleaseDataProvider`. Feature/
 | JIRA 429 with warm cache | Page renders from cache + banner to wait, then Refresh All |
 | JIRA 429 with empty cache | Friendly wait-60–90s message + Retry |
 | JIRA unreachable for a release | Inline error in release section + Retry button |
-| `sosBaseFilter` not configured | Warning banner; fallback to `sprintBaseFilter` |
+| `sosBaseFilter` not configured | Warning banner; fallback to `baseFilter` |
 | Task breakdown fetch fails for a key | `TaskBreakdownCell` shows "Breakdown unavailable" (existing behaviour) |
 | KPI filter not found | Widget shows "Filter not found" — other widgets unaffected |
 | AI service unavailable | ExecSummaryCell shows stale date warning (existing behaviour) |

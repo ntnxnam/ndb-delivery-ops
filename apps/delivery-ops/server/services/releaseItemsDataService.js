@@ -12,6 +12,9 @@ const { getSprintsForBoard, resolveSprintState } = require('../utils/sprintCache
 const { resolveRequestedTeam } = require('../utils/jiraRouteHelpers');
 const { getTeamBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
 const { wrapTeamScope } = require('../utils/teamScope');
+const { getPrimaryComponentField, parsePrimaryComponent } = require('../utils/primaryComponent');
+
+const PRIMARY_COMPONENT_FIELD = getPrimaryComponentField();
 
 const RELEASE_DATASET_CACHE_DIR = path.resolve(
   __dirname, '..', '..', '..', '..', 'shared', '.cache', 'release-dataset'
@@ -44,7 +47,7 @@ const RELEASE_ITEMS_CONFIG = {
     'customfield_11068', 'customfield_35863', 'customfield_35864',
     'customfield_14463', 'customfield_31460', 'customfield_14464',
     'customfield_14465', 'customfield_23073', 'customfield_45660',
-    'customfield_23560', 'customfield_38460', 'customfield_15160', 'components',
+    'customfield_23560', 'customfield_38460', PRIMARY_COMPONENT_FIELD, 'components',
   ].join(','),
 };
 
@@ -105,16 +108,8 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       customfield_45660: issue.fields.customfield_45660,
       customfield_23560: riskIndicator,
       customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
-      // Primary Component (CF[15160]) — cascading select: { value: "Parent", child: { value: "Child" } }
       // Expose as { parent, child } so the UI can filter on either level.
-      primaryComponent: (() => {
-        const raw = issue.fields.customfield_15160;
-        if (!raw || typeof raw !== 'object') return null;
-        return {
-          parent: raw.value || null,
-          child: raw.child?.value || null,
-        };
-      })(),
+      primaryComponent: parsePrimaryComponent(issue.fields[PRIMARY_COMPONENT_FIELD]),
       // Standard JIRA components field — array of component names
       components: (issue.fields.components || []).map((c) => c.name).filter(Boolean),
     };

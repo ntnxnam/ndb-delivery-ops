@@ -66,7 +66,7 @@ Headers: x-jira-token, x-username
 | KPI query | `kpiConfig.teams[teamId][].baseQuery` |
 | Combined | `(baseFilter) AND (kpiJql)` when baseFilter is set; otherwise kpiJql alone |
 
-Sprint reports use `sprintBaseFilter` (or `baseFilter` if sprint-specific is empty). SoS uses `sosBaseFilter`. Lookups are case-insensitive.
+Sprint reports use the sprint scope derived from `baseFilter` (ORDER BY and trailing `statusCategory != Done` removed). SoS uses `sosBaseFilter`. Lookups are case-insensitive.
 
 ---
 

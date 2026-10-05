@@ -348,16 +348,11 @@ export type {
   ToolClass,
 } from './agentPack/index.js';
 
-export {
-  compileVersionPattern,
-  compileVersionPatterns,
-  versionMatchesAny,
-  versionBelongsToProduct,
-  escapeRegExp,
-} from './utils/versionPattern.js';
+export { versionBelongsToProduct } from './utils/versionPattern.js';
 
 export {
   wrapTeamScope,
+  sprintScopeFromBaseFilter,
   requireBaseFilter,
   isUnreleasedVersion,
   toVersionSummary,

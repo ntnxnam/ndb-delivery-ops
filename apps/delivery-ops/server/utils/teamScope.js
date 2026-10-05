@@ -24,6 +24,23 @@ function wrapTeamScope(baseFilter, jql) {
   return orderBy ? `${wrapped} ${orderBy}` : wrapped;
 }
 
+const TRAILING_NOT_DONE =
+  /\s+AND\s+statusCategory\s*(?:!=\s*"?Done"?|not\s+in\s*\(\s*"?Done"?\s*\))\s*$/i;
+
+/**
+ * Sprint reports must count completed work, so the sprint scope is the
+ * team base filter minus a trailing `AND statusCategory != Done`.
+ */
+function sprintScopeFromBaseFilter(baseFilter) {
+  return stripOrderBy(baseFilter).replace(TRAILING_NOT_DONE, '').trim();
+}
+
+function stripOrderBy(jql) {
+  const filter = typeof jql === 'string' ? jql.trim() : '';
+  const orderMatch = filter.match(TRAILING_ORDER_BY);
+  return orderMatch ? filter.slice(0, orderMatch.index).trim() : filter;
+}
+
 function requireBaseFilter(team) {
   const filter = typeof team?.baseFilter === 'string' ? team.baseFilter.trim() : '';
   if (!filter) {
@@ -141,6 +158,8 @@ async function listFixVersionsForTeam(team, jira) {
 
 module.exports = {
   wrapTeamScope,
+  sprintScopeFromBaseFilter,
+  stripOrderBy,
   requireBaseFilter,
   requireProjectKey,
   isUnreleasedVersion,

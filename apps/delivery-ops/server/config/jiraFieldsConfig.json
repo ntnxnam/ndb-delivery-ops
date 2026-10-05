@@ -190,6 +190,16 @@
         "hasColor": true
       }
     },
+    "classification": {
+      "primaryComponent": {
+        "id": "customfield_15160",
+        "label": "Primary Component",
+        "type": "cascadingSelect",
+        "category": "classification",
+        "description": "Cascading select: parent is the JIRA component, child is the sub-component",
+        "usedIn": ["fetch"]
+      }
+    },
     "relationships": {
       "epicLink": {
         "id": "customfield_10361",
@@ -249,6 +259,7 @@
     "content": "Text content fields for status updates",
     "links": "Link fields to external documents",
     "indicators": "Status and risk indicator fields",
+    "classification": "Component classification fields",
     "relationships": "Fields that link tickets together",
     "agile": "Sprint and board fields (Jira Software)"
   }

@@ -144,7 +144,6 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
     teamId: effectiveTeamId,
     teamName: team.name,
     projectKey,
-    projectType: team.projectType || 'dedicated',
     defaultVersion,
     versions: versionsWithFilters,
   };

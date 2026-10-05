@@ -1,194 +1,263 @@
 # API Contract — `/api/admin/*`
 
-**Route file**: `server/routes/admin.js`  
-**Auth**: all endpoints require `requireSuperAdmin` middleware (checks `adminUsers` in `allowedUsers.json`) unless noted  
+**Route file**: `server/routes/admin.js`
+**Services**: `server/services/teamInspectService.js` (JIRA detection), `server/services/teamAdminService.js` (team registry CRUD + live test)
+**Auth**: all team endpoints require `requireSuperAdmin` (checks `adminUsers` in `allowedUsers.json`) unless noted
 **Mounted at**: `/api/admin`
 
----
-
-### POST /api/admin/validate-jira-project
-
-**Purpose**: Validate that a JIRA project key exists and is accessible with the current token — used in team onboarding wizard.
-
-**Auth**: super-admin
-
-**Request**
-- Body: `{ projectKey: string, jiraToken: string }`
-
-**Server flow**  
-`admin.js → jiraClient.getJira(token) → JiraConnector.get(project) + get(project versions)`
-
-**Response**
-```json
-{
-  "success": true,
-  "project": { "key": "ERA", "name": "NDB Engineering", "projectTypeKey": "software", "lead": { "displayName": "Lead" } },
-  "versions": { "total": 12, "open": 4, "openVersionNames": ["NDB-2.12"] }
-}
-```
-
-**Error responses**
-| Code | When | Client should |
-|------|------|---------------|
-| 404 | Project not found | Show "Project not found in JIRA" |
-| 403 | Token lacks access | Show "Token does not have access to this project" |
+> ⚠️ Breaking change in 2026-10: team onboarding now starts from the team's base filter.
+> `POST /validate-jira-project`, `POST /validate-filters` and `POST /validate-board` were removed
+> (use `POST /inspect-base-filter` and `POST /board-calendar`). Team configs no longer accept
+> `projectType`, `versionPatterns`, `sprintBaseFilter` or `userConfig`; any of these sent to
+> `POST`/`PUT /teams` are dropped and existing values are stripped on save. The sprint scope is
+> derived from `baseFilter` (ORDER BY and a trailing `statusCategory != Done` removed).
+> `allowedUsers.json` no longer has a per-team `teams` block. `test-team-config` returns
+> `baseFilter` / `sprintScope` checks instead of `teamConfig` / `filterTests`.
 
 ---
 
-### POST /api/admin/validate-filters
+### POST /api/admin/inspect-base-filter
 
-**Purpose**: Validate that each team JQL filter (or saved-filter name) is executable — used in team onboarding wizard.
+**Purpose**: Detect every derivable team setting from a base filter — main JIRA project, its release versions, scrum board + sprint calendar, and FEAT components with their primary components — so the admin only types a name and a filter.
 
-**Auth**: super-admin
-
-**Request**
-- Body: `{ filters: [{ name: string, filterQuery?: string }], jiraToken: string }`
-- `filterQuery` is JQL. If omitted, the server tests `filter=<name>`.
-
-**Server flow**  
-`admin.js → jiraClient.getJira(token) → JiraConnector.searchCount(jql)` for each filter
-
-**Response**
-```json
-{ "success": true, "results": [{ "name": "baseFilter", "valid": true, "issueCount": 25 }] }
-```
-
----
-
-### POST /api/admin/validate-board
-
-**Purpose**: Validate a JIRA Agile board and collect sprint calendar (`s1StartIso`, `sprintDays`) from its sprints — used by the team onboarding wizard **Detect from board** action.
-
-**Auth**: super-admin
+**Auth**: super-admin + JIRA token (`validateJiraTokenMiddleware`)
 
 **Request**
-- Method + path: `POST /api/admin/validate-board`
+- Method + path: `POST /api/admin/inspect-base-filter`
 - Body params:
-  - `boardId` (number, required) — JIRA Agile board ID
-  - `jiraToken` (string, required) — caller PAT
-- Required headers: super-admin username (`X-Username`)
+  - `baseFilter` (string, required) — team JQL, e.g. `filter=NDB-All-Base-Filter and statusCategory!=Done`
+  - `name` (string, optional) — team name; used to prefer a board whose name matches
+  - `boardId` (number, optional) — preferred board (kept if it belongs to the detected project)
+  - `featureProjectKey` (string, optional, default `FEAT`) — project holding the team's features
+- Required headers: `X-Username` (super admin), JIRA bearer token
 
 **Server flow**
-`admin.js` → `getJira(token)` → `collectSprintCalendarFromBoard` → `GET /rest/agile/1.0/board/{boardId}` → paginated `GET /rest/agile/1.0/board/{boardId}/sprint` → infer calendar (named S1, else earliest sprint; median duration snapped to 7/14/21)
+- `admin.js` → `teamInspectService.inspectBaseFilter`
+- → JIRA `GET /rest/api/2/search` (`jql=baseFilter`, `fields=project`, up to 500 issues) → main project = most frequent project key, ignoring the feature project (FEAT)
+- → in parallel:
+  - `JiraConnector.getProjectVersions(projectKey)` → total + unreleased version names
+  - `GET /rest/agile/1.0/board?projectKeyOrId=<key>&type=scrum` → the requested `boardId` if given, else a name match, else the first board → `collectSprintCalendarFromBoard`
+  - `JiraConnector.searchAll("(<baseFilter without ORDER BY>) AND project = FEAT", "components,<primary component field>")` → group components → primary components (`classification.primaryComponent` in `jiraFieldsConfig.json`)
+- `suggested` marks components with ≥3 tickets or ≥5% of the FEAT tickets; the form pre-checks only these.
+- Versions / board / feature failures are returned inline as `error` / `calendarError`; only a rejected base filter fails the request.
 
 **Response shape**
 ```json
 {
   "success": true,
-  "board": { "id": 2888, "name": "NDB Scrum", "type": "scrum" },
-  "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 },
-  "inferredFrom": { "sprintCount": 40, "namedS1": true, "namedS1Name": "S1" },
-  "sprintCount": 40
+  "baseFilter": "filter=NCN-All-Base-Filter and statusCategory!=Done",
+  "sprintScope": "filter=NCN-All-Base-Filter",
+  "issueCount": 1840,
+  "sampledCount": 500,
+  "projects": [{ "key": "NCN", "name": "Nutanix Cloud Native", "count": 470, "share": 94 }],
+  "projectKey": "NCN",
+  "projectShare": 94,
+  "versions": { "total": 60, "unreleasedCount": 4, "unreleased": ["NKP-2.16", "NKP-2.15.1"] },
+  "board": {
+    "boards": [{ "id": 4741, "name": "NCN Scrum" }],
+    "boardId": 4741,
+    "boardName": "NCN Scrum",
+    "sprintCalendar": { "s1StartIso": "2020-02-20", "sprintDays": 14 },
+    "inferredFrom": { "sprintCount": 120, "namedS1": false },
+    "sprintCount": 120
+  },
+  "feature": {
+    "projectKey": "FEAT",
+    "jql": "(filter=NCN-All-Base-Filter and statusCategory!=Done) AND project = FEAT",
+    "issueCount": 35,
+    "components": [{ "name": "NKP", "count": 30, "primaryComponents": ["NKP-Core", "NKP-UI"], "suggested": true }],
+    "featureComponents": { "NKP": ["NKP-Core", "NKP-UI"] }
+  }
 }
 ```
 
 **Error responses**
 | HTTP code | When | Client should |
 |-----------|------|---------------|
-| 400 | Missing `boardId` / `jiraToken`, or board has no dated sprints | Show the message; allow manual S1 + length entry |
-| 404 | Board not found | Show "Board not found — check ID" |
-| 403 | Token lacks access | Show "Token does not have access to this board" |
+| 400 | `baseFilter` missing, rejected by JIRA, or matches no tickets | Show `message`; let the admin fix the filter |
+| 401 | JIRA token missing/invalid | Prompt for token |
+| 403 | Not a super admin | Show Access Denied |
+| 500 | Unexpected failure | Show error, allow retry |
 
 **Caching**
-No — live JIRA read. Inferred calendar is persisted only when the admin saves the team.
+No — live JIRA reads. Results are persisted only when the admin saves the team.
+
+---
+
+### POST /api/admin/board-calendar
+
+**Purpose**: Read the sprint calendar for a specific board — used when the admin picks a different board than the one Detect chose.
+
+**Auth**: super-admin + JIRA token
+
+**Request**
+- Method + path: `POST /api/admin/board-calendar`
+- Body params: `boardId` (number, required)
+- Required headers: `X-Username`, JIRA bearer token
+
+**Server flow**
+`admin.js` → `teamInspectService.boardCalendar` → `collectSprintCalendarFromBoard` → `GET /rest/agile/1.0/board/{id}` + paginated `/sprint` → infer calendar (named S1, else earliest sprint; median length snapped to 7/14/21)
+
+**Response shape**
+```json
+{ "success": true, "boardId": 2888, "boardName": "NDB Scrum", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }, "inferredFrom": { "sprintCount": 40, "namedS1": true }, "sprintCount": 40 }
+```
+If the board cannot be read, the response is still 200 with `sprintCalendar: null` and `calendarError`.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Missing/invalid `boardId` or board has no dated sprints | Show the message |
+| 401 / 403 | Token or super-admin check failed | Prompt for token / show Access Denied |
+
+**Caching**
+No.
 
 ---
 
 ### GET /api/admin/teams
 
-**Purpose**: Return the current team configuration list.
+**Purpose**: Return the team registry for the Team Management page.
 
 **Auth**: super-admin
 
 **Request**: none
 
-**Server flow**  
-Reads `server/config/teamBoardConfig.json` — no JIRA call.
+**Server flow**
+`admin.js` → `teamAdminService.listTeams` → reads `server/config/teamBoardConfig.json` + `kpiConfig.json` (no JIRA call)
 
-**Response**
+**Response shape**
 ```json
-{ "success": true, "teams": [{ "id": "ndb", "name": "NDB", "boardId": 2888, "baseFilterId": "NDB-All-Base-Filter" }] }
+{
+  "success": true,
+  "defaultTeamId": "ndb",
+  "teams": [{
+    "id": "ndb", "name": "NDB", "projectKey": "ERA", "boardId": 2888,
+    "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
+    "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 },
+    "featureComponents": { "NDB": ["NDB-Core"] },
+    "sprintScope": "filter=NDB-All-Base-Filter",
+    "kpiCount": 5
+  }]
+}
 ```
+`sprintScope` and `kpiCount` are computed, not stored.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 403 | Not a super admin | Show Access Denied |
+| 500 | Config unreadable | Show error |
+
+**Caching**
+`teamBoardConfig.json` is mtime-cached in `teamConfig.js`; saves invalidate it.
 
 ---
 
 ### POST /api/admin/teams
 
-**Purpose**: Add a new team to the configuration.
+**Purpose**: Add a team to the registry using the values confirmed after Detect.
 
 **Auth**: super-admin
 
 **Request**
-- Body: `{ id, name, projectKey, projectType, boardId, sprintCalendar: { s1StartIso, sprintDays }, baseFilter, sprintBaseFilter, versionPatterns?, userConfig? }`
-- `sprintCalendar` is required (`s1StartIso` ISO date, `sprintDays` integer 1–90). Collect it with **Detect from board** (`POST /api/admin/validate-board`).
+- Body params:
+  - `name` (string, required)
+  - `baseFilter` (string, required)
+  - `projectKey` (string, required) — uppercased; must match `^[A-Z][A-Z0-9_]+$`
+  - `sprintCalendar` (object, required) — `{ s1StartIso: "YYYY-MM-DD", sprintDays: 1–90 }`
+  - `id` (string, optional) — team code; defaults to a slug of `name` (lowercase letters, digits, dashes, max 40)
+  - `boardId` (number, optional)
+  - `featureComponents` (object, optional) — `{ "<FEAT component>": ["<primary component>", ...] }`
+- Any other field (including the removed `projectType`, `versionPatterns`, `sprintBaseFilter`, `userConfig`) is ignored.
 
-**Server flow**  
-`loadTeamBoardConfig` → appends team including `sprintCalendar` → `saveTeamBoardConfig` (writes `teamBoardConfig.json`, invalidates mtime cache) → writes `allowedUsers.json` / `kpiConfig.json`. D43: the registry is multi-team; NDB is the default entry, not the only one.
+**Server flow**
+`admin.js` → `teamAdminService.createTeam` → validate → append to `teamBoardConfig.json` (`saveTeamBoardConfig`) → add an empty KPI list for the team in `kpiConfig.json`
 
-**Response**
+**Response shape**
 ```json
-{ "success": true, "team": { "id": "analytics", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 } }, "message": "Team \"Analytics Team\" created successfully" }
+{ "success": true, "team": { "id": "data-lens", "name": "Data Lens", "projectKey": "DL", "baseFilter": "filter=DL", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 14 } }, "message": "Team \"Data Lens\" created successfully" }
 ```
 
 **Error responses**
-| Code | When | Client should |
-|------|------|---------------|
-| 400 | Missing id/name/projectKey | Show required-field error |
-| 400 | Missing or invalid `sprintCalendar` | Prompt to detect from the sprint board |
-| 409 | Team ID already exists | Show "Team ID already in use" |
-| 429 | General rate limit (per user + IP, 15 min window) | Show `message`; wait and retry. Body is JSON: `{ success: false, error, message }` |
-| 500 | File write failure | Show "Config save failed — check server disk" |
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Missing name/baseFilter, invalid projectKey or team code, missing/invalid `sprintCalendar` | Show `message` |
+| 403 | Not a super admin | Show Access Denied |
+| 409 | Team code already exists | Ask for a different code |
+| 429 | General rate limit (JSON body `{ success: false, error, message }`) | Wait and retry |
+| 500 | File write failure | Show "Config save failed" |
+
+**Caching**
+Invalidates the `teamBoardConfig.json` mtime cache.
 
 ---
 
 ### PUT /api/admin/teams/:teamId
 
-**Purpose**: Update an existing team's configuration.
+**Purpose**: Update an existing team; the team code cannot change.
 
 **Auth**: super-admin
 
 **Request**
 - Path: `teamId` (string)
-- Body: partial team config. If `sprintCalendar` is sent it is validated. The saved team must end up with a valid `sprintCalendar` (existing or new).
+- Body: any of `name`, `baseFilter`, `projectKey`, `boardId`, `sprintCalendar`, `featureComponents` (same rules as POST). Omitted fields keep their current values; `id` in the body is ignored.
 
-**Server flow**  
-Reads `teamBoardConfig.json` → merges changes for matching `teamId` (calendar required) → writes `teamBoardConfig.json` and optional `allowedUsers.json`.
+**Server flow**
+`admin.js` → `teamAdminService.updateTeam` → merge onto the stored team → strip legacy fields → validate → `saveTeamBoardConfig`
+
+**Response shape**
+```json
+{ "success": true, "team": { "id": "ncn", "name": "NCN" }, "message": "Team \"ncn\" updated successfully" }
+```
 
 **Error responses**
-| Code | When | Client should |
-|------|------|---------------|
-| 400 | Resulting config would have no valid sprintCalendar | Prompt to detect from the sprint board |
-| 404 | teamId not found | Show "Team not found" |
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Merged team fails validation | Show `message` |
+| 404 | `teamId` not found | Show "Team not found" |
+
+**Caching**
+Invalidates the `teamBoardConfig.json` mtime cache.
 
 ---
 
 ### POST /api/admin/test-team-config
 
-**Purpose**: Run a live smoke test against JIRA for a team config (board reachable + base filter valid).
+**Purpose**: Live check that a saved team's project, versions, base filter and derived sprint scope all work with the caller's token.
 
-**Auth**: super-admin + JIRA token required
+**Auth**: super-admin + JIRA token
 
 **Request**
-- Body: `{ teamId: string }`
-- Headers: JIRA Bearer token (via `validateJiraTokenMiddleware`)
+- Body: `{ teamId: string }` (required)
 
-**Server flow**  
-`admin.js → loadTeamBoardConfig → jiraClient.getJira(req.jiraToken)` → project access, version list (with `versionPatterns`), and `searchCount` on `baseFilter` / `sprintBaseFilter`.
+**Server flow**
+`admin.js` → `teamAdminService.testTeamConfig` → `GET /rest/api/2/project/{key}`, `getProjectVersions`, `searchCount(baseFilter)`, `searchCount(sprintScope)`
 
-**Response**
+**Response shape**
 ```json
 {
   "success": true,
   "teamId": "ndb",
   "teamName": "NDB",
   "results": {
-    "teamConfig": { "valid": true },
     "projectAccess": { "valid": true, "projectName": "NDB Engineering" },
     "versionAccess": { "valid": true, "totalVersions": 12, "sampleVersions": ["NDB-2.12"] },
-    "filterTests": { "valid": true, "results": [{ "name": "baseFilter", "valid": true, "issueCount": 100 }] }
+    "baseFilter": { "valid": true, "issueCount": 100 },
+    "sprintScope": { "valid": true, "jql": "filter=NDB-All-Base-Filter", "issueCount": 340 }
   }
 }
 ```
+`success` is false when any check fails; failing checks carry `error`.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | `teamId` missing | Fix the request |
+| 404 | Team not found | Refresh the list |
+
+**Caching**
+No.
 
 ---
 
