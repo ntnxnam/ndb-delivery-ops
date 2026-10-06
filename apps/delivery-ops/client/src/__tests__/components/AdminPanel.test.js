@@ -186,6 +186,42 @@ describe('TeamForm', () => {
     expect(api.authenticatedPost).toHaveBeenLastCalledWith('/api/admin/board-calendar', { boardId: '78' }, expect.any(Object));
   });
 
+  it('asks for S1 start and sprint length when the board has no dated sprints', async () => {
+    const onSave = jest.fn().mockResolvedValue({});
+    api.authenticatedPost.mockResolvedValue({
+      data: {
+        ...DETECTED,
+        board: {
+          boards: [{ id: 77, name: 'DL Scrum' }],
+          boardId: 77,
+          sprintCalendar: null,
+          calendarError: 'Sprint board has no dated sprints. Enter S1 start date and sprint length manually.',
+        },
+      },
+    });
+    render(<TeamForm onSave={onSave} onCancel={jest.fn()} />);
+    fireEvent.change(screen.getByLabelText('Team name'), { target: { value: 'Data Lens' } });
+    fireEvent.change(screen.getByLabelText('Base filter (JQL)'), { target: { value: 'filter=DL' } });
+    fireEvent.click(screen.getByText('Detect'));
+
+    expect(await screen.findByText(/no dated sprints/)).toBeInTheDocument();
+    expect(screen.getByText('Create team')).toBeDisabled();
+    expect(screen.queryByText('Run Detect on this base filter before saving.')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('S1 start date'), { target: { value: '2024-10-23' } });
+    expect(screen.getByText('Create team')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Sprint length (days)'), { target: { value: '21' } });
+    fireEvent.click(screen.getByText('Create team'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sprintCalendar: { s1StartIso: '2024-10-23', sprintDays: 21 },
+        boardId: 77,
+      }),
+      null
+    ));
+  });
+
   it('shows the server message when Detect fails', async () => {
     api.authenticatedPost.mockRejectedValue({ response: { status: 400, data: { error: 'Base filter matched no tickets' } } });
     render(<TeamForm onSave={jest.fn()} onCancel={jest.fn()} />);

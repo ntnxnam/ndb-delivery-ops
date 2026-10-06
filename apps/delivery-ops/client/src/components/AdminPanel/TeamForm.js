@@ -52,7 +52,7 @@ function summary(team) {
 
 function TeamForm({ initialTeam = null, onSave, onCancel }) {
   const editMode = Boolean(initialTeam);
-  const { detected, detecting, detectError, calendarLoading, detect, loadBoardCalendar } = useTeamDetect();
+  const { detected, detecting, detectError, calendarLoading, detect, loadProject, loadBoardCalendar } = useTeamDetect();
   const [name, setName] = useState(initialTeam?.name || '');
   const [teamId, setTeamId] = useState(initialTeam?.id || '');
   const [idTouched, setIdTouched] = useState(editMode);
@@ -63,6 +63,7 @@ function TeamForm({ initialTeam = null, onSave, onCancel }) {
     boardId: initialTeam?.boardId || null,
     sprintCalendar: initialTeam?.sprintCalendar || null,
     calendarError: '',
+    calendarManual: false,
     components: Object.keys(initialTeam?.featureComponents || {}),
   });
   const [saving, setSaving] = useState(false);
@@ -84,19 +85,53 @@ function TeamForm({ initialTeam = null, onSave, onCancel }) {
       boardId: result.board?.boardId || null,
       sprintCalendar: result.board?.sprintCalendar || null,
       calendarError: result.board?.calendarError || '',
+      calendarManual: !result.board?.sprintCalendar,
       components: pickComponents(components, prev.components),
     }));
   }, [baseFilter, name, selection.boardId, detect]);
 
+  const handleProject = useCallback(async (projectKey) => {
+    setSelection((prev) => ({
+      ...prev,
+      projectKey,
+      boardId: null,
+      sprintCalendar: null,
+      calendarError: '',
+      calendarManual: false,
+    }));
+    const out = await loadProject(projectKey, name);
+    if (!out?.board) return;
+    setSelection((prev) => (
+      prev.projectKey !== projectKey ? prev : {
+        ...prev,
+        boardId: out.board.boardId || null,
+        sprintCalendar: out.board.sprintCalendar || null,
+        calendarError: out.board.calendarError || '',
+        calendarManual: !out.board.sprintCalendar,
+      }
+    ));
+  }, [loadProject, name]);
+
   const handleBoard = useCallback(async (boardId) => {
-    setSelection((prev) => ({ ...prev, boardId: Number(boardId), sprintCalendar: null, calendarError: '' }));
+    setSelection((prev) => ({
+      ...prev,
+      boardId: Number(boardId),
+      sprintCalendar: null,
+      calendarError: '',
+      calendarManual: false,
+    }));
     const out = await loadBoardCalendar(boardId);
     setSelection((prev) => ({
       ...prev,
       sprintCalendar: out?.sprintCalendar || null,
       calendarError: out?.calendarError || '',
+      calendarManual: !out?.sprintCalendar,
     }));
   }, [loadBoardCalendar]);
+
+  const handleManualCalendar = useCallback((sprintCalendar) => {
+    setSelection((prev) => ({ ...prev, sprintCalendar }));
+  }, []);
 
   const toggleComponent = (componentName) => {
     setSelection((prev) => ({
@@ -187,8 +222,9 @@ function TeamForm({ initialTeam = null, onSave, onCancel }) {
         detected={detected}
         selection={selection}
         calendarLoading={calendarLoading}
-        onSelectProject={(projectKey) => setSelection((prev) => ({ ...prev, projectKey }))}
+        onSelectProject={handleProject}
         onSelectBoard={handleBoard}
+        onManualCalendar={handleManualCalendar}
         onToggleComponent={toggleComponent}
       />
 

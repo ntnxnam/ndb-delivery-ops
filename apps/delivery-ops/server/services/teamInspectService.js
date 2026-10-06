@@ -70,11 +70,64 @@ async function listVersions(jira, projectKey) {
   return { total: (all || []).length, unreleasedCount: unreleased.length, unreleased: unreleased.slice(0, VERSION_NAME_LIMIT) };
 }
 
+const BOARD_TOKEN_STOP = new Set(['the', 'and', 'for', 'team', 'board', 'scrum', 'kanban', 'copy', 'of', 'all']);
+
+function teamBoardTokens(teamName) {
+  return [...new Set(
+    String(teamName || '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length >= 2 && !BOARD_TOKEN_STOP.has(token))
+  )];
+}
+
+function scoreBoardName(name, tokens) {
+  const words = String(name || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  let score = 0;
+  for (const token of tokens) {
+    if (words.some((word) => word === token)) score += 10;
+    else if (words.some((word) => word.startsWith(token))) score += 6;
+  }
+  if (/^copy of\b/i.test(name)) score -= 4;
+  return score;
+}
+
+/**
+ * A shared JIRA project (ERA) returns every scrum board that mentions it —
+ * mostly NDB boards. Keep boards whose names match the team; hold the rest
+ * back so the dropdown is the team's boards.
+ */
+function selectBoards(boards, { teamName } = {}) {
+  const unique = [];
+  const seen = new Set();
+  for (const board of boards || []) {
+    if (!board?.id || seen.has(board.id)) continue;
+    seen.add(board.id);
+    unique.push({ id: board.id, name: board.name });
+  }
+  const tokens = teamBoardTokens(teamName);
+  if (!tokens.length) return { boards: unique, otherBoards: [], matchedOn: 'project' };
+  const ranked = unique
+    .map((board) => ({ ...board, score: scoreBoardName(board.name, tokens) }))
+    .sort((a, b) => b.score - a.score || String(a.name).localeCompare(String(b.name)));
+  const matched = ranked.filter((board) => board.score > 0).map(({ id, name }) => ({ id, name }));
+  if (!matched.length) return { boards: unique, otherBoards: [], matchedOn: 'project' };
+  const matchedIds = new Set(matched.map((board) => board.id));
+  const otherBoards = unique.filter((board) => !matchedIds.has(board.id));
+  return { boards: matched, otherBoards, matchedOn: 'team' };
+}
+
 function pickBoard(boards, { boardId, teamName, projectKey }) {
   if (!boards.length) return null;
   const wanted = Number(boardId);
   const byId = boards.find((b) => b.id === wanted);
   if (byId) return byId;
+  const tokens = teamBoardTokens(teamName);
+  const best = boards
+    .map((board) => ({ board, score: scoreBoardName(board.name, tokens) }))
+    .sort((a, b) => b.score - a.score)
+    .find((row) => row.score > 0);
+  if (best) return best.board;
   const needles = [teamName, projectKey].map((s) => String(s || '').trim().toLowerCase()).filter(Boolean);
   for (const needle of needles) {
     const hit = boards.find((b) => String(b.name || '').toLowerCase().includes(needle));
@@ -83,16 +136,87 @@ function pickBoard(boards, { boardId, teamName, projectKey }) {
   return boards[0];
 }
 
-async function detectBoard(jira, { projectKey, boardId, teamName }) {
+async function fetchScrumBoards(jira, params) {
   const res = await jira.get('/rest/agile/1.0/board', {
     timeout: 15000,
-    params: { projectKeyOrId: projectKey, type: 'scrum', maxResults: 50 },
+    params: { type: 'scrum', maxResults: 50, ...params },
   });
-  const boards = (res.data?.values || []).map((b) => ({ id: b.id, name: b.name }));
-  if (Number(boardId) > 0) return { boards, ...(await boardCalendar(jira, Number(boardId))) };
+  return (res.data?.values || []).map((b) => ({ id: b.id, name: b.name }));
+}
+
+async function detectBoard(jira, { projectKey, boardId, teamName }) {
+  const named = [];
+  for (const token of teamBoardTokens(teamName)) {
+    try {
+      named.push(...await fetchScrumBoards(jira, { name: token }));
+    } catch {
+      // Name search is only a way to find this team's boards. The project list still loads.
+    }
+  }
+  let projectBoards = [];
+  try {
+    projectBoards = await fetchScrumBoards(jira, { projectKeyOrId: projectKey });
+  } catch (err) {
+    if (!named.length) throw err;
+  }
+  const selected = selectBoards([...named, ...projectBoards], { teamName });
+  const boards = selected.boards;
+  const extra = { otherBoards: selected.otherBoards, matchedOn: selected.matchedOn };
+  if (Number(boardId) > 0) return { boards, ...extra, ...(await boardCalendar(jira, Number(boardId))) };
   const chosen = pickBoard(boards, { boardId, teamName, projectKey });
-  if (!chosen) return { boards, boardId: null, sprintCalendar: null, calendarError: `No scrum board found for ${projectKey}` };
-  return { boards, ...(await boardCalendar(jira, chosen.id)) };
+  if (!chosen) return { boards, ...extra, boardId: null, sprintCalendar: null, calendarError: `No scrum board found for ${projectKey}` };
+  return { boards, ...extra, ...(await boardCalendar(jira, chosen.id)) };
+}
+
+/**
+ * Boards and versions for the project the admin picked. The list is that
+ * project's scrum boards, with names that match the project key (DR → DR-*)
+ * shown first. Name search from another project is not mixed in.
+ */
+async function inspectProject(jira, { projectKey, teamName } = {}) {
+  const key = String(projectKey || '').trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9_]+$/.test(key)) throw badRequest('projectKey is required');
+
+  const [versionsResult, boardsResult] = await Promise.allSettled([
+    listVersions(jira, key),
+    fetchScrumBoards(jira, { projectKeyOrId: key }),
+  ]);
+  const versions = versionsResult.status === 'fulfilled'
+    ? versionsResult.value
+    : { total: 0, unreleasedCount: 0, unreleased: [], error: jiraErrorText(versionsResult.reason) };
+
+  if (boardsResult.status === 'rejected') {
+    const err = boardsResult.reason;
+    if (err?.statusCode === 400) throw err;
+    return {
+      projectKey: key,
+      versions,
+      board: {
+        boards: [],
+        otherBoards: [],
+        matchedOn: 'project',
+        boardId: null,
+        sprintCalendar: null,
+        calendarError: jiraErrorText(err),
+      },
+    };
+  }
+
+  const selected = selectBoards(boardsResult.value, { teamName: [teamName, key].filter(Boolean).join(' ') });
+  const chosen = pickBoard(selected.boards, { teamName: key, projectKey: key });
+  const calendar = chosen
+    ? await boardCalendar(jira, chosen.id)
+    : { boardId: null, sprintCalendar: null, calendarError: `No scrum board found for ${key}` };
+  return {
+    projectKey: key,
+    versions,
+    board: {
+      boards: selected.boards,
+      otherBoards: selected.otherBoards,
+      matchedOn: selected.matchedOn,
+      ...calendar,
+    },
+  };
 }
 
 async function boardCalendar(jira, boardId) {
@@ -106,6 +230,10 @@ async function boardCalendar(jira, boardId) {
       sprintCount: out.sprintCount,
     };
   } catch (err) {
+    // Missing sprint dates are filled in on the form; they must not fail Detect.
+    if (err.code === 'NO_DATED_SPRINTS') {
+      return { boardId: Number(boardId), sprintCalendar: null, calendarError: err.message };
+    }
     if (err.statusCode === 400) throw err;
     return { boardId: Number(boardId), sprintCalendar: null, calendarError: jiraErrorText(err) };
   }
@@ -194,4 +322,6 @@ module.exports = {
   boardCalendar,
   groupFeatureComponents,
   pickBoard,
+  selectBoards,
+  inspectProject,
 };

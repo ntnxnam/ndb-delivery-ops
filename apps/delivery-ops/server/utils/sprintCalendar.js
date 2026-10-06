@@ -93,6 +93,7 @@ function inferSprintCalendarFromSprints(sprints) {
       'Sprint board has no dated sprints. Enter S1 start date and sprint length manually.'
     );
     err.statusCode = 400;
+    err.code = 'NO_DATED_SPRINTS';
     throw err;
   }
 

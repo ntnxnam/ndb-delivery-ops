@@ -2,6 +2,8 @@ const {
   inspectBaseFilter,
   groupFeatureComponents,
   pickBoard,
+  selectBoards,
+  inspectProject,
 } = require('../../services/teamInspectService');
 const { slugifyTeamId, normalizeFeatureComponents } = require('../../services/teamAdminService');
 
@@ -42,6 +44,37 @@ describe('pickBoard', () => {
     expect(pickBoard(boards, { projectKey: 'NCN' }).id).toBe(2);
     expect(pickBoard(boards, { teamName: 'zzz' }).id).toBe(1);
     expect(pickBoard([], {})).toBeNull();
+  });
+});
+
+describe('selectBoards', () => {
+  const mixed = [
+    { id: 2888, name: 'NDBAllSprintBoard' },
+    { id: 4366, name: 'NDB DBE' },
+    { id: 1592, name: 'DR-Core-WorkStream-Scrum-Board' },
+    { id: 1594, name: 'DR-ASync-WorkStream-Board' },
+    { id: 735, name: 'DRaaS - Prism UI - Scrum Board' },
+    { id: 3543, name: 'Copy of DR-Runbook-WorkStream-Base-Board' },
+    { id: 1268, name: 'API-Infra-Scrum' },
+  ];
+
+  it('keeps boards that match the team and holds the NDB project boards back', () => {
+    const out = selectBoards(mixed, { teamName: 'Cerebro / DR' });
+    expect(out.matchedOn).toBe('team');
+    expect(out.boards.map((b) => b.name)).toEqual([
+      'DR-ASync-WorkStream-Board',
+      'DR-Core-WorkStream-Scrum-Board',
+      'Copy of DR-Runbook-WorkStream-Base-Board',
+      'DRaaS - Prism UI - Scrum Board',
+    ]);
+    expect(out.otherBoards.map((b) => b.id)).toEqual([2888, 4366, 1268]);
+  });
+
+  it('keeps the project list when no board name matches the team', () => {
+    const out = selectBoards(mixed, { teamName: 'Cerebro' });
+    expect(out.matchedOn).toBe('project');
+    expect(out.boards).toHaveLength(mixed.length);
+    expect(out.otherBoards).toEqual([]);
   });
 });
 
@@ -97,6 +130,58 @@ describe('inspectBaseFilter', () => {
     });
     const out = await inspectBaseFilter(jira({ get }), { baseFilter: 'filter=x', boardId: 4741 });
     expect(out.board).toMatchObject({ boardId: 4741, boardName: 'NCN Scrum', sprintCalendar: { s1StartIso: '2020-02-20' } });
+  });
+
+  it('keeps the rest of Detect when the board has no dated sprints', async () => {
+    const get = jest.fn(async (url) => {
+      if (url === '/rest/api/2/search') return { data: { total: 1, issues: [{ fields: { project: { key: 'DR', name: 'DR' } } }] } };
+      if (url === '/rest/agile/1.0/board') return { data: { values: [{ id: 12, name: 'DR Scrum' }] } };
+      if (url === '/rest/agile/1.0/board/12') return { data: { id: 12, name: 'DR Scrum', type: 'scrum' } };
+      if (url === '/rest/agile/1.0/board/12/sprint') return { data: { isLast: true, values: [{ name: 'Sprint 1' }] } };
+      throw new Error(`unexpected ${url}`);
+    });
+    const out = await inspectBaseFilter(jira({ get }), { baseFilter: 'filter=DR-All', teamName: 'Cerebro / DR' });
+    expect(out.projectKey).toBe('DR');
+    expect(out.board.boardId).toBe(12);
+    expect(out.board.sprintCalendar).toBeNull();
+    expect(out.board.calendarError).toMatch(/no dated sprints/);
+  });
+
+  it('loads DR boards when the admin selects the DR project', async () => {
+    const get = jest.fn(async (url, opts = {}) => {
+      if (url === '/rest/agile/1.0/board') {
+        expect(opts.params).toMatchObject({ projectKeyOrId: 'DR', type: 'scrum' });
+        return {
+          data: {
+            values: [
+              { id: 2888, name: 'NDBAllSprintBoard' },
+              { id: 1592, name: 'DR-Core-WorkStream-Scrum-Board' },
+              { id: 1594, name: 'DR-ASync-WorkStream-Board' },
+            ],
+          },
+        };
+      }
+      if (/^\/rest\/agile\/1\.0\/board\/159[24]$/.test(url)) {
+        const id = Number(url.split('/').pop());
+        return { data: { id, name: id === 1592 ? 'DR-Core-WorkStream-Scrum-Board' : 'DR-ASync-WorkStream-Board' } };
+      }
+      if (/^\/rest\/agile\/1\.0\/board\/159[24]\/sprint$/.test(url)) {
+        return { data: { isLast: true, values: [{ name: 'S1', startDate: '2024-01-03', endDate: '2024-01-16' }] } };
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    const out = await inspectProject(jira({
+      get,
+      getProjectVersions: jest.fn().mockResolvedValue([{ name: 'DR-1.0', released: false }]),
+    }), { projectKey: 'dr', teamName: 'Cerebro / DR' });
+    expect(out.projectKey).toBe('DR');
+    expect(out.versions.unreleased).toEqual(['DR-1.0']);
+    expect(out.board.boards.map((b) => b.name)).toEqual([
+      'DR-ASync-WorkStream-Board',
+      'DR-Core-WorkStream-Scrum-Board',
+    ]);
+    expect(out.board.otherBoards.map((b) => b.id)).toEqual([2888]);
+    expect(out.board.boards.map((b) => b.id)).toContain(out.board.boardId);
   });
 
   it('drops a trailing ORDER BY before scoping the feature query', async () => {

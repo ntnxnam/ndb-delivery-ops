@@ -36,7 +36,7 @@
 - → JIRA `GET /rest/api/2/search` (`jql=baseFilter`, `fields=project`, up to 500 issues) → main project = most frequent project key, ignoring the feature project (FEAT)
 - → in parallel:
   - `JiraConnector.getProjectVersions(projectKey)` → total + unreleased version names
-  - `GET /rest/agile/1.0/board?projectKeyOrId=<key>&type=scrum` → the requested `boardId` if given, else a name match, else the first board → `collectSprintCalendarFromBoard`
+  - `GET /rest/agile/1.0/board?name=<team token>&type=scrum`, plus `projectKeyOrId=<key>`. Boards whose names match the team are the dropdown; the rest of the project list (often other teams on a shared project such as ERA) is returned as `otherBoards`. Then the requested `boardId` if given, else the best name match → `collectSprintCalendarFromBoard`
   - `JiraConnector.searchAll("(<baseFilter without ORDER BY>) AND project = FEAT", "components,<primary component field>")` → group components → primary components (`classification.primaryComponent` in `jiraFieldsConfig.json`)
 - `suggested` marks components with ≥3 tickets or ≥5% of the FEAT tickets; the form pre-checks only these.
 - Versions / board / feature failures are returned inline as `error` / `calendarError`; only a rejected base filter fails the request.
@@ -84,6 +84,47 @@ No — live JIRA reads. Results are persisted only when the admin saves the team
 
 ---
 
+### POST /api/admin/project-scope
+
+**Purpose**: Reload release versions and scrum boards when the admin picks a different JIRA project than the one Detect chose. Choosing DR loads DR boards, not the boards of the previously detected project.
+
+**Auth**: super-admin + JIRA token
+
+**Request**
+- Method + path: `POST /api/admin/project-scope`
+- Body params: `projectKey` (string, required), `name` (string, optional — team name, used only to rank boards)
+- Required headers: `X-Username`, JIRA bearer token
+
+**Server flow**
+`admin.js` → `teamInspectService.inspectProject` → `getProjectVersions(projectKey)` and `GET /rest/agile/1.0/board?projectKeyOrId=<key>&type=scrum` → boards whose names match the project key are the dropdown; the rest are `otherBoards` → `collectSprintCalendarFromBoard` for the best match
+
+**Response shape**
+```json
+{
+  "success": true,
+  "projectKey": "DR",
+  "versions": { "total": 4, "unreleasedCount": 1, "unreleased": ["DR-1.0"] },
+  "board": {
+    "boards": [{ "id": 1592, "name": "DR-Core-WorkStream-Scrum-Board" }],
+    "otherBoards": [],
+    "matchedOn": "team",
+    "boardId": 1592,
+    "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 14 }
+  }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Missing or invalid `projectKey` | Show the message |
+| 401 / 403 | Token or super-admin check failed | Prompt for token / show Access Denied |
+
+**Caching**
+No.
+
+---
+
 ### POST /api/admin/board-calendar
 
 **Purpose**: Read the sprint calendar for a specific board — used when the admin picks a different board than the one Detect chose.
@@ -102,12 +143,14 @@ No — live JIRA reads. Results are persisted only when the admin saves the team
 ```json
 { "success": true, "boardId": 2888, "boardName": "NDB Scrum", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }, "inferredFrom": { "sprintCount": 40, "namedS1": true }, "sprintCount": 40 }
 ```
-If the board cannot be read, the response is still 200 with `sprintCalendar: null` and `calendarError`.
+If the board cannot be read, or its sprints have no start dates, the response is still 200 with `sprintCalendar: null` and `calendarError`. The Team form then asks for an S1 start date and sprint length.
+
+> ⚠️ Breaking change in 2026-10-05: a board with no dated sprints returns 200 and `calendarError` instead of 400, so Detect still returns the project, versions, and components.
 
 **Error responses**
 | HTTP code | When | Client should |
 |-----------|------|---------------|
-| 400 | Missing/invalid `boardId` or board has no dated sprints | Show the message |
+| 400 | Missing/invalid `boardId` | Show the message |
 | 401 / 403 | Token or super-admin check failed | Prompt for token / show Access Denied |
 
 **Caching**

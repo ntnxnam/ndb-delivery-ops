@@ -77,6 +77,8 @@ Body: { baseFilter, name?, boardId?, featureProjectKey? }
 
 **Returns**: `{ baseFilter, sprintScope, issueCount, projects, projectKey, versions, board, feature }`
 
+Changing the JIRA project dropdown calls `POST /api/admin/project-scope` with `{ projectKey, name }` and replaces `versions` and `board`. Choosing DR loads boards for project DR.
+
 ### 4b. Team form — calendar for a manually chosen board
 
 ```
@@ -194,7 +196,7 @@ The sprint scope is never stored: `sprintScopeFromBaseFilter(baseFilter)` (serve
 | allowedUsers.json write fails | 500 | "Config save failed — manual edit required" |
 | Removing last admin | 400 | "Cannot remove the last admin user" |
 | Base filter invalid or matches no tickets | 400 | Team form shows the JIRA message |
-| Board / versions / FEAT lookup fails during Detect | 200 (inline `error` / `calendarError`) | That section shows the error; the rest still renders |
+| Board / versions / FEAT lookup fails during Detect | 200 (inline `error` / `calendarError`) | That section shows the error; a missing sprint calendar asks for S1 start date and sprint length |
 | Team code already exists | 409 | Team form shows "Team already exists" |
 | Cache clear while sync running | 409 | "Sync in progress — cannot clear cache now" |
 | teamBoardConfig.json write fails | 500 | "Team config save failed" |

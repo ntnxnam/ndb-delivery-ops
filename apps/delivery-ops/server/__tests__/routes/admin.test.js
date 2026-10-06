@@ -228,6 +228,21 @@ describe('Admin routes', () => {
     });
   });
 
+  describe('POST /project-scope', () => {
+    it('returns the selected project key and rejects a blank one', async () => {
+      getJira.mockResolvedValue(fakeJira({
+        searchIssues: [],
+        versions: [{ name: 'DR-1.0', released: false }],
+        boards: [{ id: 1592, name: 'DR-Core-WorkStream-Scrum-Board' }],
+      }));
+      const res = await request(app).post('/api/admin/project-scope').send({ projectKey: 'dr', name: 'Cerebro / DR' }).expect(200);
+      expect(res.body.projectKey).toBe('DR');
+      expect(res.body.board.boards.map((b) => b.name)).toEqual(['DR-Core-WorkStream-Scrum-Board']);
+      expect(res.body.versions.unreleased).toEqual(['DR-1.0']);
+      await request(app).post('/api/admin/project-scope').send({}).expect(400);
+    });
+  });
+
   describe('POST /board-calendar', () => {
     it('reads the calendar from the given board', async () => {
       getJira.mockResolvedValue(fakeJira({ searchIssues: [] }));

@@ -58,6 +58,21 @@ router.post('/inspect-base-filter', requireSuperAdmin, validateJiraTokenMiddlewa
 });
 
 /**
+ * Versions and scrum boards for the project the admin selected.
+ * POST /api/admin/project-scope
+ */
+router.post('/project-scope', requireSuperAdmin, validateJiraTokenMiddleware, async (req, res) => {
+  try {
+    const { projectKey, name } = req.body || {};
+    const jira = await getJira(req.jiraToken);
+    const scope = await teamInspectService.inspectProject(jira, { projectKey, teamName: name });
+    return res.json({ success: true, ...scope });
+  } catch (error) {
+    return sendError(res, error, 'Failed to load project boards');
+  }
+});
+
+/**
  * Sprint calendar for a specific board (when the detected board is wrong).
  * POST /api/admin/board-calendar
  */
