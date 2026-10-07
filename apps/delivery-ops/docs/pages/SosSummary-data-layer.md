@@ -177,8 +177,8 @@
 ```
 
 `recipients` / `ccRecipients` are optional. When omitted, the server applies:
-- **To:** `emailConfig.defaultTo` (`ndb-projects-updates@nutanix.com`)
-- **CC:** `emailSenderCCConfig.defaultCC` + sender (`@nutanix.com` only)
+- **To:** `sosEmailConfig.defaultTo` + dialog To field (`@nutanix.com` only)
+- **CC:** `sosEmailConfig.defaultCC` + dialog CC field + sender (`@nutanix.com` only)
 
 **Response**: `{ success: true, messageId: "...", recipientCount, accepted, rejected }`
 

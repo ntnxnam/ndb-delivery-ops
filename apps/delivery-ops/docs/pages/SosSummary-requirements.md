@@ -81,7 +81,7 @@ SoS Summary
 - [ ] Task breakdown displays using the same `TaskBreakdownCell` as Project Status
 - [ ] KPI widgets load and link to correct JIRA queries
 - [ ] Email SoS button appears for users with `email_send_generic`
-- [ ] Confirm dialog lists status-sender To (`emailConfig.defaultTo`) and CC (`emailSenderCCConfig.defaultCC` + sender)
+- [ ] Confirm dialog has editable To/CC (placeholders) seeded from `sosEmailConfig.json` defaultTo / defaultCC (+ sender on CC)
 - [ ] Send uses already-loaded page data — no `/api/jira/sos-items` (or other JIRA) call on click
 - [ ] Email sends successfully via existing SMTP relay
 - [ ] No `localhost` in any API call

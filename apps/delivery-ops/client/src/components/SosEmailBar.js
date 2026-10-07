@@ -27,6 +27,8 @@ export default function SosEmailBar({
   const canSend = hasPermission(PERMISSIONS.EMAIL_SEND_GENERIC);
   const { sending, previewing, error, success, preview, previewEmail, sendEmail, reset } = useSosEmail();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toInput, setToInput] = useState('');
+  const [ccInput, setCcInput] = useState('');
 
   const snapshot = useMemo(() => ({
     byVersion,
@@ -40,7 +42,9 @@ export default function SosEmailBar({
 
   const handleOpen = useCallback(async () => {
     try {
-      await previewEmail(snapshot);
+      const next = await previewEmail(snapshot);
+      setToInput(formatList(next?.to) === '—' ? '' : formatList(next?.to));
+      setCcInput(formatList(next?.cc) === '—' ? '' : formatList(next?.cc));
       setConfirmOpen(true);
     } catch {
       setConfirmOpen(false);
@@ -49,17 +53,24 @@ export default function SosEmailBar({
 
   const handleCancel = useCallback(() => {
     setConfirmOpen(false);
+    setToInput('');
+    setCcInput('');
     reset();
   }, [reset]);
 
   const handleSend = useCallback(async () => {
     try {
-      await sendEmail(snapshot);
+      await sendEmail(snapshot, {
+        recipients: toInput,
+        ccRecipients: ccInput,
+      });
       setConfirmOpen(false);
+      setToInput('');
+      setCcInput('');
     } catch {
       // error is shown from hook state; keep dialog open so user can retry
     }
-  }, [sendEmail, snapshot]);
+  }, [sendEmail, snapshot, toInput, ccInput]);
 
   if (!canSend) return null;
 
@@ -125,9 +136,46 @@ export default function SosEmailBar({
               Sends a snapshot of the current page. JIRA is not queried again.
             </p>
             <div style={{ fontSize: '12px', lineHeight: 1.5, marginBottom: '12px' }}>
-              <div><strong>Subject:</strong> {preview.subject}</div>
-              <div><strong>To:</strong> {formatList(preview.to)}</div>
-              <div><strong>CC:</strong> {formatList(preview.cc)}</div>
+              <div style={{ marginBottom: '8px' }}><strong>Subject:</strong> {preview.subject}</div>
+              <label htmlFor="sos-email-to" style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>To</label>
+              <input
+                id="sos-email-to"
+                type="text"
+                value={toInput}
+                onChange={(e) => setToInput(e.target.value)}
+                placeholder="user@nutanix.com, another@nutanix.com"
+                disabled={sending}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '6px 8px',
+                  fontSize: '12px',
+                  marginBottom: '8px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                }}
+              />
+              <label htmlFor="sos-email-cc" style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>CC</label>
+              <input
+                id="sos-email-cc"
+                type="text"
+                value={ccInput}
+                onChange={(e) => setCcInput(e.target.value)}
+                placeholder="user@nutanix.com, another@nutanix.com"
+                disabled={sending}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '6px 8px',
+                  fontSize: '12px',
+                  marginBottom: '4px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                }}
+              />
+              <div style={{ fontSize: '11px', color: '#888' }}>
+                Defaults live in <code>server/config/sosEmailConfig.json</code> (defaultTo / defaultCC). Only @nutanix.com.
+              </div>
             </div>
             {error && (
               <p style={{ color: '#d32f2f', fontSize: '12px', margin: '0 0 12px' }}>{error}</p>

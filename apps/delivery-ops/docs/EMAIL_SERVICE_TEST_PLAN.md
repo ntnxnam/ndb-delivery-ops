@@ -13,7 +13,7 @@ This document defines the test strategy for the email service: unit tests (mocke
 
 | ID | Scenario | Steps | Expected |
 |----|----------|--------|----------|
-| UT-EMAIL-001 | getDefaultFromAddress | With no SMTP_FROM env: call getDefaultFromAddress() | Returns emailConfig.smtp.from or 'svc.ndb.team@nutanix.com'. With SMTP_FROM set: returns env value. |
+| UT-EMAIL-001 | getDefaultFromAddress | With no SMTP_FROM env: call getDefaultFromAddress() | Returns emailConfig.smtp.from or 'smtp.ndb.team@nutanix.com'. With SMTP_FROM set: returns env value. |
 | UT-EMAIL-002 | sendEmailDirect From | Call sendEmailDirect with mailOptions without from | mailOptions.from is set to getDefaultFromAddress() before sendMail. |
 | UT-EMAIL-003 | sendEmailDirect success | Mock transporter.sendMail to resolve with messageId, accepted, rejected | sendEmailDirect returns { messageId, accepted, rejected }; sendMail called with correct from/to. |
 | UT-EMAIL-004 | sendEmailDirect relay error | Mock sendMail to reject with "554 5.7.1: Relay access denied" | Error propagated; sendEmailDirect rejects. |
@@ -56,7 +56,7 @@ Integration tests run in CI (jest config includes integration folder when mocks 
 Before first deploy or after config change:
 
 - `server/.env` has SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optionally SMTP_FROM).
-- `server/config/emailConfig.json` has smtp.from (e.g. svc.ndb.team@nutanix.com) and, for Email Sender page, defaultTo if desired.
+- `server/config/emailConfig.json` has smtp.from (e.g. smtp.ndb.team@nutanix.com) and, for Email Sender page, defaultTo if desired.
 
 ### Optional email smoke test in deploy script
 

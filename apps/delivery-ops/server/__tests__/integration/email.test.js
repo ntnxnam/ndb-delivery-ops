@@ -76,7 +76,7 @@ describe('Email API Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('messageId', '<integration-test-id>');
       expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-        from: 'svc.ndb.team@nutanix.com',
+        from: 'smtp.ndb.team@nutanix.com',
         replyTo: 'test@nutanix.com',
         subject: expect.stringContaining('NDB Consolidated Status Summary')
       }));
@@ -146,7 +146,7 @@ describe('Email API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-        from: 'svc.ndb.team@nutanix.com',
+        from: 'smtp.ndb.team@nutanix.com',
         replyTo: 'test@nutanix.com'
       }));
     });

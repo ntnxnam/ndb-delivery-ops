@@ -89,11 +89,6 @@ function register(router) {
         const username = req.username || normalizeToUsername(senderEmail) || 'unknown';
         const generatedAt = new Date().toISOString().slice(0, 10);
         const { toList, ccList } = resolveSosRecipientLists(senderEmail, recipients, ccRecipients);
-
-        if (toList.length === 0) {
-          return res.status(400).json({ success: false, error: 'No To recipients resolved from status-sender default list' });
-        }
-
         const resolvedHtml = resolveHtmlBody(req.body, generatedAt);
 
         if (previewOnly) {
@@ -104,6 +99,13 @@ function register(router) {
             to: toList,
             cc: ccList,
             subject: subject.trim(),
+          });
+        }
+
+        if (toList.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'No To recipients. Fill To in the dialog or set sosEmailConfig.json defaultTo.',
           });
         }
 
