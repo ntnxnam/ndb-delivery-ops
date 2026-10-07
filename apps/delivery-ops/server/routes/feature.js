@@ -58,6 +58,10 @@ function buildDashboardFields(getFieldIdFn) {
     getFieldIdFn('epicLink'),        // Epic Link (customfield_10361) — Task/Bug/Test → Epic
     'issuelinks',
     getFieldIdFn('riskIndicator'),
+    getFieldIdFn('riskAssessment'),
+    getFieldIdFn('pathToGreen'),
+    getFieldIdFn('cgChecklistLink'),
+    getFieldIdFn('pgChecklistLink'),
     getFieldIdFn('statusUpdate'),
     getFieldIdFn('statusUpdateDate'),
     getFieldIdFn('commitGate'),
@@ -95,6 +99,13 @@ function issueFromJira(issue) {
 
 function asIsoDay(value) {
   return typeof value === 'string' && value ? value.slice(0, 10) : null;
+}
+
+function asTextOrLink(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return value.value || value.url || value.name || null;
+  return String(value);
 }
 
 function asRisk(value) {
@@ -384,6 +395,10 @@ router.get('/dashboard', auth, async (req, res) => {
           'status',
           'assignee',
           getFieldId('riskIndicator'),
+          getFieldId('riskAssessment'),
+          getFieldId('pathToGreen'),
+          getFieldId('cgChecklistLink'),
+          getFieldId('pgChecklistLink'),
           getFieldId('statusUpdate'),
           getFieldId('statusUpdateDate'),
           getFieldId('codeComplete'),
@@ -445,6 +460,10 @@ router.get('/dashboard', auth, async (req, res) => {
           status: rootFields.status?.name || '',
           assignee: rootFields.assignee?.displayName || null,
           riskIndicator: getFieldValue(rootFields, 'riskIndicator'),
+          riskAssessment: asTextOrLink(getFieldValue(rootFields, 'riskAssessment')),
+          pathToGreen: asTextOrLink(getFieldValue(rootFields, 'pathToGreen')),
+          cgChecklistLink: asTextOrLink(getFieldValue(rootFields, 'cgChecklistLink')),
+          pgChecklistLink: asTextOrLink(getFieldValue(rootFields, 'pgChecklistLink')),
           statusUpdateDate: statusUpdateDate || null,
         },
         gates: {

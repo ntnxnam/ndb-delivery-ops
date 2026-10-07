@@ -18,6 +18,7 @@ import ReleaseConfigPage from './components/ReleaseConfigPage';
 import GenericEmailer from './components/GenericEmailer';
 import EmailHistoryTab from './components/EmailHistoryTab';
 import SprintReportPage from './components/SprintReportPage';
+import SprintPerformancePage from './components/SprintPerformancePage';
 import KPIPage from './components/KPIPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
@@ -194,6 +195,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['sprint_reports_view']}>
                       <Layout>
                         <SprintReportPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } 
+                />
+
+                <Route 
+                  path="/sprint-performance" 
+                  element={
+                    <ProtectedRoute permissions={['sprint_reports_view']}>
+                      <Layout>
+                        <SprintPerformancePage />
                       </Layout>
                     </ProtectedRoute>
                   } 

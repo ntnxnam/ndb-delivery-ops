@@ -318,6 +318,23 @@ export function generateTableHTMLForEmail(
       }
       return escapeHtml(item.customfield_38460);
     }
+    if (
+      columnKey === 'cgChecklistLink' ||
+      columnKey === 'pgChecklistLink' ||
+      columnKey === 'riskAssessment' ||
+      columnKey === 'pathToGreen'
+    ) {
+      const fieldId = columnsConfig?.columns?.[columnKey]?.customField;
+      const raw = fieldId ? item[fieldId] : null;
+      const text = raw == null
+        ? ''
+        : (typeof raw === 'string' ? raw.trim() : String(raw.value || raw.url || raw.name || '').trim());
+      if (!text || text === 'N/A' || text === 'NA' || text === 'Not Set') return 'Not Set';
+      if (/^https?:\/\//i.test(text)) {
+        return `<a href="${escapeHtml(text)}" style="color: #0065ff; text-decoration: none;">Link</a>`;
+      }
+      return escapeHtml(text);
+    }
     if (columnKey === 'statusUpdateDate') {
       let statusUpdateDateValue = item.customfield_45660;
       if (statusUpdateDateValue && typeof statusUpdateDateValue === 'object' && !(statusUpdateDateValue instanceof Date)) {

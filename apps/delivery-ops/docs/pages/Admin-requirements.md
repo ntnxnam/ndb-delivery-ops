@@ -20,7 +20,7 @@ The Admin Panel provides app configuration and team onboarding management withou
 | AP-01 | As an admin, I can add or remove users from permission groups without editing JSON files by hand. |
 | AP-02 | As an admin, I can add a team by typing only its name and base filter; everything else is detected from the base filter and I confirm it. |
 | AP-07 | As an admin, the team's main JIRA project, release versions, scrum board and sprint calendar are detected from the base filter, and I can pick a different board if the guess is wrong. |
-| AP-08 | As an admin, I can see the team's FEAT components (from `(<baseFilter>) AND project = FEAT`) and their primary components, and choose which components belong to the team (a team can own several). |
+| AP-08 | As an admin, I pick the team's project from the project codes in the base filter, then choose which of that project's component names belong to the team. |
 | AP-09 | As an admin, the team code is generated from the team name; I can override it on create, and it never changes after. |
 | AP-03 | As an admin, I can test JIRA connectivity and see which endpoints are reachable. |
 | AP-04 | As an admin, I can view and clear the server-side release dataset cache. |
@@ -44,11 +44,11 @@ The Admin Panel provides app configuration and team onboarding management withou
 ### Team form (`TeamForm` + `DetectedConfig`)
 - Inputs: **Team name** (fills **Team code** until the code is edited; code is read-only when editing) and **Base filter**.
 - **Detect** (`POST /api/admin/inspect-base-filter`) shows:
-  - Main project (most common project in the filter's tickets, with its share) — selectable if the filter spans several.
+  - Main project (most common project in the filter's tickets, with its share) — selectable if the filter spans several. The admin can also type a project key that is not in that list.
   - Release versions in that project (unreleased first). No version patterns.
   - Sprint scope = base filter without ORDER BY and its trailing `statusCategory != Done`.
-  - Scrum board + sprint calendar; picking another board re-reads the calendar.
-  - FEAT components with their primary components (CF "Primary Component"); all checked by default.
+  - Scrum board + sprint calendar. The dropdown lists boards whose names match the team, and the admin can type a board number directly. Other boards on that JIRA project stay behind “Show other boards”, because a shared project otherwise lists every team’s boards. Picking or typing a board re-reads the calendar. If the board has no dated sprints, the admin enters the S1 start date and sprint length.
+  - Component names from the selected JIRA project (`GET /project/{key}/components`), shown in columns. A filter narrows the list. All are checked; uncheck individuals, or Unselect all.
 - Save is disabled until the current base filter has been detected and a project + sprint calendar are known. Editing a team without changing its base filter does not require Detect.
 - Saved fields: `name`, `baseFilter`, `projectKey`, `boardId`, `sprintCalendar`, `featureComponents`. Legacy `projectType`, `versionPatterns`, `sprintBaseFilter` are removed on save; per-team `allowedUsers.json` lists are no longer written.
 
@@ -79,9 +79,10 @@ The Admin Panel provides app configuration and team onboarding management withou
 |------|--------------------|
 | Adding a user already in a group | Show "User already in this group" inline; no duplicate added |
 | Base filter is invalid JQL or matches no tickets | Detect shows the JIRA message; nothing is saved |
-| Base filter spans several projects | Most common project is preselected; the dropdown lists the others with their share |
-| Project has no scrum board, or the board has no dated sprints | Board section shows the reason; admin enters a board ID to read its calendar. Save stays disabled without a calendar |
-| No FEAT tickets match the base filter | Components section says none were found; team saves without `featureComponents` |
+| Base filter spans several projects | Most common project is preselected; the dropdown lists the others with their share. Choosing another project, or typing a project key, reloads that project's versions, boards, and components |
+| Project has no scrum board, or the board has no dated sprints | Board section shows the reason and asks for an S1 start date and sprint length. Save stays disabled until both are valid |
+| Project board list is mostly other teams (shared project such as ERA) | Dropdown shows boards whose names match the team. “Show other boards” reveals the rest |
+| Selected project has no components | Components section says none were found; team saves without `featureComponents` |
 | Versions or FEAT lookup fails | That section shows its error; the rest of Detect still works |
 | Team code already exists | Create returns 409 and the form shows "Team already exists" |
 | Team is missing `sprintCalendar` | Team list flags it; create/update is rejected until a calendar is detected |

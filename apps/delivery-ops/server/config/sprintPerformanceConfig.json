@@ -1,0 +1,27 @@
+{
+  "_description": "Thresholds and cadence labels for the Sprint Performance leadership report (server/services/sprintPerformanceService.js). Sprint numbers come from JIRA's Sprint Report (greenhopper sprintreport) so they match the board's reporting view.",
+  "defaults": {
+    "windowSlots": 26,
+    "trendSlots": 3,
+    "hygieneSlots": 6,
+    "leaderMaxSharePct": 70,
+    "portfolioIssueTypes": ["Feature", "Initiative", "Epic", "X-FEAT", "Capability"],
+    "qaVerificationIssueTypes": ["Bug", "Improvement"],
+    "qaVerificationRatio": 0.33,
+    "rag": { "greenSayDoPct": 75, "yellowSayDoPct": 60 },
+    "scopeCreepAlertPct": 25,
+    "chronicCarryoverSprints": 3,
+    "staleActiveSprintDays": 3,
+    "minPlannedForRanking": 15,
+    "improvementAlertPts": 10,
+    "phaseMinSprints": 3,
+    "phaseMinShiftPts": 8
+  },
+  "teams": {
+    "ndb": {
+      "cadenceLabelAnchor": { "startIso": "2026-10-07", "number": 60 },
+      "managerLeaderOverrides": {},
+      "scopeGroups": ["Team-BharatKumar-Beedu-Org", "Team-Ashish-Kumar-Org"]
+    }
+  }
+}

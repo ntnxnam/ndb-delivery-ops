@@ -94,6 +94,16 @@ export const routeConfig = {
       icon: '🏃'
     },
     {
+      path: '/sprint-performance',
+      exact: true,
+      component: 'SprintPerformancePage',
+      title: 'Sprint Performance',
+      description: 'Leadership view of sprint say/do by team, leader and manager',
+      permissions: [PERMISSIONS.SPRINT_REPORTS_VIEW],
+      showInNav: true,
+      icon: '📈'
+    },
+    {
       path: '/component-report',
       exact: true,
       component: 'ComponentReport',

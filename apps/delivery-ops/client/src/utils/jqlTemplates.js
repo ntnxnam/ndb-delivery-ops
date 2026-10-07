@@ -64,7 +64,24 @@ export function generateFilterChain(version, excludeVersion) {
   ];
 }
 
-export const RELEASE_PROJECTS = ['ERA', 'FEAT', 'SDL', 'LEG', 'TECHPUBS'];
+const COMPANION_RELEASE_PROJECTS = ['FEAT', 'SDL', 'LEG', 'TECHPUBS'];
+
+/**
+ * Version checkboxes for Release Setup. The first project is the selected
+ * team's JIRA project (ENG for Cerebro / DR). FEAT, SDL, LEG, and TECHPUBS
+ * stay in the chain.
+ */
+export function releaseProjectsForTeam(projectKey) {
+  const key = String(projectKey || '').trim().toUpperCase();
+  const projects = [];
+  if (key) projects.push(key);
+  for (const companion of COMPANION_RELEASE_PROJECTS) {
+    if (companion !== key) projects.push(companion);
+  }
+  return projects.length ? projects : ['ERA', ...COMPANION_RELEASE_PROJECTS];
+}
+
+export const RELEASE_PROJECTS = releaseProjectsForTeam('ERA');
 
 /**
  * Validates that a version name is non-empty.

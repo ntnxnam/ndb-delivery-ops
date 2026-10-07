@@ -176,7 +176,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const [briefingError, setBriefingError] = useState(null);
 
   // Filter state — client-side, no re-fetch needed
-  const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', staleness: '' });
+  const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
   const [activeSection, setActiveSection] = useState(''); // '' | 'commit' | 'longTermFunded'
 
   const handleFilterChange = (key, value) => setActiveFilters(prev => ({ ...prev, [key]: value }));

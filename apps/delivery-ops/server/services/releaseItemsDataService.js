@@ -16,6 +16,16 @@ const { getPrimaryComponentField, parsePrimaryComponent } = require('../utils/pr
 
 const PRIMARY_COMPONENT_FIELD = getPrimaryComponentField();
 
+function asStoredField(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value.type === 'doc') return extractTextFieldValue(value);
+    return value.value || value.url || value.name || null;
+  }
+  return String(value);
+}
+
 const RELEASE_DATASET_CACHE_DIR = path.resolve(
   __dirname, '..', '..', '..', '..', 'shared', '.cache', 'release-dataset'
 );
@@ -46,8 +56,11 @@ const RELEASE_ITEMS_CONFIG = {
     'customfield_11067', 'customfield_13861',
     'customfield_11068', 'customfield_35863', 'customfield_35864',
     'customfield_14463', 'customfield_31460', 'customfield_14464',
-    'customfield_14465', 'customfield_23073', 'customfield_45660',
-    'customfield_23560', 'customfield_38460', PRIMARY_COMPONENT_FIELD, 'components',
+    'customfield_14465', 'customfield_55662', 'customfield_55663',
+    'customfield_23073', 'customfield_45660',
+    'customfield_23560', 'customfield_47780', 'customfield_55664',
+    'customfield_38460', PRIMARY_COMPONENT_FIELD, 'components',
+    'customfield_19262', // Assignee Manager — TODO(D1): source id via productService
   ].join(','),
 };
 
@@ -88,6 +101,8 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       labels: issue.fields.labels || [],
       labelsString: issue.fields.labels?.join(', ') || 'N/A',
       assignee: extractAssigneeName(issue.fields.assignee, issue.key),
+      assigneeManager: issue.fields.customfield_19262?.displayName || null,
+      assigneeManagerEmail: issue.fields.customfield_19262?.emailAddress || null,
       issuetype: issue.fields.issuetype?.name || null,
       sprintState: sprintInfo.state,
       sprintName: sprintInfo.name,
@@ -104,9 +119,13 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       customfield_31460: issue.fields.customfield_31460,
       customfield_14464: issue.fields.customfield_14464,
       customfield_14465: issue.fields.customfield_14465,
+      customfield_55662: asStoredField(issue.fields.customfield_55662),
+      customfield_55663: asStoredField(issue.fields.customfield_55663),
       customfield_23073: issue.fields.customfield_23073,
       customfield_45660: issue.fields.customfield_45660,
       customfield_23560: riskIndicator,
+      customfield_47780: asStoredField(issue.fields.customfield_47780),
+      customfield_55664: asStoredField(issue.fields.customfield_55664),
       customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
       // Expose as { parent, child } so the UI can filter on either level.
       primaryComponent: parsePrimaryComponent(issue.fields[PRIMARY_COMPONENT_FIELD]),
@@ -133,6 +152,8 @@ function mapCachedTicketToItem(t) {
     labels,
     labelsString: labels.join(', ') || 'N/A',
     assignee: t['Assignee'] || null,
+    assigneeManager: t['Assignee Manager'] || null,
+    assigneeManagerEmail: t['Assignee Manager Email'] || null,
     issuetype: t['Issue Type'] || null,
     sprintState: null,
     sprintName: t['Sprint Name'] || null,
@@ -149,9 +170,13 @@ function mapCachedTicketToItem(t) {
     customfield_31460: t['TCMS Link'] || null,
     customfield_14464: t['Design Doc Link'] || null,
     customfield_14465: t['Test Plan Link'] || null,
+    customfield_55662: t['Link to CG checklist'] || null,
+    customfield_55663: t['Link to PG checklist'] || null,
     customfield_23073: t['Status Update'] || null,
     customfield_45660: t['Status Update Date'] || null,
     customfield_23560: t['Risk Indicator'] || null,
+    customfield_47780: t['Risk Assessment'] || null,
+    customfield_55664: t['Path to Green'] || null,
     customfield_38460: t['Executive Status Update'] || null,
   };
 }

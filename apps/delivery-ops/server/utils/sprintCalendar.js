@@ -10,6 +10,10 @@
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MS_PER_DAY = 86_400_000;
 const S1_NAME = /\bS(?:print)?\s*0*1\b/i;
+// A long-lived board can have hundreds of closed sprints. Detect only needs
+// enough history to find S1 and a sprint length; walking every page blows
+// the client timeout and fails the whole request.
+const MAX_SPRINT_PAGES = 4;
 
 function toDateOnly(value) {
   if (value == null || value === '') return null;
@@ -93,6 +97,7 @@ function inferSprintCalendarFromSprints(sprints) {
       'Sprint board has no dated sprints. Enter S1 start date and sprint length manually.'
     );
     err.statusCode = 400;
+    err.code = 'NO_DATED_SPRINTS';
     throw err;
   }
 
@@ -136,7 +141,8 @@ async function collectSprintCalendarFromBoard(jira, boardId) {
   const sprints = [];
   let startAt = 0;
   let hasMore = true;
-  while (hasMore) {
+  let pages = 0;
+  while (hasMore && pages < MAX_SPRINT_PAGES) {
     const res = await jira.get(`/rest/agile/1.0/board/${id}/sprint`, {
       timeout: 15000,
       params: { startAt, maxResults: 50 },
@@ -146,6 +152,7 @@ async function collectSprintCalendarFromBoard(jira, boardId) {
     const isLast = res.data?.isLast;
     hasMore = values.length > 0 && isLast === false;
     startAt += values.length;
+    pages += 1;
   }
 
   const inferred = inferSprintCalendarFromSprints(sprints);

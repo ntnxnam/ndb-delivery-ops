@@ -10,6 +10,167 @@ const emailSenderCCConfig = require('../../config/emailSenderCCConfig.json');
 const { saveEmailHistory } = require('../../utils/emailHistoryDB');
 const { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } = require('./middleware');
 
+const EXTRA_EMAIL_FIELDS = [
+  ['customfield_55662', 'Link to CG checklist'],
+  ['customfield_55663', 'Link to PG checklist'],
+];
+
+const GATE_CHART_DEFS = [
+  { label: 'FS/DS Done', fieldId: 'customfield_13861', color: '#6c757d' },
+  { label: 'Test Plan', fieldId: 'customfield_11068', color: '#17a2b8' },
+  { label: 'Code Complete', fieldId: 'customfield_11067', color: '#1f77b4' },
+  { label: 'Commit Gate', fieldId: 'customfield_35863', color: '#ff7f0e' },
+  { label: 'Promotion Gate', fieldId: 'customfield_35864', color: '#2ca02c' },
+];
+
+const MONTH_INDEX = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+};
+
+function parseEmailDisplayDate(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'object') {
+    if (value.type === 'notSet') return null;
+    return parseEmailDisplayDate(value.display || value.value || '');
+  }
+  const str = String(value).trim();
+  if (!str || str === 'Not Set' || str === 'N/A' || str === 'NA') return null;
+  const m = str.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4})$/);
+  if (m && MONTH_INDEX[m[2]] != null) {
+    const d = new Date(Number(m[3]), MONTH_INDEX[m[2]], Number(m[1]));
+    d.setHours(0, 0, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str.slice(0, 10) + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function fieldText(field) {
+  if (!field) return 'Not Set';
+  const v = field.value;
+  if (v == null || v === '') return 'Not Set';
+  if (typeof v === 'object') {
+    if (v.type === 'notSet') return 'Not Set';
+    return v.display || v.value || 'Not Set';
+  }
+  return String(v);
+}
+
+function renderExtraEmailCells(jiraData) {
+  return EXTRA_EMAIL_FIELDS.map(([id, fallback]) => {
+    const field = jiraData?.[id];
+    if (!field) return '';
+    const name = field.name || fallback;
+    const value = field.value;
+    if (value && typeof value === 'object' && value.type) {
+      const bg = value.type === 'notSet' ? '#fff3cd' : 'transparent';
+      const weight = value.type === 'notSet' ? '600' : 'normal';
+      const display = value.type === 'link' && value.url
+        ? `<a href="${value.url}" style="color: #0065ff; text-decoration: none;">${value.display || 'Link'}</a>`
+        : (value.display || 'Not Set');
+      return `<td style="padding: 8px; border: 1px solid #1a1a1a; font-weight: 600; width: 12.5%; font-size: 0.9375rem;">${name}</td><td style="padding: 8px; border: 1px solid #1a1a1a; width: 12.5%; font-size: 0.9375rem; background-color: ${bg}; font-weight: ${weight};">${display}</td>`;
+    }
+    const text = value && value !== 'N/A' && value !== 'NA' && value !== 'Not Set' ? value : 'Not Set';
+    const bg = text === 'Not Set' ? '#fff3cd' : 'transparent';
+    const weight = text === 'Not Set' ? '600' : 'normal';
+    return `<td style="padding: 8px; border: 1px solid #1a1a1a; font-weight: 600; width: 12.5%; font-size: 0.9375rem;">${name}</td><td style="padding: 8px; border: 1px solid #1a1a1a; width: 12.5%; font-size: 0.9375rem; background-color: ${bg}; font-weight: ${weight};">${formatContentForEmail(text)}</td>`;
+  }).join('');
+}
+
+/** Risk Indicator + Risk Assessment + Path to Green — below Highlights in email. */
+function renderRiskContextSection(jiraData) {
+  if (!jiraData) return '';
+  const risk = jiraData.customfield_23560;
+  const assessment = jiraData.customfield_47780;
+  const path = jiraData.customfield_55664;
+  const riskVal = fieldText(risk);
+  const assessmentVal = fieldText(assessment);
+  const pathVal = fieldText(path);
+  const riskUnset = riskVal === 'Not Set';
+  const assessmentUnset = assessmentVal === 'Not Set';
+  const pathUnset = pathVal === 'Not Set';
+  const riskColor = risk?.color || 'transparent';
+  const riskTextColor = !riskUnset && riskColor !== 'transparent' ? '#ffffff' : '#1a1a1a';
+
+  return `
+            <h2>Risk context</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+              <tbody>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; font-weight: 600; width: 16%; font-size: 0.875rem; background: #f8f9fa;">${risk?.name || 'Risk Indicator'}</td>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; width: 17%; font-size: 0.875rem; background-color: ${riskUnset ? '#fff3cd' : riskColor}; color: ${riskTextColor}; font-weight: 600; text-align: center;">${riskVal}</td>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; font-weight: 600; width: 16%; font-size: 0.875rem; background: #f8f9fa;">${assessment?.name || 'Risk Assessment'}</td>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; width: 18%; font-size: 0.875rem; background-color: ${assessmentUnset ? '#fff3cd' : 'transparent'}; font-weight: ${assessmentUnset ? '600' : 'normal'};">${formatContentForEmail(assessmentVal)}</td>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; font-weight: 600; width: 16%; font-size: 0.875rem; background: #f8f9fa;">${path?.name || 'Path to Green'}</td>
+                  <td style="padding: 8px; border: 1px solid #1a1a1a; width: 17%; font-size: 0.875rem; background-color: ${pathUnset ? '#fff3cd' : 'transparent'}; font-weight: ${pathUnset ? '600' : 'normal'};">${formatContentForEmail(pathVal)}</td>
+                </tr>
+              </tbody>
+            </table>
+  `;
+}
+
+/** Email-safe horizontal bars: gates vs days from today. */
+function renderGateDatesChartSection(jiraData) {
+  if (!jiraData) return '';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const rows = GATE_CHART_DEFS.map((g) => {
+    const field = jiraData[g.fieldId];
+    const dateLabel = fieldText(field);
+    const date = parseEmailDisplayDate(field?.value ?? field);
+    const days = date ? Math.round((date.getTime() - today.getTime()) / 86400000) : null;
+    return { ...g, dateLabel, days, set: date != null };
+  });
+  const setRows = rows.filter((r) => r.set);
+  if (setRows.length === 0) {
+    return `
+            <h2>Gates vs dates</h2>
+            <p style="font-size: 0.875rem; background: #fff3cd; padding: 8px; border: 1px solid #1a1a1a;">No gate dates set on this ticket.</p>
+    `;
+  }
+  const maxAbs = Math.max(1, ...setRows.map((r) => Math.abs(r.days)));
+  const bars = setRows.map((r) => {
+    const pct = Math.max(4, Math.round((Math.abs(r.days) / maxAbs) * 100));
+    const fill = r.days < 0 ? '#adb5bd' : r.color;
+    const dayLabel = r.days === 0 ? 'today' : (r.days > 0 ? `+${r.days}d` : `${r.days}d`);
+    return `
+                <tr>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 22%; font-weight: 600;">${r.label}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 18%;">${r.dateLabel}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 12%;">${dayLabel}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; width: 48%;">
+                    <div style="background: #f1f3f5; height: 14px; width: 100%;">
+                      <div style="background: ${fill}; height: 14px; width: ${pct}%;"></div>
+                    </div>
+                  </td>
+                </tr>`;
+  }).join('');
+  const unset = rows.filter((r) => !r.set).map((r) => r.label);
+  return `
+            <h2>Gates vs dates</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+              <thead>
+                <tr>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Gate</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Date</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">vs today</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Relative</th>
+                </tr>
+              </thead>
+              <tbody>${bars}
+              </tbody>
+            </table>
+            <p style="font-size: 0.75rem; color: #666; margin-top: 0;">Negative days = past · Grey bars = past dates${unset.length ? ` · Not set: ${unset.join(', ')}` : ''}</p>
+  `;
+}
+
 module.exports = async function sendEmailHandler(req, res) {
   // Extract username and request metadata for audit logging
   const username = req.username || req.body?.username || req.headers['x-username'] || 'unknown';
@@ -188,6 +349,12 @@ module.exports = async function sendEmailHandler(req, res) {
             <h2>Highlights and Lowlights</h2>
             <div>${additionalDetails && additionalDetails.trim() ? formatContentForEmail(additionalDetails) : '<p style="color: #666; font-style: italic;">No highlights and lowlights provided.</p>'}</div>
     `;
+
+    // Risk boxes + gate chart sit between narrative and ticket tables (matches UI)
+    if (jiraData) {
+      emailHtml += renderRiskContextSection(jiraData);
+      emailHtml += renderGateDatesChartSection(jiraData);
+    }
     
     // Add JIRA data if provided - match UI table format
     if (jiraData) {
@@ -213,20 +380,7 @@ module.exports = async function sendEmailHandler(req, res) {
                 </tr>
                 <tr>
                   <td style="padding: 10px; border: 1px solid #1a1a1a; font-weight: 600; width: 6%; font-size: 0.9375rem;">Labels</td>
-                  <td style="padding: 10px; border: 1px solid #1a1a1a; width: 20%; font-size: 0.9375rem;" colspan="2">${jiraData.labels || 'N/A'}</td>
-      `;
-      
-      // Risk Indicator (customfield_23560)
-      if (jiraData.customfield_23560 && jiraData.customfield_23560.name) {
-        const riskColor = jiraData.customfield_23560.color || 'transparent';
-        const riskTextColor = riskColor !== 'transparent' ? '#ffffff' : '#1a1a1a';
-        emailHtml += `
-                  <td style="padding: 10px; border: 1px solid #1a1a1a; font-weight: 600; width: 10%; font-size: 0.9375rem;">${jiraData.customfield_23560.name}</td>
-                  <td style="padding: 10px; border: 1px solid #1a1a1a; width: 15%; font-size: 0.9375rem; background-color: ${riskColor}; color: ${riskTextColor}; font-weight: 600; text-align: center;">${jiraData.customfield_23560.value || 'N/A'}</td>
-        `;
-      }
-      
-      emailHtml += `
+                  <td style="padding: 10px; border: 1px solid #1a1a1a; width: 94%; font-size: 0.9375rem;" colspan="7">${jiraData.labels || 'N/A'}</td>
                 </tr>
       `;
       
@@ -337,6 +491,15 @@ module.exports = async function sendEmailHandler(req, res) {
         `;
       }
       
+      const extraEmailCells = renderExtraEmailCells(jiraData);
+      if (extraEmailCells) {
+        emailHtml += `
+                <tr>
+                  ${extraEmailCells}
+                </tr>
+        `;
+      }
+
       // Links row: customfield_14463, customfield_14464, customfield_14465, customfield_31460 (TCMS)
       if (jiraData.customfield_14463 || jiraData.customfield_31460 || jiraData.customfield_14464 || jiraData.customfield_14465) {
         emailHtml += `

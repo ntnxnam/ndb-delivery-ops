@@ -177,6 +177,22 @@
         "category": "links",
         "description": "Link to test plan document",
         "usedIn": ["email"]
+      },
+      "cgChecklistLink": {
+        "id": "customfield_55662",
+        "label": "Link to CG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Commit Gate checklist",
+        "usedIn": ["table", "email", "fetch"]
+      },
+      "pgChecklistLink": {
+        "id": "customfield_55663",
+        "label": "Link to PG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Promotion Gate checklist",
+        "usedIn": ["table", "email", "fetch"]
       }
     },
     "indicators": {
@@ -188,6 +204,22 @@
         "description": "Risk level indicator (e.g., Green - On Track)",
         "usedIn": ["table", "email"],
         "hasColor": true
+      },
+      "riskAssessment": {
+        "id": "customfield_47780",
+        "label": "Risk Assessment",
+        "type": "text",
+        "category": "indicators",
+        "description": "Free-text risk assessment",
+        "usedIn": ["table", "email", "fetch"]
+      },
+      "pathToGreen": {
+        "id": "customfield_55664",
+        "label": "Path to Green",
+        "type": "text",
+        "category": "indicators",
+        "description": "What it takes to return the item to green",
+        "usedIn": ["table", "email", "fetch"]
       }
     },
     "classification": {
@@ -251,7 +283,11 @@
     "promotion gate ready estimation date": "promotionGate",
     "promotion gate": "promotionGate",
     "status update date": "statusUpdateDate",
-    "status update last updated date": "statusUpdateDate"
+    "status update last updated date": "statusUpdateDate",
+    "link to cg checklist": "cgChecklistLink",
+    "link to pg checklist": "pgChecklistLink",
+    "risk assessment": "riskAssessment",
+    "path to green": "pathToGreen"
   },
   "fieldCategories": {
     "checkpoint": "Checkpoint dates for tracking project milestones",

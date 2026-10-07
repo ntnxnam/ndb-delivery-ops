@@ -29,14 +29,15 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 
 ## UI Behaviour
 
-1. **Confluence URL input** — user pastes a Confluence page URL; app calls the extraction endpoint.
-2. **Content extraction** — extracted text/HTML is shown in a preview area; user can edit.
-3. **Release selector** — dropdown populated from JIRA (`/api/jira/releases`); selection drives JIRA data injection.
-4. **Rich text editor** (ReactQuill) — pre-filled with extracted content + JIRA snippet; fully editable.
-5. **Recipient fields** — To / CC text inputs; comma-separated email addresses.
-6. **Subject field** — editable; pre-populated as `{issue type} - {summary} - {fix version} - Weekly Update - {dd/Mmm/yyyy}`. Fix version is omitted when the ticket has none.
-7. **Send button** — disabled while loading; shows spinner; on success shows toast, on failure shows error message.
-8. **Outlook fallback** — copy-to-clipboard button for HTML body for users whose email client strips rich text.
+1. **JIRA key + Fetch** — user enters a Feature/Initiative/X-FEAT/Capability key and fetches ticket data.
+2. **Subject field** — auto-populated as `{issue type} - {summary} - {fix version} - Weekly Update - {dd/Mmm/yyyy}`. Fix version is omitted when the ticket has none.
+3. **Highlights and Lowlights** (ReactQuill) — required sections: Highlights, Lowlights, Support needed from leaders. Risk reason / Path to green are **not** in this editor.
+4. **AI summary draft** — “Generate Fresh AI Summary” calls `POST /api/ai/exec-summary` (same NAI path as Project Status). Scratch pad only; not saved, not emailed.
+5. **Risk context boxes** (below Highlights) — Risk Indicator (`customfield_23560`), Risk Assessment (`customfield_47780`), Path to Green (`customfield_55664`), read-only from JIRA.
+6. **Gates vs dates chart** — horizontal bars of FS/DS, Test Plan, Code Complete, Commit Gate, Promotion Gate vs days from today. Mirrored in outbound email as an HTML bar table.
+7. **Recipient fields** — Additional Recipients text input; comma-separated usernames/emails.
+8. **Send button** — disabled while loading; on success shows toast, on failure shows error message.
+9. **Outlook fallback** — copy-to-clipboard for HTML body when the client strips rich text.
 
 ---
 

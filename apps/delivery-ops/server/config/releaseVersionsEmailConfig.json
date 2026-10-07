@@ -481,6 +481,30 @@
       "order": 4,
       "customField": "customfield_23560"
     },
+    "riskAssessment": {
+      "label": "Risk Assessment",
+      "include": true,
+      "order": 4.1,
+      "customField": "customfield_47780"
+    },
+    "pathToGreen": {
+      "label": "Path to Green",
+      "include": true,
+      "order": 4.2,
+      "customField": "customfield_55664"
+    },
+    "cgChecklistLink": {
+      "label": "Link to CG checklist",
+      "include": true,
+      "order": 4.3,
+      "customField": "customfield_55662"
+    },
+    "pgChecklistLink": {
+      "label": "Link to PG checklist",
+      "include": true,
+      "order": 4.4,
+      "customField": "customfield_55663"
+    },
     "executiveSummary": {
       "label": "Executive Summary",
       "include": true,
@@ -493,6 +517,10 @@
     "summary",
     "status",
     "riskIndicator",
+    "riskAssessment",
+    "pathToGreen",
+    "cgChecklistLink",
+    "pgChecklistLink",
     "executiveSummary",
     "codeComplete",
     "commitGate",

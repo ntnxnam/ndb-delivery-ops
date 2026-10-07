@@ -13,7 +13,7 @@ specialist owns. Canonical home is this directory (D38), not `.cursor/`.
 | `bug-triage/` | `triage-specialist` | Proposes owner/priority/component/severity for new defects | D19 |
 | `crisis-triage/` | `triage-specialist` | P0 / escalation response coordination | D19 |
 | `stale-ticket-sweep/` | `triage-specialist` | Weekly backlog hygiene | D19 |
-| `pending-response-chase/` | `triage-specialist` | Chase un-answered dep / deferral asks (D24 open) | D19, D24 |
+| `pending-response-chase/` | `triage-specialist` | Chase unreplied JIRA ask comments (D24) | D19, D24 |
 | `dependency-walk/` | `dependency-tracker-specialist` | Upstream/downstream walk in JIRA dep graph | D18 |
 | `confluence-width-cleanup/` | `confluence-publisher-specialist` | Pre-push storage XML cleanup (canonical at user level) | D3, D15d |
 | `move-gate-date/` | `rm-specialist` | Gate-date moves (CC/CG/PG) with mandatory reason + Confluence audit | **D30** |

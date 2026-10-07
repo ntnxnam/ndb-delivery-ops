@@ -43,7 +43,7 @@ function sprintsFrom(startIso, count, days) {
   }));
 }
 
-function fakeJira({ searchIssues, total, boards = [], featureIssues = [], versions = [] }) {
+function fakeJira({ searchIssues, total, boards = [], versions = [], components = [{ name: 'NKP' }, { name: 'CSI' }] }) {
   const get = jest.fn(async (url, opts = {}) => {
     if (url === '/rest/api/2/search') {
       return { data: { total: total ?? searchIssues.length, issues: searchIssues } };
@@ -54,13 +54,14 @@ function fakeJira({ searchIssues, total, boards = [], featureIssues = [], versio
     if (/\/sprint$/.test(url)) {
       return { data: { values: opts.params?.startAt ? [] : sprintsFrom('2024-10-23', 6, 21), isLast: true } };
     }
+    if (/\/components$/.test(url)) return { data: components };
     if (url.startsWith('/rest/api/2/project/')) return { data: { name: 'Era' } };
     throw new Error(`unexpected GET ${url}`);
   });
   return {
     get,
     getProjectVersions: jest.fn().mockResolvedValue(versions),
-    searchAll: jest.fn().mockResolvedValue(featureIssues),
+    searchAll: jest.fn().mockResolvedValue([]),
     searchCount: jest.fn().mockResolvedValue(42),
   };
 }
@@ -183,10 +184,7 @@ describe('Admin routes', () => {
           { name: 'NKP-2.14', released: true },
           { name: 'NKP-2.16', released: false, archived: true },
         ],
-        featureIssues: [
-          { fields: { components: [{ name: 'NKP' }], customfield_15160: { value: 'NKP', child: { value: 'NKP-Core' } } } },
-          { fields: { components: [{ name: 'NKP' }, { name: 'CSI' }], customfield_15160: { value: 'CSI', child: { value: 'CSI-Driver' } } } },
-        ],
+        components: [{ name: 'NKP' }, { name: 'CSI' }],
       });
       getJira.mockResolvedValue(jira);
 
@@ -202,12 +200,10 @@ describe('Admin routes', () => {
       expect(res.body.versions).toEqual({ total: 3, unreleasedCount: 1, unreleased: ['NKP-2.15'] });
       expect(res.body.board.boardId).toBe(4741);
       expect(res.body.board.sprintCalendar).toEqual({ s1StartIso: '2024-10-23', sprintDays: 21 });
-      expect(res.body.feature.featureComponents).toEqual({ NKP: ['NKP-Core'], CSI: ['CSI-Driver'] });
-      expect(jira.searchAll).toHaveBeenCalledWith(
-        '(filter=NCN-All-Base-Filter and statusCategory!=Done) AND (project = FEAT)',
-        'components,customfield_15160',
-        expect.any(Object)
-      );
+      expect(res.body.feature.projectKey).toBe('NCN');
+      expect(res.body.feature.featureComponents).toEqual({ CSI: [], NKP: [] });
+      expect(jira.get).toHaveBeenCalledWith('/rest/api/2/project/NCN/components', expect.any(Object));
+      expect(jira.searchAll).not.toHaveBeenCalled();
     });
 
     it('returns 400 when the base filter is empty or matches nothing', async () => {
@@ -225,6 +221,21 @@ describe('Admin routes', () => {
       const res = await request(app).post('/api/admin/inspect-base-filter').send({ baseFilter: 'filter=nope' }).expect(400);
       expect(res.body.error).toBe('Invalid base filter');
       expect(res.body.message).toContain("does not exist for the field 'filter'");
+    });
+  });
+
+  describe('POST /project-scope', () => {
+    it('returns the selected project key and rejects a blank one', async () => {
+      getJira.mockResolvedValue(fakeJira({
+        searchIssues: [],
+        versions: [{ name: 'DR-1.0', released: false }],
+        boards: [{ id: 1592, name: 'DR-Core-WorkStream-Scrum-Board' }],
+      }));
+      const res = await request(app).post('/api/admin/project-scope').send({ projectKey: 'dr', name: 'Cerebro / DR' }).expect(200);
+      expect(res.body.projectKey).toBe('DR');
+      expect(res.body.board.boards.map((b) => b.name)).toEqual(['DR-Core-WorkStream-Scrum-Board']);
+      expect(res.body.versions.unreleased).toEqual(['DR-1.0']);
+      await request(app).post('/api/admin/project-scope').send({}).expect(400);
     });
   });
 

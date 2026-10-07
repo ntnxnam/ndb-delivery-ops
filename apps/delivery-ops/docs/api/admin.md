@@ -28,17 +28,16 @@
   - `baseFilter` (string, required) — team JQL, e.g. `filter=NDB-All-Base-Filter and statusCategory!=Done`
   - `name` (string, optional) — team name; used to prefer a board whose name matches
   - `boardId` (number, optional) — preferred board (kept if it belongs to the detected project)
-  - `featureProjectKey` (string, optional, default `FEAT`) — project holding the team's features
+  - `featureProjectKey` is no longer used. Component names come from the selected JIRA project.
 - Required headers: `X-Username` (super admin), JIRA bearer token
 
 **Server flow**
 - `admin.js` → `teamInspectService.inspectBaseFilter`
-- → JIRA `GET /rest/api/2/search` (`jql=baseFilter`, `fields=project`, up to 500 issues) → main project = most frequent project key, ignoring the feature project (FEAT)
+- → JIRA `GET /rest/gadget/1.0/stats/generate?statType=project` for every project in the base filter (not a 500-issue sample). If that call fails, page `GET /rest/api/2/search` (`fields=project`) until the filter is exhausted. Main project = most frequent project key, ignoring the feature project (FEAT)
 - → in parallel:
   - `JiraConnector.getProjectVersions(projectKey)` → total + unreleased version names
-  - `GET /rest/agile/1.0/board?projectKeyOrId=<key>&type=scrum` → the requested `boardId` if given, else a name match, else the first board → `collectSprintCalendarFromBoard`
-  - `JiraConnector.searchAll("(<baseFilter without ORDER BY>) AND project = FEAT", "components,<primary component field>")` → group components → primary components (`classification.primaryComponent` in `jiraFieldsConfig.json`)
-- `suggested` marks components with ≥3 tickets or ≥5% of the FEAT tickets; the form pre-checks only these.
+  - `GET /rest/agile/1.0/board?name=<team token>&type=scrum`, plus `projectKeyOrId=<key>`. Boards whose names match the team are the dropdown; the rest of the project list (often other teams on a shared project such as ERA) is returned as `otherBoards`. The requested `boardId`, if given, is read in parallel with the filter sample (otherwise the best name match). Sprint history is capped at 4 pages. A board that cannot be read returns `calendarError` and does not fail Detect.
+  - `GET /rest/api/2/project/<selected project>/components` → every component name in that project. The form lists the project codes found in the base filter; choosing one reloads these names.
 - Versions / board / feature failures are returned inline as `error` / `calendarError`; only a rejected base filter fails the request.
 
 **Response shape**
@@ -48,7 +47,7 @@
   "baseFilter": "filter=NCN-All-Base-Filter and statusCategory!=Done",
   "sprintScope": "filter=NCN-All-Base-Filter",
   "issueCount": 1840,
-  "sampledCount": 500,
+  "sampledCount": 1840,
   "projects": [{ "key": "NCN", "name": "Nutanix Cloud Native", "count": 470, "share": 94 }],
   "projectKey": "NCN",
   "projectShare": 94,
@@ -62,14 +61,14 @@
     "sprintCount": 120
   },
   "feature": {
-    "projectKey": "FEAT",
-    "jql": "(filter=NCN-All-Base-Filter and statusCategory!=Done) AND project = FEAT",
-    "issueCount": 35,
-    "components": [{ "name": "NKP", "count": 30, "primaryComponents": ["NKP-Core", "NKP-UI"], "suggested": true }],
-    "featureComponents": { "NKP": ["NKP-Core", "NKP-UI"] }
+    "projectKey": "NCN",
+    "components": [{ "name": "NKP", "suggested": true }],
+    "featureComponents": { "NKP": [] }
   }
 }
 ```
+
+> ⚠️ Breaking change in 2026-10-06: component names come from `GET /rest/api/2/project/{projectKey}/components` for the project selected from the base filter. They are no longer FEAT ticket components.
 
 **Error responses**
 | HTTP code | When | Client should |
@@ -81,6 +80,48 @@
 
 **Caching**
 No — live JIRA reads. Results are persisted only when the admin saves the team.
+
+---
+
+### POST /api/admin/project-scope
+
+**Purpose**: Reload release versions and scrum boards when the admin picks a different JIRA project than the one Detect chose. Choosing DR loads DR boards, not the boards of the previously detected project.
+
+**Auth**: super-admin + JIRA token
+
+**Request**
+- Method + path: `POST /api/admin/project-scope`
+- Body params: `projectKey` (string, required — any JIRA project key, including one the admin typed that was not in the Detect list), `name` (string, optional — team name, used only to rank boards)
+- Required headers: `X-Username`, JIRA bearer token
+
+**Server flow**
+`admin.js` → `teamInspectService.inspectProject` → `getProjectVersions(projectKey)`, `GET /rest/agile/1.0/board?projectKeyOrId=<key>&type=scrum`, and `GET /rest/api/2/project/<key>/components` → boards whose names match the project key are the dropdown; the rest are `otherBoards` → `collectSprintCalendarFromBoard` for the best match
+
+**Response shape**
+```json
+{
+  "success": true,
+  "projectKey": "DR",
+  "versions": { "total": 4, "unreleasedCount": 1, "unreleased": ["DR-1.0"] },
+  "board": {
+    "boards": [{ "id": 1592, "name": "DR-Core-WorkStream-Scrum-Board" }],
+    "otherBoards": [],
+    "matchedOn": "team",
+    "boardId": 1592,
+    "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 14 }
+  },
+  "feature": { "projectKey": "DR", "components": [{ "name": "Cerebro", "suggested": true }], "featureComponents": { "Cerebro": [] } }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Missing or invalid `projectKey` | Show the message |
+| 401 / 403 | Token or super-admin check failed | Prompt for token / show Access Denied |
+
+**Caching**
+No.
 
 ---
 
@@ -102,12 +143,14 @@ No — live JIRA reads. Results are persisted only when the admin saves the team
 ```json
 { "success": true, "boardId": 2888, "boardName": "NDB Scrum", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 }, "inferredFrom": { "sprintCount": 40, "namedS1": true }, "sprintCount": 40 }
 ```
-If the board cannot be read, the response is still 200 with `sprintCalendar: null` and `calendarError`.
+If the board cannot be read, or its sprints have no start dates, the response is still 200 with `sprintCalendar: null` and `calendarError`. The Team form then asks for an S1 start date and sprint length.
+
+> ⚠️ Breaking change in 2026-10-05: a board with no dated sprints returns 200 and `calendarError` instead of 400, so Detect still returns the project, versions, and components.
 
 **Error responses**
 | HTTP code | When | Client should |
 |-----------|------|---------------|
-| 400 | Missing/invalid `boardId` or board has no dated sprints | Show the message |
+| 400 | Missing/invalid `boardId` | Show the message |
 | 401 / 403 | Token or super-admin check failed | Prompt for token / show Access Denied |
 
 **Caching**

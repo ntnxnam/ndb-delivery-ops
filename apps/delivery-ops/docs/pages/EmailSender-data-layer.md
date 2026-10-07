@@ -46,14 +46,28 @@ Headers: x-jira-token, x-username
 
 ---
 
-### 4. Send email
+### 4. Generate Fresh AI Summary (scratch pad)
+
+```
+POST /api/ai/exec-summary
+Headers: Authorization (JIRA Bearer), x-username
+Body: { item, breakdownData, release }
+```
+
+**Flow**: same as Project Status `ExecSummaryCell` → `naiService.generateExecSummary`.  
+**Client**: `AiSummaryDraft.js` — result stays in local state only (no `PUT`, not included in send payload).
+
+---
+
+### 5. Send email
 
 ```
 POST /api/email/send
 Headers: x-jira-token, x-username
-Body: { to, cc, subject, htmlBody, release, productId }
+Body: { additionalDetails, emailRecipients, emailSubject, jiraKey, jiraData, … }
 ```
 
+**HTML order**: Highlights and Lowlights → Risk context (Indicator / Assessment / Path to Green) → Gates vs dates bar table → JIRA ticket tables → breakdown.
 **Flow**: `server/routes/email/sendEmailHandler.js → sanitize.js (sanitize htmlBody) → emailService.send(options) → Nodemailer → mailrelay.dyn.nutanix.com:25`  
 **Returns**: `{ success: true, messageId }` or `{ success: false, error: string }`  
 **Side effect**: writes to email history log (see Email History data layer)  

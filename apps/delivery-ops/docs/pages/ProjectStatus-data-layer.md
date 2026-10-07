@@ -53,6 +53,10 @@ Headers: x-jira-token, x-username
 ```
 **Hook**: `useReleaseItems` (5-minute in-memory TTL). Choosing a version in the dropdown, or **Load** / **Refresh**, hits this endpoint. **Refresh** busts TTL. Does not call `/refresh-now`.
 
+**Item fields**: mapped in `releaseItemsDataService.processReleaseItems` from `RELEASE_ITEMS_CONFIG.FIELDS_LIST`. Includes `assigneeManager` (display name) and `assigneeManagerEmail`, both derived from `customfield_19262`.
+
+**Client-side filtering**: `ReleaseVersionFilterBar` + `applyFilters` narrow the loaded items in memory (no re-fetch). Filters: Risk, Status, Assignee, **Assignee Mgr**, Status-update staleness, plus a commit/long-term-funded Section toggle. `assigneeManager` also drives the manager CC on the release-versions email (`sendReleaseVersions.js`).
+
 ---
 
 ### 3. Fetch gate timeline (Gantt rulers)

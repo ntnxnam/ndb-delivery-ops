@@ -25,6 +25,7 @@ import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
 import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
 import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
+import ReleaseVersionFilterBar, { applyFilters } from './ReleaseVersionFilterBar';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -1172,6 +1173,51 @@ function SosSummaryPage() {
 
   const RAG_LABELS = { Red: 'Red', Yellow: 'Yellow', Green: 'Green', NotSet: 'Not Set' };
 
+  // Client-side filters (shared bar with the Release Versions page). Applied to
+  // what is rendered only — batch/email/enrich passes still act on the full set.
+  const [sosFilters, setSosFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
+  const handleSosFilterChange = useCallback((key, value) => {
+    setSosFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const allSosItems = useMemo(() => Object.values(byVersion).flat(), [byVersion]);
+
+  const hasSosFilters = useMemo(
+    () => Object.values(sosFilters).some((v) => v !== ''),
+    [sosFilters]
+  );
+
+  // byVersion narrowed by the active filters; versions with no surviving items
+  // are dropped so we don't render empty sections.
+  const filteredByVersion = useMemo(() => {
+    if (!hasSosFilters) return byVersion;
+    const out = {};
+    Object.entries(byVersion).forEach(([version, items]) => {
+      const kept = applyFilters(items || [], sosFilters);
+      if (kept.length > 0) out[version] = kept;
+    });
+    return out;
+  }, [byVersion, sosFilters, hasSosFilters]);
+
+  const filteredSortedVersions = useMemo(() => {
+    return Object.keys(filteredByVersion).sort((a, b) => {
+      if (a === 'Unversioned') return 1;
+      if (b === 'Unversioned') return -1;
+      return b.localeCompare(a, undefined, { numeric: true });
+    });
+  }, [filteredByVersion]);
+
+  const filteredSosCount = useMemo(
+    () => Object.values(filteredByVersion).reduce((n, arr) => n + arr.length, 0),
+    [filteredByVersion]
+  );
+
+  // Combine Assignee-Mgr filter with release/RAG/component visibility from SoS chrome.
+  const displayVersions = useMemo(() => {
+    const base = hasSosFilters ? filteredSortedVersions : visibleVersions;
+    return base.filter((v) => visibleVersions.includes(v));
+  }, [hasSosFilters, filteredSortedVersions, visibleVersions]);
+
   return (
     <div>
         {/* ── Filter bar ─────────────────────────────────────────── */}
@@ -1384,11 +1430,28 @@ function SosSummaryPage() {
           onRegenerateOne={regenerateOne}
         />
 
-        {visibleVersions.map((version) => (
+        {!loading && !error && allSosItems.length > 0 && (
+          <ReleaseVersionFilterBar
+            items={{ commit: allSosItems, longTermFunded: [] }}
+            activeFilters={sosFilters}
+            onFilterChange={handleSosFilterChange}
+            activeSection=""
+            onSectionChange={() => {}}
+            showSection={false}
+            totalCount={allSosItems.length}
+            filteredCount={filteredSosCount}
+          />
+        )}
+
+        {!loading && !error && hasSosFilters && displayVersions.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px' }}>No items match the current filters.</p>
+        )}
+
+        {displayVersions.map((version) => (
           <ReleaseSection
             key={version}
             version={version}
-            items={filterItemsByComponent(byVersion[version] || [])}
+            items={filterItemsByComponent(filteredByVersion[version] || [])}
             breakdownDataMap={breakdownDataMap}
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}

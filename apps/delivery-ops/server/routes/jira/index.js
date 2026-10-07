@@ -6,6 +6,7 @@ router.use('/', require('./shared'));
 router.use('/', require('./kpi'));
 router.use('/', require('./changelog'));
 router.use('/', require('./sprints'));
+router.use('/', require('./sprint-performance'));
 router.use('/', require('./versions'));
 router.use('/', require('./setup'));
 router.use('/', require('./exec-summary'));

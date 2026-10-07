@@ -160,6 +160,24 @@
         ],
         "CSI": []
       }
+    },
+    {
+      "id": "cerebro-dr",
+      "name": "Cerebro / DR",
+      "baseFilter": "filter=DR-All",
+      "projectKey": "ENG",
+      "boardId": 2477,
+      "sprintCalendar": {
+        "s1StartIso": "2021-11-04",
+        "sprintDays": 14
+      },
+      "featureComponents": {
+        "Xi-DR": [],
+        "DR": [],
+        "DR-Backup": [],
+        "Cerebro": []
+      },
+      "defaultReleaseVersion": "AOS 5.11"
     }
   ],
   "defaultTeamId": "ndb"

@@ -77,6 +77,8 @@ customfield_11260   PM Owner
 customfield_23073   Status Update
 customfield_38460   Executive Status Update (ADF — use extractTextFieldValue)
 customfield_23560   Risk Indicator
+customfield_47780   Risk Assessment
+customfield_55664   Path to Green
 ```
 
 ### Links (Feature/Initiative level)
@@ -85,6 +87,8 @@ customfield_14463   Link to Requirements
 customfield_31460   TCMS Link
 customfield_14464   Link to Design Doc
 customfield_14465   Link to Test Plan
+customfield_55662   Link to CG checklist
+customfield_55663   Link to PG checklist
 ```
 
 ### Sprint (NDB board uses non-standard field)

@@ -45,6 +45,7 @@ export const TAB_PERMISSIONS = {
   '/generic-emailer': [PERMISSIONS.EMAIL_SEND_GENERIC],
   '/email-history': [PERMISSIONS.EMAIL_HISTORY_VIEW],
   '/sprint-report': [PERMISSIONS.SPRINT_REPORTS_VIEW],
+  '/sprint-performance': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/kpis': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS]
 };

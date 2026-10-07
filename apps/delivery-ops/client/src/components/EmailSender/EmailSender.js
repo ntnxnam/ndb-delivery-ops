@@ -5,6 +5,9 @@ import { authenticatedPost } from '../../utils/api';
 import { useJiraConfig } from '../../utils/jiraConfig';
 import { HIGHLIGHTS_LOWLIGHTS_TEMPLATE, HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } from '../../config/emailSenderFeatures';
 import OutlookFallback from '../shared/OutlookFallback';
+import AiSummaryDraft from './AiSummaryDraft';
+import RiskAndPathBoxes from './RiskAndPathBoxes';
+import GateDatesBarChart from './GateDatesBarChart';
 import './EmailSender.css';
 
 // Strip HTML to plain text for validation
@@ -28,6 +31,27 @@ function validateHighlightsLowlightsSections(html) {
 }
 
 const WEEKLY_UPDATE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Checklist links only — Risk Assessment / Path to Green render below Highlights. */
+const EXTRA_FETCH_FIELDS = [
+  ['customfield_55662', 'Link to CG checklist'],
+  ['customfield_55663', 'Link to PG checklist'],
+];
+
+function renderFetchedFieldValue(value) {
+  if (!value) return 'Not Set';
+  if (typeof value === 'object' && value.type) {
+    if (value.type === 'link' && value.url) {
+      return (
+        <a href={value.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0065ff', textDecoration: 'none' }}>
+          {value.display || 'Link'}
+        </a>
+      );
+    }
+    return value.display || 'Not Set';
+  }
+  return typeof value === 'string' ? value : 'Not Set';
+}
 
 function formatWeeklyUpdateDate(date = new Date()) {
   const day = String(date.getDate()).padStart(2, '0');
@@ -809,25 +833,7 @@ function EmailSender({ onLogout: _onLogout }) {
                 </tr>
                 <tr>
                   <td style={{ padding: '10px', border: '1px solid #dee2e6', fontWeight: 600, width: '6%' }}>Labels</td>
-                  <td style={{ padding: '10px', border: '1px solid #dee2e6', width: '20%', colSpan: '2' }}>{jiraData.labels || 'N/A'}</td>
-                  {jiraData.customfield_23560?.name && (
-                    <>
-                      <td style={{ padding: '10px', border: '1px solid #dee2e6', fontWeight: 600, width: '10%' }}>
-                        {jiraData.customfield_23560.name}
-                      </td>
-                      <td style={{ 
-                        padding: '10px', 
-                        border: '1px solid #dee2e6', 
-                        width: '15%',
-                        backgroundColor: jiraData.customfield_23560.color || 'transparent',
-                        color: jiraData.customfield_23560.color ? '#ffffff' : 'inherit',
-                        fontWeight: 600,
-                        textAlign: 'center'
-                      }}>
-                        {jiraData.customfield_23560.value || 'N/A'}
-                      </td>
-                    </>
-                  )}
+                  <td style={{ padding: '10px', border: '1px solid #dee2e6', width: '94%' }} colSpan={7}>{jiraData.labels || 'N/A'}</td>
                 </tr>
               </tbody>
             </table>
@@ -960,6 +966,35 @@ function EmailSender({ onLogout: _onLogout }) {
               }
               return null;
             })()}
+
+            <GateDatesBarChart jiraData={jiraData} />
+
+            {EXTRA_FETCH_FIELDS.some(([id]) => jiraData[id]?.name) && (
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                <tbody>
+                  <tr>
+                    {EXTRA_FETCH_FIELDS.map(([id, fallback]) => (
+                      jiraData[id]?.name ? (
+                        <React.Fragment key={id}>
+                          <td style={{ padding: '8px', border: '1px solid #dee2e6', fontWeight: 600, width: '12.5%' }}>
+                            {jiraData[id].name || fallback}
+                          </td>
+                          <td style={{
+                            padding: '8px',
+                            border: '1px solid #dee2e6',
+                            width: '12.5%',
+                            backgroundColor: (jiraData[id]?.value?.type === 'notSet' || jiraData[id]?.value === 'Not Set') ? '#fff3cd' : 'transparent',
+                            fontWeight: (jiraData[id]?.value?.type === 'notSet' || jiraData[id]?.value === 'Not Set') ? 600 : 'normal'
+                          }}>
+                            {renderFetchedFieldValue(jiraData[id].value)}
+                          </td>
+                        </React.Fragment>
+                      ) : null
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            )}
 
             {/* Row for cf[14463], cf[14464], cf[14465], cf[31460] TCMS */}
             {jiraData.customfield_14463?.name || jiraData.customfield_31460?.name || jiraData.customfield_14464?.name || jiraData.customfield_14465?.name ? (
@@ -1999,7 +2034,7 @@ function EmailSender({ onLogout: _onLogout }) {
                   value={additionalDetails}
                   onChange={setAdditionalDetails}
                   modules={quillModules}
-                  placeholder="Highlights and lowlights, reason for risk (if yellow/red), path to green, support needed from leaders..."
+                  placeholder="Highlights, lowlights, and support needed from leaders…"
                   className="rich-text-editor"
                 />
               </div>
@@ -2037,6 +2072,13 @@ function EmailSender({ onLogout: _onLogout }) {
                 );
               })()}
             </div>
+
+            <AiSummaryDraft
+              jiraData={jiraData}
+              issueBreakdown={issueBreakdown}
+              release={jiraData.fixVersions && jiraData.fixVersions !== 'N/A' ? jiraData.fixVersions.split(',')[0].trim() : null}
+            />
+            <RiskAndPathBoxes jiraData={jiraData} />
 
             <div className="form-group">
               <label htmlFor="email-recipients">Additional Recipients</label>

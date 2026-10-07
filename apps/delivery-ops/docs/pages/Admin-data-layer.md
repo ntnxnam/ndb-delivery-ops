@@ -66,16 +66,18 @@ Client hooks: `useTeamAdmin` (list / save / test) and `useTeamDetect` (detect / 
 ```
 POST /api/admin/inspect-base-filter
 Headers: Authorization Bearer, X-Username
-Body: { baseFilter, name?, boardId?, featureProjectKey? }
+Body: { baseFilter, name?, boardId? }
 ```
 
 **Server flow**: `admin.js → teamInspectService.inspectBaseFilter` →
-- `GET /rest/api/2/search` (base filter, `fields=project`, 500 issues) → main project by count
+- `GET /rest/gadget/1.0/stats/generate?statType=project` (every project in the base filter; search pagination is the fallback) → main project by count
 - `getProjectVersions(project)` → total + unreleased names
 - `GET /rest/agile/1.0/board?projectKeyOrId=&type=scrum` → board pick → `collectSprintCalendarFromBoard`
-- `searchAll("(<baseFilter>) AND project = FEAT", "components,<primaryComponent CF>")` → `{ component: [primaryComponents] }`
+- `GET /rest/api/2/project/{projectKey}/components` → component names for the selected project
 
 **Returns**: `{ baseFilter, sprintScope, issueCount, projects, projectKey, versions, board, feature }`
+
+Changing the JIRA project dropdown, or typing a project key, calls `POST /api/admin/project-scope` with `{ projectKey, name }` and replaces versions, boards, and components. A typed key does not have to be one of the projects Detect listed.
 
 ### 4b. Team form — calendar for a manually chosen board
 
@@ -194,7 +196,7 @@ The sprint scope is never stored: `sprintScopeFromBaseFilter(baseFilter)` (serve
 | allowedUsers.json write fails | 500 | "Config save failed — manual edit required" |
 | Removing last admin | 400 | "Cannot remove the last admin user" |
 | Base filter invalid or matches no tickets | 400 | Team form shows the JIRA message |
-| Board / versions / FEAT lookup fails during Detect | 200 (inline `error` / `calendarError`) | That section shows the error; the rest still renders |
+| Board / versions / FEAT lookup fails during Detect | 200 (inline `error` / `calendarError`) | That section shows the error; a missing sprint calendar asks for S1 start date and sprint length |
 | Team code already exists | 409 | Team form shows "Team already exists" |
 | Cache clear while sync running | 409 | "Sync in progress — cannot clear cache now" |
 | teamBoardConfig.json write fails | 500 | "Team config save failed" |

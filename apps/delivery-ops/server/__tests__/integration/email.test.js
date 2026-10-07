@@ -36,7 +36,7 @@ const columnsConfigPath = path.join(__dirname, '../../config/releaseVersionsColu
 const columnsConfig = JSON.parse(fs.readFileSync(columnsConfigPath, 'utf8'));
 const defaultVersion = columnsConfig.defaultReleaseVersion;
 
-const REQUIRED_SECTIONS = 'Highlights Lowlights Reason for risk indicator Path to green Support needed from leaders';
+const REQUIRED_SECTIONS = 'Highlights Lowlights Support needed from leaders';
 
 describe('Email API Integration Tests', () => {
   const baseHeaders = {
@@ -132,7 +132,7 @@ describe('Email API Integration Tests', () => {
     test('IT-EMAIL-002: Should send general email when mock succeeds', async () => {
       const testData = {
         executiveSummary: 'Test summary',
-        additionalDetails: `<p>${REQUIRED_SECTIONS}</p><p>Highlights</p><p>Lowlights</p><p>Reason for risk indicator (if yellow or red)</p><p>Path to green</p><p>Support needed from leaders</p>`,
+        additionalDetails: `<p>${REQUIRED_SECTIONS}</p><p>Highlights</p><p>Lowlights</p><p>Support needed from leaders</p>`,
         emailRecipients: 'test@nutanix.com',
         jiraToken: 'test-token',
         username: 'test.user'

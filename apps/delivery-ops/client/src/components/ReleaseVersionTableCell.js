@@ -25,6 +25,28 @@ function isJiraStatusWithTick(statusStr, statusesWithTick) {
   return statusesWithTick.some(s => String(s).trim().toLowerCase() === normalized);
 }
 
+function plainFieldText(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    return String(value.value || value.url || value.name || '').trim();
+  }
+  return String(value).trim();
+}
+
+function renderLinkOrText(value) {
+  const text = plainFieldText(value);
+  if (!text || text === 'N/A' || text === 'NA' || text === 'Not Set') return renderNotSet();
+  if (/^https?:\/\//i.test(text)) {
+    return (
+      <a href={text} target="_blank" rel="noopener noreferrer" style={{ color: '#0065ff', textDecoration: 'none' }}>
+        Link
+      </a>
+    );
+  }
+  return text;
+}
+
 function StatusWithTick({ statusValue, statusesWithTick }) {
   if (!statusValue) return null;
   const showTick = isJiraStatusWithTick(statusValue, statusesWithTick);
@@ -787,6 +809,13 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     // Defensive: ensure it's a string, not an object
     const tpmOwner = item.customfield_27764;
     cellContent = (typeof tpmOwner === 'string' ? tpmOwner : (tpmOwner?.displayName || tpmOwner?.name || tpmOwner?.emailAddress || 'N/A'));
+  } else if (
+    columnKey === 'cgChecklistLink' ||
+    columnKey === 'pgChecklistLink' ||
+    columnKey === 'riskAssessment' ||
+    columnKey === 'pathToGreen'
+  ) {
+    cellContent = renderLinkOrText(col?.customField ? item[col.customField] : null);
   } else if (columnKey === 'teamMembers') {
     // Handle array of team members
     const teamMembers = item.customfield_51460;

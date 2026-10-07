@@ -114,6 +114,12 @@ export const Sidebar = () => {
       description: 'Sprint reporting and metrics'
     },
     {
+      path: '/sprint-performance',
+      label: 'Sprint Performance',
+      icon: '📈',
+      description: 'Leadership view: say/do by scrum team, leader and manager across the last six sprints'
+    },
+    {
       path: '/sos-summary',
       label: 'SoS Summary',
       icon: '📡',
