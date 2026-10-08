@@ -114,16 +114,40 @@ export const Sidebar = () => {
       description: 'Sprint reporting and metrics'
     },
     {
+      path: '/sprint-performance',
+      label: 'Sprint Performance',
+      icon: '📈',
+      description: 'Leadership view: say/do by scrum team, leader and manager across the last six sprints'
+    },
+    {
       path: '/sos-summary',
       label: 'SoS Summary',
       icon: '📡',
       description: 'Scrum of Scrums — live Feature/Initiative status across all active releases'
     },
     {
+      path: '/sos-leader-summary',
+      label: 'SoS by Leader (temp)',
+      icon: '👥',
+      description: 'TEMP — SoS regrouped by NDB eng leader for layout review'
+    },
+    {
       path: '/component-report',
       label: 'Component Report',
       icon: '📊',
       description: 'Component health, actionable metrics, deferral trends'
+    },
+    {
+      path: '/kpis',
+      label: 'KPIs',
+      icon: '📈',
+      description: 'KPI dashboard'
+    },
+    {
+      path: '/system-test-scale',
+      label: 'System-Test Scale',
+      icon: '🧪',
+      description: 'System-Test bug scale, regressions (cf[13260]), and release trends'
     },
     {
       path: '/chatbot',
@@ -140,10 +164,10 @@ export const Sidebar = () => {
       newTab: true
     },
     {
-      path: '/admin',
-      label: 'Admin',
+      path: '/team-management',
+      label: 'Team Management',
       icon: '🔧',
-      description: 'Administrative functions'
+      description: 'Add and edit teams'
     }
   ];
 

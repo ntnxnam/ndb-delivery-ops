@@ -13,18 +13,26 @@
 **Auth**: required
 
 **Request**
-- Query: `productId` (string, required)
+- Query: `productId` (string, optional — selected team id, e.g. `ncn`). Alias: `team`. Omitted uses `defaultTeamId`.
+- Query: `refresh` (boolean, optional — `true` bypasses the session cache for that project)
 
 **Server flow**  
-`component.js → jiraConnector.getComponents(projectKey)`  
-`projectKey` resolved via `productService.getJiraProjects(productId)`
+`component.js → getTeamById(productId).projectKey → componentReportService.fetchComponentsFromERA(token, projectKey)`  
+JIRA: `GET /rest/api/2/project/{projectKey}/components`
 
 **Response**
 ```json
-{ "success": true, "data": [{ "id": "10001", "name": "Storage" }, { "id": "10002", "name": "Networking" }] }
+{ "components": [{ "id": "10001", "name": "Storage" }], "count": 1, "projectKey": "NCN", "fetchedAt": "2026-09-30T00:00:00.000Z" }
 ```
 
-**Caching**: In-memory, 10 min.
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|----------------|
+| 400 | Unknown `productId` / team has no `projectKey` | Show the error; do not fall back to another product |
+| 401 | Missing JIRA token | Re-login |
+| 500 | JIRA component fetch failed | Show error; retry |
+
+**Caching**: Session, per `projectKey`, 1 hour. `refresh=true` drops that project's entry.
 
 ---
 

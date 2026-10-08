@@ -6,8 +6,10 @@
  */
 
 import {
+  classifyRiskIndicator,
   computeReleaseHealthVerdict,
   countSelfReportedRisk,
+  evaluateTeamRiskContext,
 } from './riskIndicator.js';
 import type { ReleaseHealthResult } from './riskIndicator.js';
 
@@ -37,6 +39,14 @@ export interface FeatureSignals {
   criticalRisks?: string[];
   nextGate?: unknown;
   statusUpdate?: { ageDays?: number | null } | null;
+  riskAssessment?: string | null;
+  pathToGreen?: string | null;
+  teamRisk?: {
+    pathToGreenMissing?: boolean;
+    assessmentMissing?: boolean;
+    verdictFloor?: string | null;
+    gaps?: string[];
+  } | null;
   compliance?: {
     security?: { filed?: boolean };
     legal?: { filed?: boolean };
@@ -53,6 +63,9 @@ export interface FeatureRecord {
   summary: string;
   status: string;
   jiraRisk: string;
+  riskAssessment: string | null;
+  pathToGreen: string | null;
+  pathToGreenMissing: boolean;
   phase: string;
   phaseRationale?: string;
   latestPassedMarker?: string | null;
@@ -80,6 +93,14 @@ export interface TicketLite {
   issueType?: string;
 }
 
+export interface SchedulePressure {
+  ecDate: string;
+  gaDate: string;
+  windowDays: number;
+  elapsedDays: number;
+  elapsedPct: number;
+}
+
 export interface ReleaseIntelligence {
   version: string;
   totalFeatures: number;
@@ -88,7 +109,12 @@ export interface ReleaseIntelligence {
   mustFixTickets: TicketLite[];
   phaseDist: Record<string, number>;
   selfReportedRisk: Record<'red' | 'yellow' | 'green' | 'notSet', number>;
-  dateMetrics: { daysFromCutoff?: number | null } | null;
+  dateMetrics: {
+    daysFromCutoff?: number | null;
+    ecDate?: string | null;
+    gaDate?: string | null;
+    schedulePressure?: SchedulePressure | null;
+  } | null;
   buckets: Record<FeatureBucket, FeatureRecord[]>;
   health: ReleaseHealthResult;
   generatedAt: string;
@@ -164,11 +190,21 @@ export function buildFeatureRecord(
   const assignee = f.assignee as { displayName?: string; name?: string } | undefined;
   const status = f.status as { name?: string } | undefined;
 
+  // Prefer signals (already evaluated); fall back to raw JIRA fields on the item.
+  const teamRisk = evaluateTeamRiskContext({
+    indicator: riskRaw ?? riskVal,
+    assessment: signals.riskAssessment ?? f.customfield_47780,
+    pathToGreen: signals.pathToGreen ?? f.customfield_55664,
+  });
+
   return {
     key: item.key,
     summary: String(f.summary || '').slice(0, 80),
     status: status?.name || 'Unknown',
     jiraRisk: riskVal,
+    riskAssessment: teamRisk.assessment || signals.riskAssessment || null,
+    pathToGreen: teamRisk.pathToGreen || signals.pathToGreen || null,
+    pathToGreenMissing: teamRisk.pathToGreenMissing,
     phase: signals.phase || 'Unknown',
     phaseRationale: signals.phaseRationale,
     latestPassedMarker: signals.latestPassedMarker,
@@ -192,7 +228,13 @@ export function assembleReleaseIntelligence(input: {
   featureRecords: FeatureRecord[];
   p0Bugs: TicketLite[];
   mustFixTickets: TicketLite[];
-  dateMetrics: { daysFromCutoff?: number | null } | null;
+  dateMetrics: {
+    daysFromCutoff?: number | null;
+    ecDate?: string | null;
+    gaDate?: string | null;
+    schedulePressure?: SchedulePressure | null;
+    [key: string]: unknown;
+  } | null;
   generatedAt?: string;
 }): ReleaseIntelligence {
   const buckets: Record<FeatureBucket, FeatureRecord[]> = {
@@ -215,6 +257,10 @@ export function assembleReleaseIntelligence(input: {
   }
 
   const selfReportedRisk = countSelfReportedRisk(input.featureRecords.map((rec) => rec.jiraRisk));
+  const pathToGreenGapCount = input.featureRecords.filter((rec) => {
+    const bucket = classifyRiskIndicator(rec.jiraRisk);
+    return (bucket === 'yellow' || bucket === 'red') && rec.pathToGreenMissing;
+  }).length;
   const health = computeReleaseHealthVerdict({
     openP0Blockers: input.p0Bugs.length,
     openMustFixTickets: input.mustFixTickets.length,
@@ -223,6 +269,7 @@ export function assembleReleaseIntelligence(input: {
     darkCount: buckets.dark?.length ?? 0,
     committedCount: input.featureRecords.length,
     complianceAtRiskCount: buckets.compliance?.length ?? 0,
+    pathToGreenGapCount,
   });
 
   return {
@@ -233,7 +280,14 @@ export function assembleReleaseIntelligence(input: {
     mustFixTickets: input.mustFixTickets,
     phaseDist,
     selfReportedRisk,
-    dateMetrics: input.dateMetrics,
+    dateMetrics: input.dateMetrics
+      ? {
+          daysFromCutoff: input.dateMetrics.daysFromCutoff ?? null,
+          ecDate: (input.dateMetrics.ecDate as string | null | undefined) ?? null,
+          gaDate: (input.dateMetrics.gaDate as string | null | undefined) ?? null,
+          schedulePressure: (input.dateMetrics.schedulePressure as SchedulePressure | null | undefined) ?? null,
+        }
+      : null,
     buckets,
     health,
     generatedAt: input.generatedAt || new Date().toISOString(),

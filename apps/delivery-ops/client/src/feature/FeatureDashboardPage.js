@@ -32,6 +32,35 @@ const PHASE_LABEL_MAP = [
   { key: 'unit-test',    label: 'Unit Test' },
 ];
 
+function renderHeaderValue(value) {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) {
+    return (
+      <a href={value} target="_blank" rel="noopener noreferrer">
+        Link
+      </a>
+    );
+  }
+  return value;
+}
+
+function FeatureHeaderExtras({ header }) {
+  const rows = [
+    ['CG checklist', header?.cgChecklistLink],
+    ['PG checklist', header?.pgChecklistLink],
+    ['Risk assessment', header?.riskAssessment],
+    ['Path to green', header?.pathToGreen],
+  ].filter(([, value]) => value);
+  if (rows.length === 0) return null;
+  return (
+    <div className="fd-meta">
+      {rows.map(([label, value]) => (
+        <span key={label}>{label}: {renderHeaderValue(value)}</span>
+      ))}
+    </div>
+  );
+}
+
 function isDone(issue) {
   return DONE_STATUSES.has((issue.status || '').toLowerCase());
 }
@@ -223,6 +252,7 @@ export default function FeatureDashboardPage() {
               <span>{dashboard.header.assignee || 'Unassigned'}</span>
               <span>Risk: {dashboard.header.riskIndicator?.value || 'N/A'}</span>
             </div>
+            <FeatureHeaderExtras header={dashboard.header} />
             <div className="fd-gates">
               <GateChip label="EC" planned={dashboard.gates.ec} />
               <GateChip

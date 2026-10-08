@@ -164,6 +164,10 @@ export const RELEASE_DATASET_FIELDS = [
   'customfield_31460', // TCMS Link            (jiraFieldsConfig: links.tcmsLink)
   'customfield_14464', // Link to Design Doc   (jiraFieldsConfig: links.designDocLink)
   'customfield_14465', // Link to Test Plan    (jiraFieldsConfig: links.testPlanLink)
+  'customfield_55662', // Link to CG checklist (jiraFieldsConfig: links.cgChecklistLink)
+  'customfield_55663', // Link to PG checklist (jiraFieldsConfig: links.pgChecklistLink)
+  'customfield_47780', // Risk Assessment      (jiraFieldsConfig: indicators.riskAssessment)
+  'customfield_55664', // Path to Green        (jiraFieldsConfig: indicators.pathToGreen)
 
   // ── Sprint (NDB board uses non-standard field ID) ──────────────────────────
   'customfield_10360', // Sprint (NDB board — teamBoardConfig: sprintFieldId)
@@ -347,6 +351,10 @@ export interface ProcessedTicket {
   'Executive Status Update': string;
   /** Risk Indicator (customfield_23560). One of: Green | Yellow | Red | ''. */
   'Risk Indicator': string;
+  /** Risk Assessment (customfield_47780). */
+  'Risk Assessment': string;
+  /** Path to Green (customfield_55664). */
+  'Path to Green': string;
 
   // ── Document links (Feature/Initiative level) ──────────────────────────────
   /** Link to Requirements (customfield_14463). */
@@ -357,6 +365,10 @@ export interface ProcessedTicket {
   'Design Doc Link': string;
   /** Link to Test Plan (customfield_14465). */
   'Test Plan Link': string;
+  /** Link to CG checklist (customfield_55662). */
+  'Link to CG checklist': string;
+  /** Link to PG checklist (customfield_55663). */
+  'Link to PG checklist': string;
 
   // ── Sprint (raw sprint name from the NDB board field) ─────────────────────
   /** Sprint name raw from customfield_10360 (NDB board). Used for display; Sprint Number is derived separately. */
@@ -385,6 +397,18 @@ export interface FetchReleaseResult {
  * JIRA returns ADF as a nested JSON object for rich-text fields like
  * customfield_38460 (Executive Status Update).
  */
+function extractPlainField(raw: unknown): string {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.value === 'string') return obj.value;
+    if (typeof obj.url === 'string') return obj.url;
+    if (obj.type === 'doc') return extractAdfText(raw);
+  }
+  return '';
+}
+
 function extractAdfText(raw: unknown): string {
   if (!raw || typeof raw !== 'object') return '';
   const parts: string[] = [];
@@ -547,12 +571,16 @@ export function ticketFromIssue(
     'Risk Indicator': typeof f.customfield_23560 === 'string'
       ? f.customfield_23560
       : (f.customfield_23560 as { value?: string } | null)?.value ?? '',
+    'Risk Assessment': extractPlainField(f.customfield_47780),
+    'Path to Green': extractPlainField(f.customfield_55664),
 
     // Document links — these come back as plain string URLs.
     'Requirements Link': typeof f.customfield_14463 === 'string' ? f.customfield_14463 : '',
     'TCMS Link': typeof f.customfield_31460 === 'string' ? f.customfield_31460 : '',
     'Design Doc Link': typeof f.customfield_14464 === 'string' ? f.customfield_14464 : '',
     'Test Plan Link': typeof f.customfield_14465 === 'string' ? f.customfield_14465 : '',
+    'Link to CG checklist': extractPlainField(f.customfield_55662),
+    'Link to PG checklist': extractPlainField(f.customfield_55663),
 
     // Sprint name from the raw NDB board sprint field.
     'Sprint Name': extractSprintName(f.customfield_10360),
@@ -1337,11 +1365,15 @@ export const PROCESSED_DATASET_COLUMNS = [
   'Status Update',
   'Executive Status Update',
   'Risk Indicator',
+  'Risk Assessment',
+  'Path to Green',
   // Document links
   'Requirements Link',
   'TCMS Link',
   'Design Doc Link',
   'Test Plan Link',
+  'Link to CG checklist',
+  'Link to PG checklist',
   // Sprint raw name
   'Sprint Name',
 ] as const;

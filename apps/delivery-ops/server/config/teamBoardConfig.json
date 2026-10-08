@@ -11,10 +11,8 @@
       "name": "NDB",
       "boardId": 2888,
       "projectKey": "ERA",
-      "projectType": "dedicated",
       "featureProjectKey": "FEAT",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
-      "sprintBaseFilter": "filter=NDB-All-Base-Filter",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb",
       "releasePrefix": "NDB-",
@@ -53,20 +51,133 @@
         "s1StartIso": "2024-10-23",
         "sprintDays": 21
       },
-      "defaultReleaseVersion": "NDB-2.12"
+      "defaultReleaseVersion": "NDB-2.12",
+      "featureComponents": {
+        "NDB": [
+          "DB Migration",
+          "DB specialists & DB LCM",
+          "Functional",
+          "NDB-API-Infra",
+          "NDB-Backup-Restore",
+          "NDB-CP-Availability",
+          "NDB-CP-Deployment-Upgrade",
+          "NDB-CP-on-Containers",
+          "NDB-DB-HA-DR",
+          "NDB-DB-LCM-MSSQL",
+          "NDB-DB-LCM-MongoDB",
+          "NDB-DB-LCM-MySQL",
+          "NDB-DB-LCM-Oracle",
+          "NDB-DB-LCM-Postgres",
+          "NDB-DB-in-Containers",
+          "NDB-IAM",
+          "NDB-InfraProv",
+          "NDB-Monitoring",
+          "NDB-Nutanix-Integration",
+          "NDB-Security",
+          "NDB-Tenant-Management",
+          "NDB-UI",
+          "Platform"
+        ],
+        "Era": [
+          "Era-MSSQL",
+          "Era-Platform"
+        ]
+      }
     },
     {
       "id": "prism-infra",
       "name": "prism-infra",
       "projectKey": "ENG",
-      "projectType": "parent",
       "baseFilter": "filter=prisminfra-all-base-filter",
-      "sprintBaseFilter": "filter=prisminfra-all-base-filter",
-      "versionPatterns": [
-        "MSP*",
-        "msp*"
-      ],
-      "defaultReleaseVersion": "NCC-6.0.1"
+      "defaultReleaseVersion": "AOS 5.11",
+      "featureComponents": {
+        "Infrastructure": [
+          "Infra-2node",
+          "Infra-API-Utils-RPC",
+          "Infra-Breakfix-HostBootDisk",
+          "Infra-ClusterMgmt-Expand",
+          "Infra-ClusterMgmt-RemoveNode",
+          "Infra-Core-Bootstrap",
+          "Infra-Core-RscMgmt",
+          "Infra-Core-SvcMgmt",
+          "Infra-HyperV",
+          "Infra-NW-NetworkSegmentation",
+          "Infra-PlannedOutageManager",
+          "Infra-RDMA",
+          "Infra-Tools-Other",
+          "Infra-Tools-Syslog",
+          "Infra-Upgrades-AOS",
+          "Infra-Upgrades-ESXi",
+          "Infra-Upgrades-Other",
+          "Infra-hypervisor",
+          "Infra-lcm",
+          "Infrastructure - Setup"
+        ],
+        "MSP": [
+          "MSP-AWS",
+          "MSP-Buckets",
+          "MSP-PC",
+          "MSP-SMSP",
+          "MSP-Upgrades",
+          "MSP-core"
+        ],
+        "LCM": [
+          "LCM-Framework",
+          "LCM-Interface",
+          "LCM-Prechecks",
+          "LCM-UX/UI Design"
+        ]
+      },
+      "boardId": 3132,
+      "sprintCalendar": {
+        "s1StartIso": "2023-09-05",
+        "sprintDays": 14
+      }
+    },
+    {
+      "id": "ncn",
+      "name": "Nutanix Cloud Native",
+      "projectKey": "NCN",
+      "sprintCalendar": {
+        "s1StartIso": "2020-02-20",
+        "sprintDays": 14
+      },
+      "boardId": 4741,
+      "baseFilter": "filter=NCN-All-Base-Filter and statusCategory!=Done",
+      "featureComponents": {
+        "NKP": [
+          "NKP - Documentation",
+          "NKP - Konvoy",
+          "NKP - UI"
+        ],
+        "NDK": [
+          "NDK-App Management Services",
+          "NDK-Async-DR",
+          "NDK-Blocks-Async",
+          "NDK-Blocks-Sync",
+          "NDK-Dev",
+          "NDK-QA"
+        ],
+        "CSI": []
+      }
+    },
+    {
+      "id": "cerebro-dr",
+      "name": "Cerebro / DR",
+      "baseFilter": "filter=DR-All",
+      "projectKey": "ENG",
+      "boardId": 2477,
+      "sprintCalendar": {
+        "s1StartIso": "2021-11-04",
+        "sprintDays": 14
+      },
+      "featureComponents": {
+        "Xi-DR": [],
+        "DR": [],
+        "DR-Backup": [],
+        "Cerebro": []
+      },
+      "defaultReleaseVersion": "AOS 5.11"
     }
   ],
   "defaultTeamId": "ndb"

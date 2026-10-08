@@ -64,6 +64,13 @@ is HITL-queued and never executed while D26 is open.
 
 Domain derives (signals, briefing buckets, sprint rates, bundle-first page math) live in `shared/` (D41). Pages and routes fetch and render.
 
+## Context + prompts (`agent-pack/context/`, `agent-pack/prompts/`)
+
+Host-agnostic domain briefs and canonical LLM system prompts. Start at
+`agent-pack/context/INDEX.md` and `agent-pack/prompts/INDEX.md`. Loaded by
+`loadAgentPack()` as `pack.context` / `pack.prompts`. Cursor stubs under
+`.cursor/context/` point here — do not fork long-form context only for Cursor.
+
 ## Skills (`agent-pack/skills/`)
 
 Reusable capabilities the agent reads on demand. Each one is task-specific

@@ -197,11 +197,44 @@ function processAllMilestones(versionConfig) {
 
     // Calculate days to Promotion Gate (PG)
     let daysToPG = null;
+    let currentPGRawDate = null;
     if (promotionGate.milestones.length > 0) {
       // Find the current (non-strikethrough) PG date
       const currentPGMilestone = promotionGate.milestones.find(m => m.isCurrent && !m.isStrikeThrough);
       if (currentPGMilestone) {
         daysToPG = calculateDaysToMilestone(currentPGMilestone.date);
+        currentPGRawDate = currentPGMilestone.date;
+      }
+    }
+
+    // GA date — pick the most recent current (non-strikethrough) GA milestone
+    let gaRawDate = null;
+    if (ga.milestones.length > 0) {
+      const currentGA = ga.milestones.find(m => m.isCurrent && !m.isStrikeThrough)
+        || ga.milestones[ga.milestones.length - 1]; // fallback: last GA milestone
+      if (currentGA) gaRawDate = currentGA.date;
+    }
+
+    // EC date — stored directly on the config object (not a gate array)
+    const ecRawDate = versionConfig.ecDate || null;
+
+    // Schedule pressure index (SPI):
+    //   elapsed%  = (today - EC) / (GA - EC) × 100
+    //   Used by the LLM prompt to flag when outstanding work % > elapsed %
+    let schedulePressure = null;
+    if (ecRawDate && gaRawDate) {
+      try {
+        const today = new Date();
+        const ecMs = new Date(ecRawDate).getTime();
+        const gaMs = new Date(gaRawDate).getTime();
+        const windowDays = Math.ceil((gaMs - ecMs) / 86400000);
+        const elapsedDays = Math.ceil((today.getTime() - ecMs) / 86400000);
+        if (windowDays > 0) {
+          const elapsedPct = Math.round((elapsedDays / windowDays) * 100);
+          schedulePressure = { ecDate: ecRawDate, gaDate: gaRawDate, windowDays, elapsedDays, elapsedPct };
+        }
+      } catch (e) {
+        // non-fatal — SPI block stays null
       }
     }
 
@@ -210,6 +243,9 @@ function processAllMilestones(versionConfig) {
       currentCCDate: ccm.currentDate || 'TBD',
       currentCGDate: commitGate.currentDate || 'TBD',
       currentPGDate: promotionGate.currentDate || 'TBD',
+      ecDate: ecRawDate,
+      gaDate: gaRawDate,
+      schedulePressure,
       milestones: {
         codeComplete: ccm.milestones,
         commitGate: commitGate.milestones,
@@ -229,6 +265,9 @@ function processAllMilestones(versionConfig) {
       currentCCDate: 'TBD',
       currentCGDate: 'TBD', 
       currentPGDate: 'TBD',
+      ecDate: null,
+      gaDate: null,
+      schedulePressure: null,
       milestones: {
         codeComplete: [],
         commitGate: [],

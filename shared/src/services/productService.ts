@@ -13,8 +13,6 @@
  *   - Return custom-field IDs (with per-product overrides on top of globals)
  *   - Return audience overrides (per-product Team Executive name, etc.)
  *   - Resolve JQL filter prefixes
- *   - Resolve a release-name → product mapping (for parent-projects with
- *     version patterns)
  */
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -28,7 +26,7 @@ import type {
   AudienceOverrides,
 } from '../types/product.js';
 import type { AudienceId } from '../types/audience.js';
-import { compileVersionPattern } from '../utils/versionPattern.js';
+import { sprintScopeFromBaseFilter } from '../utils/teamScope.js';
 
 /**
  * Nutanix-wide defaults for JIRA custom fields. These come from the legacy
@@ -57,7 +55,6 @@ const DEFAULT_GLOBAL: JiraGlobalConfig = {
 export class ProductService {
   private registry: ProductRegistry;
   private byId: Map<string, ProductConfig>;
-  private versionPatterns: Map<string, { productId: string; regex: RegExp }[]>;
 
   /**
    * @param configPath Path to `teamBoardConfig.json`. Defaults to the
@@ -75,7 +72,6 @@ export class ProductService {
     const parsed = JSON.parse(raw) as ProductRegistry;
     this.registry = this.normalise(parsed);
     this.byId = new Map(this.registry.teams.map((p) => [p.id, p]));
-    this.versionPatterns = this.buildVersionPatternIndex();
   }
 
   /**
@@ -116,10 +112,8 @@ export class ProductService {
   }
 
   /**
-   * Returns the JIRA project key(s) a product's tickets live in. For
-   * `dedicated` products that's a single key; for `parent` products the
-   * caller may also need versionPatterns to narrow further (use
-   * `buildJqlForProduct`).
+   * Returns the JIRA project key(s) a product's tickets live in — the main
+   * project detected from the base filter.
    */
   getJiraProjects(productId: string): string[] {
     const p = this.getProduct(productId);
@@ -151,21 +145,12 @@ export class ProductService {
   }
 
   /**
-   * Returns the JQL fragment for "tickets belonging to this product".
-   * For dedicated: `project = ERA`. For parent: `project = ENG AND
-   * fixVersion ~ "DataLens"` (parent products are version-scoped).
+   * Returns the JQL fragment for "tickets belonging to this product":
+   * `project = <main project>` plus any extra clauses.
    */
   buildJqlForProduct(productId: string, extraClauses: string[] = []): string {
     const p = this.getProduct(productId);
-    const clauses: string[] = [`project = ${p.projectKey}`];
-    if (p.versionPatterns?.length) {
-      const versionClauses = p.versionPatterns
-        .map((pat) => `fixVersion ~ "${escapeJqlString(pat)}"`)
-        .join(' OR ');
-      clauses.push(`(${versionClauses})`);
-    }
-    clauses.push(...extraClauses);
-    return clauses.join(' AND ');
+    return [`project = ${p.projectKey}`, ...extraClauses].join(' AND ');
   }
 
   /**
@@ -176,8 +161,14 @@ export class ProductService {
     return this.getProduct(productId).baseFilter;
   }
 
+  /** Base filter without its trailing `statusCategory != Done` clause. */
   getSprintBaseFilter(productId: string): string {
-    return this.getProduct(productId).sprintBaseFilter;
+    return sprintScopeFromBaseFilter(this.getProduct(productId).baseFilter);
+  }
+
+  /** Feature-project components → Primary Component children. */
+  getFeatureComponents(productId: string): Record<string, string[]> {
+    return this.getProduct(productId).featureComponents ?? {};
   }
 
   /**
@@ -287,23 +278,6 @@ export class ProductService {
     return p.sprintCalendar;
   }
 
-  /**
-   * Given a JIRA fixVersion name (e.g. "NDB-2.11", "DataLens-X"), resolve
-   * the owning product id. Useful when the caller only has a release
-   * name but needs the product context.
-   *
-   * For dedicated products, the version name doesn't necessarily contain
-   * the project key, so we fall back to scanning version patterns.
-   */
-  resolveProductForVersion(versionName: string): string | null {
-    for (const [productId, patterns] of this.versionPatterns) {
-      for (const { regex } of patterns) {
-        if (regex.test(versionName)) return productId;
-      }
-    }
-    return null;
-  }
-
   // ── internals ─────────────────────────────────────────────────────────────
 
   private normalise(parsed: ProductRegistry): ProductRegistry {
@@ -317,25 +291,6 @@ export class ProductService {
     }
     return parsed;
   }
-
-  private buildVersionPatternIndex(): Map<string, { productId: string; regex: RegExp }[]> {
-    const index = new Map<string, { productId: string; regex: RegExp }[]>();
-    for (const p of this.registry.teams) {
-      if (!p.versionPatterns?.length) continue;
-      const entries: { productId: string; regex: RegExp }[] = [];
-      for (const pat of p.versionPatterns) {
-        const regex = compileVersionPattern(pat);
-        if (regex) entries.push({ productId: p.id, regex });
-      }
-      if (entries.length) index.set(p.id, entries);
-    }
-    return index;
-  }
-}
-
-function escapeJqlString(s: string): string {
-  // JIRA fixVersion ~ "X" tokens: escape backslashes and double-quotes.
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function defaultConfigPath(): string {
@@ -375,7 +330,7 @@ function defaultConfigPath(): string {
 
 /**
  * Process-global singleton. Reloads when teamBoardConfig.json changes
- * (admin-created teams / versionPatterns) so pages pick up the new team
+ * (admin-created or edited teams) so pages pick up the new team
  * without a process restart.
  */
 let _singleton: ProductService | null = null;

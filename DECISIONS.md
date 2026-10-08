@@ -143,7 +143,7 @@ boundaries until a non-NDB organisation actually signs up.
 - Default-landing is a user-preference value (per-role default, overridable).
 - The role lens dropdown is a header-level component on every audience-sensitive page.
 - Mutating actions (cascade rename, bulk date move) are gated by separate
-  **action-level authorization**, NOT tab visibility — see open D26.
+  **action-level authorization**, NOT tab visibility — see D26.
 
 **What this is NOT.**
 - It is NOT role-based nav filtering for specialist roles. Everyone sees
@@ -462,9 +462,9 @@ from the other places to surface untracked dependencies.
 
 **Implications.**
 - 4 distinct triage skills under `.cursor/skills/`: `bug-triage`, `crisis-triage`, `stale-ticket-sweep`, `pending-response-chase`
-- New service: `pendingResponseService` — tracks asks (from JIRA comments / labels / custom fields) without a corresponding reply, ages them, surfaces stuck ones
+- New service: `pendingResponseService` — tracks ask comments without a reply comment, ages them, surfaces stuck ones
 - This is the agent's job par excellence: scan the corpus daily, surface what's stuck, prompt the Portfolio Manager to chase. Saves time on the "all of the above" repetitive load (D8).
-- **Open**: exact mechanism for "did someone respond?" — JIRA comment threads? Label changes? Status changes? Need to confirm before building the skill. (Captured as **D24**.)
+- Detection mechanism is locked in **D24**: unreplied JIRA comment threads only.
 
 ### D20 — TPM Confluence pages incl. data-driven Release Gates Checklist
 
@@ -492,8 +492,8 @@ from the other places to surface untracked dependencies.
 TPM is now defined enough to build. Locked decisions covering TPM:
 D3 (Confluence connector), D16 (agent design, incl. `tpm-specialist`),
 D17 (weekly status email), D18 (cross-team deps), D19 (4 triage flavours),
-D20 (Confluence pages). Open detail D24 (pending-response mechanism)
-gets resolved when we actually build the `pending-response-chase` skill.
+D20 (Confluence pages). Pending-response detection is locked in D24
+(unreplied JIRA comment threads).
 
 ---
 
@@ -872,13 +872,14 @@ Stuffing the snapshot into a system prompt and calling
 - Exec-summary and release-briefing stay one-shot `chatCompletion`
   (transcript + computed health). Do not add chat SOPs to `naiService`
 - Wave 1 tools are `toolClass === 'read'` only. Wave 4 (D42) runs
-  `draft` and pauses `mutate` in HITL; D26 still blocks execute
+  `draft` and pauses `mutate` in HITL; D26 names who may execute after
+  approval. The runtime still records `blocked_d26` until that gate is coded.
 - Response keeps `reply` / `scope` / `snapshotMeta` and adds `trace`
   + `runtime: "agent"`
 - `nlpQueryService` (D4) remains unbuilt; the tool loop is the planner
 
-**What this is NOT.** Opening write-back to JIRA from chat. That stays
-blocked until D26 (HITL inbox is D42).
+**What this is NOT.** The execution gate itself. Who may approve a
+mutate is D26. The inbox is D42.
 
 ---
 
@@ -936,9 +937,9 @@ to JIRA (D26).
 
 **Statement.** Web chat persists session/user/org memory (pack schema),
 writes an append-only provenance row per turn, and pauses `mutate`
-tools in a HITL inbox. **D26 stays open:** Approve does **not** execute
-a JIRA write (`blocked_d26`). `propose_jira_write` exists so the door
-can be seen; it never calls `execute()`.
+tools in a HITL inbox. Who may execute after approval is **D26**
+(locked 2026-10-05). Until the role gate is coded, Approve still
+records `blocked_d26` and does not call `execute()`.
 
 **Implications.**
 - Memory is JSON files under `AGENT_RUNTIME_DIR` (default
@@ -947,11 +948,10 @@ can be seen; it never calls `execute()`.
   mode}` — citations stay in the reply; unknown keys are recorded, not
   silently rewritten
 - `remember_correction` is `draft` (auto persist preference)
-- Candidate D26 (not locked): mutate always RM/TPM by action; Team Exec
-  is read + draft only. Do not implement that matrix until D26 closes
+- Execute only when the caller matches the D26 matrix
 
-**What this is NOT.** Write-back to JIRA from chat. Settling D26.
-Model routing (router vs reasoner). Unattended workflow engine.
+**What this is NOT.** The role gate implementation. Settling the matrix
+is D26. Model routing (router vs reasoner). Unattended workflow engine.
 
 ---
 
@@ -976,12 +976,58 @@ old DataLens/NCM blocks unless those teams are onboarded again through Admin.
 
 ---
 
+### D24 — Pending-response detection is unreplied JIRA comments
+
+**Statement.** A dependency or deferral ask is stuck when a JIRA comment
+that requests a response has no reply comment. Labels, workflow status,
+custom fields, Confluence tasks, and Slack are not detection signals.
+Locked 2026-10-05.
+
+**Implications.**
+- `pendingResponseService` and `pending-response-chase` scan JIRA comment
+  threads only
+- Default stale threshold stays 5 days with no reply
+- The chase is a JIRA comment on the same ticket (chase channel matches
+  the ask channel)
+- Confidence is high when the unreplied comment is found; there is no
+  second "inferred" signal
+
+**What this is NOT.** A `needs-response` label, a Pending Response status,
+a Response Due Date field, Confluence checklists, or Slack acks.
+
+---
+
+### D26 — Action-level authorization
+
+**Statement.** Tab visibility is not the security boundary (D6). After
+HITL approval, a mutate executes only for a role that owns that action.
+Portfolio Manager may approve every mutate. Team Executive and Director
+are read + draft only. Locked 2026-10-05.
+
+| Action | Who may execute |
+|---|---|
+| Cascade rename, gate-date move | RM, Portfolio Manager |
+| Bulk triage, pending-response chase comment | TPM, Portfolio Manager |
+| Admin config | Admin, Portfolio Manager |
+| Any other mutate | Portfolio Manager |
+
+Team Executive and Director never execute a mutate.
+
+**Implications.**
+- Chat may propose a write for any signed-in user
+- Approve calls `execute()` only when the approver's role is in the row
+- The runtime still records `blocked_d26` until this table is coded
+
+**What this is NOT.** Hiding tabs by role. A blanket "any approver can
+write." Lifting the code block in this decision — that is a follow-on
+change.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
 |---|---|---|
-| D24 | "Pending-response" detection mechanism — JIRA comments? Labels? Custom fields? | Build-time question for `pending-response-chase` skill |
-| D26 | **Action-level authorization** — which actions require which roles? (e.g. cascade rename = RM only? bulk triage = TPM+? admin actions = admin only?) | HITL inbox exists (D42). Do not execute mutate from chat until this closes. |
 | D27 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
 | D28 | First gap to build (post-Phase-A) | Phase H planning |
 | D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |

@@ -16,13 +16,13 @@ jest.mock('../../utils/teamConfig', () => ({
     storyPointsFieldId: 'customfield_10002',
     pendingQAStatusName: 'Resolved',
     completedStatusName: 'Closed',
-    teams: [{ id: 'ndb', name: 'NDB', boardId: 2888, sprintBaseFilter: 'filter=NDB-All-Base-Filter' }]
+    teams: [{ id: 'ndb', name: 'NDB', boardId: 2888, baseFilter: 'filter=NDB-All-Base-Filter and statusCategory!=Done' }]
   })),
   getTeamById: jest.fn(() => ({
     id: 'ndb',
     name: 'NDB',
     boardId: 2888,
-    sprintBaseFilter: 'filter=NDB-All-Base-Filter'
+    baseFilter: 'filter=NDB-All-Base-Filter and statusCategory!=Done'
   }))
 }));
 jest.mock('../../utils/changelogPagination', () => ({

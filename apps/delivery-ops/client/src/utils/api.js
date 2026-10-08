@@ -91,6 +91,10 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
   else if (url.includes('/release-items-commit') || url.includes('/release-items-long-term')) timeout = 180000; // 3 min each
   else if (url.includes('/sprint-report') || url.includes('/sprint-report-trends')) timeout = 300000; // 5 min (matches server)
   else if (url.includes('/api/jira/sprints')) timeout = 90000; // 90s for sprints list (paginated Jira Agile API; cold cache + many sprints)
+  else if (url.includes('/inspect-base-filter') || url.includes('/project-scope') || url.includes('/board-calendar')) timeout = 120000;
+  // NAI reasoning models often exceed 30–60s; keep client above AI_REQUEST_TIMEOUT (120s).
+  else if (url.includes('/api/ai/')) timeout = 180000;
+  else if (url.includes('/system-test-scale')) timeout = 180000;
   
   const config = {
     ...authHeaders,
@@ -153,13 +157,15 @@ export const authenticatedPut = async (url, data = {}, options = {}) => {
 export const authenticatedGet = async (url, params = {}, options = {}, axiosConfig = {}) => {
   const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
+  let timeout = 30000;
+  if (url.includes('/system-test-scale')) timeout = 180000;
 
   return withRequestGate(
     requestKey('GET', url, null, params),
     () => axios.get(url, {
       ...authHeaders,
       params,
-      timeout: 30000,
+      timeout,
       ...axiosConfig,
       requestGate: { managed: true, ignoreFailureCooldown },
     }),

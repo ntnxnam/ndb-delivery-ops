@@ -91,6 +91,8 @@ Three JIRA queries run in parallel:
 
 **Fields per issue**: `key, summary, status, priority, issuetype, fixVersions, assignee, labels, duedate, customfield_11067, customfield_35863, customfield_35864, customfield_10360, components, resolutiondate`
 
+> ⚠️ Breaking change in 2026-10-07: `data.header` also includes `riskAssessment`, `pathToGreen`, `cgChecklistLink`, and `pgChecklistLink`.
+
 **Response**
 ```json
 {

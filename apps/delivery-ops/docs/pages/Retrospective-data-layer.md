@@ -1,9 +1,11 @@
 # Retrospective — Data Layer & Middleware Contract
 
 **Route**: `/release/retrospective`  
-**Server routes used**: `server/routes/releaseDataset.js` (retrospective sub-routes)  
-**Hooks**: `useRetrospective` (`release/hooks/useRetrospective.js`)  
-**Services**: `release/services/retrospectiveService.js`  
+**Server routes used**: `server/routes/releaseDataset.js` (retrospective sub-routes), `server/routes/jira/kpi.js` (`release-kpi-breakdown-batch`)  
+**Hooks**: `useRetrospective` (`release/hooks/useRetrospective.js`), `useRetroComparison` (`release/hooks/useRetroComparison.js`)  
+**Services**: `release/services/retrospectiveService.js`, `release/services/retroComparisonService.js`  
+**Components**: `ProjectGateHealthTable`, `ReleaseComparisonTable`, `ComparisonTrendChart`  
+**Utils**: `release/utils/releaseCompareSet.js` (release-set picker)  
 **Bundle utility**: `release/utils/bundleUtils.js` (CRA copy of `shared/src/domain/bundleDerive.js`, D41)  
 **Contexts consumed**: `SelectedReleaseContext`, `ReleaseDataContext`
 
@@ -70,11 +72,11 @@ Headers: x-jira-token, x-username
 ### Step 3 — Project detail (expanded naughty list row)
 
 ```
-GET /api/release-dataset/retrospective/project-detail?release=NDB-2.11&productId=ndb&projectKey=ERA-100
+GET /api/release-dataset/retrospective/project/:parentKey?release=NDB-2.11&productId=ndb&parentType=Feature&parentSummary=...
 Headers: x-jira-token, x-username
 ```
 
-**Server flow**: `releaseDataset.js → retroService.getProjectDetail(release, productId, projectKey)`  
+**Server flow**: `releaseDataset.js → retroService.getProjectDetail(release, productId, parentKey)`  
 **Triggered**: on-demand when user expands a project row  
 **Returns**: array of specific ticket keys + violation type per ticket
 
@@ -90,6 +92,41 @@ Headers: x-jira-token, x-username
 **Used only when**: `retroFallback` state is set (bootstrap fails or returns empty)  
 **Server flow**: fires all gate-check JQL queries live against JIRA  
 **Returns**: full retro shape (same as bootstrap + projects combined)
+
+---
+
+## Cross-Release Comparison (in `useRetroComparison`)
+
+Loaded only after the user presses Fetch (`enabled = hasFetched`). Request-storm
+safe: keyed by `(teamId, releaseSet)`; no auto-refetch on empty results.
+
+**Release set** — `pickComparisonReleases(versions, selectedRelease, 3)` picks the
+latest 3 major/minor ("big", one-dot) releases plus the selected release, sorted
+oldest → newest. Maintenance (two-dot) and patch (three-dot) are excluded.
+
+**Per release, in parallel:**
+
+1. `GET /api/release-dataset/per-release/:release?productId=<teamId>` — flat ticket
+   bundle (offline source). Derives:
+   - `deriveReleaseScorecardFromBundle(tickets, release)` → task closure, bugs
+     (total/done/open + resolution split), P0/P1 open, reopen rate.
+   - `deriveBugVerificationAtPG(tickets, release, pgDate)` → bug/improvement
+     unverified-at-PG, verification lag (`Closed Date − Last Resolved Date`:
+     median/avg/p90 + `≤7 / 8–30 / 31–90 / >90` buckets), reopen rate.
+2. `GET /api/release-dataset/gates?release=<release>` — supplies the PG date
+   (latest solid PG) for the unverified-at-PG time-travel semantics.
+3. `POST /api/jira/release-kpi-breakdown-batch` body `{ releaseVersion, teamId }`
+   — live per-KPI total/done/open counts by resolution (see `docs/api/jira.md`).
+
+KPI definitions (row order) come from `GET /api/config/kpi?teamId=<teamId>`.
+
+Failures are isolated: a missing bundle blanks one column; a KPI-breakdown failure
+blanks only the KPI rows for that release; delivery/PG rows still render.
+
+**Verification lag semantics**: "verified" = the Resolved → Closed transition
+(dev-fixed → QA-verified). `unverifiedAtPg` = resolved on/before PG but not Closed
+by PG. JQL for the unverified cell uses
+`... AND status = Resolved AND status was not Closed ON "<pgDate>"`.
 
 ---
 
@@ -136,3 +173,5 @@ All JQL strings are constructed server-side by `retroService` using `productServ
 | Projects list | Derived from live per-release tickets | 5 min in-memory TTL |
 | Project detail | No cache — on-demand live | — |
 | Full retro fallback | No cache | — |
+| Cross-release scorecards / PG verification | Per-release bundle (offline) | inherits per-release cache |
+| Cross-release KPI breakdown | Live count-only queries | `useRetroComparison` key `(teamId, releaseSet)` |

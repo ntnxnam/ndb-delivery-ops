@@ -26,16 +26,17 @@
 export const FEAT_TYPES = new Set(['Feature', 'Initiative', 'X-FEAT', 'X-Feat', 'Capability']);
 const HIGH_SEVERITY = new Set(['P0', 'P1', 'Blocker', 'Critical', 'Blocker - P0', 'Critical - P1']);
 
-// Resolution-based "done" — matches isDoneResolution() in resolutionCategoriesService.ts.
-const DONE_RESOLUTIONS_LC = new Set(['fixed', 'done', 'resolved', 'complete']);
+// Positive resolutions — ticket shipped. What is not positive is negative.
+// Source: .cursor/context/jira-workflows-and-resolutions.md §3
+const POSITIVE_RESOLUTIONS_LC = new Set(['fixed', 'done', 'resolved', 'complete', 'approved']);
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/** Resolution-based done (used for general open/closed counts). */
+/** Resolution-based positive (ticket shipped — used for general open/closed counts). */
 export function isDone(ticket) {
   return (
     ticket['Is Done'] === true ||
-    DONE_RESOLUTIONS_LC.has((ticket['Resolution'] ?? '').toLowerCase())
+    POSITIVE_RESOLUTIONS_LC.has((ticket['Resolution'] ?? '').toLowerCase())
   );
 }
 
@@ -711,6 +712,220 @@ export function deriveQualityMetricsFromBundle(bundle, release) {
       : 0,
     maxReopens,
     perProject,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cross-release comparison derivations (retrospective enrichment)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Accept either a flat ticket array or a { tickets } bundle object. */
+function ticketsOf(bundleOrArray) {
+  if (Array.isArray(bundleOrArray)) return bundleOrArray;
+  return bundleOrArray?.tickets || [];
+}
+
+/** Whole-day difference (b - a) in calendar days, or null if unparseable. */
+function daysBetween(aIso, bIso) {
+  if (!aIso || !bIso) return null;
+  const a = new Date(aIso).getTime();
+  const b = new Date(bIso).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  return Math.round((b - a) / (24 * 60 * 60 * 1000));
+}
+
+function median(nums) {
+  if (!nums.length) return null;
+  const s = nums.slice().sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round(((s[mid - 1] + s[mid]) / 2) * 10) / 10;
+}
+
+function percentile(nums, p) {
+  if (!nums.length) return null;
+  const s = nums.slice().sort((a, b) => a - b);
+  const idx = Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1);
+  return s[Math.max(0, idx)];
+}
+
+function average(nums) {
+  if (!nums.length) return null;
+  return Math.round((nums.reduce((x, y) => x + y, 0) / nums.length) * 10) / 10;
+}
+
+/** Coarse resolution category (velocity-resolution-categories.mdc). */
+function resolutionCategory(res) {
+  const r = (res ?? '').toLowerCase();
+  if (!r || r === 'unresolved') return 'Unresolved';
+  if (POSITIVE_RESOLUTIONS_LC.has(r)) return 'Done';
+  if (r === 'cannot reproduce' || r === 'duplicate') return 'Dupe or Not Reproducible';
+  return 'Others';
+}
+
+/**
+ * Bundle-derived scorecard for one release. All counts are offline
+ * (no JIRA call). Each metric carries an approximate fixVersion-scoped
+ * JQL string for click-through (the caller turns it into a URL).
+ *
+ * Returns:
+ *   {
+ *     release,
+ *     taskClosure: { total, done, pct, jql },
+ *     bugs:        { total, done, open, byResolution, jql },
+ *     p0:          { total, open, jql },
+ *     p1:          { total, open, jql },
+ *     reopen:      { qualityTickets, reopened, rate, jql },
+ *   }
+ * Returns null when no tickets match the release.
+ */
+export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
+  const all = ticketsOf(bundleOrArray);
+  if (!all.length || !release) return null;
+  const list = all.filter((t) => t['Release Name'] === release);
+  if (!list.length) return null;
+
+  const fv = `fixVersion = "${release}"`;
+
+  // Task closure — Task + Unit Test.
+  const taskList = list.filter((t) => t['Issue Type'] === 'Task' || t['Issue Type'] === 'Unit Test');
+  const taskDone = taskList.filter(isClosed).length;
+  const taskClosure = {
+    total: taskList.length,
+    done: taskDone,
+    pct: taskList.length ? Math.round((taskDone / taskList.length) * 100) : 0,
+    jql: `${fv} AND issuetype in (Task, "Unit Test")`,
+  };
+
+  // Bugs — total / done / open + resolution breakdown.
+  const bugList = list.filter((t) => t['Issue Type'] === 'Bug');
+  const byResolution = { Done: 0, Unresolved: 0, 'Dupe or Not Reproducible': 0, Others: 0 };
+  let bugsDone = 0;
+  for (const t of bugList) {
+    const cat = resolutionCategory(t['Resolution']);
+    byResolution[cat] = (byResolution[cat] || 0) + 1;
+    if (isDone(t)) bugsDone++;
+  }
+  const bugs = {
+    total: bugList.length,
+    done: bugsDone,
+    open: bugList.length - bugsDone,
+    byResolution,
+    jql: `${fv} AND issuetype = Bug`,
+  };
+
+  // P0 / P1 — priority bands.
+  const isP0 = (t) => t['Priority'] === 'Blocker - P0';
+  const isP1 = (t) => t['Priority'] === 'Critical - P1';
+  const p0List = list.filter(isP0);
+  const p1List = list.filter(isP1);
+  const p0 = {
+    total: p0List.length,
+    open: p0List.filter((t) => !isDone(t)).length,
+    jql: `${fv} AND priority = "Blocker - P0"`,
+  };
+  const p1 = {
+    total: p1List.length,
+    open: p1List.filter((t) => !isDone(t)).length,
+    jql: `${fv} AND priority = "Critical - P1"`,
+  };
+
+  // Reopen — Bug/Improvement/Test quality tickets.
+  const QUALITY = new Set(['Bug', 'Improvement', 'Test']);
+  const qualityList = list.filter((t) => QUALITY.has(t['Issue Type']));
+  const reopened = qualityList.filter((t) => (t['Reopen Count'] || 0) > 0).length;
+  const reopen = {
+    qualityTickets: qualityList.length,
+    reopened,
+    rate: qualityList.length ? Math.round((reopened / qualityList.length) * 1000) / 10 : 0,
+    jql: `${fv} AND issuetype in (Bug, Improvement, Test)`,
+  };
+
+  return { release, taskClosure, bugs, p0, p1, reopen };
+}
+
+/**
+ * Bug / Improvement verification at the Promotion Gate (PG) for one
+ * release, derived offline from the bundle.
+ *
+ * "Verification" is the Resolved -> Closed transition (dev-fixed ->
+ * QA-verified). Maps to the PG checklist item "All open bugs and
+ * improvements are verified".
+ *
+ *  - unverifiedAtPg: dev-resolved on/before PG but not Closed by PG.
+ *  - lag:            Closed Date - Last Resolved Date (verified tickets).
+ *  - reopenRate:     share with Reopen Count > 0 (failed verification).
+ *
+ * @param {Array|{tickets:Array}} bundleOrArray
+ * @param {string} release
+ * @param {string|null} pgDate  ISO date of the Promotion Gate (from gate timeline)
+ * @returns {object|null}
+ */
+export function deriveBugVerificationAtPG(bundleOrArray, release, pgDate) {
+  const all = ticketsOf(bundleOrArray);
+  if (!all.length || !release) return null;
+  const list = all.filter((t) => t['Release Name'] === release);
+  if (!list.length) return null;
+
+  const forType = (issueType) => {
+    const items = list.filter((t) => t['Issue Type'] === issueType);
+    const resolvedField = (t) => t['Last Resolved Date'] || t['Resolved Date'] || null;
+
+    // Verification lag over tickets that reached Closed.
+    const lags = [];
+    for (const t of items) {
+      const closed = t['Closed Date'];
+      const resolved = resolvedField(t);
+      const d = daysBetween(resolved, closed);
+      if (d != null && d >= 0) lags.push(d);
+    }
+
+    // Unverified at PG: resolved on/before PG, not closed by PG.
+    let unverifiedAtPg = null;
+    if (pgDate) {
+      unverifiedAtPg = items.filter((t) => {
+        const resolved = resolvedField(t);
+        if (!resolved) return false;
+        if (daysBetween(resolved, pgDate) < 0) return false; // resolved after PG
+        const closed = t['Closed Date'];
+        // Not closed at all, or closed after PG.
+        return !closed || daysBetween(pgDate, closed) > 0;
+      }).length;
+    }
+
+    const reopened = items.filter((t) => (t['Reopen Count'] || 0) > 0).length;
+    const dist = { le7: 0, d8_30: 0, d31_90: 0, gt90: 0 };
+    for (const d of lags) {
+      if (d <= 7) dist.le7++;
+      else if (d <= 30) dist.d8_30++;
+      else if (d <= 90) dist.d31_90++;
+      else dist.gt90++;
+    }
+
+    const typeClause = `issuetype = ${issueType}`;
+    return {
+      count: items.length,
+      verifiedCount: lags.length,
+      unverifiedAtPg,
+      lag: {
+        median: median(lags),
+        avg: average(lags),
+        p90: percentile(lags, 90),
+        dist,
+      },
+      reopened,
+      reopenRate: items.length ? Math.round((reopened / items.length) * 1000) / 10 : 0,
+      jqlClosed: `fixVersion = "${release}" AND ${typeClause} AND status = Closed`,
+      jqlUnverified: pgDate
+        ? `fixVersion = "${release}" AND ${typeClause} AND status = Resolved AND status was not Closed ON "${pgDate}"`
+        : null,
+    };
+  };
+
+  return {
+    release,
+    pgDate: pgDate || null,
+    bug: forType('Bug'),
+    improvement: forType('Improvement'),
   };
 }
 

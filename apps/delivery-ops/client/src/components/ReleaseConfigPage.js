@@ -2,10 +2,61 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Toast } from '../shared/components/Toast';
 import ReleaseGantt from './ReleaseGantt';
 
-// Normalise a ccmXGate value: config may store it as an object (new) or array (legacy).
-function toGateArray(val) {
-  if (!val) return [];
-  return Array.isArray(val) ? val : [val];
+/**
+ * Numbered gate revisions — one key per slip, reasons live on each entry.
+ *
+ * Correct shape (any other update path is wrong):
+ *   gate1: { label, date, color, style: "dotted", reason: "…" }
+ *   gate2: { label, date, color, style: "dotted", reason: "…" }
+ *   gate3: { label, date, color, style: "solid",  reason: "…" }
+ *
+ * On slip: mark previous solid → dotted (keep its reason), append next solid slot.
+ * Never overwrite, rotate, or push into overflow.
+ */
+function numberedGateColumn({ key, label, isGA, color, keyFor, parseNum, defaultLabel }) {
+  const slotsOf = (cfg) => {
+    const nums = Object.keys(cfg || {})
+      .map(k => parseNum(k))
+      .filter(n => n != null)
+      .sort((a, b) => a - b);
+    return nums.length ? nums.map(n => keyFor(n)) : [keyFor(1)];
+  };
+  const lastFilled = (cfg) => {
+    const slots = slotsOf(cfg);
+    return [...slots].reverse().find(k => cfg?.[k]?.date) || null;
+  };
+  return {
+    key,
+    label,
+    isGA: !!isGA,
+    getAll: (cfg) => slotsOf(cfg).map(k => cfg?.[k]).filter(x => x?.date),
+    getCurrent: (cfg) => {
+      const last = lastFilled(cfg);
+      return last ? cfg[last].date : '';
+    },
+    setCurrent: (cfg, v) => {
+      if (!v) return cfg;
+      const last = lastFilled(cfg);
+      if (!last) {
+        return {
+          ...cfg,
+          [keyFor(1)]: { label: `${defaultLabel} 1`, date: v, color, style: 'solid' },
+        };
+      }
+      if (cfg[last]?.date === v) return cfg;
+      const nextNum = parseNum(last) + 1;
+      const nextKey = keyFor(nextNum);
+      return {
+        ...cfg,
+        [last]: { ...cfg[last], style: 'dotted' },
+        [nextKey]: { label: `${defaultLabel} ${nextNum}`, date: v, color, style: 'solid' },
+      };
+    },
+    stampReason: (cfg, r) => {
+      const last = lastFilled(cfg);
+      return last ? { ...cfg, [last]: { ...cfg[last], reason: r } } : cfg;
+    },
+  };
 }
 
 /**
@@ -13,8 +64,8 @@ function toGateArray(val) {
  *
  * getAll(cfg)         → [{ date, reason? }, …] in chronological order
  * getCurrent(cfg)     → current date string
- * setCurrent(cfg, v)  → new config with v appended as the latest revision
- * stampReason(cfg, r) → new config with r written onto the latest slot
+ * setCurrent(cfg, v)  → append a new numbered revision; previous becomes dotted
+ * stampReason(cfg, r) → write reason onto the latest (current) slot
  */
 const GATE_COLUMNS = [
   {
@@ -26,128 +77,51 @@ const GATE_COLUMNS = [
     setCurrent: (cfg, v) => ({ ...cfg, ecDate: v || null }),
     stampReason:(cfg, r) => ({ ...cfg, ecDateReason: r }),
   },
-  {
+  numberedGateColumn({
     key: 'ccm',
     label: 'CCM',
-    isGA: false,
-    getAll: cfg => [
-      ...toGateArray(cfg?.ccm1Gate),
-      ...toGateArray(cfg?.ccm2Gate),
-    ].filter(x => x?.date),
-    getCurrent: cfg => {
-      const all = [...toGateArray(cfg?.ccm1Gate), ...toGateArray(cfg?.ccm2Gate)].filter(x => x?.date);
-      return all[all.length - 1]?.date || '';
+    color: '#de350b',
+    defaultLabel: 'Code Complete',
+    keyFor: n => `ccm${n}Gate`,
+    parseNum: k => {
+      const m = /^ccm(\d+)Gate$/.exec(k);
+      return m ? parseInt(m[1], 10) : null;
     },
-    setCurrent: (cfg, v) => ({
-      ...cfg,
-      ccm2Gate: v ? { label: 'Code Complete Met', date: v, color: '#de350b', style: 'solid' } : null,
-    }),
-    stampReason: (cfg, r) => {
-      const arr = toGateArray(cfg?.ccm2Gate).length
-        ? toGateArray(cfg?.ccm2Gate)
-        : toGateArray(cfg?.ccm1Gate);
-      if (!arr.length) return cfg;
-      const which = toGateArray(cfg?.ccm2Gate).length ? 'ccm2Gate' : 'ccm1Gate';
-      const currentVal = cfg[which];
-      // For object format, update the object directly; for array format, update last element
-      if (Array.isArray(currentVal)) {
-        const updated = [...currentVal];
-        updated[updated.length - 1] = { ...updated[updated.length - 1], reason: r };
-        return { ...cfg, [which]: updated };
-      }
-      return { ...cfg, [which]: { ...currentVal, reason: r } };
-    },
-  },
-  {
+  }),
+  numberedGateColumn({
     key: 'cg',
     label: 'CG',
-    isGA: false,
-    getAll: cfg => [cfg?.commitGate1, cfg?.commitGate2].filter(x => x?.date),
-    getCurrent: cfg => cfg?.commitGate2?.date || cfg?.commitGate1?.date || '',
-    setCurrent: (cfg, v) => {
-      if (!cfg?.commitGate1?.date && !cfg?.commitGate2?.date) {
-        return { ...cfg, commitGate1: v ? { label: 'Commit Gate', date: v, color: '#ff9800', style: 'solid' } : null };
-      }
-      if (cfg?.commitGate2?.date) {
-        return { ...cfg, commitGate1: cfg.commitGate2, commitGate2: v ? { ...cfg.commitGate2, date: v, reason: undefined } : null };
-      }
-      return { ...cfg, commitGate2: v ? { label: 'Commit Gate', date: v, color: '#ff9800', style: 'solid' } : null };
+    color: '#ff9800',
+    defaultLabel: 'Commit Gate',
+    keyFor: n => `commitGate${n}`,
+    parseNum: k => {
+      const m = /^commitGate(\d+)$/.exec(k);
+      return m ? parseInt(m[1], 10) : null;
     },
-    stampReason: (cfg, r) => {
-      const slot = cfg?.commitGate2?.date ? 'commitGate2' : 'commitGate1';
-      return cfg?.[slot] ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
-    },
-  },
-  {
+  }),
+  numberedGateColumn({
     key: 'pg',
     label: 'PG',
-    isGA: false,
-    getAll: cfg => [
-      ...(cfg?.promotionGateOverflow || []),
-      cfg?.promotionGate1,
-      cfg?.promotionGate2,
-      cfg?.promotionGate3,
-    ].filter(x => x?.date),
-    getCurrent: cfg => cfg?.promotionGate3?.date || cfg?.promotionGate2?.date || cfg?.promotionGate1?.date || '',
-    setCurrent: (cfg, v) => {
-      const slots = ['promotionGate1', 'promotionGate2', 'promotionGate3'];
-      const last  = [...slots].reverse().find(k => cfg?.[k]?.date);
-      if (!last) return { ...cfg, promotionGate1: v ? { label: 'Promotion Gate', date: v, color: '#9c27b0', style: 'solid' } : null };
-      const idx  = slots.indexOf(last);
-      const next = slots[Math.min(idx + 1, slots.length - 1)];
-      if (next === last) {
-        // All named slots full — push oldest into overflow (unlimited history), rotate, set newest
-        const overflow = [...(cfg.promotionGateOverflow || []), cfg.promotionGate1].filter(x => x?.date);
-        return {
-          ...cfg,
-          promotionGateOverflow: overflow,
-          promotionGate1: cfg.promotionGate2,
-          promotionGate2: cfg.promotionGate3,
-          promotionGate3: v ? { ...(cfg.promotionGate3 || {}), date: v, reason: undefined } : null,
-        };
-      }
-      return { ...cfg, [next]: v ? { label: 'Promotion Gate', date: v, color: '#9c27b0', style: 'solid' } : null };
+    color: '#9c27b0',
+    defaultLabel: 'Promotion Gate',
+    keyFor: n => `promotionGate${n}`,
+    parseNum: k => {
+      const m = /^promotionGate(\d+)$/.exec(k);
+      return m ? parseInt(m[1], 10) : null;
     },
-    stampReason: (cfg, r) => {
-      const slot = ['promotionGate3','promotionGate2','promotionGate1'].find(k => cfg?.[k]?.date);
-      return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
-    },
-  },
-  {
+  }),
+  numberedGateColumn({
     key: 'ga',
     label: 'GA',
     isGA: true,
-    getAll: cfg => [
-      ...(cfg?.gaOverflow || []),
-      cfg?.ga1,
-      cfg?.ga2,
-      cfg?.ga3,
-    ].filter(x => x?.date),
-    getCurrent: cfg => cfg?.ga3?.date || cfg?.ga2?.date || cfg?.ga1?.date || '',
-    setCurrent: (cfg, v) => {
-      const slots = ['ga1', 'ga2', 'ga3'];
-      const last  = [...slots].reverse().find(k => cfg?.[k]?.date);
-      if (!last) return { ...cfg, ga1: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
-      const idx  = slots.indexOf(last);
-      const next = slots[Math.min(idx + 1, slots.length - 1)];
-      if (next === last) {
-        // All named slots full — push oldest into overflow (unlimited history), rotate, set newest
-        const overflow = [...(cfg.gaOverflow || []), cfg.ga1].filter(x => x?.date);
-        return {
-          ...cfg,
-          gaOverflow: overflow,
-          ga1: cfg.ga2,
-          ga2: cfg.ga3,
-          ga3: v ? { ...(cfg.ga3 || {}), date: v, reason: undefined } : null,
-        };
-      }
-      return { ...cfg, [next]: v ? { label: 'GA', date: v, color: '#28a745', style: 'solid' } : null };
+    color: '#28a745',
+    defaultLabel: 'GA',
+    keyFor: n => `ga${n}`,
+    parseNum: k => {
+      const m = /^ga(\d+)$/.exec(k);
+      return m ? parseInt(m[1], 10) : null;
     },
-    stampReason: (cfg, r) => {
-      const slot = ['ga3','ga2','ga1'].find(k => cfg?.[k]?.date);
-      return slot ? { ...cfg, [slot]: { ...cfg[slot], reason: r } } : cfg;
-    },
-  },
+  }),
 ];
 
 function fmt(dateStr) {

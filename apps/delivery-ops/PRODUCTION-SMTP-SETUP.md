@@ -24,7 +24,7 @@ node test-smtp-alternatives.js
 Request IT to whitelist your production server's IP address for SMTP relay access:
 - **Server**: `santhosh-s-1.umsvm.nutanix.com`
 - **SMTP Server**: `secure-mailrelay.corp.nutanix.com:587`
-- **Service Account**: `svc.ndb.team@nutanix.com`
+- **Service Account**: `smtp.ndb.team@nutanix.com`
 
 ### Option 2: Use Internal SMTP Server
 Try these alternative SMTP servers in production `.env`:
@@ -67,9 +67,9 @@ Based on diagnostic results, update your production `.env`:
 # SMTP Configuration - Update based on diagnostic results
 SMTP_HOST=secure-mailrelay.corp.nutanix.com  # or working alternative
 SMTP_PORT=587                                 # or 25 if that works
-SMTP_USER=svc.ndb.team@nutanix.com          # comment out for port 25
-SMTP_PASS=26@t3Mb4rwy1%#cO                  # comment out for port 25
-SMTP_FROM=svc.ndb.team@nutanix.com
+SMTP_USER=smtp.ndb.team@nutanix.com         # comment out for port 25
+SMTP_PASS=<service-account-password>        # comment out for port 25
+SMTP_FROM=smtp.ndb.team@nutanix.com
 
 # Server Configuration
 PORT=6001

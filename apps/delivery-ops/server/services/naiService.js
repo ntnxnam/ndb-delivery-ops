@@ -54,6 +54,8 @@ HYGIENE FIELDS TO CHECK (emit as bullets only when actually missing):
 - Test Plan Link not set (SIGNALS.testPlanLink is null or empty)
 - Design Doc not set (SIGNALS.designDocLink is null or empty)
 - Requirements Link not set (SIGNALS.requirementsLink is null or empty)
+- Risk Assessment not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.assessmentMissing)
+- Path to Green not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.pathToGreenMissing)
 
 REASONING REQUIREMENTS (used to populate TLDR and Key Risks — do NOT surface reasoning text in output):
 - Every claim in Key Risks MUST connect to a cause from TICKET CONTEXT or SIGNALS. No claim without a source.
@@ -85,9 +87,12 @@ CLOSEST-DATE-THAT-PASSED RULE (primary verdict anchor):
 - When CRITICAL_RISKS contains a "MISSED GATE" entry, set TLDR verdict to RED and lead with it.
 - daysAgo urgency: ≤7 days = YELLOW (if no other RED signals); 8–21 days = RED; >21 days = RED + escalation language.
 
-JIRA RISK INDICATOR ALIGNMENT:
+JIRA RISK INDICATOR + TEAM NARRATIVE ALIGNMENT:
 - SIGNALS.jiraRiskIndicator (Green / Yellow / Red) is the team's own attestation. Your RAG verdict in TLDR should match it.
-- If you diverge, TLDR MUST cite the specific evidence (a CRITICAL_RISKS entry, an open P0/P1 blocker, or a comment within 14 days naming a regression).
+- SIGNALS.riskAssessment and SIGNALS.pathToGreen are the team's written rationale and recovery plan. When present, TLDR/Key Risks MUST use them (plain English) — do not invent a different story.
+- If SIGNALS.teamRisk.verdictFloor is YELLOW or RED, TLDR must not be greener than that floor unless you cite overriding CRITICAL_RISKS / blocker evidence.
+- If Indicator is Yellow/Red and Path to Green or Risk Assessment is missing, that gap is already in CRITICAL_RISKS — lead with it when it is the most severe hygiene gap.
+- If you diverge from the Indicator, TLDR MUST cite the specific evidence (a CRITICAL_RISKS entry, an open P0/P1 blocker, or a comment within 14 days naming a regression).
 - Never silently override the team's attestation.
 
 COMMENT STALENESS FLOOR:
@@ -420,6 +425,35 @@ Never fabricate owner names or dates not present in the data. Under 400 words to
  * Build the user prompt for a release-level AI summary.
  * @param {object} intelligence - Output of releaseAiSummaryService.buildReleaseIntelligence
  */
+function buildSchedulePressureBlock(intelligence) {
+  const { totalFeatures, buckets, dateMetrics } = intelligence;
+  const sp = dateMetrics?.schedulePressure;
+  if (!sp || !sp.ecDate || !sp.gaDate || sp.windowDays == null) return null;
+
+  // Features not yet in a "clear" state (Shipped / PG Met)
+  const clearCount = (buckets?.clear || []).length;
+  const notClearCount = totalFeatures - clearCount;
+  const outstandingPct = totalFeatures > 0
+    ? Math.round((notClearCount / totalFeatures) * 100)
+    : 0;
+
+  const gap = outstandingPct - sp.elapsedPct;
+  const pressureFlag = gap > 0
+    ? `⚠️ BEHIND SCHEDULE: ${outstandingPct}% work outstanding vs ${sp.elapsedPct}% time elapsed — ${gap}pp gap.`
+    : gap === 0
+      ? `On pace: work outstanding matches time elapsed (${outstandingPct}% each).`
+      : `Ahead of pace: ${outstandingPct}% work outstanding vs ${sp.elapsedPct}% time elapsed (${Math.abs(gap)}pp buffer).`;
+
+  return [
+    'SCHEDULE PRESSURE (EC → GA time vs outstanding work — use to calibrate urgency in Release Health prose):',
+    `  EC date: ${sp.ecDate} | GA date: ${sp.gaDate}`,
+    `  Release window: ${sp.windowDays} days | Elapsed: ${sp.elapsedDays} days (${sp.elapsedPct}%)`,
+    `  Committed features: ${totalFeatures} | Not-yet-clear (not Shipped/PG Met): ${notClearCount} (${outstandingPct}%)`,
+    `  ${pressureFlag}`,
+    '  Calibration rule: when outstanding% significantly exceeds elapsed%, escalate urgency language — this release is running out of runway.',
+  ].join('\n');
+}
+
 function buildReleaseSummaryPrompt(intelligence) {
   const { version, totalFeatures, p0Bugs = [], mustFixTickets = [],
           phaseDist, selfReportedRisk, dateMetrics, buckets } = intelligence;
@@ -496,6 +530,8 @@ function buildReleaseSummaryPrompt(intelligence) {
     `CLEAR (PG Met / Shipped): ${buckets['clear']?.length ?? 0} features`,
   ].join('\n\n');
 
+  const schedulePressureBlock = buildSchedulePressureBlock(intelligence);
+
   return `${headerLines}
 
 ${keyReferenceBlock}
@@ -510,7 +546,7 @@ ${p0Block}
 
 ${mustFixBlock}
 
-FEATURE BUCKETS (primary signal — grounded in release calendar dates):
+${schedulePressureBlock ? schedulePressureBlock + '\n\n' : ''}FEATURE BUCKETS (primary signal — grounded in release calendar dates):
 ${bucketsBlock}
 
 Write the three-section release briefing now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
@@ -535,12 +571,514 @@ async function generateReleaseSummary(intelligence) {
   return trimmed;
 }
 
+// ── SoS work-tier briefing (team-exec density, one release × one tier) ────────
+
+const TIER_LABELS = {
+  feat: 'FEAT Work',
+  standalone: 'Standalone Epics',
+  direct: 'Direct Tickets',
+};
+
+/**
+ * Team-exec SoS box: state-of-business for one work tier.
+ * Not the per-feature VP prompt — aggregates + top critical items only.
+ * Audience: team-exec / director (~15 seconds).
+ */
+const SOS_TIER_SYSTEM_PROMPT = `You are a senior TPM writing a Scrum-of-Scrums work-tier briefing for engineering leadership (team-exec). They have minutes, not hours. Answer: is this slice of the release healthy for the business — and if not, what to escalate.
+
+OUTPUT FORMAT (exact order; omit empty sections including their headers):
+
+## <Tier Name> — <RELEASE>
+
+🔴 TLDR: …     OR     🟡 TLDR: …     OR     🟢 TLDR: …
+(Use EXACTLY one emoji — 🔴 or 🟡 or 🟢 — immediately before TLDR. Never write 🔴/🟡/🟢 as a menu of options.)
+1–2 sentences. Verdict first (RED/YELLOW/GREEN), then the dominant business risk in plain English.
+If GREEN with no material risk: "On track — no blocking issues."
+When NotSet risk is material, name the COUNT and list the keys from CALL_OUTS (never "all four" without naming every key).
+TLDR must NOT cite "items past next gate" as a risk unless the gate is ≤14 days away or there is a corroborating signal (e.g. high outstanding work, Red RAG). Items scheduled beyond the upcoming gate are a planning observation, not a blocker.
+
+⚠️ Call-outs:   ← MANDATORY when CALL_OUTS below is non-empty. Copy lines/keys verbatim. One bullet per callout row.
+• Past gate lagging — <this release's most recently elapsed gate> (<date>): KEY1, …  (FEAT Work only — status not at expected clearance — CCM→Code Complete Met, CG→Commit Gate Met, PG→Promotion Gate Met, GA→Closed)
+• Not done by CG (<date>, Nd until/past CG) — N item(s) still open  (Standalone Epics / Direct Tickets only — these tiers have no gate date fields; rule is all items must be closed by CG)
+• Risk Indicator not set (N): KEY1, KEY2, …
+• Stale status updates (≥14d): KEY1, KEY2, …
+• <Date field> moved (last 7d): KEY1, KEY2, …
+(Omit this whole section only when CALL_OUTS says none. Do NOT include a "Keep an eye" / datesPastNextGate bullet for Standalone Epics or Direct Tickets — that check does not apply to those tiers.)
+
+📋 Key Risks:
+• ≤3 bullets. Each must cite a SOURCE from CRITICAL_ITEMS, OUTSTANDING, CALL_OUTS, RAG, or P0/MUSTFIX. Name ticket keys only from VALID TICKET KEYS.
+
+👁 Keep an eye:
+• For FEAT Work only: include when CALL_OUTS.datesPastNextGate is non-empty — list those keys vs the upcoming gate. Else omit section.
+• For Standalone Epics / Direct Tickets: omit this section entirely — datesPastNextGate does not apply to these tiers.
+• IMPORTANT: items whose own gate date falls after the release's upcoming gate are NOT a risk by themselves — they are simply scheduled beyond that gate. Only escalate to Key Risks if the gate is ≤14 days away AND outstanding work is high, OR if the item's date is so far past the gate that it signals a planning gap. Never frame "dates past next gate" alone as a risk or include it in Key Risks without a corroborating signal.
+
+✅ Next Owner Actions:
+• ≤2 bullets. Format: <owner or role> — <specific ask>. No "monitor" or "follow up".
+• Owner role depends on TIER (see OWNER ROLE HINT in the user message):
+  - FEAT Work: "FEAT Manager" for Risk Indicator, Requirements Done, FS/DS Done, Test Plan, gate dates, past-gate clearance — never Product Owner / Product Manager / Product Management.
+  - Standalone Epics: "Team Manager" (engineering team manager / EM) — never FEAT Manager. Standalone Epics are owned at the team level, not the feature-program level.
+  - Direct Tickets: "Manager" (engineering / assignee manager) — never FEAT Manager (direct tickets have no FEAT Manager).
+• For past-gate lagging on FEAT: FEAT Manager — advance status to the expected clearance named in CALL_OUTS.
+• For past-gate lagging on Standalone Epics: Team Manager — advance status to the expected clearance.
+• For Direct Tickets backlog / open Bugs: Manager — triage and prioritize.
+
+RULES:
+- Under 180 words total (Call-outs keys may push slightly over — keep keys complete).
+- Use ONLY numbers and keys in the user message. Never invent tickets, owners, or dates.
+- Prefer CRITICAL_ITEMS, CALL_OUTS (esp. past-gate lagging), and P0/MUSTFIX over volume narration.
+- Past gate and next gate come from THIS release's calendar in CALL_OUTS — never assume CG or PG.
+- Risk Indicator not set is a first-class callout when CALL_OUTS.riskNotSet.count > 0 — always include the Call-outs bullet with every key.
+- Risk Indicator not set matters even for closed/resolved tickets: a missing Risk Indicator prevents retrospective risk-pattern analysis and blocks downstream release planning that depends on historical signal. When flagging NotSet on closed tickets, state: "blocks downstream planning — risk signal needed even for completed work."
+- Never output scoring rationale, banners, or "Here is the summary".
+
+GATE RULES BY TIER:
+- FEAT Work: uses CG/PG date field comparisons. Past-gate lagging and dates-past-next-gate apply.
+- Standalone Epics and Direct Tickets: have NO CG/PG date fields. The ONLY gate rule is: all items must be done (closed/fixed/resolved) by the CG date. Use CALL_OUTS "Not done by CG" count as the primary risk signal. Never mention "dates past next gate" or "past gate lagging" for these tiers — those checks do not apply.
+
+RAG VERDICT (first match wins):
+- If ITEM_COUNT is 0 and OUTSTANDING is none and CRITICAL_ITEMS is none: do NOT invent GREEN/On track. Output only the ## heading and one line: "No items in this tier for this release." Omit TLDR, Call-outs, Key Risks, and Actions.
+- For FEAT Work — RED if OPEN_P0 > 0, OR past-gate lagging count > 0, OR Red RAG dominates the tier, OR days to next gate ≤ 14 with material outstanding Bugs/Tests
+- For FEAT Work — YELLOW if Yellow RAG > 0, OR OPEN_MUSTFIX > 0, OR Bug/Test outstanding elevated vs Dev Code, OR NotSet count is material, OR stale/date-move callouts are material, OR (dates past next gate > 0 AND gate is ≤14 days away). Do NOT set YELLOW solely because items have dates past the next gate when the gate is still >14 days out.
+- For Standalone Epics / Direct Tickets — RED if "Not done by CG" count > 0 AND CG is ≤14 days away (or already past)
+- For Standalone Epics / Direct Tickets — YELLOW if "Not done by CG" count > 0 AND CG is >14 days away
+- For Standalone Epics / Direct Tickets — GREEN only when "Not done by CG" count = 0 (all items closed)
+- GREEN for FEAT Work only when Red≈0, Yellow negligible, P0=0, must-fix=0, NotSet≈0, no past-gate lagging, no dominant open-work risk
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.
+- Counts of NotSet / stale / date-moved / gate-lagging items MUST equal the length of the key list you print from CALL_OUTS.`;
+
+function extractKeysFromItems(criticalItems, extraKeys = []) {
+  const seen = new Set();
+  const keys = [];
+  const push = (k) => {
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    keys.push(k);
+  };
+  for (const item of criticalItems || []) push(item?.key);
+  for (const k of extraKeys || []) push(k);
+  return keys;
+}
+
+function collectCalloutKeys(callouts) {
+  const keys = [];
+  if (!callouts) return keys;
+  for (const k of callouts.riskNotSet?.keys || []) keys.push(k);
+  for (const k of callouts.staleStatusUpdates?.keys || []) keys.push(k);
+  for (const row of callouts.dateMovesLast7d || []) {
+    for (const k of row.keys || []) keys.push(k);
+  }
+  for (const k of callouts.pastGateLagging?.keys || []) keys.push(k);
+  for (const k of callouts.datesPastNextGate?.keys || []) keys.push(k);
+  return keys;
+}
+
+function formatCalloutsBlock(callouts) {
+  if (!callouts) return '  (none)';
+  const lines = [];
+
+  // ── FEAT Work: phase-based gate checks ──────────────────────────────────
+  const past = callouts.pastGateLagging;
+  if (past?.count > 0 && past.keys?.length && past.gate) {
+    lines.push(
+      `  Past gate lagging — ${past.gate.label || past.gate.kind} (${past.gate.iso}) ` +
+      `passed ${past.gate.daysAgo ?? '?'}d ago; status not yet "${past.gate.expectedStatus}" ` +
+      `(${past.count}): ${past.keys.join(', ')}`
+    );
+  }
+  const next = callouts.datesPastNextGate;
+  if (next?.count > 0 && next.keys?.length && next.gate) {
+    lines.push(
+      `  Keep an eye — item dates past next gate ${next.gate.label || next.gate.kind} ` +
+      `(${next.gate.iso}, ${next.gate.daysUntil ?? '?'}d out) (${next.count}): ${next.keys.join(', ')}`
+    );
+  }
+
+  // ── Standalone Epics / Direct Tickets: done-by-CG check ─────────────────
+  // These tiers have no CG/PG date fields; the only gate rule is all items
+  // must reach done-status by the CG date.
+  const notDone = callouts.notDoneByCg;
+  if (notDone?.count > 0 && notDone.gate) {
+    const daysStr = notDone.gate.daysUntil != null
+      ? `, ${notDone.gate.daysUntil}d ${notDone.gate.daysUntil >= 0 ? 'until' : 'past'} CG`
+      : '';
+    const keyStr = notDone.keys?.length ? `: ${notDone.keys.join(', ')}` : ' (no per-ticket keys available)';
+    lines.push(
+      `  Not done by CG (${notDone.gate.iso}${daysStr}) — ${notDone.count} item(s) still open${keyStr}`
+    );
+  }
+
+  const notSet = callouts.riskNotSet;
+  if (notSet?.count > 0 && notSet.keys?.length) {
+    lines.push(`  Risk Indicator not set (${notSet.count}): ${notSet.keys.join(', ')}`);
+  }
+  const stale = callouts.staleStatusUpdates;
+  if (stale?.count > 0 && stale.keys?.length) {
+    const days = stale.thresholdDays || 14;
+    lines.push(`  Stale status updates (≥${days}d) (${stale.count}): ${stale.keys.join(', ')}`);
+  }
+  for (const row of callouts.dateMovesLast7d || []) {
+    if (!row.keys?.length) continue;
+    lines.push(`  ${row.label || row.field} moved (last 7d) (${row.keys.length}): ${row.keys.join(', ')}`);
+  }
+  const gc = callouts.gateContext;
+  if (gc?.pastGate || gc?.nextGate) {
+    lines.push(
+      `  Gate calendar: past=${gc.pastGate ? `${gc.pastGate.kind}@${gc.pastGate.iso}` : 'none'}; ` +
+      `next=${gc.nextGate ? `${gc.nextGate.kind}@${gc.nextGate.iso}` : 'none'}`
+    );
+  }
+  return lines.length ? lines.join('\n') : '  (none)';
+}
+
+/**
+ * Build user prompt for a SoS tier briefing — structured facts, not a corpus dump.
+ * @param {object} payload
+ */
+function buildSosTierPrompt(payload) {
+  const {
+    release,
+    tier,
+    ragCounts = {},
+    itemCount = 0,
+    outstandingByType = {},
+    gateDates = {},
+    criticalItems = [],
+    callouts = null,
+    p0Count = 0,
+    mustFixCount = 0,
+    p0Keys = [],
+    mustFixKeys = [],
+  } = payload || {};
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tierLabel = TIER_LABELS[tier] || tier || 'Unknown Tier';
+  const validKeys = extractKeysFromItems(
+    criticalItems,
+    [...p0Keys, ...mustFixKeys, ...collectCalloutKeys(callouts)]
+  );
+
+  const keyReferenceBlock = validKeys.length > 0
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n` +
+      validKeys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')
+    : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+
+  const outstandingLines = Object.entries(outstandingByType)
+    .filter(([, n]) => n != null && Number(n) > 0)
+    .map(([label, n]) => `  ${label}: ${n}`)
+    .join('\n') || '  (none open)';
+
+  const criticalLines = (criticalItems || []).length > 0
+    ? (criticalItems || []).slice(0, 8).map((c, i) => {
+      const rag = c.rag || 'NotSet';
+      const line = (c.tldr || c.summary || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+      return `  ${i + 1}. [${c.key}] ${rag} — ${line || '(no TLDR on screen)'}`;
+    }).join('\n')
+    : '  (none — synthesize from RAG / OUTSTANDING / CALL_OUTS / P0 / MUSTFIX only)';
+
+  const ownerHint = tier === 'direct'
+    ? 'OWNER ROLE HINT: Direct Tickets → Manager (engineering / assignee manager). Never FEAT Manager, Product Owner, or Product Manager.'
+    : tier === 'standalone'
+      ? 'OWNER ROLE HINT: Standalone Epics → Team Manager (engineering team manager / EM) for Risk Indicator, gate dates, and status hygiene. Never FEAT Manager, Product Owner, or Product Manager.'
+      : 'OWNER ROLE HINT: FEAT Work → FEAT Manager for Risk Indicator, date/gate hygiene (not Product Owner / Product Manager).';
+
+  return `TODAY: ${today}
+RELEASE: ${release}
+TIER: ${tierLabel}
+ITEM_COUNT: ${itemCount}
+RAG: Red=${ragCounts.Red ?? 0} Yellow=${ragCounts.Yellow ?? 0} Green=${ragCounts.Green ?? 0} NotSet=${ragCounts.NotSet ?? 0}
+OPEN_P0: ${p0Count}
+OPEN_MUSTFIX: ${mustFixCount}
+CG_DATE: ${gateDates.cgDate || 'unknown'} (days=${gateDates.daysToCommitGate ?? 'unknown'})
+PG_DATE: ${gateDates.pgDate || 'unknown'} (days=${gateDates.daysToPromotionGate ?? 'unknown'})
+
+${keyReferenceBlock}
+
+OUTSTANDING BY ISSUE TYPE (this tier):
+${outstandingLines}
+
+CRITICAL_ITEMS (top risks already on screen — key, RAG, one-line TLDR):
+${criticalLines}
+
+CALL_OUTS (copy keys exactly when non-empty — counts must match listed keys):
+${formatCalloutsBlock(callouts)}
+
+${ownerHint}
+
+Write the briefing for ${tierLabel} — ${release} now. Answer state-of-business for this slice only.
+When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+/**
+ * Generate a SoS work-tier AI summary from a tiny structured packet.
+ * No JIRA — payload fully provided by the caller.
+ *
+ * @param {object} payload
+ * @returns {Promise<string>}
+ */
+async function generateSosTierSummary(payload) {
+  if (!payload?.release || !payload?.tier) {
+    throw new Error('release and tier are required for SoS tier summary');
+  }
+  if (!TIER_LABELS[payload.tier]) {
+    throw new Error(`tier must be one of: ${Object.keys(TIER_LABELS).join(', ')}`);
+  }
+  const itemCount = Number(payload.itemCount) || 0;
+  const openCount = Object.values(payload.outstandingByType || {})
+    .reduce((s, n) => s + (Number(n) || 0), 0);
+  const criticalCount = (payload.criticalItems || []).length;
+  if (itemCount === 0 && openCount === 0 && criticalCount === 0) {
+    const label = TIER_LABELS[payload.tier];
+    return `## ${label} — ${payload.release}\n\nNo items in this tier for this release.`;
+  }
+  const messages = [
+    { role: 'system', content: SOS_TIER_SYSTEM_PROMPT },
+    { role: 'user', content: buildSosTierPrompt(payload) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error('NAI returned an empty SoS tier summary after trim');
+  }
+  return trimmed;
+}
+
+// ── Sprint Performance — Asks of leadership (org-wide) ───────────────────────
+// Separate from RELEASE_SUMMARY: this is sprint discipline / say-do / QA lag /
+// hygiene — not gate dates, P0 release blockers, or feature buckets.
+
+const SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT = `You are a senior TPM writing org-wide "Asks of leadership" for a multi-sprint Sprint Performance report. Audience: Director / Team Executive. They will skim this in under 30 seconds.
+
+This is NOT a release health briefing. Do not invent gate dates, P0 release blockers, must-fix labels, or feature commit status. Work only from the sprint metrics packet in the user message.
+
+Sprint signals in the packet (use them):
+- JIRA Completed say/do vs Dev-finished say/do (Resolved∪Closed) — gap = QA close lag, not "Dev missed the sprint"
+- Dev→QA lag (still waiting in Resolved, median/p90 close lag)
+- Leader / manager say/do rankings
+- Three velocity streams (Dev done, QA verification ×1/3, Test tasks)
+- Scope creep, declining/improving teams, chronic carry-over keys, unmapped ownership, sprint hygiene
+
+OUTPUT FORMAT (strict — nothing else):
+## Asks of Leadership
+1. Ask: <one concrete leadership ask> | Owner: <named role or person role from the data, e.g. Team EMs + TPM>
+2. Ask: ... | Owner: ...
+(up to 5 lines; fewer is fine if the org is healthy)
+
+RULES:
+- Each ask must be actionable this sprint cycle (decision, freeze, deep-dive, burn-down, close hygiene) — never "monitor" or "continue to watch".
+- Prioritise: say/do declines → Dev-finished vs Completed gap / QA lag → mid-sprint scope chaos → trailing leader/manager orgs → chronic carry-over keys → unmapped ownership → sprint hygiene.
+- When Dev-finished say/do is materially higher than JIRA Completed say/do, frame QA bandwidth — do not blame Dev for that gap.
+- Name scrum teams / leaders / managers only if they appear in the packet.
+- If SEED_ASKS are provided, refine and prioritise them; you may drop weak ones and add stronger ones grounded in the metrics.
+- If the org is clean (no meaningful lowlights / gaps), emit 1–2 light asks or a single line: "1. Ask: No org-wide leadership asks this cycle — keep current sprint discipline. | Owner: TPM"
+- Under 220 words total.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from the data provided.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+  You are transcribing keys given to you — not recalling from memory.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key in your response, confirm it appears
+  verbatim in VALID TICKET KEYS above.
+`;
+
+/**
+ * Build user prompt for sprint leadership asks.
+ * @param {object} intelligence - Output of buildSprintAsksIntelligence
+ */
+function buildSprintLeadershipAsksPrompt(intelligence) {
+  const pack = intelligence || {};
+  const o = pack.overall || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const chronic = Array.isArray(pack.chronic) ? pack.chronic : [];
+  const waits = pack.qaLag?.longestWaits || [];
+  const keys = [];
+  const seenKey = new Set();
+  [...chronic.map((c) => c.key), ...waits.map((w) => w.key)].forEach((k) => {
+    if (k && !seenKey.has(k)) { seenKey.add(k); keys.push(k); }
+  });
+  const keyBlock = keys.length
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${keys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')}`
+    : 'VALID TICKET KEYS: none provided';
+
+  const lineList = (label, arr) => {
+    const items = (arr || []).filter(Boolean);
+    if (!items.length) return `${label}: none`;
+    return `${label}:\n${items.map((t) => `  - ${t}`).join('\n')}`;
+  };
+
+  const fmtRank = (rows) => (rows || []).map((r) => {
+    const who = r.leader ? `${r.name} (under ${r.leader})` : r.name;
+    return `${who}: ${r.sayDo ?? '—'}% say/do · ${r.people ?? '—'} people · ${r.committed ?? '—'} items`;
+  });
+
+  const gap = pack.devFinishedGap || {};
+  const gapTeamLines = (gap.largestTeamGaps || []).map(
+    (t) => `${t.name}: Completed ${t.jiraSayDo}% → Dev-finished ${t.devFinishedSayDo}% (gap +${t.gapPts} pts)`
+  );
+  const gapBlock = [
+    'DEV_FINISHED_VS_COMPLETED (same planned membership; gap ≈ QA close lag):',
+    `  Org JIRA Completed say/do: ${gap.orgJiraSayDo ?? o.sayDo ?? '—'}%`,
+    `  Org Dev-finished say/do (Resolved∪Closed): ${gap.orgDevFinishedSayDo ?? o.sayDoDevFinished ?? '—'}%`,
+    `  Org gap (Dev-finished − Completed): ${gap.orgGapPts != null ? `${gap.orgGapPts} pts` : '—'}`,
+    gapTeamLines.length ? `  Largest team gaps:\n${gapTeamLines.map((t) => `    - ${t}`).join('\n')}` : '  Largest team gaps: none',
+  ].join('\n');
+
+  const q = pack.qaLag || {};
+  const waitLines = (q.longestWaits || []).map(
+    (w) => `${w.key}: ${w.days}d waiting (Team: ${w.scrumTeam || '—'}; Assignee: ${w.assignee || '—'}; Manager: ${w.manager || '—'})`
+  );
+  const qaLagBlock = [
+    'QA_LAG (Resolved → Closed):',
+    `  Still waiting (status=Resolved): ${q.stillWaiting ?? 0} · median ${q.waitingMedianDays ?? '—'}d · p90 ${q.waitingP90Days ?? '—'}d`,
+    `  Closed lag: median ${q.closedMedianLagDays ?? '—'}d · p90 ${q.closedP90LagDays ?? '—'}d · closed after >14d: ${q.closedAfter14d ?? 0} of ${q.closedWithBothDates ?? 0}`,
+    waitLines.length ? `  Longest waits still in Resolved:\n${waitLines.map((t) => `    - ${t}`).join('\n')}` : '  Longest waits: none',
+  ].join('\n');
+
+  const ranks = pack.orgRankings || {};
+  const orgBlock = [
+    lineList('TOP_LEADERS_BY_SAY_DO', fmtRank(ranks.topLeaders)),
+    lineList('TRAILING_LEADERS_BY_SAY_DO', fmtRank(ranks.trailingLeaders)),
+    lineList('TOP_MANAGERS_BY_SAY_DO', fmtRank(ranks.topManagers)),
+    lineList('TRAILING_MANAGERS_BY_SAY_DO', fmtRank(ranks.trailingManagers)),
+  ].join('\n\n');
+
+  const vel = pack.velocityStreams || {};
+  const vw = vel.window || {};
+  const vr = vel.lastTrendSlots || {};
+  const velocityBlock = [
+    'VELOCITY_STREAMS:',
+    `  Full window — Dev done: ${vw.devDone ?? '—'} · QA verification (adj): ${vw.qaVerifiedAdj ?? '—'} · Test tasks: ${vw.testDone ?? '—'}`,
+    `  Last ${vr.slots ?? '—'} slots — Dev: ${vr.devDone ?? '—'} · QA verify adj: ${vr.qaVerifiedAdj ?? '—'} · Test: ${vr.testDone ?? '—'}`,
+  ].join('\n');
+
+  const chronicBlock = chronic.length
+    ? `CHRONIC CARRY-OVER (open, planned into many sprints):\n${chronic.map((c) => `  - ${c.key}: ${c.summary || ''} [${c.sprints} sprints] (Assignee: ${c.assignee || '—'}; Team: ${c.scrumTeam || '—'})`).join('\n')}`
+    : 'CHRONIC CARRY-OVER: none';
+
+  const hyg = pack.hygiene || {};
+  const hygieneLines = [
+    ...(hyg.staleActive || []).map((s) => `stale-open: ${s.name} (+${s.daysOverdue}d)`),
+    ...(hyg.startedEmpty || []).map((s) => `started-before-planned: ${s.name}`),
+    ...(hyg.lateClosed || []).map((s) => `late-closed: ${s.name} (+${s.daysLate}d)`),
+  ];
+
+  const seed = Array.isArray(pack.seedAsks) ? pack.seedAsks : [];
+  const seedBlock = seed.length
+    ? `SEED_ASKS (rule-based candidates — refine, do not invent facts beyond the packet):\n${seed.map((a, i) => `  ${i + 1}. ${a.text} | Owner: ${a.owner}`).join('\n')}`
+    : 'SEED_ASKS: none';
+
+  return [
+    `TODAY: ${today}`,
+    `PRODUCT_TEAM: ${pack.teamName || pack.teamId || '—'}`,
+    `SPRINT_WINDOW: ${pack.window || '—'}`,
+    `ORG_SAY_DO_RECENT: ${o.sayDoRecent ?? o.sayDo ?? '—'}%`,
+    `ORG_SAY_DO_TREND: ${o.trendEarly ?? '—'}% → ${o.trendRecent ?? '—'}%`,
+    `ORG_RAG: ${o.rag || '—'}`,
+    `SCOPE_CREEP_PCT: ${o.scopeCreep ?? '—'}`,
+    `COMPLETION_PCT: ${o.completion ?? '—'}`,
+    `PENDING_QA_RESOLVED: ${o.pendingQA ?? 0}`,
+    `CARRIED_ITEMS: ${o.carried ?? '—'}`,
+    `ITEMS_IN_WINDOW: ${o.committed ?? '—'}`,
+    `UNMAPPED_OWNERSHIP: ${o.unmappedPct ?? 0}% (${o.unmappedItems ?? 0} items)`,
+    '',
+    keyBlock,
+    '',
+    gapBlock,
+    '',
+    qaLagBlock,
+    '',
+    velocityBlock,
+    '',
+    orgBlock,
+    '',
+    lineList('HIGHLIGHTS', pack.highlights),
+    '',
+    lineList('LOWLIGHTS', pack.lowlights),
+    '',
+    lineList('DECLINING_TEAMS', pack.decliningTeams),
+    '',
+    lineList('IMPROVING_TEAMS', pack.improvingTeams),
+    '',
+    lineList('SCOPE_CREEP_TEAMS', pack.scopeCreepTeams),
+    '',
+    chronicBlock,
+    '',
+    lineList('SPRINT_HYGIENE', hygieneLines),
+    '',
+    seedBlock,
+    '',
+    'Write the Asks of Leadership section now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.',
+  ].join('\n');
+}
+
+/**
+ * Parse strict "N. Ask: … | Owner: …" lines from the model.
+ * @returns {{ text: string, owner: string }[]}
+ */
+function parseSprintLeadershipAsks(text) {
+  const asks = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || /^##/.test(line)) continue;
+    const m = line.match(/^\d+\.\s*(?:Ask:\s*)?(.+?)\s*\|\s*Owner:\s*(.+)$/i);
+    if (!m) continue;
+    const askText = m[1].replace(/^Ask:\s*/i, '').trim();
+    const owner = m[2].trim();
+    if (askText && owner) asks.push({ text: askText, owner });
+  }
+  return asks.slice(0, 5);
+}
+
+/**
+ * Generate AI-refined org-wide leadership asks for Sprint Performance.
+ * @param {object} intelligence - buildSprintAsksIntelligence output
+ * @returns {Promise<{ text: string, owner: string }[]>}
+ */
+async function generateSprintLeadershipAsks(intelligence) {
+  const messages = [
+    { role: 'system', content: SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT },
+    { role: 'user', content: buildSprintLeadershipAsksPrompt(intelligence) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const asks = parseSprintLeadershipAsks(text);
+  if (!asks.length) {
+    throw new Error('NAI returned no parseable sprint leadership asks');
+  }
+  return asks;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
+  generateSosTierSummary,
+  generateSprintLeadershipAsks,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
+  SOS_TIER_SYSTEM_PROMPT,
+  SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT,
   // Exposed for testing
-  _internals: { buildUserPrompt, buildTicketContext, buildGateGapsLine, buildReleaseContextBlock, buildReleaseSummaryPrompt },
+  _internals: {
+    buildUserPrompt,
+    buildTicketContext,
+    buildGateGapsLine,
+    buildReleaseContextBlock,
+    buildReleaseSummaryPrompt,
+    buildSchedulePressureBlock,
+    buildSosTierPrompt,
+    buildSprintLeadershipAsksPrompt,
+    parseSprintLeadershipAsks,
+    extractKeysFromItems,
+    collectCalloutKeys,
+    formatCalloutsBlock,
+    TIER_LABELS,
+  },
 };

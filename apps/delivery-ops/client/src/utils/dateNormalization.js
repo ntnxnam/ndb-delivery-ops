@@ -12,6 +12,12 @@
  */
 export function normalizeDateStr(dateValue) {
   if (!dateValue) return null;
+
+  // Unwrap { value } / { date } shapes from JIRA or stored fields
+  if (typeof dateValue === 'object' && !(dateValue instanceof Date)) {
+    const inner = dateValue.value ?? dateValue.date ?? dateValue.display ?? null;
+    return inner != null ? normalizeDateStr(inner) : null;
+  }
   
   let dateStr;
   if (typeof dateValue === 'string') {

@@ -28,7 +28,7 @@ Release Setup provides RM-only tools for managing JIRA release versions: creatin
 ## UI Behaviour
 
 1. **Create release form** — name, description, release date picker; validation before submit
-2. **Rename panel** — select existing release, enter new name; "Preview" button shows affected items; "Confirm" executes
+2. **Rename panel** — select existing release, enter new name; project checkboxes start with the selected team's JIRA project (ENG when the team is Cerebro / DR) plus FEAT, SDL, LEG, and TECHPUBS; "Preview" button shows affected items; "Confirm" executes
 3. **Cascade rename** — checkbox on rename panel; lists companion versions that will also be renamed
 4. **Cleanup filters panel** (`CleanupFilters`) — lists JIRA saved filters with stale release references; checkboxes to select which to update; "Apply" button
 5. **Confirmation dialogs** — every destructive action (create, rename, cleanup) requires a modal confirmation

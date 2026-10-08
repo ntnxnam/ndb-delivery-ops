@@ -48,7 +48,7 @@ router.get('/project-components', releaseVersionsLimiter, validateJiraTokenMiddl
 });
 
 /**
- * Build JQL for issues in a sprint, scoped by team sprintBaseFilter (project scope only; no statusCategory exclusion).
+ * Build JQL for issues in a sprint, scoped by the team sprint scope derived from baseFilter (project scope only; no statusCategory exclusion).
  * options.componentNames: optional string[] — when provided, appends AND component in ("A", "B").
  */
 

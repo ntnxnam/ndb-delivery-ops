@@ -11,7 +11,10 @@ Read order when you start a session in this repo:
 3. `AGENTS.md` (repo root) — repo-specific deltas.
 4. This file — Cursor-specific bootstrap.
 5. `agent-pack/identity/ops-assistant.md` — orchestrator protocol.
-6. `DECISIONS.md`, `ARCHITECTURE.md`, `FEATURE_CATALOG.md`.
+6. `agent-pack/context/INDEX.md` + `agent-pack/prompts/INDEX.md` — portable domain + LLM prompts (leave Cursor without losing these).
+7. `DECISIONS.md`, `ARCHITECTURE.md`, `FEATURE_CATALOG.md`.
+
+Context/prompts SoT is `agent-pack/` — not `.cursor/context/` (stubs only).
 
 ## The Ops Assistant — single user-facing agent (D16)
 

@@ -9,7 +9,7 @@ This file documents the team-list and team-base-filter endpoints. Other `/api/co
 
 ### GET /api/config/teams
 
-**Purpose**: Return the configured teams (id, name, board, **baseFilter**, sprintBaseFilter, sosBaseFilter) so the shared `TeamContext` can select a team and every page can scope JIRA queries to that team's base query.
+**Purpose**: Return the configured teams (id, name, board, **baseFilter**, sosBaseFilter, sprintCalendar, featureComponents) so the shared `TeamContext` can select a team and every page can scope JIRA queries to that team's base query.
 
 **Auth**: not required (read-only config)
 
@@ -34,7 +34,6 @@ This file documents the team-list and team-base-filter endpoints. Other `/api/co
       "boardId": 2888,
       "projectKey": "ERA",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
-      "sprintBaseFilter": "filter=NDB-All-Base-Filter",
       "sosBaseFilter": "filter=ndb-all-sos"
     }
   ]
@@ -87,3 +86,47 @@ Yes — in-process, keyed by file mtime. Invalidated on `POST /api/config/team-b
 
 **Caching**
 Write invalidates the in-process teamBoardConfig cache immediately. Client should `replaceTeams` with the returned `teams` array so other pages see the new base query without a refetch.
+
+---
+
+### GET /api/config/ndb-leader-org
+
+**Purpose**: Return the maintainable NDB engineering leader org map used by the leader-grouped SoS review page. Client matches SoS item `assigneeManager` against leader `matchNames` and manager `displayName` / `matchNames` (including nested `reports`).
+
+**Auth**: not required (read-only config)
+
+**Request**
+- Method + path: `GET /api/config/ndb-leader-org`
+- Query params: none
+- Body: none
+- Required headers: none
+
+**Server flow**
+`config.js` → read `server/config/ndbLeaderOrgConfig.json` (require cache cleared per request)
+
+**Response shape**
+```json
+{
+  "root": "Bharat",
+  "leaders": [
+    {
+      "id": "anil",
+      "displayName": "Anil",
+      "role": "dev_senior_director",
+      "matchNames": ["Anil Madan", "Anil"],
+      "managers": [
+        { "displayName": "Pranay Ega", "role": "dev_director" },
+        { "displayName": "Adil Gul Rather", "role": "manager", "note": "DBE" }
+      ]
+    }
+  ]
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 500 | Config file unreadable | Show Retry / keep previous map if cached |
+
+**Caching**
+No server TTL — file re-read each request. Client may hold in component state for the page session.

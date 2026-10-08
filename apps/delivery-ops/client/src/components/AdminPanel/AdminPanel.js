@@ -1,50 +1,41 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { authenticatedGet } from '../../utils/api';
 import { useTeam } from '../../contexts/TeamContext';
-import TeamOnboardingWizard from './TeamOnboardingWizard';
+import { useTeamAdmin } from '../../hooks/useTeamAdmin';
+import TeamForm from './TeamForm';
 import TeamList from './TeamList';
 import './AdminPanel.css';
 
 function pickerTeam(team) {
   if (!team) return team;
-  const { userConfig: _userConfig, kpiCount: _kpiCount, ...rest } = team;
+  const { kpiCount: _kpiCount, sprintScope: _sprintScope, ...rest } = team;
   return rest;
 }
 
+const headerButton = (bg, color = 'white') => ({
+  padding: '8px 16px',
+  backgroundColor: bg,
+  color,
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '14px',
+});
+
 function AdminPanel() {
   const { replaceTeams, upsertTeam, updateTeam } = useTeam();
+  const { teams, loading, error, loadTeams, saveTeam, testTeam } = useTeamAdmin();
   const [activeView, setActiveView] = useState('teams');
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [editingTeam, setEditingTeam] = useState(null);
   const [syncNotice, setSyncNotice] = useState('');
 
-  const loadTeams = useCallback(async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await authenticatedGet('/api/admin/teams', {
-        jiraToken: localStorage.getItem('jiraToken'),
-        username: localStorage.getItem('username') || ''
-      });
-
-      if (response.data.success) {
-        const list = response.data.teams || [];
-        setTeams(list);
-        replaceTeams(list.map(pickerTeam));
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load teams');
-    }
-
-    setLoading(false);
-  }, [replaceTeams]);
+  const refresh = useCallback(async () => {
+    const list = await loadTeams();
+    if (list) replaceTeams(list.map(pickerTeam));
+  }, [loadTeams, replaceTeams]);
 
   useEffect(() => {
-    loadTeams();
-  }, [loadTeams]);
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!syncNotice) return undefined;
@@ -52,50 +43,34 @@ function AdminPanel() {
     return () => clearTimeout(id);
   }, [syncNotice]);
 
-  const handleTeamCreated = (newTeam) => {
-    setTeams(prev => [...prev, { ...newTeam, userConfig: null, kpiCount: 0 }]);
-    upsertTeam(pickerTeam(newTeam));
-    setSyncNotice(`${newTeam?.name || 'New team'} is now in the Team dropdown. Click Fetch to load it.`);
+  const closeForm = () => {
     setActiveView('teams');
     setEditingTeam(null);
   };
 
-  const handleTeamUpdated = (updatedTeam) => {
-    setTeams(prev => prev.map(team =>
-      team.id === updatedTeam.id ? { ...updatedTeam, userConfig: team.userConfig, kpiCount: team.kpiCount } : team
-    ));
-    updateTeam(updatedTeam.id, pickerTeam(updatedTeam));
-    setSyncNotice(`${updatedTeam?.name || 'Team'} was updated in the Team dropdown.`);
-    setActiveView('teams');
-    setEditingTeam(null);
-  };
-
-  const handleEditTeam = (team) => {
-    setEditingTeam(team);
-    setActiveView('edit');
+  const handleSave = async (payload, editId) => {
+    const team = await saveTeam(payload, editId);
+    if (editId) {
+      updateTeam(team.id, pickerTeam(team));
+      setSyncNotice(`${team.name || 'Team'} was updated in the Team dropdown.`);
+    } else {
+      upsertTeam(pickerTeam(team));
+      setSyncNotice(`${team.name || 'New team'} is now in the Team dropdown. Click Fetch to load it.`);
+    }
+    closeForm();
   };
 
   if (loading && teams.length === 0) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '256px'
-      }}>
-        <div style={{ color: '#6b7280' }}>Loading admin panel...</div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '256px' }}>
+        <div style={{ color: '#6b7280' }}>Loading teams...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fca5a5',
-        borderRadius: '6px',
-        padding: '16px'
-      }}>
+      <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '16px' }}>
         <h3 style={{ fontWeight: '500', color: '#991b1b', margin: 0 }}>Access Denied</h3>
         <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>{error}</p>
         <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '8px' }}>
@@ -106,70 +81,19 @@ function AdminPanel() {
   }
 
   return (
-    <div style={{ 
-      maxWidth: '1280px', 
-      margin: '0 auto', 
-      padding: '24px' 
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
-      }}>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <h1 style={{ 
-            fontSize: '30px', 
-            fontWeight: 'bold',
-            margin: 0 
-          }}>
-            Team Administration
-          </h1>
-          <p style={{ 
-            color: '#6b7280', 
-            marginTop: '4px',
-            margin: 0
-          }}>
-            Manage teams, users, and permissions
-          </p>
+          <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: 0 }}>Team Management</h1>
+          <p style={{ color: '#6b7280', margin: 0 }}>Add and edit teams</p>
         </div>
-        
-        {activeView === 'teams' && (
-          <button
-            onClick={() => setActiveView('create')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}
-          >
-            <span>+</span>
-            Create New Team
-          </button>
-        )}
-        
-        {(activeView === 'create' || activeView === 'edit') && (
-          <button
-            onClick={() => {setActiveView('teams'); setEditingTeam(null);}}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Back to Teams
-          </button>
+        {activeView === 'teams' ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={refresh} style={headerButton('#f3f4f6', '#374151')}>🔄 Refresh</button>
+            <button onClick={() => setActiveView('create')} style={headerButton('#3b82f6')}>+ Add team</button>
+          </div>
+        ) : (
+          <button onClick={closeForm} style={headerButton('#6b7280')}>Back to Teams</button>
         )}
       </div>
 
@@ -190,79 +114,19 @@ function AdminPanel() {
         </div>
       )}
 
-      {/* Navigation Tabs & Quick Actions */}
       {activeView === 'teams' && (
-        <div style={{
-          borderBottom: '1px solid #e5e7eb',
-          marginBottom: '24px'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <nav style={{ marginBottom: '-1px', display: 'flex', gap: '32px' }}>
-              <button
-                onClick={() => setActiveView('teams')}
-                style={{
-                  padding: '8px 4px',
-                  borderBottom: '2px solid #3b82f6',
-                  color: '#2563eb',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                Teams ({teams.length})
-              </button>
-            </nav>
-            
-            <div style={{ display: 'flex', gap: '8px', paddingBottom: '8px' }}>
-              <button
-                onClick={loadTeams}
-                style={{
-                  padding: '4px 12px',
-                  fontSize: '14px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                🔄 Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
-      {activeView === 'teams' && (
-        <TeamList 
-          teams={teams} 
-          onTeamUpdate={loadTeams}
+        <TeamList
+          teams={teams}
+          onTest={testTeam}
           onCreateTeam={() => setActiveView('create')}
-          onEditTeam={handleEditTeam}
+          onEditTeam={(team) => { setEditingTeam(team); setActiveView('edit'); }}
         />
       )}
 
-      {activeView === 'create' && (
-        <TeamOnboardingWizard
-          onComplete={handleTeamCreated}
-          onCancel={() => {setActiveView('teams'); setEditingTeam(null);}}
-        />
-      )}
+      {activeView === 'create' && <TeamForm onSave={handleSave} onCancel={closeForm} />}
 
       {activeView === 'edit' && editingTeam && (
-        <TeamOnboardingWizard
-          editMode={true}
-          initialData={editingTeam}
-          onComplete={handleTeamUpdated}
-          onCancel={() => {setActiveView('teams'); setEditingTeam(null);}}
-        />
+        <TeamForm key={editingTeam.id} initialTeam={editingTeam} onSave={handleSave} onCancel={closeForm} />
       )}
     </div>
   );

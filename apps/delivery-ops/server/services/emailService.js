@@ -74,16 +74,18 @@ async function getEmailConnector() {
  */
 function getDefaultFromAddress() {
   const smtpConfig = emailConfig.smtp || {};
-  return process.env.SMTP_FROM || smtpConfig.from || 'svc.ndb.team@nutanix.com';
+  return process.env.SMTP_FROM || smtpConfig.from || 'smtp.ndb.team@nutanix.com';
 }
 
 /**
  * Send email via nodemailer transporter.
- * From is always set to the service account (getDefaultFromAddress) for relay compliance.
+ * From is always forced to the service account (getDefaultFromAddress) for relay compliance.
+ * Auth uses SMTP_USER / SMTP_PASS from env (same account). Callers may set replyTo only.
  * In production, implements fallback for relay access issues.
  */
 async function sendEmailDirect(mailOptions) {
-  mailOptions.from = mailOptions.from || getDefaultFromAddress();
+  // Always overwrite — never allow a caller From that is not the SMTP service account.
+  mailOptions.from = getDefaultFromAddress();
   const email = await getEmailConnector();
   
   try {
@@ -126,50 +128,35 @@ async function sendEmailDirect(mailOptions) {
 async function tryFallbackSMTP(mailOptions, originalError) {
   console.log('[EmailService] 🔧 Starting fallback SMTP configuration attempts...');
   
+  // Prefer the configured service account (SMTP_USER / SMTP_PASS) on alternate hosts/ports.
+  const envUser = process.env.SMTP_USER;
+  const envPass = process.env.SMTP_PASS;
+  const envAuth = envUser && envPass ? { user: envUser, pass: envPass } : null;
+
   const fallbackConfigs = [
-    // Try local Era SMTP server first (non-secure, authenticated)
     {
-      name: 'Era SMTP Server (10.111.71.70:25)',
-      host: '10.111.71.70',
+      name: 'Secure relay port 25 (same service account)',
+      host: process.env.SMTP_HOST || 'secure-mailrelay.corp.nutanix.com',
       port: 25,
       secure: false,
       requireTLS: false,
-      auth: { user: 'era@nutanix.com', pass: 'Nutanix.1' }
+      auth: envAuth
     },
-    // Try port 25 without authentication on the same server (most likely to work)
     {
-      name: 'Same Server Port 25 (No Auth)',
-      host: 'secure-mailrelay.corp.nutanix.com',
-      port: 25,
-      secure: false,
-      requireTLS: false,
-      auth: null
-    },
-    // Try the main corporate mail server variations
-    {
-      name: 'Corporate Mail Server',
+      name: 'Corporate Mail Server (same service account)',
       host: 'mailrelay.corp.nutanix.com',
       port: 25,
       secure: false,
       requireTLS: false,
-      auth: null
+      auth: envAuth
     },
     {
-      name: 'Exchange Server',
+      name: 'Exchange Server (same service account)',
       host: 'exchange.corp.nutanix.com',
       port: 25,
       secure: false,
       requireTLS: false,
-      auth: null
-    },
-    // Try mercury directly (we saw this in the SMTP logs)
-    {
-      name: 'Mercury Mail Server',
-      host: 'mercury01.nutanix.com',
-      port: 25,
-      secure: false,
-      requireTLS: false,
-      auth: null
+      auth: envAuth
     }
   ];
 

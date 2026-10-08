@@ -9,9 +9,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:parent-project": "jest __tests__/routes/jira-parent-project.test.js",
     "test:admin": "jest __tests__/routes/admin.test.js",
-    "test:new-features": "jest __tests__/routes/admin.test.js __tests__/routes/jira-parent-project.test.js"
+    "test:new-features": "jest __tests__/routes/admin.test.js __tests__/services/teamInspectService.test.js"
   },
   "dependencies": {
     "@portfolio-delivery-ops/shared": "*",

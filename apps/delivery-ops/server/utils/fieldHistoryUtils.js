@@ -310,6 +310,8 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
 
     // Risk Indicator changelog transitions (captured only when requested).
     const riskChanges = [];
+    // Timestamped date-field moves (for SoS "moved in last 7d" callouts).
+    const dateMoveEvents = [];
 
     // Process changelog to find field changes
     histories.forEach(history => {
@@ -335,12 +337,18 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
         // First try by fieldId, then by field name
         let matchingFieldKey = null;
         
-        // Try matching by fieldId first using config
+        // Try matching by fieldId first using config.
+        // getAllFields() sets category to the parent group key ("checkpointDates"),
+        // while the JSON field's own category is "checkpoint" — accept both.
         if (fieldId) {
           // Skip immediately if this fieldId isn't in our active set
           if (!activeFieldIds.has(fieldId)) return;
           const fieldConfig = getFieldConfigById(fieldId);
-          if (fieldConfig && fieldConfig.category === 'checkpoint' && fieldConfig.type === 'date') {
+          const cat = fieldConfig?.category;
+          const isCheckpointDate =
+            fieldConfig?.type === 'date' &&
+            (cat === 'checkpoint' || cat === 'checkpointDates');
+          if (isCheckpointDate && fieldConfig.logicalKey && activeFields[fieldConfig.logicalKey]) {
             matchingFieldKey = fieldConfig.logicalKey;
           }
         }
@@ -383,6 +391,17 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
             if (date) {
               historyData[matchingFieldKey].push(date);
             }
+          }
+          // A real move = to-value set/changed with a changelog timestamp
+          const toDate = toValue && toValue !== 'null' && toValue !== ''
+            ? formatDate(toValue) : null;
+          if (toDate && history.created) {
+            dateMoveEvents.push({
+              field: matchingFieldKey,
+              changedAt: history.created,
+              from: fromValue && fromValue !== 'null' ? formatDate(fromValue) : null,
+              to: toDate,
+            });
           }
         } else if (!matchingFieldKey && (fieldId || fieldName)) {
           // Debug: log items we're not matching (only for date-like fields)
@@ -445,7 +464,9 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
       // Risk Indicator (RAG) trail — oldest → newest. Empty unless requested.
       riskIndicatorHistory: includeRiskIndicator
         ? buildRiskIndicatorTrail(riskChanges, fields[RISK_INDICATOR_FIELD_ID])
-        : []
+        : [],
+      // Timestamped date moves (changelog.created) for recent-move callouts.
+      dateMoveEvents,
     };
     
     // Add raw response if requested
@@ -491,7 +512,9 @@ async function fetchFieldHistoryForMultiple(jiraKeys, token, options = {}) {
         codeCompleteDate: [],
         numberofTimesCCMDateMoved: 0,
         WeeksDiffbwOldestandLatestCCMDate: 0,
-        PGCompleteDate: []
+        PGCompleteDate: [],
+        dateMoveEvents: [],
+        riskIndicatorHistory: [],
       });
     }
 
@@ -535,6 +558,15 @@ function transformFieldHistoryToCheckpointHistory(fieldHistoryData) {
       ? item.riskIndicatorHistory.map((e) => ({
           value: e.value,
           changedAt: e.changedAt || null,
+        }))
+      : [];
+
+    checkpointHistory[key].dateMoves = Array.isArray(item.dateMoveEvents)
+      ? item.dateMoveEvents.map((e) => ({
+          field: e.field,
+          changedAt: e.changedAt || null,
+          from: e.from || null,
+          to: e.to || null,
         }))
       : [];
     

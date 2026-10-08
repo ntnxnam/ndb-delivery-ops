@@ -144,6 +144,70 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 
 ---
 
+### POST /api/jira/release-kpi-breakdown-batch
+
+**Purpose**: For each team KPI, return `total` / `done` / `open` counts scoped to
+a release version, split by resolution. Powers the Retrospective page's
+Cross-Release Comparison "KPI Categories" rows, and leader-scoped KPI chips on
+SoS by Leader (via optional `jqlExtra`).
+
+**Auth**: required — KPI view authorization (same gate as `kpi-results-batch`).
+
+**Request**
+- Method + path: `POST /api/jira/release-kpi-breakdown-batch`
+- Required headers: `x-jira-token` (PAT), `x-username`
+- Body params:
+  - `releaseVersion` (string, required) — e.g. `NDB-2.11`
+  - `teamId` (string, required) — team key whose KPI config is used
+  - `jqlExtra` (string, optional) — AND-ed onto every bucket JQL (e.g.
+    `"Assignee Manager" in ("Jovan Cukalovic", …)` for leader SoS)
+
+**Server flow**
+Route (`routes/jira/kpi.js`) → `kpiService.getReleaseKpiResolutionBreakdown`
+→ per KPI builds `buildReleaseKpiResolutionJql(total|done|open)` (release base
+filter + KPI filter + optional `jqlExtra` + resolution/status clause) →
+`jira.searchCount` (count-only, maxResults=0) for each bucket.
+
+**Response shape**
+```json
+{
+  "success": true,
+  "results": {
+    "product-blockers": {
+      "name": "Product Blockers",
+      "total": 12,
+      "done": 9,
+      "open": 3,
+      "links": {
+        "total": "fixVersion = \"NDB-2.11\" and (...) ",
+        "done": "... and resolution in (Fixed, Done, Resolved, Complete)",
+        "open": "... and status not in (Done, Closed)"
+      }
+    },
+    "system-test": { "error": "..." }
+  }
+}
+```
+Per-KPI `error` strings are returned inline; a failing KPI does not fail the batch.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | `releaseVersion` or `teamId` missing | fix request |
+| 403 | not KPI-view authorized | hide the comparison KPI rows |
+| 5xx | JIRA/query failure | show error, allow retry |
+
+**Caching**: No server cache. Client caches per (teamId, releaseSet) via the
+`useRetroComparison` hook key; no auto-refetch on empty results.
+
+> JQL buckets approved via the richer-retrospective plan (2026-09-21):
+> `total = <releaseBaseFilter> AND (<kpiPart>)`;
+> `done = total AND resolution in (Fixed, Done, Resolved, Complete)`;
+> `open = total AND status not in (Done, Closed)`. `excludeDeferred` KPIs also
+> append the deferred-label exclusion.
+
+---
+
 ## Issue Breakdown & History
 
 ### POST /api/jira/issue-breakdown
@@ -515,3 +579,88 @@ This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
 **Request** — Path: `key` (JIRA issue key)
 
 **Response**: `{ changelog: [...] }`
+
+---
+
+## System-Test Scale
+
+### GET /api/jira/system-test-scale
+
+**Purpose**: Return live System-Test scale dashboard counts, per-metric JQL, RAG, components, and release-over-release trends scoped by team KPI `filter={teamCode}-System-Test` with `cf[13260]` regression typing.
+
+**Auth**: required · KPI view authorization (`kpi_view`)
+
+**Request**
+- Method + path: `GET /api/jira/system-test-scale`
+- Query params:
+  - `teamId` (string, optional) — team board id (e.g. `ndb`); resolves `teamCode` → `filter={teamCode}-System-Test`
+  - `currentRelease` (string, optional) — e.g. `NDB-2.11`
+  - `compareRelease` (string, optional) — e.g. `NDB-2.10`
+- Required headers: JIRA token (middleware)
+
+**Server flow**
+Route handler → `checkKpiViewAuthorization` → `systemTestScaleService.getDashboard({ teamId, … })` → resolve teamCode / kpiFilter → parallel `jira.searchCount` → assemble payload
+
+**Response shape**
+```json
+{
+  "success": true,
+  "generatedAt": "2026-10-08T06:00:00.000Z",
+  "fetchSeconds": 52.3,
+  "teamId": "ndb",
+  "teamCode": "NDB",
+  "kpiFilter": "filter=NDB-System-Test",
+  "regressionField": "cf[13260]",
+  "currentRelease": "NDB-2.11",
+  "compareRelease": "NDB-2.10",
+  "rag": { "level": "yellow", "why": "..." },
+  "current": { "open": { "count": 19, "jql": "..." }, "rates": { "regressionRate": 8.1 } },
+  "compare": { },
+  "byRelease": { },
+  "trends": { "series": [], "rateSeries": [] },
+  "components": { },
+  "carry": { }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Team has no releases in `systemTestScaleConfig.teams` | Show configure message |
+| 403 | User lacks KPI view | Show access denied |
+| 500 | JIRA / internal failure | Show error + retry |
+
+**Caching**
+No — always live JIRA `searchCount`.
+
+---
+
+### POST /api/jira/system-test-scale/refresh
+
+**Purpose**: Explicit pull — same live re-count as GET (user-triggered Refresh).
+
+**Auth**: required · KPI view authorization
+
+**Request**
+- Method + path: `POST /api/jira/system-test-scale/refresh`
+- Body params:
+  - `teamId` (string, optional)
+  - `currentRelease` (string, optional)
+  - `compareRelease` (string, optional)
+- Required headers: JIRA token
+
+**Server flow**
+Route handler → `getDashboard` → respond
+
+**Response shape**
+Same as GET `/api/jira/system-test-scale`.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Team not configured for System-Test | Show configure message |
+| 403 | No KPI view | Show access denied |
+| 500 | Refresh failed | Show error + retry |
+
+**Caching**
+No.

@@ -32,6 +32,8 @@ Headers: x-jira-token, x-username
 
 **Fields fetched**: `summary, issuetype, status, assignee, codeComplete, commitGate, promotionGate, riskIndicator`
 
+The selected-feature dashboard header also fetches `riskAssessment` (`customfield_47780`), `pathToGreen` (`customfield_55664`), `cgChecklistLink` (`customfield_55662`), and `pgChecklistLink` (`customfield_55663`).
+
 **Response extras used by the overall Gantt**:
 - `features[].ccDate` / `cgDate` / `pgDate` — feature gate dates
 - `features[].risk` — Risk Indicator (`Green` / `Yellow` / `Red`)

@@ -176,6 +176,7 @@ No.
 |---|---|---|
 | 400 | `item.key` missing | Fix the request body |
 | 502 | NAI returned empty or failed | Show retry button; log `naiDebug` |
+| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` | Retry; raise timeout if frequent |
 
 **Caching**: No — summaries are generated on demand and written to JIRA via the PUT endpoint.
 
@@ -284,3 +285,115 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
 | `dark` | Status update is ≥14 days stale |
 | `watching` | On track, no critical signals |
 | `clear` | At PG Met or Shipped |
+
+---
+
+### POST /api/ai/sos-tier-summary
+
+**Purpose**: Team-exec SoS work-tier briefing (FEAT / Standalone / Direct) from a tiny client-assembled packet — RAG, outstanding-by-type, gates, ≤8 CRITICAL_ITEMS, and CALL_OUTS (Risk not set, stale status updates ≥14d, date moves in last 7d with exact keys). No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-tier-summary`
+- Body:
+  - `release` (string, required)
+  - `tier` (`feat` | `standalone` | `direct`, required)
+  - `ragCounts` `{ Red, Yellow, Green, NotSet }`
+  - `itemCount` number
+  - `outstandingByType` map of open counts by issue-type group
+  - `gateDates` `{ cgDate, pgDate, daysToCommitGate, daysToPromotionGate }`
+  - `criticalItems` `[{ key, rag, tldr, summary }]` — max ~8
+  - `callouts` optional hygiene packet:
+    - `riskNotSet` `{ count, keys[] }`
+    - `staleStatusUpdates` `{ count, keys[], thresholdDays }`
+    - `dateMovesLast7d` `[{ field, label, keys[] }]` e.g. FS/DS Done Date moved
+    - `pastGateLagging` `{ count, keys[], gate: { kind, label, iso, expectedStatus, daysAgo } }` — this release's most recently elapsed gate; status not cleared
+    - `datesPastNextGate` `{ count, keys[], gate: { kind, label, iso, daysUntil } }` — item CC/CG/PG dates after upcoming gate ("Keep an eye")
+    - `gateContext` `{ pastGate, nextGate }` snapshot of the release calendar
+  - `p0Count`, `mustFixCount` numbers
+  - `p0Keys`, `mustFixKeys` optional string arrays for VALID TICKET KEYS
+
+**Server flow**
+Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI (`SOS_TIER_SYSTEM_PROMPT`) → response
+
+**Response shape**
+```json
+{
+  "summary": "## FEAT Work — NDB-3.0\n🟡 TLDR: …\n⚠️ Call-outs:\n• Risk Indicator not set (2): ERA-1, ERA-2\n📋 Key Risks:\n• …\n✅ Next Owner Actions:\n• FEAT Manager — …",
+  "release": "NDB-3.0",
+  "tier": "feat",
+  "generatedAt": "2026-09-25T17:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `release` / `tier` missing or invalid | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / upstream failure | Retry that tier |
+| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` (default 120s) | Retry that tier; if frequent, raise timeout |
+
+**Caching**: No — on demand. One call per tier; client runs tiers sequentially per release.
+
+---
+
+### POST /api/ai/sprint-leadership-asks
+
+**Purpose**: Generate org-wide **Asks of leadership** for the Sprint Performance report using a **sprint-specific** NAI prompt (`SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT`). This is not the release briefing prompt — inputs are say/do, scope creep, QA Resolved queue, chronic carry-over keys, and sprint hygiene (not gate dates / P0 release blockers / feature buckets).
+
+Also invoked automatically at the end of **Regenerate from JIRA** (`sprintPerformanceReportService`); on NAI failure the report keeps rule-based asks (`asksSource: "rules"`).
+
+**Auth**: Required (JIRA token — auth only; no JIRA search in this handler)
+
+**Request**
+- Method + path: `POST /api/ai/sprint-leadership-asks`
+- Body (JSON) — either a compact intelligence packet or `{ model }` from `computeSprintPerformance`:
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `teamId` / `teamName` | string | no | Product team label for the prompt |
+  | `window` | string | no | e.g. `S34–S59` |
+  | `overall` | object | recommended | `sayDo`, `sayDoDevFinished`, `sayDoRecent`, trends, `scopeCreep`, `pendingQA`, `committed`, `carried`, `completion`, `rag`, `unmappedPct` |
+  | `devFinishedGap` | object | no | Org + per-team Completed vs Dev-finished (Resolved∪Closed) gap |
+  | `qaLag` | object | no | Still-waiting counts/ages, closed lag median/p90, `longestWaits[]` (keys → VALID TICKET KEYS) |
+  | `orgRankings` | object | no | `topLeaders` / `trailingLeaders` / `topManagers` / `trailingManagers` |
+  | `velocityStreams` | object | no | Dev / QA verification adj / Test for window + last trend slots |
+  | `highlights` / `lowlights` | string[] | no | Org-wide narrative lines |
+  | `decliningTeams` / `improvingTeams` / `scopeCreepTeams` | string[] | no | Team trend / creep lines |
+  | `chronic` | `{ key, summary, sprints, assignee, scrumTeam }[]` | no | Open chronic carry-overs |
+  | `hygiene` | object | no | `staleActive` / `startedEmpty` / `lateClosed` |
+  | `seedAsks` | `{ text, owner }[]` | no | Rule-based candidates to refine |
+  | `model` | object | alt | Full Sprint Performance model — server runs `buildSprintAsksIntelligence` |
+
+**Server flow**
+`POST /api/ai/sprint-leadership-asks`
+→ normalize body → `buildSprintAsksIntelligence(model)` if needed
+→ `generateSprintLeadershipAsks` (`SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` + user packet)
+→ parse `N. Ask: … \| Owner: …` lines
+→ response
+
+**Response shape**
+```json
+{
+  "asks": [
+    { "text": "Deep-dive with Team X on the say/do decline…", "owner": "Team EMs + TPM" }
+  ],
+  "asksSource": "ai",
+  "teamId": "ndb",
+  "teamName": "NDB",
+  "window": "S34–S59",
+  "generatedAt": "2026-10-08T09:15:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | Intelligence packet / model missing | Send packet or `{ model }` |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / unparseable asks | Retry; report gen falls back to rules |
+| 504 | NAI timeout | Retry |
+
+**Caching**: No — on demand. Report generation embeds the result into the HTML once per regenerate.
+

@@ -12,6 +12,7 @@ const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { fetchComponentsFromERA, fetchComponentPayload } = require('../services/componentReportService');
+const { getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
 
 const router = express.Router();
 
@@ -19,43 +20,42 @@ const auth = [apiLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersi
 
 /**
  * GET /api/component/list
- * Return list of components from ERA project
- * Caches in session to avoid repeated JIRA calls
+ * Components for the selected team's JIRA project.
+ * Query: productId (or team). Omitted → default team. Cache is per project.
  */
 router.get('/list', auth, async (req, res) => {
   try {
-    const { team = 'ndb', refresh = false } = req.query;
     const jiraToken = req.jiraToken;
 
     if (!jiraToken) {
       return res.status(401).json({ error: 'JIRA token required' });
     }
 
-    // Check session cache first (skip if refresh=true)
-    const shouldRefresh = refresh === 'true' || refresh === true;
-    if (!shouldRefresh && req.session && req.session.componentList) {
-      const cacheAge = Date.now() - req.session.componentListTime;
-      if (cacheAge < 3600000) { // 1 hour cache
-        return res.json(req.session.componentList);
-      }
+    const requestedId = String(req.query.productId || req.query.team || '').trim();
+    const config = loadTeamBoardConfig();
+    const teamId = requestedId || config.defaultTeamId || 'ndb';
+    const team = getTeamById(teamId);
+    const projectKey = team && team.projectKey ? String(team.projectKey).trim() : '';
+    if (!projectKey) {
+      return res.status(400).json({ error: `Unknown team '${teamId}' or missing projectKey` });
     }
 
-    // Clear stale cache if refreshing
-    if (shouldRefresh && req.session) {
-      delete req.session.componentList;
-      delete req.session.componentListTime;
+    const shouldRefresh = req.query.refresh === 'true' || req.query.refresh === true;
+    if (req.session && !req.session.componentListByProject) req.session.componentListByProject = {};
+    const cached = req.session?.componentListByProject?.[projectKey];
+    if (!shouldRefresh && cached && (Date.now() - cached.cachedAt) < 3600000) {
+      return res.json(cached.result);
+    }
+    if (shouldRefresh && req.session?.componentListByProject) {
+      delete req.session.componentListByProject[projectKey];
     }
 
-    // Fetch from JIRA
-    const result = await fetchComponentsFromERA(jiraToken);
-    console.log('[component route] Fetched', result.count, 'components from JIRA');
+    const result = await fetchComponentsFromERA(jiraToken, projectKey);
+    console.log('[component route] Fetched', result.count, 'components for', projectKey);
 
-    // Cache in session
-    if (req.session) {
-      req.session.componentList = result;
-      req.session.componentListTime = Date.now();
+    if (req.session?.componentListByProject) {
+      req.session.componentListByProject[projectKey] = { result, cachedAt: Date.now() };
     }
-
     res.json(result);
   } catch (err) {
     console.error('[component route] Error fetching components:', err.message);

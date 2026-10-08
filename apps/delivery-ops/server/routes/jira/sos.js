@@ -108,10 +108,9 @@ router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistory
       return res.json({ success: true, data: { history: {}, itemCount: 0, skipped } });
     }
 
-    // Restrict to the three checkpoint fields the SoS page renders (CC, CG, PG).
-    // Fetching all six date fields per ticket is unnecessary and slows down the
-    // changelog walk for a large SoS filter.
-    const SOS_FIELDS = ['codeComplete', 'commitGate', 'promotionGate'];
+    // Checkpoint fields for SoS movement overlay + recent-move callouts.
+    // Includes FS/DS + Test Plan so "date moved last 7d" callouts can name them.
+    const SOS_FIELDS = ['codeComplete', 'commitGate', 'promotionGate', 'fsdsDone', 'testPlan'];
 
     // Failure ladder: live walk → on-disk snapshot → propagate. On success we
     // refresh the snapshot so the next rate-limited call still has movement.

@@ -109,6 +109,7 @@ function GateMarker({ gate, highlighted, onClick }) {
   const baseClass = [
     'ds-gate-timeline__marker',
     trackClass,
+    `ds-gate-timeline__marker--${gate.kind.toLowerCase()}`,
     gate.style === 'dotted' ? 'ds-gate-timeline__marker--planned' : '',
     gate.past ? 'ds-gate-timeline__marker--past' : '',
     highlighted ? 'ds-gate-timeline__marker--highlight' : '',

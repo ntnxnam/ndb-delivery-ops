@@ -2,7 +2,7 @@
  * Team-config lookup helpers. Encapsulates the two config files that
  * NDB-Ops projects use to identify teams, boards, and KPIs:
  *
- *   - config/teamBoardConfig.json — team -> { id, baseFilter, sprintBaseFilter, boardId, ... }
+ *   - config/teamBoardConfig.json — team -> { id, baseFilter, boardId, ... }
  *   - config/kpiConfig.json       — { teams: { [teamId]: KPI[] } }
  *
  * Pulled out of server/routes/jira/index.js during Phase 2a.
@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { sprintScopeFromBaseFilter } = require('./teamScope');
 
 const KPI_CONFIG_PATH = path.join(__dirname, '..', 'config', 'kpiConfig.json');
 const TEAM_CONFIG_PATH = path.join(__dirname, '..', 'config', 'teamBoardConfig.json');
@@ -177,13 +178,13 @@ function getTeamBaseFilter(teamId) {
 }
 
 /**
- * Sprint-specific base filter (project scope only — no statusCategory!=Done clause,
- * because sprint reports must count completed/Resolved issues).
+ * Sprint scope: the team base filter without its trailing statusCategory!=Done
+ * clause, because sprint reports must count completed/Resolved issues.
  * @param {string} teamId
  * @returns {string|null}
  */
 function getTeamSprintBaseFilter(teamId) {
-  return getTeamField(teamId, 'sprintBaseFilter');
+  return sprintScopeFromBaseFilter(getTeamBaseFilter(teamId)) || null;
 }
 
 /**

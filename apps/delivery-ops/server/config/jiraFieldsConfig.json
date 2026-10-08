@@ -177,6 +177,22 @@
         "category": "links",
         "description": "Link to test plan document",
         "usedIn": ["email"]
+      },
+      "cgChecklistLink": {
+        "id": "customfield_55662",
+        "label": "Link to CG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Commit Gate checklist",
+        "usedIn": ["table", "email", "fetch"]
+      },
+      "pgChecklistLink": {
+        "id": "customfield_55663",
+        "label": "Link to PG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Promotion Gate checklist",
+        "usedIn": ["table", "email", "fetch"]
       }
     },
     "indicators": {
@@ -188,6 +204,32 @@
         "description": "Risk level indicator (e.g., Green - On Track)",
         "usedIn": ["table", "email"],
         "hasColor": true
+      },
+      "riskAssessment": {
+        "id": "customfield_47780",
+        "label": "Risk Assessment",
+        "type": "text",
+        "category": "indicators",
+        "description": "Free-text risk assessment",
+        "usedIn": ["table", "email", "fetch"]
+      },
+      "pathToGreen": {
+        "id": "customfield_55664",
+        "label": "Path to Green",
+        "type": "text",
+        "category": "indicators",
+        "description": "What it takes to return the item to green",
+        "usedIn": ["table", "email", "fetch"]
+      }
+    },
+    "classification": {
+      "primaryComponent": {
+        "id": "customfield_15160",
+        "label": "Primary Component",
+        "type": "cascadingSelect",
+        "category": "classification",
+        "description": "Cascading select: parent is the JIRA component, child is the sub-component",
+        "usedIn": ["fetch"]
       }
     },
     "relationships": {
@@ -241,7 +283,11 @@
     "promotion gate ready estimation date": "promotionGate",
     "promotion gate": "promotionGate",
     "status update date": "statusUpdateDate",
-    "status update last updated date": "statusUpdateDate"
+    "status update last updated date": "statusUpdateDate",
+    "link to cg checklist": "cgChecklistLink",
+    "link to pg checklist": "pgChecklistLink",
+    "risk assessment": "riskAssessment",
+    "path to green": "pathToGreen"
   },
   "fieldCategories": {
     "checkpoint": "Checkpoint dates for tracking project milestones",
@@ -249,6 +295,7 @@
     "content": "Text content fields for status updates",
     "links": "Link fields to external documents",
     "indicators": "Status and risk indicator fields",
+    "classification": "Component classification fields",
     "relationships": "Fields that link tickets together",
     "agile": "Sprint and board fields (Jira Software)"
   }

@@ -1,6 +1,6 @@
 ---
 name: pending-response-chase
-description: Detect and chase pending responses to dependency or deferral asks. Per D19 (4th triage flavour) — when team X asks team Y for a decision or commitment and team Y doesn't reply, surface the stuck request and prompt a chase. Open detail in D24.
+description: Detect and chase pending responses to dependency or deferral asks. Per D19 — when team X asks team Y for a decision or commitment in a JIRA comment and team Y doesn't reply, surface the stuck request and prompt a chase. Detection is unreplied JIRA comments (D24).
 audience: tpm, portfolio_mgr
 ---
 
@@ -12,63 +12,43 @@ audience: tpm, portfolio_mgr
 - The TPM specialist invokes this during weekly status preparation
 - Portfolio Manager wants to clear their reactive-load chase queue
 
-## ⚠ Open Detail (D24)
+## Detection (D24, locked 2026-10-05)
 
-The exact mechanism for detecting "did someone respond?" is **not yet
-locked**. Candidate signals (to validate with the Portfolio Manager
-before building):
+An ask is stuck when a JIRA comment that requests a response has no reply
+comment within the stale threshold. Labels, status, custom fields,
+Confluence tasks, and Slack are out of scope.
 
-- **JIRA comment threads** — an ask comment with no reply comment in N days
-- **JIRA label changes** — a `needs-response` label that hasn't been removed
-- **JIRA status transitions** — a status like `Pending Response` that
-  hasn't moved
-- **JIRA custom field** — a "Response Due Date" field that's past due
-  without a "Response Received" timestamp
-- **Confluence task list items** — `<ac:task-list>` items that haven't
-  been checked off
-- **Slack threads** — a question/ask posted that no one acked
-
-This skill's implementation depends on which signal(s) the Portfolio
-Manager confirms. Until D24 is resolved, the skill produces a
-**best-effort** scan with explicit "confirmed signals" vs "inferred"
-in its output.
-
-## Quick Start (provisional pending D24)
+## Quick Start
 
 ```
 Input: {
   productId: 'ndb',
-  signals: ('jira-comment' | 'jira-label' | 'jira-status' | 'jira-custom-field' | 'confluence-task' | 'slack')[],
-  staleThresholdDays: 5,  // ask is considered stuck if no response in N days
+  signal: 'jira-comment',
+  staleThresholdDays: 5,  // ask is considered stuck if no reply comment in N days
   scope: 'active-releases' | 'team:<id>' | 'all'
 }
 
 Output: a table of stuck asks with proposed chase actions.
 
 Procedure:
-1. For each enabled signal, scan the corpus:
-     - jiraConnector.searchComments(...) for unreplied comments
-     - jiraConnector.search labels="needs-response" with no recent activity
-     - confluenceConnector for unchecked task items past their due date
-     - slackConnector for unacked questions in tracked channels (Phase D)
-2. Aggregate by ask (multiple signals on one item count once).
-3. Classify ask-type: dependency-ask, deferral-ask, generic-ask.
-4. Propose a chase action: DM the owner, comment on the ticket, escalate
-   to manager.
-5. User approves → execute.
-6. Audit log.
+1. Scan JIRA comments for ask comments with no reply within
+   staleThresholdDays.
+2. Classify ask-type: dependency-ask, deferral-ask, generic-ask.
+3. Propose a chase: comment on the same ticket. Escalate to the owner's
+   manager only when rule 5 applies.
+4. User approves → execute.
+5. Audit log.
 ```
 
 ## Core Rules
 
-1. **Best-effort until D24 is resolved.** Output explicitly distinguishes
-   "high-confidence stuck ask" (matched a confirmed signal) from
-   "inferred stuck ask" (matched an unconfirmed signal).
+1. **JIRA comments only (D24).** A stuck ask is an unreplied ask comment.
+   Do not infer stuck asks from labels, status, custom fields, Confluence,
+   or Slack.
 2. **Don't double-chase.** If the agent has already chased an ask in the
    last N days, don't propose another chase unless the ask is now urgent
    (per the underlying ticket's priority).
-3. **Chase channel respects the original ask channel** — JIRA-comment
-   asks get JIRA-comment chases; Slack asks get Slack chases.
+3. **Chase is a JIRA comment** on the same ticket as the ask.
 4. **Owner from the ask context**, not from a generic team lead. If a
    specific person was @mentioned in the original ask, they're the
    chase target.
@@ -78,48 +58,32 @@ Procedure:
    detected absence-of-response.
 7. **Audit log** including chase channel + recipient + message.
 
-## Output Format (provisional)
+## Output Format
 
 ```
-Stuck asks (no response in ≥5 days)
+Stuck asks (no reply comment in ≥5 days)
 
-| # | Ask                                  | Asker      | Owner needed | Channel     | Age | Confidence | Proposed chase                    |
-|---|--------------------------------------|------------|--------------|-------------|-----|------------|-----------------------------------|
-| 1 | "Can storage team commit to FEAT-1?" | alice      | storage lead | jira-comment| 12d | high       | Comment on NDB-123 + DM jane.doe  |
-| 2 | "Approve deferral of NDB-200?"       | bob        | rm           | jira-label  | 8d  | high       | Slack #ndb-rm + DM ralph          |
-| 3 | "API contract feedback?"             | dave       | api team     | slack-thread| 6d  | inferred   | Slack thread bump                  |
+| # | Ask                                  | Asker | Owner needed | Ticket   | Age | Proposed chase              |
+|---|--------------------------------------|-------|--------------|----------|-----|-----------------------------|
+| 1 | "Can storage team commit to FEAT-1?" | alice | storage lead | NDB-123  | 12d | Comment on NDB-123          |
+| 2 | "Approve deferral of NDB-200?"       | bob   | rm           | NDB-200  | 8d  | Comment on NDB-200          |
 
-Summary: 3 stuck asks. 2 high-confidence, 1 inferred.
-Estimated reactive load saved (you don't have to remember these): ~30 min/week.
-
-[Approve all chases] [Edit] [Skip inferred] [Cancel]
+Summary: 2 stuck asks.
+[Approve all chases] [Edit] [Cancel]
 ```
 
 ## Quality Validation
 
-- [ ] Every stuck ask cites the original ask source (ticket / page / Slack message)
-- [ ] Every stuck ask cites the *absence* of response (no reply since X)
-- [ ] Confidence is labelled per ask: high (matched a signal) vs inferred
-- [ ] Chase channel matches the ask channel
+- [ ] Every stuck ask cites the original JIRA comment
+- [ ] Every stuck ask cites the absence of a reply comment (no reply since X)
+- [ ] Chase is a comment on the same ticket
 - [ ] No double-chase within the last N days
 - [ ] Escalation policy triggered for P0/P1 stuck >2× threshold
 - [ ] User approves before any chase is sent
 - [ ] Audit log written
 
-## Open Questions to Resolve (D24)
-
-Before this skill is production-ready, lock with the Portfolio Manager:
-
-1. Which signal(s) does NDB actually use today? (JIRA comments / labels /
-   status / Confluence tasks / Slack?)
-2. Is there a custom field like "Response Required By" we should use?
-3. Do dependency-asks live in JIRA `issuelinks` of a specific type?
-4. Do deferral-asks have a specific JIRA workflow status?
-
-These map to **D24** in `DECISIONS.md`.
-
 ## Cross-references
 
 - `.cursor/agents/specialists/triage-specialist.md`
 - `.cursor/rules/citation-first-output.mdc`
-- `DECISIONS.md` — D19 (4 triage flavours), D24 (pending-response mechanism — OPEN)
+- `DECISIONS.md` — D19 (4 triage flavours), D24 (unreplied JIRA comments)

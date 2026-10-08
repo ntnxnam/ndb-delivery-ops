@@ -9,8 +9,6 @@ const { requireAuth } = require('../../middleware/authMiddleware');
 const HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS = [
   'Highlights',
   'Lowlights',
-  'Reason for risk indicator (if yellow or red)',
-  'Path to green',
   'Support needed from leaders'
 ];
 

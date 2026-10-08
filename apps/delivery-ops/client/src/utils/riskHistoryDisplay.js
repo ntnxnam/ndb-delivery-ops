@@ -65,7 +65,7 @@ export function formatRiskWithHistory(itemKey, currentRisk, checkpointHistory) {
   const newestFirst = [...seq].reverse();
 
   return (
-    <span style={{ fontSize: '9px', display: 'inline-block', lineHeight: 1.3, marginTop: '3px' }}>
+    <span style={{ fontSize: '10px', display: 'inline-block', lineHeight: 1.35 }}>
       {newestFirst.map((word, i) => (
         <span key={`${word}-${i}`} style={{ whiteSpace: 'nowrap' }}>
           {i > 0 && <span style={{ color: '#999' }}> ← </span>}

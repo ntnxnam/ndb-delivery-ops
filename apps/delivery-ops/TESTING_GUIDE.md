@@ -1,231 +1,78 @@
-# Testing Guide for Parent Project Support & New Features
+# Testing Guide — Team Management & Crystal Ball
 
 ## Overview
-This guide covers testing for the comprehensive system enhancements including parent project support, dynamic filter construction, admin onboarding, and Crystal Ball integration.
+Covers the base-filter-driven Team Management flow (detect project, versions, board, sprint calendar and FEAT components from a team's base filter) and Crystal Ball predictions.
 
-## Test Suites Created
+## Test Suites
 
-### Backend Tests
+### Backend
 
-#### 1. Admin Routes Tests (`server/__tests__/routes/admin.test.js`)
-Tests the super admin team management functionality:
+#### 1. Admin routes (`server/__tests__/routes/admin.test.js`)
+- Super-admin guard (403 for everyone else)
+- `GET /teams` adds computed `sprintScope` and `kpiCount`
+- `POST /teams`: code slugified from the name, explicit code honoured, legacy `projectType` / `versionPatterns` / `sprintBaseFilter` dropped, KPI entry created, `allowedUsers.json` untouched
+- 400 on missing name / filter / project / calendar; 409 on duplicate code
+- `PUT /teams/:id` merges and keeps the code; 404 for unknown teams
+- `POST /inspect-base-filter`: success shape, 400 when the filter matches nothing or JIRA rejects it
+- `POST /board-calendar`, `POST /test-team-config`
+- Removed `validate-*` endpoints return 404
 
-**Coverage:**
-- Team creation (dedicated & parent projects)
-- Team listing and management
-- JIRA project validation
-- Filter validation
-- User authorization checks
-- Configuration file management
+#### 2. Team detection service (`server/__tests__/services/teamInspectService.test.js`)
+- Grouping FEAT components into `{ component: [primaryComponents] }`
+- Board choice (requested board → name match → first scrum board)
+- Partial failure: versions / board / FEAT errors are reported inline
+- ORDER BY stripped before composing the FEAT query
+- Team code slugify and `featureComponents` normalisation
 
-**Key Test Cases:**
-- ✅ Create dedicated project team (NDB-style)
-- ✅ Create parent project team with version patterns (DataLens-style) 
-- ✅ Validate JIRA project accessibility
-- ✅ Test filter validation with real JIRA calls
-- ✅ Handle authorization checks
-- ✅ Reject duplicate team IDs
-- ✅ Validate required fields
+#### 3. Sprint scope (`server/__tests__/utils/teamScope.test.js`, `server/__tests__/services/sprintService.test.js`)
+- `sprintScopeFromBaseFilter` removes ORDER BY and a trailing `statusCategory != Done`
+- Sprint KPI breakdown scopes by the derived sprint scope
 
-**Run Tests:**
 ```bash
 cd server
-npm run test:admin
+npm run test:admin          # admin routes
+npm run test:new-features   # admin routes + team detection service
+npm test                    # full server suite
 ```
 
-#### 2. Parent Project JIRA Tests (`server/__tests__/routes/jira-parent-project.test.js`)
-Tests the enhanced JIRA integration with parent project support:
+### Frontend
 
-**Coverage:**
-- Version filtering by regex patterns
-- Dynamic filter construction
-- Backward compatibility with dedicated projects
-- Version discovery API
-- Case-insensitive pattern matching
+#### 4. Team Management (`client/src/__tests__/components/AdminPanel.test.js`)
+- Loading / access-denied / team list (sprint scope, components, picker sync)
+- Test button calls `test-team-config` and renders each check
+- Team code follows the name until edited
+- Save disabled until Detect; Detect fills project, board, calendar, components; deselected components are not saved
+- Choosing another board re-reads its calendar
+- Detect and save errors are shown
+- Edit mode: read-only code, no re-detect while the base filter is unchanged
 
-**Key Test Cases:**
-- ✅ NDB (dedicated) returns all versions unfiltered
-- ✅ DataLens (parent) filters by `^DataLens.*` and `^DL.*` patterns
-- ✅ Case-insensitive pattern matching works
-- ✅ Empty version lists handled gracefully
-- ✅ Teams without patterns (backward compatibility)
-- ✅ Dynamic filter construction works correctly
-- ✅ Config overrides take precedence
+#### 5. Crystal Ball hook (`client/src/__tests__/hooks/useCrystalBall.test.js`)
+- Status, predictions, trends, risk forecasts, error handling
 
-**Run Tests:**
-```bash
-cd server
-npm run test:parent-project
-```
-
-### Frontend Tests
-
-#### 3. Crystal Ball Hook Tests (`client/src/__tests__/hooks/useCrystalBall.test.js`)
-Tests the AI prediction functionality:
-
-**Coverage:**
-- Status checking and initialization
-- Release prediction generation
-- Trend analysis fetching
-- Risk forecast generation
-- Error handling and edge cases
-- Loading states and data management
-
-**Key Test Cases:**
-- ✅ Fetch Crystal Ball status successfully
-- ✅ Generate release predictions with proper data transformation
-- ✅ Handle prediction errors and rate limiting
-- ✅ Validate required parameters
-- ✅ Clear data functionality
-- ✅ Network timeout handling
-
-**Run Tests:**
 ```bash
 cd client
+npm run test:admin
 npm run test:crystalball
 ```
 
-#### 4. Admin Panel Component Tests (`client/src/__tests__/components/AdminPanel.test.js`)
-Tests the team onboarding wizard and admin interface:
+> Client tests import `@testing-library/react` and use `@testing-library/jest-dom` matchers; both must be installed in the client workspace for these suites to run.
 
-**Coverage:**
-- Admin panel rendering and access control
-- Team onboarding wizard workflow
-- Form validation and error handling
-- JIRA project validation UI
-- Step navigation and completion
+## Test Data
 
-**Key Test Cases:**
-- ✅ Access control for super admin users
-- ✅ Team wizard step progression
-- ✅ Form validation on each step
-- ✅ JIRA project validation with UI feedback
-- ✅ Version pattern management (add/remove)
-- ✅ Team creation workflow completion
-- ✅ Error handling and user feedback
-
-**Run Tests:**
-```bash
-cd client
-npm run test:admin
-```
-
-## Running All New Feature Tests
-
-### Server Side
-```bash
-cd server
-npm run test:new-features
-```
-
-### Client Side
-```bash
-cd client
-npm run test:new-features
-```
-
-### Full Test Suite
-```bash
-# From project root
-cd server && npm test && cd ../client && npm test
-```
-
-## Test Scenarios Covered
-
-### 1. Parent Project Architecture
-- **Scenario**: DataLens team in ENG parent project
-- **Tests**: Version filtering, pattern matching, configuration validation
-- **Backward Compatibility**: Ensure NDB (dedicated project) continues working
-
-### 2. Dynamic Configuration
-- **Scenario**: New release versions without manual config updates
-- **Tests**: Dynamic filter construction, config override precedence
-- **Validation**: `filter={version}-All` pattern generation
-
-### 3. Admin Onboarding
-- **Scenario**: Super admin creates new team through wizard
-- **Tests**: Multi-step validation, JIRA integration, configuration updates
-- **Security**: Authorization checks, input validation
-
-### 4. Crystal Ball Integration
-- **Scenario**: AI predictions in Release Trends page
-- **Tests**: API integration, data transformation, error handling
-- **Performance**: Caching, rate limiting, graceful degradation
-
-## Integration Testing
-
-### End-to-End Team Setup Flow
-1. **Admin creates team** via onboarding wizard
-2. **System validates** JIRA project and filters
-3. **Team configuration** is saved across multiple config files
-4. **Version filtering** works correctly for team type
-5. **Crystal Ball predictions** generate for team releases
-
-### Backward Compatibility Validation
-1. **Existing NDB team** continues working without changes
-2. **Legacy configuration** (without projectType) defaults correctly
-3. **Config overrides** take precedence over dynamic construction
-4. **API calls** maintain same interface with optional parameters
-
-## Performance Testing
-
-### Load Testing Scenarios
-- **Multiple teams** with different project types
-- **Large version lists** in parent projects
-- **Concurrent admin operations**
-- **Crystal Ball predictions** for multiple releases
-
-### Monitoring Points
-- JIRA API rate limiting compliance
-- Configuration file I/O performance
-- Memory usage with cached data
-- Response times for AI predictions
-
-## Error Scenarios Tested
-
-### Network & API Errors
-- JIRA server unavailable
-- Invalid authentication tokens
-- Rate limiting responses
-- Malformed API responses
-
-### Configuration Errors  
-- Invalid team configurations
-- Missing JIRA filters
-- Duplicate team IDs
-- Invalid version patterns
-
-### User Input Errors
-- Invalid team names/IDs
-- Missing required fields
-- Invalid JIRA project keys
-- Malformed filter queries
-
-## Test Data & Mocks
-
-### Mock Team Configurations
 ```javascript
-// Dedicated project (NDB)
+// Team as stored in teamBoardConfig.json
 {
-  id: 'ndb',
-  projectKey: 'ERA', 
-  projectType: 'dedicated'
-}
-
-// Parent project (DataLens)
-{
-  id: 'datalens',
-  projectKey: 'ENG',
-  projectType: 'parent',
-  versionPatterns: ['^DataLens.*', '^DL.*']
+  id: 'ncn',
+  name: 'Nutanix Cloud Native',
+  projectKey: 'NCN',
+  boardId: 4741,
+  baseFilter: 'filter=NCN-All-Base-Filter and statusCategory!=Done',
+  sprintCalendar: { s1StartIso: '2020-02-20', sprintDays: 14 },
+  featureComponents: { NKP: ['NKP-Core'] }
 }
 ```
 
-### Mock JIRA Responses
-- Project validation responses
-- Version lists with mixed products
-- Filter validation results
-- Error responses for edge cases
+JIRA is never called in tests: the server suites inject a fake `JiraConnector` (`get`, `searchAll`, `searchCount`, `getProjectVersions`), and the client suites mock `utils/api`.
 
 ## Continuous Integration
 

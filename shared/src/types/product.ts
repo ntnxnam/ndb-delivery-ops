@@ -14,14 +14,6 @@
 import type { AudienceId } from './audience.js';
 
 /**
- * Project type. "Dedicated" = the product has its own JIRA project
- * (e.g. NDB → ERA). "Parent" = the product shares a JIRA project with
- * other products and is identified by version-name patterns (e.g.
- * DataLens lives inside ENG, filtered by versions matching `^DataLens.*`).
- */
-export type ProductProjectType = 'dedicated' | 'parent';
-
-/**
  * Custom-field overrides per product. If a key is absent, the global
  * default from `JiraGlobalConfig` is used (e.g. `sprintFieldId`,
  * `storyPointsFieldId` at the top of `teamBoardConfig.json`).
@@ -62,24 +54,24 @@ export interface ProductConfig {
   name: string;
   /** JIRA Agile board ID, or null if the product has no dedicated board */
   boardId: number | null;
-  /** JIRA project key the product's tickets live under (e.g. 'ERA') */
+  /**
+   * Main JIRA project of the base-filter tickets (e.g. 'ERA'). Release
+   * versions are listed from this project.
+   */
   projectKey: string;
   /** Optional feature-root project key (e.g. FEAT for NDB feature roots). */
   featureProjectKey?: string;
-  /** Whether the product has a dedicated project or shares a parent */
-  projectType: ProductProjectType;
-  /**
-   * Version-name regex patterns when projectType=parent. The product's
-   * releases are JIRA versions matching ANY of these.
-   */
-  versionPatterns?: string[];
   /**
    * Base JQL filter for product-scoped queries. Already excludes Done
-   * (statusCategory != Done) for active-work queries.
+   * (statusCategory != Done) for active-work queries. The sprint scope is
+   * derived from it (see `sprintScopeFromBaseFilter`).
    */
   baseFilter: string;
-  /** Sprint-scoped JQL filter (typically broader than baseFilter). */
-  sprintBaseFilter: string;
+  /**
+   * Components in the feature project, keyed by component name, each
+   * listing its Primary Component children.
+   */
+  featureComponents?: Record<string, string[]>;
   /** Per-product custom-field overrides; falls back to global defaults */
   customFields?: ProductCustomFields;
   /** Per-product, per-audience overrides */

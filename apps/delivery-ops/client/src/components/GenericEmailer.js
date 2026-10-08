@@ -64,6 +64,7 @@ function GenericEmailer() {
   const [subject, setSubject] = useState('');
   const [fetching, setFetching] = useState(false);
   const [sending, setSending] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { config: fetchedEmailerConfig } = useGenericEmailerConfig();
@@ -320,9 +321,10 @@ function GenericEmailer() {
         selectedCCRecipients: optionalCCRecipients,
         subject: subject.trim() || defaultSubject(),
         fieldLabels,
-        notes: notes.trim() || undefined
+        notes: notes.trim() || undefined,
+        isTest: testMode
       }, { jiraToken: jiraToken(), username: username() });
-      setSuccess('Email sent successfully.');
+      setSuccess(testMode ? 'Test mode: email sent only to you.' : 'Email sent successfully.');
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to send email');
     } finally {
@@ -381,6 +383,15 @@ function GenericEmailer() {
             <button type="button" onClick={handleFetch} disabled={fetching} style={{ padding: '0.5rem 1rem' }}>
               {fetching ? 'Fetching...' : 'Fetch'}
             </button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.875rem', margin: 0 }}>
+              <input
+                type="checkbox"
+                checked={testMode}
+                onChange={e => setTestMode(e.target.checked)}
+                disabled={sending}
+              />
+              Test mode (send only to me)
+            </label>
             <button
               type="button"
               onClick={handleSend}

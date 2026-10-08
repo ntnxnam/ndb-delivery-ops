@@ -1,13 +1,23 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { authenticatedPost } from '../../utils/api';
-import { generateFilterChain, RELEASE_PROJECTS, isValidVersionName } from '../../utils/jqlTemplates';
+import { generateFilterChain, releaseProjectsForTeam, isValidVersionName } from '../../utils/jqlTemplates';
+import { useTeam } from '../../contexts/TeamContext';
 import { statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';
 
 function RenameRelease() {
+  const { selectedTeam } = useTeam();
+  const releaseProjects = useMemo(
+    () => releaseProjectsForTeam(selectedTeam?.projectKey),
+    [selectedTeam?.projectKey]
+  );
   const [oldVersion, setOldVersion] = useState('');
   const [newVersion, setNewVersion] = useState('');
   const [excludeVersion, setExcludeVersion] = useState('');
-  const [selectedProjects, setSelectedProjects] = useState(RELEASE_PROJECTS);
+  const [selectedProjects, setSelectedProjects] = useState(releaseProjects);
+
+  useEffect(() => {
+    setSelectedProjects(releaseProjects);
+  }, [releaseProjects]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -107,7 +117,7 @@ function RenameRelease() {
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: 4 }}>Projects</label>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {RELEASE_PROJECTS.map(p => (
+            {releaseProjects.map(p => (
               <label key={p} style={{ fontSize: '0.82rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"

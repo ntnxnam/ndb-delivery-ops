@@ -1,5 +1,6 @@
 const {
   wrapTeamScope,
+  sprintScopeFromBaseFilter,
   requireBaseFilter,
   isUnreleasedVersion,
   pickNextUpcomingGaVersion,
@@ -29,6 +30,20 @@ describe('wrapTeamScope', () => {
     )).toBe(
       '(filter=prisminfra-all-base-filter) AND ((fixVersion = "MSP-3.2.0.0" OR labels = "msp-3.2.0.0-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled) ORDER BY key ASC'
     );
+  });
+});
+
+describe('sprintScopeFromBaseFilter', () => {
+  test.each([
+    ['filter=NDB-All-Base-Filter and statusCategory!=Done', 'filter=NDB-All-Base-Filter'],
+    ['filter=NCN-All-Base-Filter AND statusCategory != "Done"', 'filter=NCN-All-Base-Filter'],
+    ['project = X and statusCategory not in (Done) ORDER BY key', 'project = X'],
+    ['filter=prisminfra-all-base-filter', 'filter=prisminfra-all-base-filter'],
+    ['statusCategory!=Done and project = X', 'statusCategory!=Done and project = X'],
+    ['', ''],
+    [null, ''],
+  ])('%p → %p', (input, expected) => {
+    expect(sprintScopeFromBaseFilter(input)).toBe(expected);
   });
 });
 

@@ -29,14 +29,19 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 
 ## UI Behaviour
 
-1. **Confluence URL input** — user pastes a Confluence page URL; app calls the extraction endpoint.
-2. **Content extraction** — extracted text/HTML is shown in a preview area; user can edit.
-3. **Release selector** — dropdown populated from JIRA (`/api/jira/releases`); selection drives JIRA data injection.
-4. **Rich text editor** (ReactQuill) — pre-filled with extracted content + JIRA snippet; fully editable.
-5. **Recipient fields** — To / CC text inputs; comma-separated email addresses.
-6. **Subject field** — editable; pre-populated with release name + date.
-7. **Send button** — disabled while loading; shows spinner; on success shows toast, on failure shows error message.
-8. **Outlook fallback** — copy-to-clipboard button for HTML body for users whose email client strips rich text.
+**UI is the reverse of the email body** — pulled data on top, typed entry above Send.
+
+| UI (top → bottom) | Email body (top → bottom) |
+|---|---|
+| Ticket strip + pulled details (incl. sprint Gantt) | Highlights / Lowlights / Support |
+| Gates chart | AI risk summary |
+| Risk row | Risk context |
+| Subject (header only) · Highlights · AI · Recipients · **Send** | Gates vs dates → JIRA ticket / epics / breakdown → Sprint timeline |
+
+1. **JIRA key + Fetch** — Feature / Initiative / X-FEAT / Capability.
+2. **Pulled** — strip, collapsed ticket data, sprint Gantt, gates (EC→…→PG), risk (Indicator / Assessment / Path to Green).
+3. **Entry** — Subject (email header only), Highlights (required sections), **AI risk summary (required — emailed)**, Recipients.
+4. **Send** + Outlook copy fallback (preview includes AI + sprint timeline).
 
 ---
 

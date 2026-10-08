@@ -6,7 +6,6 @@
  *   - upstreamStatus           — translate JIRA 501 -> 502 for client responses
  *   - getDefaultReleaseBaseFilter  — "filter={version}-All"
  *   - getTeamConfig            — find a team object in teamBoardConfig
- *   - constructParentProjectFilter — parent-project release filter
  *   - getConfigOverride        — release-specific overrides from columns config
  *   - getReleaseBaseFilter     — orchestrates all of the above
  */
@@ -43,17 +42,6 @@ function getTeamConfig(teamId) {
 }
 
 /**
- * Build the release base filter for a parent-project team (DataLens, NCM).
- * Same shape as the default; kept as a named function so the orchestration
- * is readable and future per-team branches have a place to grow.
- */
-function constructParentProjectFilter(releaseVersion, team) {
-  if (!releaseVersion || !team) return null;
-  const v = releaseVersion.trim();
-  return v ? `filter=${v}-All` : null;
-}
-
-/**
  * Read releaseVersionsColumnsConfig.json fresh (bypassing require cache) and
  * return the configured override for a release version, if any.
  * The sentinel value "filter=0" means "no override, use default".
@@ -71,22 +59,12 @@ function getConfigOverride(releaseVersion) {
 }
 
 /**
- * Resolve the release base filter for a release version, optionally
- * scoped to a team. Tries (in order):
+ * Resolve the release base filter for a release version. Tries (in order):
  *   1. Explicit override from releaseVersionsColumnsConfig.json
- *   2. Parent-project pattern if the team is a parent project
- *   3. Default pattern: filter={version}-All
+ *   2. Default pattern: filter={version}-All
  */
-function getReleaseBaseFilter(releaseVersion, teamId = null) {
-  const configOverride = getConfigOverride(releaseVersion);
-  if (configOverride) return configOverride;
-
-  const team = getTeamConfig(teamId);
-  if (team && team.projectType === 'parent') {
-    return constructParentProjectFilter(releaseVersion, team);
-  }
-
-  return getDefaultReleaseBaseFilter(releaseVersion);
+function getReleaseBaseFilter(releaseVersion) {
+  return getConfigOverride(releaseVersion) || getDefaultReleaseBaseFilter(releaseVersion);
 }
 
 /**
@@ -155,7 +133,6 @@ module.exports = {
   upstreamStatus,
   getDefaultReleaseBaseFilter,
   getTeamConfig,
-  constructParentProjectFilter,
   getConfigOverride,
   getReleaseBaseFilter,
   resolveTeam,

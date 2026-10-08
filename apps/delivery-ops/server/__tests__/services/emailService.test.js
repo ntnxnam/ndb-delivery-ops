@@ -40,7 +40,7 @@ describe('Email Service', () => {
     test('UT-EMAIL-001: returns config smtp.from or default when SMTP_FROM not set', () => {
       delete process.env.SMTP_FROM;
       const from = getDefaultFromAddress();
-      expect(from).toBe('svc.ndb.team@nutanix.com');
+      expect(from).toBe('smtp.ndb.team@nutanix.com');
     });
 
     test('UT-EMAIL-001: returns SMTP_FROM when set', () => {
@@ -58,7 +58,7 @@ describe('Email Service', () => {
         return Promise.resolve({ messageId: '<id>', accepted: [opts.to], rejected: [] });
       });
       await sendEmailDirect({ to: 'a@nutanix.com', subject: 'S', html: 'H' });
-      expect(capturedOpts.from).toBe('svc.ndb.team@nutanix.com');
+      expect(capturedOpts.from).toBe('smtp.ndb.team@nutanix.com');
     });
 
     test('UT-EMAIL-003: success returns messageId, accepted, rejected', async () => {
@@ -74,7 +74,7 @@ describe('Email Service', () => {
         rejected: []
       });
       expect(mockFns.sendMail).toHaveBeenCalledWith(
-        expect.objectContaining({ from: 'svc.ndb.team@nutanix.com', to: 'to@nutanix.com' })
+        expect.objectContaining({ from: 'smtp.ndb.team@nutanix.com', to: 'to@nutanix.com' })
       );
     });
 

@@ -87,6 +87,115 @@ async function buildReleaseKpiCombinedJql(releaseVersion, kpiBaseQuery, cleanTok
   return `${releaseBaseFilter.trim()} and ${kpiPart} and status != Closed`;
 }
 
+/**
+ * Build a release-scoped KPI JQL split by resolution bucket, for the
+ * cross-release retrospective comparison. Unlike buildReleaseKpiCombinedJql
+ * (which always adds `status != Closed`), this returns the full set for
+ * `total`, resolution-based done for `done`, and open for `open`.
+ *
+ *   total: <releaseBaseFilter> AND <kpiPart>
+ *   done:  <releaseBaseFilter> AND <kpiPart> AND resolution in (Fixed, Done, Resolved, Complete)
+ *   open:  <releaseBaseFilter> AND <kpiPart> AND status not in (Done, Closed)
+ *
+ * When no release base filter is configured, the KPI saved filter is
+ * resolved to underlying JQL and the same clauses are appended.
+ */
+async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket, cleanToken, httpsAgent, teamId = null, jqlExtra = null) {
+  const trimmedKpi = (kpiBaseQuery || '').trim();
+  if (!trimmedKpi) return null;
+  const releaseBaseFilter = getReleaseBaseFilter(releaseVersion, teamId);
+
+  let base;
+  if (releaseBaseFilter) {
+    const kpiPart = trimmedKpi.match(/^filter\s*=\s*.+$/i)
+      ? trimmedKpi
+      : `(${trimmedKpi.replace(/\btype\s*=/gi, 'issuetype=')})`;
+    base = `${releaseBaseFilter.trim()} and ${kpiPart}`;
+  } else {
+    const resolved = await resolveKpiJql(kpiBaseQuery, cleanToken, httpsAgent);
+    if (!resolved) return null;
+    base = `(${resolved})`;
+  }
+
+  const extra = (jqlExtra || '').trim();
+  if (extra) {
+    base = `(${base}) AND (${extra})`;
+  }
+
+  // Four resolution buckets — status is the gating condition:
+  //   closed   = status = Closed AND resolution in (Fixed, Done, Resolved, Complete)
+  //   tbv      = status = Resolved AND resolution is not EMPTY  (dev done, awaiting QA)
+  //   others   = negative resolutions (Dupe, Not Repro, Won't Fix, etc.)
+  //   open     = resolution is EMPTY AND status not in (Resolved, Closed)
+  if (bucket === 'closed')   return `${base} and status = Closed and resolution in (Fixed, Done, Resolved, Complete, Approved)`;
+  if (bucket === 'resolved') return `${base} and status = Resolved and resolution is not EMPTY`;
+  if (bucket === 'others')   return `${base} and resolution in ("Cannot Reproduce", Duplicate, "Won't Fix", Invalid)`;
+  if (bucket === 'open')     return `${base} and status not in (Resolved, Closed)`;
+  return base; // total
+}
+
+/**
+ * For each team KPI, return total / done / open counts scoped to a
+ * release, plus the JQL used for each (for click-through). Count-only
+ * queries via jira.searchCount (maxResults=0).
+ */
+async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId, jqlExtra = null }) {
+  const { kpis, normalizedTeamId } = getTeamKpis(teamId);
+  if (!kpis || kpis.length === 0) return {};
+  const jira = await getJira(token);
+  const results = {};
+  const extra = (jqlExtra || '').trim() || null;
+
+  for (const kpi of kpis) {
+    const baseQuery = (kpi.baseQuery || '').trim();
+    if (!baseQuery) {
+      results[kpi.id] = { error: 'No base query' };
+      continue;
+    }
+    try {
+      const buildBucket = async (bucket) => {
+        let jql = await buildReleaseKpiResolutionJql(releaseVersion, baseQuery, bucket, token, null, normalizedTeamId, extra);
+        if (!jql) return null;
+        if (kpi.excludeDeferred) jql = appendDeferredExclusion(jql, releaseVersion);
+        return jql;
+      };
+      const [totalJql, closedJql, resolvedJql, othersJql, openJql] = await Promise.all([
+        buildBucket('total'),
+        buildBucket('closed'),
+        buildBucket('resolved'),
+        buildBucket('others'),
+        buildBucket('open'),
+      ]);
+      if (!totalJql) {
+        results[kpi.id] = { error: 'Could not resolve query (check release base filter)' };
+        continue;
+      }
+      const [total, closed, resolved, others, open] = await Promise.all([
+        jira.searchCount(totalJql),
+        closedJql  ? jira.searchCount(closedJql)  : Promise.resolve(0),
+        resolvedJql ? jira.searchCount(resolvedJql) : Promise.resolve(0),
+        othersJql  ? jira.searchCount(othersJql)  : Promise.resolve(0),
+        openJql    ? jira.searchCount(openJql)    : Promise.resolve(0),
+      ]);
+      results[kpi.id] = {
+        name: kpi.name,
+        total:    total    || 0,
+        closed:   closed   || 0,  // Fixed / Done / Complete — shipped
+        resolved: resolved || 0,  // Resolved — TBV (awaiting QA verify)
+        others:   others   || 0,  // Dupe, Not Repro, Won't Fix, etc.
+        open:     open     || 0,  // resolution is EMPTY
+        // legacy alias so existing consumers don't break
+        done: (closed || 0) + (resolved || 0),
+        links: { total: totalJql, closed: closedJql, resolved: resolvedJql, others: othersJql, open: openJql },
+      };
+    } catch (err) {
+      const message = err.response?.data?.errorMessages?.[0] || err.response?.data?.message || err.message || 'Query failed';
+      results[kpi.id] = { error: message };
+    }
+  }
+  return results;
+}
+
 function mapIssues(response) {
   return (response.data.issues || []).map((issue) => {
     const f = issue.fields || {};
@@ -373,10 +482,12 @@ module.exports = {
   deriveDeferredLabel,
   appendDeferredExclusion,
   buildReleaseKpiCombinedJql,
+  buildReleaseKpiResolutionJql,
   getKpiResult,
   getKpiResultBatch,
   getReleaseKpiResult,
   getReleaseKpiResultBatch,
+  getReleaseKpiResolutionBreakdown,
   categorizeStatus,
   groupBreakdownByProject,
   getIssueBreakdown

@@ -6,48 +6,42 @@
         "name": "Top-CFI",
         "baseQuery": "filter=142539",
         "displayType": "count",
-        "order": 0,
-        "excludeDeferred": true
+        "order": 0
       },
       {
         "id": "kpi_mlt8xtjw_7iu388x4",
         "name": "Top-CFD",
         "baseQuery": "filter=142537",
         "displayType": "count",
-        "order": 1,
-        "excludeDeferred": true
+        "order": 1
       },
       {
         "id": "kpi_mlt8y8o9_m7f8uo6d",
         "name": "Non-Top-CFI",
         "baseQuery": "filter=142543",
         "displayType": "count",
-        "order": 2,
-        "excludeDeferred": true
+        "order": 2
       },
       {
         "id": "kpi_mlt8ykk1_87kzd1g2",
         "name": "Non-Top-CFD",
         "baseQuery": "filter=142541",
         "displayType": "count",
-        "order": 3,
-        "excludeDeferred": true
+        "order": 3
       },
       {
         "id": "kpi_mltpmqym_g5u55h35",
         "name": "Product Blockers",
         "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
         "displayType": "count",
-        "order": 4,
-        "excludeDeferred": true
+        "order": 4
       },
       {
         "id": "kpi_mltqufvv_0eregk0s",
         "name": "Product Criticals",
         "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
         "displayType": "count",
-        "order": 5,
-        "excludeDeferred": true
+        "order": 5
       },
       {
         "id": "kpi_mltqw1zl_35j6oo0k",
@@ -61,24 +55,21 @@
         "name": "System Test",
         "baseQuery": "filter=NDB-System-Test",
         "displayType": "count",
-        "order": 7,
-        "excludeDeferred": true
+        "order": 7
       },
       {
         "id": "kpi_mltr5hi3_0qdmhcep",
         "name": "Smokes",
         "baseQuery": "filter=NDB-Smokes",
         "displayType": "count",
-        "order": 8,
-        "excludeDeferred": true
+        "order": 8
       },
       {
         "id": "kpi_mmaylqy1_a8nuacz5",
         "name": "NDB PreCommits",
         "baseQuery": "filter=NDB-PreCommits",
         "displayType": "count",
-        "order": 9,
-        "excludeDeferred": true
+        "order": 9
       },
       {
         "id": "kpi_mmosswaj_h8bp5a7r",
@@ -86,6 +77,13 @@
         "baseQuery": "type=CVE",
         "displayType": "count",
         "order": 10
+      },
+      {
+        "id": "kpi_muhc9grs_lveeudij",
+        "name": "Deferral",
+        "baseQuery": "filter=ndb-deferred-tickets",
+        "displayType": "count",
+        "order": 11
       }
     ],
     "datalens": [
@@ -131,32 +129,28 @@
         "name": "Open P0 Blockers",
         "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
         "displayType": "count",
-        "order": 0,
-        "excludeDeferred": false
+        "order": 0
       },
       {
         "id": "kpi_sos_mustfix",
         "name": "Must-Fix Tickets",
         "baseQuery": "project=ERA and type=Bug and labels is not EMPTY",
         "displayType": "list",
-        "order": 1,
-        "excludeDeferred": true
+        "order": 1
       },
       {
         "id": "kpi_sos_at_risk",
         "name": "At-Risk Features",
         "baseQuery": "issuetype in (Feature, Initiative) and \"Risk Indicator\" = Red",
         "displayType": "count",
-        "order": 2,
-        "excludeDeferred": false
+        "order": 2
       },
       {
         "id": "kpi_sos_criticals",
         "name": "Open Criticals",
         "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
         "displayType": "count",
-        "order": 3,
-        "excludeDeferred": true
+        "order": 3
       }
     ],
     "ncm": [
@@ -196,6 +190,8 @@
         "order": 4
       }
     ],
-    "prism-infra": []
+    "prism-infra": [],
+    "ncn": [],
+    "cerebro-dr": []
   }
 }

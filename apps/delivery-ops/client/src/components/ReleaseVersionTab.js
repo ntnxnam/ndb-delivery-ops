@@ -32,7 +32,6 @@ import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
 import { useGateTimeline } from '../release/hooks/useGateTimeline';
 import { GateChipStrip } from '../design-system';
 import ReleaseSummaryPanel from './ReleaseSummaryPanel';
-import { TeamSelector } from '../layout/components/TeamSelector';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
@@ -177,7 +176,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const [briefingError, setBriefingError] = useState(null);
 
   // Filter state — client-side, no re-fetch needed
-  const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', staleness: '' });
+  const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
   const [activeSection, setActiveSection] = useState(''); // '' | 'commit' | 'longTermFunded'
 
   const handleFilterChange = (key, value) => setActiveFilters(prev => ({ ...prev, [key]: value }));
@@ -1480,7 +1479,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           onDownload={handleDownload}
           onGenerateBriefing={handleGenerateBriefing}
           briefingState={briefingState}
-          teamSelector={<TeamSelector variant="page" id="project-status-team-select" />}
+
         />
       </div>
       

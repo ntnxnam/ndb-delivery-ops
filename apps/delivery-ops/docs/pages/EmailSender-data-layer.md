@@ -46,14 +46,28 @@ Headers: x-jira-token, x-username
 
 ---
 
-### 4. Send email
+### 4. Generate Fresh AI Summary (emailed)
+
+```
+POST /api/ai/exec-summary
+Headers: Authorization (JIRA Bearer), x-username
+Body: { item, breakdownData, release }
+```
+
+**Flow**: same as Project Status `ExecSummaryCell` → `naiService.generateExecSummary`.  
+**Client**: `AiSummaryDraft.js` — draft owned by `EmailSender` (`aiSummaryDraft`); required before Send; passed as `aiSummary` on `/api/email/send` (no JIRA `PUT`).
+
+---
+
+### 5. Send email
 
 ```
 POST /api/email/send
 Headers: x-jira-token, x-username
-Body: { to, cc, subject, htmlBody, release, productId }
+Body: { additionalDetails, aiSummary, emailRecipients, emailSubject, jiraKey, jiraData, epics, issueBreakdown, sprintGanttData, … }
 ```
 
+**HTML order**: Highlights and Lowlights → AI risk summary → Risk context (Indicator / Assessment / Path to Green) → Gates vs dates → JIRA ticket tables → epics → breakdown → Sprint timeline (`sprintGanttEmail.js`).
 **Flow**: `server/routes/email/sendEmailHandler.js → sanitize.js (sanitize htmlBody) → emailService.send(options) → Nodemailer → mailrelay.dyn.nutanix.com:25`  
 **Returns**: `{ success: true, messageId }` or `{ success: false, error: string }`  
 **Side effect**: writes to email history log (see Email History data layer)  
@@ -67,12 +81,16 @@ Body: { to, cc, subject, htmlBody, release, productId }
 ### Email send request body
 ```json
 {
-  "to": "team-dl@nutanix.com",
-  "cc": "manager@nutanix.com",
-  "subject": "NDB-2.11 Status Update — 2026-06-15",
-  "htmlBody": "<html>...</html>",
-  "release": "NDB-2.11",
-  "productId": "ndb"
+  "additionalDetails": "<h2>Highlights:</h2>…",
+  "aiSummary": "[2026-10-08] YELLOW: …",
+  "emailRecipients": "optional.extra@nutanix.com",
+  "emailSubject": "Feature - … - Weekly Update - 08/Oct/2026",
+  "jiraKey": "FEAT-16815",
+  "jiraData": { "key": "FEAT-16815", "summary": "…" },
+  "epics": [],
+  "issueBreakdown": {},
+  "sprintGanttData": { "sprintTickets": [], "timelineColumns": [], "sprintStats": {} },
+  "isTest": true
 }
 ```
 

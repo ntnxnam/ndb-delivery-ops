@@ -203,6 +203,9 @@ function transformLegacyPermissions(serverData, username) {
   permissions.add('sprint_reports_view');
   permissions.add('kpi_view');
   permissions.add('email_history_view');
+  permissions.add('ai_insights_view');
+  permissions.add('crystal_ball_access');
+  permissions.add('kpi_manage');
 
   return {
     permissions: Array.from(permissions),

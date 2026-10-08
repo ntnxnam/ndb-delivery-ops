@@ -6,7 +6,7 @@
     "port": 587,
     "secure": false,
     "requireTLS": true,
-    "from": "svc.ndb.team@nutanix.com",
+    "from": "smtp.ndb.team@nutanix.com",
     "requireAuth": true
   }
 }

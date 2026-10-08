@@ -75,5 +75,22 @@ describe('sprintCalendar', () => {
       expect(collected.sprintCalendar).toEqual({ s1StartIso: '2024-10-23', sprintDays: 21 });
       expect(get).toHaveBeenNthCalledWith(1, '/rest/agile/1.0/board/99', expect.any(Object));
     });
+
+    it('stops after four sprint pages so a long board cannot hang Detect', async () => {
+      const get = jest.fn(async (url) => {
+        if (String(url).endsWith('/sprint')) {
+          return {
+            data: {
+              isLast: false,
+              values: [{ name: 'S1', startDate: '2024-10-23T00:00:00.000Z', endDate: '2024-11-12T00:00:00.000Z' }],
+            },
+          };
+        }
+        return { data: { id: 99, name: 'Board' } };
+      });
+      await collectSprintCalendarFromBoard({ get }, 99);
+      const sprintCalls = get.mock.calls.filter((call) => String(call[0]).endsWith('/sprint'));
+      expect(sprintCalls).toHaveLength(4);
+    });
   });
 });

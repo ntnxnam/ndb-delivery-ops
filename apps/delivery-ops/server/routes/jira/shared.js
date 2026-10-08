@@ -78,7 +78,6 @@ const {
   upstreamStatus,
   getDefaultReleaseBaseFilter,
   getTeamConfig,
-  constructParentProjectFilter,
   getConfigOverride,
   getReleaseBaseFilter,
   sendServiceError,
@@ -114,7 +113,7 @@ router.post('/validate', validateJiraTokenMiddleware, async (req, res) => {
       const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
-          fields: 'issuetype,summary,status'
+          fields: 'issuetype,summary,status,fixVersions'
         }
       });
 
@@ -142,12 +141,16 @@ router.post('/validate', validateJiraTokenMiddleware, async (req, res) => {
         });
       }
       
+      const fixVersionNames = response.data.fields?.fixVersions;
       return res.json({
         valid: true,
         issueType: issueType,
         summary: response.data.fields?.summary || 'N/A',
         status: response.data.fields?.status?.name || 'N/A',
-        key: response.data.key
+        key: response.data.key,
+        fixVersions: Array.isArray(fixVersionNames) && fixVersionNames.length > 0
+          ? fixVersionNames.map(v => v.name).filter(Boolean).join(', ')
+          : 'N/A'
       });
     } catch (apiError) {
       console.error('JIRA validation error:', apiError.message);
@@ -826,7 +829,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
       const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
-          fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
+          fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_47780,customfield_55664,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_55662,customfield_55663,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
           expand: 'names'
         }
       });
@@ -922,6 +925,10 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
         'customfield_31460': fields.customfield_31460,
         'customfield_14464': fields.customfield_14464,
         'customfield_14465': fields.customfield_14465,
+        'customfield_55662': fields.customfield_55662,
+        'customfield_55663': fields.customfield_55663,
+        'customfield_47780': fields.customfield_47780,
+        'customfield_55664': fields.customfield_55664,
         'customfield_38460': fields?.customfield_38460 || null,
         'customfield_11260': fields.customfield_11260  // QA Contact
       };
@@ -1090,6 +1097,22 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
         customfield_14465: {
           name: getFieldName('customfield_14465'),
           value: formatLinkField(customFields.customfield_14465)
+        },
+        customfield_55662: {
+          name: getFieldName('customfield_55662'),
+          value: formatLinkField(customFields.customfield_55662)
+        },
+        customfield_55663: {
+          name: getFieldName('customfield_55663'),
+          value: formatLinkField(customFields.customfield_55663)
+        },
+        customfield_47780: {
+          name: getFieldName('customfield_47780'),
+          value: formatCustomFieldValue(customFields.customfield_47780)
+        },
+        customfield_55664: {
+          name: getFieldName('customfield_55664'),
+          value: formatCustomFieldValue(customFields.customfield_55664)
         },
         customfield_38460: {
           name: getFieldName('customfield_38460'),

@@ -31,14 +31,14 @@ export function useSosEmail() {
   const [success, setSuccess] = useState('');
   const [preview, setPreview] = useState(null);
 
-  const previewEmail = useCallback(async (data) => {
+  const previewEmail = useCallback(async (data, recipientOverrides = {}) => {
     setPreviewing(true);
     setError('');
     setSuccess('');
     try {
       const resp = await authenticatedPost(
         '/api/email/send-sos',
-        buildPayload(data, { previewOnly: true }),
+        buildPayload(data, { previewOnly: true, ...recipientOverrides }),
         authHeaders()
       );
       if (!resp.data?.success) {
@@ -61,14 +61,14 @@ export function useSosEmail() {
     }
   }, []);
 
-  const sendEmail = useCallback(async (data) => {
+  const sendEmail = useCallback(async (data, recipientOverrides = {}) => {
     setSending(true);
     setError('');
     setSuccess('');
     try {
       const resp = await authenticatedPost(
         '/api/email/send-sos',
-        buildPayload(data),
+        buildPayload(data, recipientOverrides),
         authHeaders()
       );
       if (!resp.data?.success) {

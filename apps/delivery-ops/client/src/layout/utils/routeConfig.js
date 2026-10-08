@@ -94,6 +94,16 @@ export const routeConfig = {
       icon: '🏃'
     },
     {
+      path: '/sprint-performance',
+      exact: true,
+      component: 'SprintPerformancePage',
+      title: 'Sprint Performance',
+      description: 'Leadership view of sprint say/do by team, leader and manager',
+      permissions: [PERMISSIONS.SPRINT_REPORTS_VIEW],
+      showInNav: true,
+      icon: '📈'
+    },
+    {
       path: '/component-report',
       exact: true,
       component: 'ComponentReport',
@@ -124,6 +134,16 @@ export const routeConfig = {
       icon: '📈'
     },
     {
+      path: '/system-test-scale',
+      exact: true,
+      component: 'SystemTestScalePage',
+      title: 'System-Test Scale',
+      description: 'System-Test bug scale, cf[13260] regressions, and release trends',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
+      icon: '🧪'
+    },
+    {
       path: '/sos-summary',
       exact: true,
       component: 'SosSummaryPage',
@@ -132,6 +152,16 @@ export const routeConfig = {
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
       icon: '📡'
+    },
+    {
+      path: '/sos-leader-summary',
+      exact: true,
+      component: 'SosLeaderSummaryPage',
+      title: 'SoS by Leader (temp)',
+      description: 'TEMP — SoS Feature/Initiative status regrouped by NDB eng leader',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '👥'
     },
     {
       path: '/release/brief',
@@ -163,11 +193,11 @@ export const routeConfig = {
       icon: '🗓️'
     },
     {
-      path: '/admin',
+      path: '/team-management',
       exact: true,
       component: 'AdminPanel',
-      title: 'Admin',
-      description: 'Administrative functions',
+      title: 'Team Management',
+      description: 'Add and edit teams',
       permissions: [PERMISSIONS.ADMIN_PANEL_ACCESS],
       showInNav: true,
       icon: '🔧'

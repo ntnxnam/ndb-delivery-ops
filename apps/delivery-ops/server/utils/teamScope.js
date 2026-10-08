@@ -24,6 +24,23 @@ function wrapTeamScope(baseFilter, jql) {
   return orderBy ? `${wrapped} ${orderBy}` : wrapped;
 }
 
+const TRAILING_NOT_DONE =
+  /\s+AND\s+statusCategory\s*(?:!=\s*"?Done"?|not\s+in\s*\(\s*"?Done"?\s*\))\s*$/i;
+
+/**
+ * Sprint reports must count completed work, so the sprint scope is the
+ * team base filter minus a trailing `AND statusCategory != Done`.
+ */
+function sprintScopeFromBaseFilter(baseFilter) {
+  return stripOrderBy(baseFilter).replace(TRAILING_NOT_DONE, '').trim();
+}
+
+function stripOrderBy(jql) {
+  const filter = typeof jql === 'string' ? jql.trim() : '';
+  const orderMatch = filter.match(TRAILING_ORDER_BY);
+  return orderMatch ? filter.slice(0, orderMatch.index).trim() : filter;
+}
+
 function requireBaseFilter(team) {
   const filter = typeof team?.baseFilter === 'string' ? team.baseFilter.trim() : '';
   if (!filter) {
@@ -54,6 +71,20 @@ function isUnreleasedVersion(v) {
   return Boolean(v && v.name) && v.released !== true && v.archived !== true;
 }
 
+/**
+ * Returns true for a one-dot (Major.Minor) release name, e.g. "NDB-2.12", "NCC-6.0".
+ * Maintenance (two-dot), patch (three-dot), and pre-release (-EA, -RC) versions return false.
+ * Used so the global defaultReleaseVersion always points to the nearest one-dot release.
+ */
+function isOneDotRelease(name) {
+  if (!name || typeof name !== 'string') return false;
+  // Strip known product prefix (e.g. "NDB-", "NCC-") then count dots in the version part.
+  const versionPart = name.replace(/^[A-Z]+-/i, '');
+  // Pre-release suffixes (e.g. -EA, -RC1) are not one-dot releases.
+  if (/-[A-Z]/i.test(versionPart)) return false;
+  return (versionPart.match(/\./g) || []).length === 1;
+}
+
 function toVersionSummary(v) {
   return {
     name: String(v.name),
@@ -81,10 +112,15 @@ function pickNextUpcomingGaVersion(versions, now = new Date()) {
     .map((v) => ({ v, day: v.releaseDate ? parseReleaseDay(v.releaseDate) : null }))
     .filter((row) => row.day != null);
 
-  const upcoming = dated.filter((row) => row.day >= today).sort((a, b) => a.day - b.day);
+  // Prefer one-dot (Major.Minor) releases as the global default — maintenance/patch
+  // releases (2+ dots) or pre-releases (-EA/-RC) should not override the global default.
+  const oneDot = dated.filter((row) => isOneDotRelease(row.v.name));
+  const candidate = oneDot.length > 0 ? oneDot : dated;
+
+  const upcoming = candidate.filter((row) => row.day >= today).sort((a, b) => a.day - b.day);
   if (upcoming.length > 0) return upcoming[0].v.name || null;
 
-  const overdue = dated.sort((a, b) => a.day - b.day);
+  const overdue = candidate.sort((a, b) => a.day - b.day);
   if (overdue.length > 0) return overdue[0].v.name || null;
 
   return unreleased[0].name || null;
@@ -122,9 +158,12 @@ async function listFixVersionsForTeam(team, jira) {
 
 module.exports = {
   wrapTeamScope,
+  sprintScopeFromBaseFilter,
+  stripOrderBy,
   requireBaseFilter,
   requireProjectKey,
   isUnreleasedVersion,
+  isOneDotRelease,
   toVersionSummary,
   pickNextUpcomingGaVersion,
   listFixVersionsForTeam,

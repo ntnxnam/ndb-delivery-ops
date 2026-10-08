@@ -2,7 +2,7 @@
   "name": "portfolio-delivery-ops",
   "version": "1.0.0",
   "decision": "D38",
-  "description": "Portable agent cookbook. Hosts are adapters; this pack is the source of truth.",
+  "description": "Portable agent cookbook. Hosts are adapters; this pack is the source of truth for identity, skills, workflows, rules, context, and prompts (D38).",
   "orchestrator": "ops-assistant",
   "identity": {
     "orchestrator": "identity/ops-assistant.md",
@@ -204,6 +204,187 @@
       "capabilityType": "deterministic",
       "toolClass": "mutate",
       "path": "workflows/release-cascade-rename.md"
+    }
+  ],
+  "context": [
+    {
+      "name": "index",
+      "path": "context/INDEX.md",
+      "kind": "index"
+    },
+    {
+      "name": "app-surface-map",
+      "path": "context/domain/app-surface-map.md",
+      "kind": "domain"
+    },
+    {
+      "name": "release-gates",
+      "path": "context/domain/release-gates.md",
+      "kind": "domain"
+    },
+    {
+      "name": "jira-workflows-and-resolutions",
+      "path": "context/domain/jira-workflows-and-resolutions.md",
+      "kind": "domain"
+    },
+    {
+      "name": "jira-hygiene-and-collaterals",
+      "path": "context/domain/jira-hygiene-and-collaterals.md",
+      "kind": "domain"
+    },
+    {
+      "name": "deferral-tracking",
+      "path": "context/domain/deferral-tracking.md",
+      "kind": "domain"
+    },
+    {
+      "name": "velocity-and-sprints",
+      "path": "context/domain/velocity-and-sprints.md",
+      "kind": "domain"
+    },
+    {
+      "name": "leader-org",
+      "path": "context/domain/leader-org.md",
+      "kind": "domain"
+    },
+    {
+      "name": "ai-prompt-inventory",
+      "path": "context/domain/ai-prompt-inventory.md",
+      "kind": "domain"
+    },
+    {
+      "name": "email-sender",
+      "path": "context/pages/email-sender.md",
+      "kind": "page"
+    },
+    {
+      "name": "project-status",
+      "path": "context/pages/project-status.md",
+      "kind": "page"
+    },
+    {
+      "name": "feature-dashboard",
+      "path": "context/pages/feature-dashboard.md",
+      "kind": "page"
+    },
+    {
+      "name": "retrospective",
+      "path": "context/pages/retrospective.md",
+      "kind": "page"
+    },
+    {
+      "name": "release-setup",
+      "path": "context/pages/release-setup.md",
+      "kind": "page"
+    },
+    {
+      "name": "jira-emailer",
+      "path": "context/pages/jira-emailer.md",
+      "kind": "page"
+    },
+    {
+      "name": "email-history",
+      "path": "context/pages/email-history.md",
+      "kind": "page"
+    },
+    {
+      "name": "sprint-report",
+      "path": "context/pages/sprint-report.md",
+      "kind": "page"
+    },
+    {
+      "name": "sprint-performance",
+      "path": "context/pages/sprint-performance.md",
+      "kind": "page"
+    },
+    {
+      "name": "component-report",
+      "path": "context/pages/component-report.md",
+      "kind": "page"
+    },
+    {
+      "name": "chatbot",
+      "path": "context/pages/chatbot.md",
+      "kind": "page"
+    },
+    {
+      "name": "kpis",
+      "path": "context/pages/kpis.md",
+      "kind": "page"
+    },
+    {
+      "name": "system-test-scale",
+      "path": "context/pages/system-test-scale.md",
+      "kind": "page"
+    },
+    {
+      "name": "sos-summary",
+      "path": "context/pages/sos-summary.md",
+      "kind": "page"
+    },
+    {
+      "name": "sos-leader",
+      "path": "context/pages/sos-leader.md",
+      "kind": "page"
+    },
+    {
+      "name": "release-brief",
+      "path": "context/pages/release-brief.md",
+      "kind": "page"
+    },
+    {
+      "name": "release-config",
+      "path": "context/pages/release-config.md",
+      "kind": "page"
+    },
+    {
+      "name": "admin",
+      "path": "context/pages/admin.md",
+      "kind": "page"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "feature-exec-summary",
+      "path": "prompts/production/feature-exec-summary.md",
+      "status": "production",
+      "area": "project-status,sos-summary,feature-dashboard"
+    },
+    {
+      "name": "release-health-briefing",
+      "path": "prompts/production/release-health-briefing.md",
+      "status": "production",
+      "area": "release-brief"
+    },
+    {
+      "name": "sos-tier-briefing",
+      "path": "prompts/production/sos-tier-briefing.md",
+      "status": "production",
+      "area": "sos-summary"
+    },
+    {
+      "name": "sprint-leadership-asks",
+      "path": "prompts/production/sprint-leadership-asks.md",
+      "status": "production",
+      "area": "sprint-performance"
+    },
+    {
+      "name": "team-exec-report",
+      "path": "prompts/production/team-exec-report.md",
+      "status": "production",
+      "area": "reports"
+    },
+    {
+      "name": "sos-leader-coaching",
+      "path": "prompts/draft/sos-leader-coaching.md",
+      "status": "draft",
+      "area": "sos-leader"
+    },
+    {
+      "name": "component-report-narrative",
+      "path": "prompts/draft/component-report-narrative.md",
+      "status": "draft",
+      "area": "component-report"
     }
   ]
 }

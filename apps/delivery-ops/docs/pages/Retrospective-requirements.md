@@ -11,6 +11,11 @@
 
 The Retrospective page answers "did teams follow their gate contracts?" for a completed or in-flight release. It checks four gates (CCM, CG, PG, GA) and shows per-project compliance, a "naughty list" of top violators, reopen quality, companion readiness, and the PG-to-GA interval.
 
+It also answers "how does this release compare to recent ones?" via a
+**Cross-Release Comparison** section at the top, contrasting the selected release
+against the latest big (major/minor) releases on delivery, quality, PG
+bug/improvement verification, and team KPI categories — all split by resolution.
+
 ---
 
 ## User Stories
@@ -25,11 +30,19 @@ The Retrospective page answers "did teams follow their gate contracts?" for a co
 | RT-06 | As an RM, I can see companion readiness — whether companion releases (patch versions) were ready when the main release shipped. |
 | RT-07 | As an RM, I can see the PG-to-GA calendar interval per project. |
 | RT-08 | As a user, all counts link to JIRA queries that reproduce the exact result. |
+| RT-09 | As a TPM, I can compare the selected release against the latest 3 big releases on task closure, bug counts, P0/P1, reopen rate, PG verification, and team KPI categories — by resolution. |
+| RT-10 | As an RM, I can see PG bug/improvement verification patterns: how many were unverified at PG and how long verification took (Resolved → Closed). |
+| RT-11 | As a user, each comparison cell shows a delta vs the previous release and a trend sparkline, and links to JIRA. |
 
 ---
 
 ## UI Behaviour
 
+0. **Cross-Release Comparison** (`ReleaseComparisonTable` + `ComparisonTrendChart`) — top section (audience: tpm, dense):
+   - Columns = compared releases (latest 3 big + the selected one), oldest → newest
+   - Row groups: **Delivery** (task closure %, bugs total, P0 open, P1 open, reopen rate), **PG Verification** (bug/improvement unverified@PG, verify-lag median, reopen rate), **KPI Categories** (one row per team KPI from `kpiConfig.json`, split total/done/open)
+   - Every numeric cell links to JIRA; each cell shows a coloured delta vs the release on its left (green = improved, red = regressed) and a trend sparkline
+   - Delivery + PG rows are offline (per-release bundles); KPI rows are live release-scoped counts
 1. **Release picker** — shared with other pages via `SelectedReleaseContext`; defaults to last selected
 2. **Gate timeline ruler** (`GateTimelineRuler`) — horizontal swimlane showing CCM / CG / PG / GA actual vs planned dates
 3. **Gate compliance cards** (`GateComplianceCard`) — one card per gate:
@@ -60,6 +73,10 @@ The Retrospective page answers "did teams follow their gate contracts?" for a co
 | Project has zero violations | Omit from naughty list; show in "All compliant" section |
 | Companion release not found in config | Omit row; show footnote "Companion config missing" |
 | Top N parameter | Defaults to 10; adjustable via query param `?topN=20` |
+| Fewer than 2 comparable releases | Comparison section shows "Need at least two comparable releases" |
+| A release's bundle missing | That column shows "—"; other releases still render |
+| KPI breakdown fails for a release | KPI rows show "—" for that release; delivery/PG rows unaffected |
+| PG date unknown for a release | Unverified@PG shows "—"; verify-lag still computed from Closed dates |
 
 ---
 
@@ -70,3 +87,7 @@ The Retrospective page answers "did teams follow their gate contracts?" for a co
 - [ ] Every count in every card links to a JIRA URL returning the same issues
 - [ ] Gate timeline ruler dates match `releaseVersionsEmailConfig.json` exactly
 - [ ] Page renders correctly for both past releases (all gates done) and active releases (some gates future)
+- [ ] Cross-Release Comparison spans the latest 3 big releases plus the selected one, oldest → newest
+- [ ] Delivery + PG verification rows derive from per-release bundles offline (no JIRA call)
+- [ ] KPI category rows use the team's `kpiConfig.json`, split into total/done/open by resolution
+- [ ] Every comparison cell links to a JIRA query and shows a delta vs the previous release

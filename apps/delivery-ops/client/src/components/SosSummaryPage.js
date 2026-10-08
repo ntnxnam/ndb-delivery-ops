@@ -10,7 +10,9 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
+import { useEraComponents } from '../hooks/useEraComponents';
 import { useSosHistory } from '../hooks/useSosHistory';
+import { useSosTierSummary, SOS_TIERS } from '../hooks/useSosTierSummary';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { authenticatedPost, authenticatedPut, authenticatedGet } from '../utils/api';
@@ -18,8 +20,12 @@ import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { formatRiskWithHistory } from '../utils/riskHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';
 import TaskBreakdownCell from './TaskBreakdownCell';
-import ReleaseGantt from './ReleaseGantt';
+import ReleaseVersionGantt from './ReleaseVersionGantt';
 import SosEmailBar from './SosEmailBar';
+import SosTierSummaryBox from './SosTierSummaryBox';
+import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
+import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
+import ReleaseVersionFilterBar, { applyFilters } from './ReleaseVersionFilterBar';
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -30,6 +36,17 @@ const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
 // Rolling / placeholder fixVersion buckets we never fetch task breakdowns for
 // (they can hold thousands of tickets). Everything else is a real release.
 const PLACEHOLDER_VERSIONS = new Set(['master', 'era future', 'unversioned']);
+
+/** JIRA user field → display string. Empty and the live-fetch sentinel "N/A" are blank. */
+function personName(value) {
+  if (value == null) return null;
+  const text = typeof value === 'string'
+    ? value
+    : (value.displayName || value.name || value.emailAddress || value.email || '');
+  const trimmed = String(text).trim();
+  if (!trimmed || trimmed === 'N/A' || trimmed === '—') return null;
+  return trimmed;
+}
 
 function daysOld(dateVal) {
   if (!dateVal) return null;
@@ -60,7 +77,7 @@ function needsSummary(item) {
    Hook: useMultiReleaseGateData
 ───────────────────────────────────────────────────────────── */
 
-function useMultiReleaseGateData(releases) {
+export function useMultiReleaseGateData(releases) {
   const [gateDataMap, setGateDataMap] = useState({});
   const [loadingGates, setLoadingGates] = useState(false);
   const [gateError, setGateError] = useState(null);
@@ -121,21 +138,23 @@ function useMultiReleaseGateData(releases) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Hook: useReleaseDatesConfig — loads the same config that
-   ReleaseConfigPage uses, so we can feed ReleaseGantt
+   Hook: useReleaseDatesConfig — loads release gate dates config
 ───────────────────────────────────────────────────────────── */
 
-function useReleaseDatesConfig() {
+export function useReleaseDatesConfig() {
   const [releases, setReleases] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch('/api/config/release-dates')
-      .then(res => res.ok ? res.json() : Promise.reject(res.status))
-      .then(data => { if (!cancelled) setReleases(data.releases || {}); })
-      .catch(() => { /* non-fatal — Gantt just won't render */ })
+    // Prefer authenticated helper so cookies / auth headers match the rest of the app
+    // (bare fetch can miss the session and return an empty body → no history enrich keys).
+    authenticatedGet('/api/config/release-dates')
+      .then((resp) => {
+        if (!cancelled) setReleases(resp.data?.releases || {});
+      })
+      .catch(() => { /* non-fatal — Gantt / history enrich just won't run */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -418,19 +437,28 @@ function BulkReviewPanel({ pendingReviews, onPushOne, onDiscardOne, onPushAll, o
 }
 
 const SOS_COLUMNS = [
-  { key: 'key',        label: 'Key',        width: '90px' },
-  { key: 'summary',    label: 'Summary',    width: '220px' },
-  { key: 'status',     label: 'Status',     width: '100px' },
-  { key: 'risk',       label: 'Risk',       width: '70px' },
-  { key: 'ccmDate',     label: 'CCM',        width: '140px' },
-  { key: 'cgDate',     label: 'CG',         width: '140px' },
-  { key: 'pgDate',     label: 'PG',         width: '140px' },
-  { key: 'assignee',   label: 'Assignee',   width: '110px' },
-  { key: 'aiSummary',  label: 'AI Summary', width: '260px' },
-  { key: 'breakdown',  label: 'Breakdown',  width: '180px' },
+  { key: 'identity',   label: 'Feature / Initiative', width: '200px' },
+  { key: 'state',      label: 'State',                width: '160px' },
+  { key: 'dates',      label: 'Dates',                width: '130px' },
+  { key: 'aiSummary',  label: 'AI Summary',           width: '300px' },
+  { key: 'breakdown',  label: 'Breakdown',            width: '180px' },
 ];
 
-const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
+/** Plain text for Risk Assessment / Path to Green (string or { value }). */
+function riskTextField(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    return !t || t === 'Not Set' || t === 'N/A' ? null : t;
+  }
+  if (typeof raw === 'object') {
+    const v = raw.value ?? raw.display ?? raw.name ?? null;
+    return riskTextField(v);
+  }
+  return null;
+}
+
+const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 
 /* ─────────────────────────────────────────────────────────────
    Helpers
@@ -443,16 +471,18 @@ function formatDate(val) {
 }
 
 function getRagColor(riskIndicator) {
-  if (!riskIndicator) return '#9e9e9e';
+  if (!riskIndicator) return RAG_COLORS.NotSet;
   const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '');
-  const key = val.split(' ')[0]; // "Red", "Yellow", "Green"
-  return RAG_COLORS[key] || '#9e9e9e';
+  const key = val.split(' ')[0];
+  return RAG_COLORS[key] || RAG_COLORS.NotSet;
 }
 
 function getRagLabel(riskIndicator) {
-  if (!riskIndicator) return '?';
-  const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '?');
-  return val.split(' ')[0] || '?'; // "Red", "Yellow", "Green"
+  if (!riskIndicator) return 'not set';
+  const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator?.value || '');
+  const key = val.split(' ')[0];
+  if (key === 'Red' || key === 'Yellow' || key === 'Green') return key;
+  return 'not set';
 }
 
 
@@ -492,61 +522,153 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
   const breakdown = breakdownDataMap[item.key] || null;
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
+  const riskAssessment = riskTextField(item.customfield_47780);
+  const pathToGreen = riskTextField(item.customfield_55664);
+  const riskTrail = formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory);
+  const testLead = personName(item.customfield_11065);
+  const qaContact = personName(item.customfield_10860);
+  const pmOwner = personName(item.customfield_11260);
+  const programMgr = personName(item.customfield_27764);
+
+  // Date rows: label → field mapping for the stacked Dates cell
+  const DATE_ROWS = [
+    { label: 'FS/DS', field: 'fsdsDone',     raw: item.customfield_13861 },
+    { label: 'CCM',   field: 'codeComplete',  raw: item.customfield_11067 },
+    { label: 'CG',    field: 'commitGate',    raw: item.customfield_35863 },
+    { label: 'PG',    field: 'promotionGate', raw: item.customfield_35864 },
+  ];
 
   return (
     <tr style={{ borderBottom: '1px solid #eee', verticalAlign: 'top' }}>
-      {/* Key */}
-      <td style={{ padding: '6px 8px', width: '90px', whiteSpace: 'nowrap' }}>
+
+      {/* ── Identity: key + summary + assignee stacked ── */}
+      <td style={{ padding: '8px 10px', width: '200px' }}>
         <a
-          href={jiraBaseUrl ? `${jiraBaseUrl}/browse/${item.key}` : `#`}
+          href={jiraBaseUrl ? `${jiraBaseUrl}/browse/${item.key}` : '#'}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: '#1565c0', fontSize: '12px', fontWeight: 600 }}
+          style={{ color: '#1565c0', fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '3px' }}
         >
           {item.key}
         </a>
+        <div style={{ fontSize: '11px', color: '#333', lineHeight: '1.4', marginBottom: '4px' }}
+             title={item.summary}>
+          {item.summary}
+        </div>
+        {item.assignee && (
+          <div style={{ fontSize: '10px', color: '#888' }}>
+            👤 {item.assignee}
+          </div>
+        )}
+        {(testLead || qaContact || pmOwner || programMgr) && (
+          <div style={{ fontSize: '10px', color: '#888', marginTop: 2 }}>
+            {testLead && (
+              <div title="Test Lead">🧪 {testLead}</div>
+            )}
+            {qaContact && qaContact !== testLead && (
+              <div title="QA Contact">🧪 QA {qaContact}</div>
+            )}
+            {pmOwner && (
+              <div title="PM Owner">📋 {pmOwner}</div>
+            )}
+            {programMgr && (
+              <div title="Program Mgr">🗂 {programMgr}</div>
+            )}
+          </div>
+        )}
       </td>
-      {/* Summary */}
-      <td style={{ padding: '6px 8px', fontSize: '12px', maxWidth: '220px' }}>
-        <span title={item.summary}>{item.summary}</span>
+
+      {/* ── State: RAG + history trail + Assessment / Path to Green + status ── */}
+      <td style={{ padding: '8px 10px', width: '160px', verticalAlign: 'top' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+          <span
+            style={{
+              display: 'inline-block', width: '10px', height: '10px',
+              borderRadius: '50%', background: ragColor, flexShrink: 0,
+            }}
+            title={ragLabel}
+          />
+          <span style={{ fontSize: '11px', fontWeight: 600, color: ragColor }}>
+            {ragLabel === 'not set' ? <span style={{ color: '#bbb' }}>—</span> : ragLabel}
+          </span>
+        </div>
+        {riskTrail && (
+          <div style={{ marginBottom: '4px' }} title="Risk Indicator history (newest → oldest)">
+            {riskTrail}
+          </div>
+        )}
+        {riskAssessment && (
+          <div style={{ marginTop: '4px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.4px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              Assessment
+            </span>
+            <div
+              title={riskAssessment}
+              style={{
+                fontSize: '10px', color: '#333', lineHeight: 1.35,
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                maxHeight: '3.6em', overflow: 'hidden',
+              }}
+            >
+              {riskAssessment}
+            </div>
+          </div>
+        )}
+        {pathToGreen && (
+          <div style={{ marginTop: '4px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.4px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              Path to Green
+            </span>
+            <div
+              title={pathToGreen}
+              style={{
+                fontSize: '10px', color: '#333', lineHeight: 1.35,
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                maxHeight: '3.6em', overflow: 'hidden',
+              }}
+            >
+              {pathToGreen}
+            </div>
+          </div>
+        )}
+        {!riskAssessment && !pathToGreen && (
+          <div style={{ fontSize: '9px', color: '#ccc', marginTop: '2px' }}>
+            No assessment / path
+          </div>
+        )}
+        <div style={{ fontSize: '10px', color: '#555', marginTop: '4px', fontStyle: 'italic' }}>
+          {item.status || '—'}
+        </div>
       </td>
-      {/* Status */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap', color: '#444' }}>
-        {item.status || '—'}
+
+      {/* ── Dates: FS/DS / CCM / CG / PG stacked ── */}
+      <td style={{ padding: '8px 10px', width: '130px', verticalAlign: 'top' }}>
+        {DATE_ROWS.map(({ label, field, raw }) => (
+          <div key={label} style={{ marginBottom: '6px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              {label}
+            </span>
+            <span style={{ fontSize: '11px' }}>
+              {raw ? formatDateWithHistory(item.key, field, raw, checkpointHistory) : <span style={{ color: '#ccc' }}>—</span>}
+            </span>
+          </div>
+        ))}
       </td>
-      {/* Risk — RAG dot plus a movement trail when the indicator has changed */}
-      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            width: '14px',
-            height: '14px',
-            borderRadius: '50%',
-            background: ragColor,
-            verticalAlign: 'middle',
-          }}
-          title={ragLabel}
-        />
-        {formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)}
-      </td>
-      {/* CC */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'codeComplete', item.customfield_11067, checkpointHistory)}
-      </td>
-      {/* CG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'commitGate', item.customfield_35863, checkpointHistory)}
-      </td>
-      {/* PG */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#555', verticalAlign: 'top' }}>
-        {formatDateWithHistory(item.key, 'promotionGate', item.customfield_35864, checkpointHistory)}
-      </td>
-      {/* Assignee */}
-      <td style={{ padding: '6px 8px', fontSize: '11px', color: '#444', whiteSpace: 'nowrap' }}>
-        {item.assignee || '—'}
-      </td>
-      {/* AI Exec Summary */}
-      <td style={{ padding: '6px 8px', minWidth: '260px' }}>
+
+      {/* ── AI Exec Summary ── */}
+      <td style={{ padding: '8px 10px', verticalAlign: 'top' }}>
         <ExecSummaryCell
           item={item}
           selectedVersion={version}
@@ -555,8 +677,9 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
           releaseContext={null}
         />
       </td>
-      {/* Task Breakdown */}
-      <td style={{ padding: '6px 8px', minWidth: '180px' }}>
+
+      {/* ── Task Breakdown ── */}
+      <td style={{ padding: '8px 10px', width: '180px', verticalAlign: 'top' }}>
         <TaskBreakdownCell
           jiraKey={item.key}
           breakdownData={breakdown}
@@ -564,6 +687,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
           compact={true}
         />
       </td>
+
     </tr>
   );
 });
@@ -579,7 +703,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, loadingB
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '1250px' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '900px' }}>
         <thead>
           <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
             {SOS_COLUMNS.map((col) => (
@@ -644,7 +768,26 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, onRefresh, checkpointHistory = {}, gateData = null }) {
+export function ReleaseSection({
+  version,
+  items,
+  breakdownDataMap,
+  loadingBreakdowns = false,
+  jiraBaseUrl,
+  onRefresh,
+  checkpointHistory = {},
+  gateData = null,
+  tierSummaries = null,
+  projectStatus = null,
+  onRetryTier = null,
+  onGenerate = null,
+  generating = false,
+  kpiData = null,
+  kpiLoading = false,
+  kpiError = null,
+  ganttConfigFromDates = null,  // Per-version config from /api/config/release-dates (drives ReleaseVersionGantt)
+  productId = '',
+}) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
     if (!gateData || !gateData.gates || !Array.isArray(gateData.gates)) return null;
@@ -682,19 +825,34 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
   const features = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'feature'), [items]);
   const initiatives = useMemo(() => items.filter((i) => (i.issuetype || i.issueType || '').toLowerCase() === 'initiative'), [items]);
 
-  // Derive a rough RAG from items
   const ragCounts = useMemo(() => {
-    const counts = { Red: 0, Yellow: 0, Green: 0 };
+    const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
     items.forEach((i) => {
       const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
-      const v = raw.split(' ')[0]; // normalize "Red - Big Risk to Plan" → "Red"
-      if (v in counts) counts[v]++;
+      const v = String(raw).split(' ')[0];
+      if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
+      else counts.NotSet++;
     });
     return counts;
   }, [items]);
 
-  const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : 'Green';
-  const ragColor = RAG_COLORS[overallRag] || '#9e9e9e';
+  const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : ragCounts.Green > 0 ? 'Green' : 'NotSet';
+  const ragColor = RAG_COLORS[overallRag] || RAG_COLORS.NotSet;
+
+  // Status-update staleness (customfield_45660): missing or ≥ STALE_DAYS old.
+  const staleItems = useMemo(() => {
+    return (items || []).filter((item) => {
+      const age = daysOld(item?.customfield_45660);
+      return age === null || age >= STALE_DAYS;
+    });
+  }, [items]);
+  const staleCount = staleItems.length;
+
+  const TIER_TITLES = {
+    feat: 'FEAT Work',
+    standalone: 'Standalone Epics',
+    direct: 'Direct Tickets',
+  };
 
   return (
     <div style={{
@@ -704,30 +862,124 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
       {/* Release header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <h3 style={{ margin: 0, fontSize: '15px', color: '#1a1a2e', fontWeight: 700 }}>{version}</h3>
             {items.length > 0 && (
               <span style={{
                 background: ragColor, color: '#fff', borderRadius: '4px',
                 padding: '1px 8px', fontSize: '11px', fontWeight: 700,
               }}>
-                {overallRag}
+                {overallRag === 'NotSet' ? 'not set' : overallRag}
+              </span>
+            )}
+            {staleCount > 0 && (
+              <span
+                title={
+                  `${staleCount} Feature/Initiative${staleCount === 1 ? '' : 's'} with status update ` +
+                  `missing or ≥${STALE_DAYS} days old — dig into these projects:\n` +
+                  staleItems.slice(0, 12).map((i) => i.key).join(', ') +
+                  (staleItems.length > 12 ? ` (+${staleItems.length - 12} more)` : '')
+                }
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  background: '#fff3e0',
+                  color: '#bf360c',
+                  border: '2px solid #e65100',
+                  borderRadius: 4,
+                  padding: '2px 10px',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.02em',
+                  boxShadow: '0 0 0 2px rgba(230, 81, 0, 0.15)',
+                  cursor: 'help',
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 13 }}>⚠</span>
+                {staleCount} stale update{staleCount === 1 ? '' : 's'}
               </span>
             )}
           </div>
           <GateDateStrip ganttConfig={ganttConfig} />
+          {/* KPI breakdown per release — only mount when loading or data is present; errors are silently suppressed inside KpiBreakdownStrip */}
+          {(kpiData || kpiLoading) && (
+            <KpiBreakdownStrip
+              kpiData={kpiData}
+              loading={kpiLoading}
+              error={kpiError}
+              jiraBaseUrl={jiraBaseUrl}
+            />
+          )}
         </div>
-        <button
-          onClick={onRefresh}
-          title="Refresh from JIRA"
-          style={{
-            fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
-            background: '#fff', color: '#555', cursor: 'pointer', padding: '3px 8px',
-          }}
-        >
-          ↻ Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onGenerate && (
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={generating}
+              title={`Team-exec briefing for FEAT / Standalone / Direct — ${version} only`}
+              style={{
+                fontSize: '11px', border: '1px solid #0d47a1', borderRadius: '4px',
+                background: generating ? '#e3f2fd' : '#0d47a1',
+                color: generating ? '#0d47a1' : '#fff',
+                cursor: generating ? 'not-allowed' : 'pointer',
+                padding: '3px 10px', fontWeight: 600,
+              }}
+            >
+              {generating ? '✦ Generating…' : '✦ Generate Exec Summary'}
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            title="Refresh from JIRA"
+            style={{
+              fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
+              background: '#fff', color: '#555', cursor: 'pointer', padding: '3px 8px',
+            }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Per-release gate timeline — reuses ReleaseVersionGantt (timelineOnly) so the
+          visual language (binding vs soft gates, Today bubble, proportional spacing)
+          is identical to Project Status. Only shown when release-dates config exists. */}
+      {ganttConfigFromDates && (
+        <div style={{ marginBottom: '12px' }}>
+          <ReleaseVersionGantt
+            ganttConfig={ganttConfigFromDates}
+            selectedVersion={version}
+            items={{ commit: [], longTermFunded: [] }}
+            checkpointHistory={{}}
+            sortItems={(arr) => arr}
+            sprintDates={[]}
+            timelineOnly={true}
+          />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+        {SOS_TIERS.map((tier) => (
+          <SosTierSummaryBox
+            key={tier}
+            title={TIER_TITLES[tier]}
+            tierState={tierSummaries?.[tier] || { state: 'idle' }}
+            onRetry={onRetryTier ? () => onRetryTier(tier) : null}
+          />
+        ))}
+      </div>
+
+      <SosReleaseCharts
+        ragCounts={ragCounts}
+        gateData={gateData}
+        projectStatus={projectStatus}
+        items={items}
+        release={version}
+        productId={productId}
+        jiraBaseUrl={jiraBaseUrl}
+      />
 
       {/* Features */}
       <CollapsibleSection title="Features" count={features.length} accentColor="#1565c0">
@@ -764,7 +1016,8 @@ function ReleaseSection({ version, items, breakdownDataMap, loadingBreakdowns = 
 
 function SosSummaryPage() {
   const { jiraBaseUrl } = useJiraConfig();
-  const { selectedTeamId } = useTeam();
+  const { selectedTeamId, selectedTeam } = useTeam();
+  const productId = selectedTeam?.id || selectedTeam?.productId || selectedTeamId || '';
 
   const {
     byVersion,
@@ -783,6 +1036,20 @@ function SosSummaryPage() {
 
   const { checkpointHistory, fetchHistory } = useSosHistory();
 
+  // KPI breakdown per release — loaded once activeVersions are known
+  const { dataByRelease: kpiDataByRelease, loadingRelease: kpiLoadingByRelease, errorByRelease: kpiErrorByRelease, load: loadKpiForRelease } = useReleaseKpiBreakdown();
+
+  const {
+    tierSummaries,
+    projectStatusByRelease,
+    generating,
+    generatingRelease,
+    generateError,
+    generateForRelease,
+    retryTier,
+    fetchProjectStatus,
+  } = useSosTierSummary();
+
   // Sort versions: NDB-2.12 before NDB-2.11 etc, Unversioned last
   const sortedVersions = useMemo(() => {
     return Object.keys(byVersion).sort((a, b) => {
@@ -792,14 +1059,36 @@ function SosSummaryPage() {
     });
   }, [byVersion]);
 
+  const activeVersions = useMemo(
+    () => sortedVersions.filter((v) => !PLACEHOLDER_VERSIONS.has(String(v).trim().toLowerCase())),
+    [sortedVersions]
+  );
+
   // Fetch gate data for all active releases
   const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
+
+  // Eagerly fetch project-status (component donuts) for every active release
+  // as soon as we know productId + versions — no need to wait for Exec Summary.
+  useEffect(() => {
+    if (!productId || activeVersions.length === 0) return;
+    activeVersions.forEach((v) => {
+      fetchProjectStatus(productId, v).catch(() => {/* silently ignore — chart shows placeholder */});
+    });
+  }, [productId, activeVersions, fetchProjectStatus]);
 
   // Fetch on mount — live JIRA first
   useEffect(() => {
     if (!selectedTeamId) return;
     fetchAll(selectedTeamId);
   }, [fetchAll, selectedTeamId]);
+
+  // Load KPI breakdown for each active release (lazy — fires once per version)
+  useEffect(() => {
+    if (!selectedTeamId || activeVersions.length === 0) return;
+    activeVersions.forEach((v) => {
+      loadKpiForRelease(v, selectedTeamId);
+    });
+  }, [activeVersions, selectedTeamId, loadKpiForRelease]);
 
   // All items that need a summary (for batch button label)
   const needsCount = useMemo(() => {
@@ -856,13 +1145,15 @@ function SosSummaryPage() {
   // React StrictMode's double-invoke and the cache→live byVersion update don't
   // fire duplicate walks. Both run even in degraded mode — the server serves
   // history from its snapshot rather than re-tripping JIRA.
+  // lastSyncIso is included so Refresh (which clears breakdownDataMap) re-arms
+  // the walks even when the key-set signature is unchanged.
   const lastEnrichRef = useRef('');
   const lastBreakdownRef = useRef('');
   useEffect(() => {
     if (!selectedTeamId) return;
 
     if (enrichKeys.length > 0) {
-      const sig = `${selectedTeamId}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
+      const sig = `${selectedTeamId}|${lastSyncIso || ''}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
       if (lastEnrichRef.current !== sig) {
         lastEnrichRef.current = sig;
         fetchHistory(selectedTeamId, enrichKeys);
@@ -870,21 +1161,263 @@ function SosSummaryPage() {
     }
 
     if (breakdownKeys.length > 0) {
-      const sig = `${selectedTeamId}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
+      const sig = `${selectedTeamId}|${lastSyncIso || ''}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
       if (lastBreakdownRef.current !== sig) {
         lastBreakdownRef.current = sig;
         fetchBreakdowns(breakdownKeys);
       }
     }
-  }, [selectedTeamId, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
+  }, [selectedTeamId, lastSyncIso, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+
+  // Release filter — which versions to show
+  const [selectedVersions, setSelectedVersions] = useState([]); // empty = all
+
+  const toggleVersion = useCallback((v) => {
+    setSelectedVersions((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    );
+  }, []);
+
+  // RAG filter — drive by overall RAG of each release section
+  const RAG_FILTER_OPTIONS = ['Red', 'Yellow', 'Green', 'NotSet'];
+  const [selectedRags, setSelectedRags] = useState([]); // empty = all
+
+  const toggleRag = useCallback((r) => {
+    setSelectedRags((prev) =>
+      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
+    );
+  }, []);
+
+  // Pre-compute per-release overall RAG so the release filter can use it
+  const releaseRagMap = useMemo(() => {
+    const map = {};
+    for (const [version, items] of Object.entries(byVersion)) {
+      const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
+      items.forEach((i) => {
+        const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
+        const v = String(raw).split(' ')[0];
+        if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
+        else counts.NotSet++;
+      });
+      map[version] = counts.Red > 0 ? 'Red' : counts.Yellow > 0 ? 'Yellow' : counts.Green > 0 ? 'Green' : 'NotSet';
+    }
+    return map;
+  }, [byVersion]);
+
+  // Versions visible after both filters applied
+  const visibleVersions = useMemo(() => {
+    return sortedVersions.filter((v) => {
+      if (selectedVersions.length > 0 && !selectedVersions.includes(v)) return false;
+      if (selectedRags.length > 0 && !selectedRags.includes(releaseRagMap[v])) return false;
+      return true;
+    });
+  }, [sortedVersions, selectedVersions, selectedRags, releaseRagMap]);
+
+  // Component filter — names from the selected team's JIRA project
+  const [selectedComponent, setSelectedComponent] = useState('');
+  const { components: eraComponents } = useEraComponents(productId);
+
+  useEffect(() => {
+    setSelectedComponent('');
+  }, [productId]);
+
+  const filterItemsByComponent = useCallback((items) => {
+    if (!selectedComponent) return items;
+    return items.filter((item) => {
+      // Match CF[15160] Primary Component (cascading select — match on parent value)
+      const pc = item.primaryComponent;
+      if (pc && (pc.parent === selectedComponent || pc.child === selectedComponent)) return true;
+      // Match JIRA standard components field
+      const comps = item.components;
+      if (Array.isArray(comps)) return comps.some((c) => (typeof c === 'string' ? c : (c?.name || '')) === selectedComponent);
+      if (typeof comps === 'string') return comps === selectedComponent;
+      return false;
+    });
+  }, [selectedComponent]);
 
   const handleBatchGenerate = useCallback(() => {
     const allItems = Object.values(byVersion).flat();
     runBatch(allItems, gateDataMap);
   }, [byVersion, gateDataMap, runBatch]);
 
+  const handleGenerateExecSummary = useCallback((version) => {
+    if (!productId || !version) return;
+    generateForRelease({
+      productId,
+      release: version,
+      items: byVersion[version] || [],
+      gateData: gateDataMap[version] || null,
+      breakdownDataMap,
+      checkpointHistory,
+    });
+  }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, generateForRelease]);
+
+  const handleRetryTier = useCallback((version, tier) => {
+    if (!productId) return;
+    retryTier({
+      productId,
+      release: version,
+      tier,
+      items: byVersion[version] || [],
+      gateData: gateDataMap[version] || null,
+      breakdownDataMap,
+      checkpointHistory,
+    });
+  }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, retryTier]);
+
+  const RAG_CHIP_STYLE = (rag, active) => ({
+    display: 'inline-flex', alignItems: 'center', gap: '4px',
+    padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700,
+    cursor: 'pointer', userSelect: 'none',
+    border: `1px solid ${RAG_COLORS[rag] || '#9e9e9e'}`,
+    background: active ? (RAG_COLORS[rag] || '#9e9e9e') : '#fff',
+    color: active ? '#fff' : (RAG_COLORS[rag] || '#9e9e9e'),
+    transition: 'all 0.15s',
+  });
+
+  const RAG_LABELS = { Red: 'Red', Yellow: 'Yellow', Green: 'Green', NotSet: 'Not Set' };
+
+  // Client-side filters (shared bar with the Release Versions page). Applied to
+  // what is rendered only — batch/email/enrich passes still act on the full set.
+  const [sosFilters, setSosFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
+  const handleSosFilterChange = useCallback((key, value) => {
+    setSosFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const allSosItems = useMemo(() => Object.values(byVersion).flat(), [byVersion]);
+
+  const hasSosFilters = useMemo(
+    () => Object.values(sosFilters).some((v) => v !== ''),
+    [sosFilters]
+  );
+
+  // byVersion narrowed by the active filters; versions with no surviving items
+  // are dropped so we don't render empty sections.
+  const filteredByVersion = useMemo(() => {
+    if (!hasSosFilters) return byVersion;
+    const out = {};
+    Object.entries(byVersion).forEach(([version, items]) => {
+      const kept = applyFilters(items || [], sosFilters);
+      if (kept.length > 0) out[version] = kept;
+    });
+    return out;
+  }, [byVersion, sosFilters, hasSosFilters]);
+
+  const filteredSortedVersions = useMemo(() => {
+    return Object.keys(filteredByVersion).sort((a, b) => {
+      if (a === 'Unversioned') return 1;
+      if (b === 'Unversioned') return -1;
+      return b.localeCompare(a, undefined, { numeric: true });
+    });
+  }, [filteredByVersion]);
+
+  const filteredSosCount = useMemo(
+    () => Object.values(filteredByVersion).reduce((n, arr) => n + arr.length, 0),
+    [filteredByVersion]
+  );
+
+  // Combine Assignee-Mgr filter with release/RAG/component visibility from SoS chrome.
+  const displayVersions = useMemo(() => {
+    const base = hasSosFilters ? filteredSortedVersions : visibleVersions;
+    return base.filter((v) => visibleVersions.includes(v));
+  }, [hasSosFilters, filteredSortedVersions, visibleVersions]);
+
   return (
     <div>
+        {/* ── Filter bar ─────────────────────────────────────────── */}
+        {sortedVersions.length > 0 && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px',
+            marginBottom: '14px', padding: '8px 12px',
+            background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '6px',
+          }}>
+
+            {/* Release filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Release:</span>
+              {sortedVersions.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => toggleVersion(v)}
+                  style={{
+                    padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
+                    cursor: 'pointer', border: '1px solid #6a1b9a', userSelect: 'none',
+                    background: selectedVersions.includes(v) ? '#6a1b9a' : '#fff',
+                    color: selectedVersions.includes(v) ? '#fff' : '#6a1b9a',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {v}
+                </button>
+              ))}
+              {selectedVersions.length > 0 && (
+                <button type="button" onClick={() => setSelectedVersions([])}
+                  style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                  ✕ clear
+                </button>
+              )}
+            </div>
+
+            {/* RAG filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>RAG:</span>
+              {RAG_FILTER_OPTIONS.map((rag) => (
+                <button
+                  key={rag}
+                  type="button"
+                  onClick={() => toggleRag(rag)}
+                  style={RAG_CHIP_STYLE(rag, selectedRags.includes(rag))}
+                >
+                  {RAG_LABELS[rag]}
+                </button>
+              ))}
+              {selectedRags.length > 0 && (
+                <button type="button" onClick={() => setSelectedRags([])}
+                  style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                  ✕ clear
+                </button>
+              )}
+            </div>
+
+            {/* Component filter — selected team's JIRA project */}
+            {eraComponents.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Component:</span>
+                <select
+                  value={selectedComponent}
+                  onChange={(e) => setSelectedComponent(e.target.value)}
+                  style={{
+                    fontSize: '12px', padding: '3px 8px', borderRadius: '4px',
+                    border: '1px solid #ced4da', background: '#fff', color: '#333',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">All</option>
+                  {eraComponents.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {selectedComponent && (
+                  <button type="button" onClick={() => setSelectedComponent('')}
+                    style={{ fontSize: '10px', border: 'none', background: 'none', color: '#888', cursor: 'pointer', padding: '0 2px' }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active filter summary */}
+            {(selectedVersions.length > 0 || selectedRags.length > 0 || selectedComponent) && (
+              <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>
+                Showing {visibleVersions.length} of {sortedVersions.length} releases
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Page header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
@@ -929,6 +1462,7 @@ function SosSummaryPage() {
               checkpointHistory={checkpointHistory}
               jiraBaseUrl={jiraBaseUrl}
               sortedVersions={sortedVersions}
+              tierSummaries={tierSummaries}
               disabled={loading || sortedVersions.length === 0}
             />
             <button
@@ -979,10 +1513,19 @@ function SosSummaryPage() {
         {!loading && !error && sortedVersions.length === 0 && (
           <p style={{ color: '#aaa', fontSize: '13px' }}>No items found. Click ↻ Refresh All to load from JIRA.</p>
         )}
-
-        {Object.keys(releaseDatesConfig).length > 0 && (
-          <ReleaseGantt releases={releaseDatesConfig} />
+        {!loading && !error && sortedVersions.length > 0 && visibleVersions.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px' }}>No releases match the active filters.</p>
         )}
+
+        {generateError && (
+          <p style={{ color: '#d32f2f', fontSize: '12px', marginBottom: 12 }}>{generateError}</p>
+        )}
+
+        <SosRagHeatmap
+          byVersion={byVersion}
+          sortedVersions={activeVersions}
+          defaultOpen={false}
+        />
 
         <BulkReviewPanel
           pendingReviews={pendingReviews}
@@ -993,17 +1536,44 @@ function SosSummaryPage() {
           onRegenerateOne={regenerateOne}
         />
 
-        {sortedVersions.map((version) => (
+        {!loading && !error && allSosItems.length > 0 && (
+          <ReleaseVersionFilterBar
+            items={{ commit: allSosItems, longTermFunded: [] }}
+            activeFilters={sosFilters}
+            onFilterChange={handleSosFilterChange}
+            activeSection=""
+            onSectionChange={() => {}}
+            showSection={false}
+            totalCount={allSosItems.length}
+            filteredCount={filteredSosCount}
+          />
+        )}
+
+        {!loading && !error && hasSosFilters && displayVersions.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px' }}>No items match the current filters.</p>
+        )}
+
+        {displayVersions.map((version) => (
           <ReleaseSection
             key={version}
             version={version}
-            items={byVersion[version] || []}
+            items={filterItemsByComponent(filteredByVersion[version] || [])}
             breakdownDataMap={breakdownDataMap}
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}
             onRefresh={() => fetchAll(selectedTeamId)}
             checkpointHistory={checkpointHistory}
             gateData={gateDataMap[version] || null}
+            tierSummaries={tierSummaries[version] || null}
+            projectStatus={projectStatusByRelease[version] || null}
+            onRetryTier={(tier) => handleRetryTier(version, tier)}
+            onGenerate={() => handleGenerateExecSummary(version)}
+            generating={generating && generatingRelease === version}
+            kpiData={kpiDataByRelease[version] || null}
+            kpiLoading={kpiLoadingByRelease[version] || false}
+            kpiError={kpiErrorByRelease[version] || null}
+            ganttConfigFromDates={releaseDatesConfig[version] || null}
+            productId={productId}
           />
         ))}
     </div>

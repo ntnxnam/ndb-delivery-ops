@@ -64,6 +64,22 @@
 
 ---
 
+### 1c. `GET /api/component/list?productId=<teamId>`
+
+**Purpose**: Populate the Component filter with components registered on the selected team's JIRA project.
+
+**When called**: On page load and when the team picker changes.
+
+**Request**: query `productId` = selected team id (`ncn`, `ndb`, …).
+
+**Server flow**: `component.js` → `getTeamById(productId).projectKey` → `GET /rest/api/2/project/{projectKey}/components`
+
+**Response**: `{ components: [{ id, name }], count, projectKey, fetchedAt }`
+
+**Caching**: Session, 1 hour, keyed by `projectKey`.
+
+---
+
 ### 2. `POST /api/jira/issue-breakdown`
 
 **Purpose**: Fetch child ticket breakdown (done / in-progress / remaining) per Feature/Initiative key.
@@ -161,8 +177,8 @@
 ```
 
 `recipients` / `ccRecipients` are optional. When omitted, the server applies:
-- **To:** `emailConfig.defaultTo` (`ndb-projects-updates@nutanix.com`)
-- **CC:** `emailSenderCCConfig.defaultCC` + sender (`@nutanix.com` only)
+- **To:** `sosEmailConfig.defaultTo` + dialog To field (`@nutanix.com` only)
+- **CC:** `sosEmailConfig.defaultCC` + dialog CC field + sender (`@nutanix.com` only)
 
 **Response**: `{ success: true, messageId: "...", recipientCount, accepted, rejected }`
 
@@ -191,16 +207,25 @@ POST /api/email/send-sos
 
 ### Item shape (from sos-items)
 
-Identical to the shape returned by `/api/jira/release-items`. All fields defined in `releaseItemsDataService.RELEASE_ITEMS_CONFIG.FIELDS_LIST` (24 fields).
+Identical to the shape returned by `/api/jira/release-items`. All fields defined in `releaseItemsDataService.RELEASE_ITEMS_CONFIG.FIELDS_LIST` (25 fields).
 
 Key fields used by the UI:
 - `key`, `summary`, `status`, `issuetype`, `assignee`
+- `customfield_11065` (Test Lead), `customfield_10860` (QA Contact — shown when Test Lead is empty or a different person)
+- `customfield_11260` (PM Owner), `customfield_27764` (TPM / Program Mgr)
+- `assigneeManager` (display name) / `assigneeManagerEmail` — from `customfield_19262`; powers the client-side **Assignee Mgr** filter and the release-versions email manager CC
 - `customfield_11067` (CC Date), `customfield_35863` (CG Date), `customfield_35864` (PG Date)
-- `customfield_23560` (Risk Indicator — rendered as RAG chip)
+- `customfield_23560` (Risk Indicator — RAG chip + strikethrough history trail from `sos-items-history`)
+- `customfield_47780` (Risk Assessment), `customfield_55664` (Path to Green) — both rendered under the Risk Indicator in the State column
+- `customfield_55662` (Link to CG checklist), `customfield_55663` (Link to PG checklist)
 - `customfield_38460` (AI Executive Summary — displayed in ExecSummaryCell)
 - `customfield_45660` (Status Update Date — staleness check in ExecSummaryCell)
 - `customfield_23073` (Status Update text — **passed to AI only, never displayed**)
 - `labels`, `fixVersions`
+
+### Client-side filtering
+
+The page renders the shared `ReleaseVersionFilterBar` (`showSection={false}`) above the release sections. Filters (Risk, Status, Assignee, Assignee Mgr, Status-update staleness) are applied purely client-side via `applyFilters` to a copy of `byVersion`; versions with no surviving items are hidden. Batch AI summary, email snapshot, history, and breakdown passes still operate on the full unfiltered set.
 
 ## Caching Strategy
 
@@ -223,7 +248,7 @@ The page is routed through the shared `Layout` / `ReleaseDataProvider`. Feature/
 | JIRA 429 with warm cache | Page renders from cache + banner to wait, then Refresh All |
 | JIRA 429 with empty cache | Friendly wait-60–90s message + Retry |
 | JIRA unreachable for a release | Inline error in release section + Retry button |
-| `sosBaseFilter` not configured | Warning banner; fallback to `sprintBaseFilter` |
+| `sosBaseFilter` not configured | Warning banner; fallback to `baseFilter` |
 | Task breakdown fetch fails for a key | `TaskBreakdownCell` shows "Breakdown unavailable" (existing behaviour) |
 | KPI filter not found | Widget shows "Filter not found" — other widgets unaffected |
 | AI service unavailable | ExecSummaryCell shows stale date warning (existing behaviour) |

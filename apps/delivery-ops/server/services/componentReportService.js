@@ -17,12 +17,14 @@ function getProjectKey() {
 }
 
 /**
- * Fetch all components registered on the JIRA project.
+ * Fetch all components registered on a JIRA project.
  * Uses /rest/api/2/project/{key}/components — direct API, no JQL scanning.
+ * @param {string} jiraToken
+ * @param {string} [projectKey] - JIRA project key for the selected team. Falls back to the default team.
  */
-async function fetchComponentsFromERA(jiraToken) {
-  const projectKey = getProjectKey();
-  const url = `${JIRA_API_V2.PROJECT(projectKey)}/components`;
+async function fetchComponentsFromERA(jiraToken, projectKey) {
+  const key = (projectKey || '').trim() || getProjectKey();
+  const url = `${JIRA_API_V2.PROJECT(key)}/components`;
 
   console.log('[componentReportService] Fetching components from:', url);
 
@@ -55,6 +57,7 @@ async function fetchComponentsFromERA(jiraToken) {
   return {
     components,
     count: components.length,
+    projectKey: key,
     fetchedAt: new Date().toISOString(),
   };
 }

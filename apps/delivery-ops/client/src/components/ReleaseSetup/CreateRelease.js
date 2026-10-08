@@ -1,9 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { authenticatedPost } from '../../utils/api';
-import { generateFilterChain, RELEASE_PROJECTS, isValidVersionName } from '../../utils/jqlTemplates';
+import { generateFilterChain, releaseProjectsForTeam, isValidVersionName } from '../../utils/jqlTemplates';
+import { useTeam } from '../../contexts/TeamContext';
 import { STATUS, statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';
 
 function CreateRelease() {
+  const { selectedTeam } = useTeam();
+  const releaseProjects = useMemo(
+    () => releaseProjectsForTeam(selectedTeam?.projectKey),
+    [selectedTeam?.projectKey]
+  );
   const [version, setVersion] = useState('');
   const [excludeVersion, setExcludeVersion] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
@@ -48,7 +54,7 @@ function CreateRelease() {
     const newVersionStatuses = {};
     const newVersionErrors = {};
 
-    for (const proj of RELEASE_PROJECTS) {
+    for (const proj of releaseProjects) {
       newVersionStatuses[proj] = STATUS.CHECKING;
       setVersionStatuses({ ...newVersionStatuses });
 
@@ -89,7 +95,7 @@ function CreateRelease() {
     }
 
     setPhase('checked');
-  }, [version, excludeVersion, jiraToken, username]);
+  }, [version, excludeVersion, jiraToken, username, releaseProjects]);
 
   const handleCreateVersion = useCallback(async (proj) => {
     setVersionStatuses(prev => ({ ...prev, [proj]: STATUS.CREATING }));
@@ -140,12 +146,12 @@ function CreateRelease() {
     }));
   }, []);
 
-  const allVersionsDone = RELEASE_PROJECTS.every(p => [STATUS.EXISTS, STATUS.CREATED, STATUS.SKIPPED, STATUS.ERROR].includes(versionStatuses[p]));
+  const allVersionsDone = releaseProjects.every(p => [STATUS.EXISTS, STATUS.CREATED, STATUS.SKIPPED, STATUS.ERROR].includes(versionStatuses[p]));
   const allFiltersDone = filterChain.length > 0 && filterChain.every(f => [STATUS.EXISTS, STATUS.CREATED, STATUS.SKIPPED, STATUS.ERROR].includes(filterStatuses[f.name]));
 
   const getActiveVersionIdx = () => {
-    const idx = RELEASE_PROJECTS.findIndex(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR);
-    return idx >= 0 ? idx : RELEASE_PROJECTS.length;
+    const idx = releaseProjects.findIndex(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR);
+    return idx >= 0 ? idx : releaseProjects.length;
   };
 
   const getActiveFilterIdx = () => {
@@ -153,10 +159,10 @@ function CreateRelease() {
     return idx >= 0 ? idx : filterChain.length;
   };
 
-  const hasMissingVersions = RELEASE_PROJECTS.some(p => versionStatuses[p] === STATUS.MISSING);
+  const hasMissingVersions = releaseProjects.some(p => versionStatuses[p] === STATUS.MISSING);
   const hasMissingFilters = filterChain.some(f => filterStatuses[f.name] === STATUS.MISSING);
   const everythingExists = phase === 'checked' && !hasMissingVersions && !hasMissingFilters
-    && RELEASE_PROJECTS.every(p => versionStatuses[p] === STATUS.EXISTS)
+    && releaseProjects.every(p => versionStatuses[p] === STATUS.EXISTS)
     && filterChain.every(f => filterStatuses[f.name] === STATUS.EXISTS);
 
   return (
@@ -233,7 +239,7 @@ function CreateRelease() {
 
           <div style={sectionHeading}>fixVersions ({version})</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-            {RELEASE_PROJECTS.map(proj => (
+            {releaseProjects.map(proj => (
               <div key={proj} style={{
                 ...cardStyle,
                 marginBottom: 0,
@@ -301,7 +307,7 @@ function CreateRelease() {
       {phase === 'versions' && (
         <>
           <div style={sectionHeading}>Create Missing fixVersions</div>
-          {RELEASE_PROJECTS.map((proj, idx) => {
+          {releaseProjects.map((proj, idx) => {
             const s = versionStatuses[proj];
             if (s === STATUS.EXISTS || s === STATUS.CREATED || s === STATUS.SKIPPED) return null;
             const isActive = idx === getActiveVersionIdx();

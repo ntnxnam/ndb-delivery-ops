@@ -5,16 +5,32 @@
 const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
-const { generateExecSummary, generateReleaseSummary } = require('../services/naiService');
+const { generateExecSummary, generateReleaseSummary, generateSosTierSummary, generateSprintLeadershipAsks } = require('../services/naiService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
+const { buildSprintAsksIntelligence } = require('../services/sprintLeadershipAsksService');
 const { fetchTicketNarrative } = require('../utils/jiraTicketNarrative');
 const { JIRA_API_V2 } = require('../config/api');
 const { getJira } = require('../utils/jiraClient');
 const logger = require('../utils/logger');
 
 const EXEC_SUMMARY_FIELD = 'customfield_38460';
+
+function isNaiTimeout(err) {
+  const msg = err?.message || '';
+  const code = err?.code || '';
+  return code === 'ECONNABORTED' || /timeout|timed out|ECONNABORTED/i.test(msg);
+}
+
+function naiFailureResponse(res, err, fallback) {
+  if (isNaiTimeout(err)) {
+    return res.status(504).json({
+      error: 'AI generation timed out. The model took too long — please retry.',
+    });
+  }
+  return res.status(502).json({ error: err.message || fallback });
+}
 
 /**
  * POST /api/ai/chat
@@ -77,7 +93,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
     });
   } catch (err) {
     logger.error('[ai/chat] failed', err, { naiDebug: err.naiDebug });
-    return res.status(502).json({ error: err.message || 'Chat request failed' });
+    return naiFailureResponse(res, err, 'Chat request failed');
   }
 });
 
@@ -164,7 +180,7 @@ router.post('/exec-summary', validateJiraTokenMiddleware, async (req, res) => {
     // logger.error expects (message, errorObj, metadata) — passing the err object
     // and the naiDebug shape lets us see finish_reason / usage in error logs.
     logger.error(`AI exec summary failed for ${item.key}`, err, { naiDebug: err.naiDebug });
-    return res.status(502).json({ error: err.message || 'NAI request failed' });
+    return naiFailureResponse(res, err, 'NAI request failed');
   }
 });
 
@@ -272,7 +288,75 @@ router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) =>
     if (err.message?.includes('NAI API key not configured')) {
       return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
     }
-    return res.status(502).json({ error: err.message || 'Release summary generation failed' });
+    return naiFailureResponse(res, err, 'Release summary generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/sos-tier-summary
+ * Team-exec SoS work-tier briefing from a tiny client-assembled packet.
+ * No JIRA — auth only.
+ */
+router.post('/sos-tier-summary', validateJiraTokenMiddleware, async (req, res) => {
+  const payload = req.body || {};
+  const { release, tier } = payload;
+  if (!release) {
+    return res.status(400).json({ error: 'release is required' });
+  }
+  if (!['feat', 'standalone', 'direct'].includes(tier)) {
+    return res.status(400).json({ error: "tier must be one of: 'feat', 'standalone', 'direct'" });
+  }
+  try {
+    logger.info(`[sos-tier-summary] Generating ${tier} briefing for ${release}`);
+    const summary = await generateSosTierSummary(payload);
+    return res.json({
+      summary,
+      release,
+      tier,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error(`[sos-tier-summary] Failed for ${release}/${tier}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'SoS tier summary generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/sprint-leadership-asks
+ * Org-wide Sprint Performance "Asks of leadership" via a sprint-specific
+ * prompt (not the release briefing prompt). Body is the compact intelligence
+ * packet from buildSprintAsksIntelligence, or a full model object.
+ */
+router.post('/sprint-leadership-asks', validateJiraTokenMiddleware, async (req, res) => {
+  const body = req.body || {};
+  try {
+    const intelligence = body.overall || body.highlights || body.lowlights || body.seedAsks
+      ? body
+      : (body.model ? buildSprintAsksIntelligence(body.model) : null);
+    if (!intelligence || (!intelligence.lowlights && !intelligence.seedAsks && !intelligence.overall)) {
+      return res.status(400).json({
+        error: 'intelligence packet required (overall / highlights / lowlights / seedAsks), or { model } from Sprint Performance',
+      });
+    }
+    logger.info(`[sprint-leadership-asks] Generating asks for ${intelligence.teamName || intelligence.teamId || 'unknown'}`);
+    const asks = await generateSprintLeadershipAsks(intelligence);
+    return res.json({
+      asks,
+      asksSource: 'ai',
+      teamId: intelligence.teamId,
+      teamName: intelligence.teamName,
+      window: intelligence.window,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error('[sprint-leadership-asks] Failed', err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'Sprint leadership asks generation failed');
   }
 });
 

@@ -2,8 +2,9 @@
   "defaultCC": [
     "namratha.singh@nutanix.com",
     "bharath@nutanix.com",
-    "ahmad.elayat@nutanix.com",
-    "ashish.kumar@nutanix.com"
-  ]
+    "ashish.kumar@nutanix.com",
+    "ashish.mohindroo@nutanix.com"
+  ],
+  "defaultTO":[]
 }
 

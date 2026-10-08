@@ -1,6 +1,24 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
+// Plain-text 429 bodies break clients that always call response.json()
+// (the team wizard surfaces that as Unexpected token 'T', "Too many r"...).
+function rateLimitBody(message) {
+  return {
+    success: false,
+    error: 'Too many requests',
+    message,
+  };
+}
+
+// One bucket per user when the client sent X-Username, still scoped to IP
+// so a shared office NAT does not exhaust the limit for everyone else.
+function clientKey(req) {
+  const ip = req.ip || 'unknown';
+  const user = String(req.headers['x-username'] || '').trim().toLowerCase();
+  return user ? `${user}|${ip}` : ip;
+}
+
 // Shared rule: don't count CORS preflight OPTIONS requests against any limiter.
 // They're protocol overhead the browser fires automatically; counting them
 // punishes normal users for protocol mechanics.
@@ -49,9 +67,10 @@ const securityHeaders = helmet({
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 100 : 5000,
-  message: 'Too many requests from this IP, please try again later.',
+  message: rateLimitBody('Too many requests from this IP, please try again later.'),
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: clientKey,
   skip: (req) => req.path === '/api/health' || skipOptions(req),
 });
 
@@ -60,7 +79,7 @@ const generalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 5 : 50, // More lenient in development
-  message: 'Too many authentication attempts from this IP, please try again later.',
+  message: rateLimitBody('Too many authentication attempts from this IP, please try again later.'),
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful auth attempts
@@ -72,7 +91,8 @@ const authLimiter = rateLimit({
 const emailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: process.env.NODE_ENV === 'production' ? 10 : 200,
-  message: 'Too many email sending attempts from this IP, please try again later.',
+  message: rateLimitBody('Too many email sending attempts from this IP, please try again later.'),
+  keyGenerator: clientKey,
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipOptions,
@@ -84,7 +104,8 @@ const emailLimiter = rateLimit({
 const apiLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 50 : 1000,
-  message: 'Too many API requests from this IP, please try again later.',
+  message: rateLimitBody('Too many API requests from this IP, please try again later.'),
+  keyGenerator: clientKey,
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipOptions,
@@ -95,7 +116,8 @@ const apiLimiter = rateLimit({
 const checkpointHistoryLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 100 : 500,
-  message: 'Too many checkpoint history requests from this IP, please try again later.',
+  message: rateLimitBody('Too many checkpoint history requests from this IP, please try again later.'),
+  keyGenerator: clientKey,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
@@ -110,7 +132,8 @@ const checkpointHistoryLimiter = rateLimit({
 const releaseVersionsLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 10 : 800,
-  message: 'Too many release version requests from this IP. Please wait 60-90 seconds before trying again. Each request makes multiple JIRA API calls, so rate limits are reached quickly.',
+  message: rateLimitBody('Too many release version requests from this IP. Please wait 60-90 seconds before trying again. Each request makes multiple JIRA API calls, so rate limits are reached quickly.'),
+  keyGenerator: clientKey,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,

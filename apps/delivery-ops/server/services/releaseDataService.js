@@ -24,6 +24,7 @@ const {
 const {
   listFixVersionsForTeam,
   pickNextUpcomingGaVersion,
+  isOneDotRelease,
 } = require('../utils/teamScope');
 
 const COLUMNS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'releaseVersionsColumnsConfig.json');
@@ -35,6 +36,12 @@ async function createAxiosJira(jiraToken) {
 function persistDefaultReleaseVersion(teamId, defaultVersion) {
   if (process.env.NODE_ENV === 'test') return;
   if (!teamId || !defaultVersion) return;
+  // Only persist one-dot (Major.Minor) releases as the global default.
+  // Maintenance/patch/pre-release versions must not overwrite the config.
+  if (!isOneDotRelease(defaultVersion)) {
+    console.log(`[releaseDataService] Skipping persist for non-one-dot default: ${defaultVersion}`);
+    return;
+  }
 
   try {
     // Re-read from disk so a stale in-memory snapshot cannot wipe teams
@@ -137,7 +144,6 @@ async function discoverVersionsWithFilters(jiraToken, { teamId } = {}) {
     teamId: effectiveTeamId,
     teamName: team.name,
     projectKey,
-    projectType: team.projectType || 'dedicated',
     defaultVersion,
     versions: versionsWithFilters,
   };
