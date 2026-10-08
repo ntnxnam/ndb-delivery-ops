@@ -196,6 +196,14 @@
       }
     },
     "indicators": {
+      "releaseCommit": {
+        "id": "customfield_11061",
+        "label": "Release Commit",
+        "type": "select",
+        "category": "indicators",
+        "description": "Release Commit state (e.g. Commit) — used by Dependency View ask vs committed",
+        "usedIn": ["dependency-view", "fetch"]
+      },
       "riskIndicator": {
         "id": "customfield_23560",
         "label": "Risk Indicator",

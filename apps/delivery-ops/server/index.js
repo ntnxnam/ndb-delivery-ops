@@ -140,7 +140,9 @@ app.use('/api/release-dataset', releaseSyncRoutes);   // Sync lifecycle: /sync-s
 app.use('/api/ai', aiRoutes); // AI routes: exec summary generation + JIRA push
 app.use('/api/feature', featureRoutes); // Feature-level dashboard endpoints
 const componentRoutes = require('./routes/component');
-app.use('/api/component', componentRoutes); // Component report endpoints
+  app.use('/api/component', componentRoutes); // Component report endpoints
+  const dependencyRoutes = require('./routes/dependency');
+  app.use('/api/dependency', dependencyRoutes); // Dependency View (read-only)
 
 // Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
 // /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,

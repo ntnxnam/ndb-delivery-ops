@@ -253,6 +253,11 @@
       "kind": "domain"
     },
     {
+      "name": "cross-team-dependencies",
+      "path": "context/domain/cross-team-dependencies.md",
+      "kind": "domain"
+    },
+    {
       "name": "email-sender",
       "path": "context/pages/email-sender.md",
       "kind": "page"
@@ -340,6 +345,11 @@
     {
       "name": "admin",
       "path": "context/pages/admin.md",
+      "kind": "page"
+    },
+    {
+      "name": "dependency-view",
+      "path": "context/pages/dependency-view.md",
       "kind": "page"
     }
   ],

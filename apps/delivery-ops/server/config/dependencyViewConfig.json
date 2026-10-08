@@ -1,0 +1,77 @@
+{
+  "version": "1.0.0",
+  "description": "Dependency View — aligned trains, companion roots, partner catalog stubs (read-only MVP)",
+  "defaultTeamId": "ndb",
+  "defaultRelease": "NDB-3.0",
+  "jiraBaseUrlDefault": "https://jira.nutanix.com",
+  "scopeGroups": [
+    "Team-BharatKumar-Beedu-Org",
+    "Team-Ashish-Kumar-Org"
+  ],
+  "nonCommitFixVersions": [
+    "master",
+    "Era Future",
+    "Triage",
+    "Backlog"
+  ],
+  "releases": [
+    "NDB-2.11",
+    "NDB-2.12",
+    "NDB-3.0",
+    "NDB-3.1"
+  ],
+  "alignedTrains": {
+    "NDB-2.11": {
+      "train": "Janus",
+      "trainSlug": "janus",
+      "status": "aligned",
+      "notes": "Historical",
+      "partnerVersions": [],
+      "confluenceUrl": null
+    },
+    "NDB-2.12": {
+      "train": "Kronos",
+      "trainSlug": "kronos",
+      "status": "broken",
+      "notes": "Was Kronos; Kronos slipped — alignment broken / reassess",
+      "partnerVersions": [],
+      "confluenceUrl": null
+    },
+    "NDB-3.0": {
+      "train": "Kronos.1",
+      "trainSlug": "kronos.1",
+      "status": "aligned",
+      "notes": "Current intended align",
+      "partnerVersions": [],
+      "confluenceUrl": null
+    },
+    "NDB-3.1": {
+      "train": "Leto",
+      "trainSlug": "leto",
+      "status": "planned",
+      "notes": "Planned",
+      "partnerVersions": [],
+      "confluenceUrl": null
+    }
+  },
+  "companionRoots": [
+    {
+      "rootKey": "ERA-67841",
+      "label": "Example companion root (replace in config)",
+      "span": 2,
+      "releases": ["NDB-2.12", "NDB-3.0", "NDB-3.1"]
+    }
+  ],
+  "partnerCatalog": [
+    { "id": "eng", "label": "ENG + component", "notes": "Stub — Confluence SoT later" },
+    { "id": "ncm", "label": "NCM", "notes": "Stub" },
+    { "id": "ncn", "label": "NCN", "notes": "Stub" },
+    { "id": "era-ndb", "label": "ERA / NDB-* unarchived", "notes": "Stub" }
+  ],
+  "spans": [
+    { "id": 1, "label": "Span 1 — direct" },
+    { "id": 2, "label": "Span 2 — near" },
+    { "id": 3, "label": "Span 3 — medium" },
+    { "id": 4, "label": "Span 4 — far" }
+  ]
+}

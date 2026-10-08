@@ -30,6 +30,7 @@ import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
 import SosSummaryPage from './components/SosSummaryPage';
 import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
+import DependencyViewPage from './components/DependencyViewPage';
 
 import './App.css';
 
@@ -230,6 +231,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>
                         <SystemTestScalePage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dependency-view"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout wide>
+                        <DependencyViewPage />
                       </Layout>
                     </ProtectedRoute>
                   }

@@ -121,8 +121,23 @@ Truncated: no (actualDepth=2, maxDepth=5)
   caching contract
 - Auto-creating JIRA links for inferred deps (forbidden, D18)
 
+## UI naming (Dependency View)
+
+The Dependency View page uses user-facing wait language; map to this skill:
+
+| UI label | Skill / D18 | Link |
+|---|---|---|
+| I wait on them | `upstream` / `upstreamOf` | `is blocked by` |
+| They wait on me | `downstream` / `downstreamOf` | `blocks` |
+
+Release-level list queries (Q1–Q5) live in
+`agent-pack/context/domain/cross-team-dependencies.md` and
+`dependencyViewService` — this skill remains the **ticket graph walk**.
+
 ## Cross-references
 
 - `.cursor/agents/specialists/dependency-tracker-specialist.md`
+- `agent-pack/context/domain/cross-team-dependencies.md`
+- `agent-pack/context/pages/dependency-view.md`
 - `.cursor/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D18

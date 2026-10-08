@@ -138,6 +138,12 @@ export const Sidebar = () => {
       description: 'Component health, actionable metrics, deferral trends'
     },
     {
+      path: '/dependency-view',
+      label: 'Dependency View',
+      icon: '🔗',
+      description: 'Read-only partnership and companion dependencies (NDB-first)'
+    },
+    {
       path: '/kpis',
       label: 'KPIs',
       icon: '📈',

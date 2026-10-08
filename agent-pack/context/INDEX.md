@@ -22,6 +22,7 @@
 | `domain/velocity-and-sprints.md` | Dev / QA verification / Test streams |
 | `domain/leader-org.md` | SoS-by-leader rollup (Anil/Naveen/Jovan/Ashish) |
 | `domain/ai-prompt-inventory.md` | Which production prompt lives where |
+| `domain/cross-team-dependencies.md` | Partnership / companion deps, aligned trains, Dependency View JQL |
 
 ## 3. Page briefs (one per surface)
 
@@ -45,6 +46,7 @@
 | `pages/release-brief.md` | `/release/brief` |
 | `pages/release-config.md` | `/release-config` |
 | `pages/admin.md` | `/team-management` |
+| `pages/dependency-view.md` | `/dependency-view` |
 
 ## 4. Prompts
 

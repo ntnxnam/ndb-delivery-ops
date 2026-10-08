@@ -53,6 +53,13 @@ First match wins (also in `ai-ticket-key-integrity` / `riskIndicator`):
 - Panel border / header: always neutral
 - RAG badge appears once inside body at `## Release Health: <VERDICT>`
 
+## Cross-train alignment
+
+NDB releases align to AOS-family **trains** (Janus, Kronos, Kronos.1, Leto).
+Gate dates on the NDB side are compared to the aligned partner train in
+Dependency View — see `domain/cross-team-dependencies.md` and
+`dependencyViewConfig.json` → `alignedTrains`.
+
 ## Related prompts
 
 - `prompts/production/release-health-briefing.md`

@@ -114,6 +114,16 @@ export const routeConfig = {
       icon: '📊'
     },
     {
+      path: '/dependency-view',
+      exact: true,
+      component: 'DependencyViewPage',
+      title: 'Dependency View',
+      description: 'Read-only partnership and companion dependencies (NDB-first)',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
+      icon: '🔗'
+    },
+    {
       path: '/chatbot',
       exact: true,
       component: 'ChatbotPage',

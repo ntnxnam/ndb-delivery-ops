@@ -239,7 +239,7 @@ These pairs/triples did the same thing:
 | Status Page Auto-Publisher | Confluence       | Today a TPM writes the same content twice (email + Confluence). One-click fixes that. |
 | Ticket Triage workflow     | Triage           | Currently manual; tpm-assistant agent should drive a structured triage                |
 | Carry-over standalone page | Sprint Analytics | Buried inside SprintReportPage; deserves its own surface for RMs                      |
-| Cross-team dependency map  | Planning         | Multiple TPMs have asked; no app ever built it                                        |
+| Cross-team dependency map  | Planning         | **In progress (read-only NDB-first MVP)** — `/dependency-view`; partnership + companion; no mutates yet |
 
 
 ---
