@@ -102,7 +102,8 @@ export function jiraDataToAiItem(jiraData) {
   };
 }
 
-const GATE_DEFS = [
+/** Sequential milestones after EC (release EC is the timeline origin). */
+const SEQUENTIAL_GATES = [
   { key: 'fsds', label: 'FS/DS Done', fieldId: 'customfield_13861', color: '#6c757d' },
   { key: 'testPlan', label: 'Test Plan', fieldId: 'customfield_11068', color: '#17a2b8' },
   { key: 'cc', label: 'Code Complete', fieldId: 'customfield_11067', color: '#1f77b4' },
@@ -110,26 +111,106 @@ const GATE_DEFS = [
   { key: 'pg', label: 'Promotion Gate', fieldId: 'customfield_35864', color: '#2ca02c' },
 ];
 
+function formatShortDate(date) {
+  if (!date) return 'Not Set';
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day}/${months[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+export function resolvePrimaryFixVersion(jiraData) {
+  const raw = jiraData?.fixVersions;
+  if (!raw || raw === 'N/A') return null;
+  return String(raw).split(',')[0].trim() || null;
+}
+
 /**
- * @returns {Array<{ key, label, dateLabel, daysFromToday, dateMs, color, set }>}
+ * Sequential gate segments from EC → FS/DS → Test Plan → CC → CG → PG.
+ * Each bar is the duration of one leg (waterfall offset from EC).
+ *
+ * @returns {{
+ *   ecDate: Date|null,
+ *   ecLabel: string,
+ *   segments: Array<{
+ *     key, label, fromLabel, toLabel, fromDateLabel, toDateLabel,
+ *     offset, duration, color, inverted
+ *   }>,
+ *   missing: string[]
+ * }}
  */
+export function buildSequentialGateSegments(jiraData, ecDateInput) {
+  const ecDate = parseJiraDisplayDate(ecDateInput);
+  const missing = [];
+
+  if (!ecDate) {
+    return { ecDate: null, ecLabel: 'Not Set', segments: [], missing: ['EC (release)'] };
+  }
+
+  const points = [
+    { key: 'ec', label: 'EC', date: ecDate, dateLabel: formatShortDate(ecDate), color: '#9467bd' },
+  ];
+
+  SEQUENTIAL_GATES.forEach((g) => {
+    const field = jiraData?.[g.fieldId];
+    const date = parseJiraDisplayDate(field?.value ?? field);
+    if (!date) {
+      missing.push(g.label);
+      return;
+    }
+    points.push({
+      key: g.key,
+      label: g.label,
+      date,
+      dateLabel: formatShortDate(date),
+      color: g.color,
+    });
+  });
+
+  const segments = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const from = points[i - 1];
+    const to = points[i];
+    const rawDays = Math.round((to.date.getTime() - from.date.getTime()) / MS_PER_DAY);
+    const inverted = rawDays < 0;
+    const duration = Math.max(1, Math.abs(rawDays)); // min 1 day so a same-day leg still draws
+    const offsetDays = Math.round((from.date.getTime() - ecDate.getTime()) / MS_PER_DAY);
+    segments.push({
+      key: `${from.key}-${to.key}`,
+      label: `${from.label} → ${to.label}`,
+      fromLabel: from.label,
+      toLabel: to.label,
+      fromDateLabel: from.dateLabel,
+      toDateLabel: to.dateLabel,
+      offset: Math.max(0, offsetDays),
+      duration,
+      color: inverted ? '#dc3545' : to.color,
+      inverted,
+      daySpan: rawDays,
+    });
+  }
+
+  return {
+    ecDate,
+    ecLabel: formatShortDate(ecDate),
+    segments,
+    missing,
+  };
+}
+
+/** @deprecated use buildSequentialGateSegments — kept for any leftover imports */
 export function buildGateChartRows(jiraData, today = new Date()) {
   const today0 = new Date(today);
   today0.setHours(0, 0, 0, 0);
-
-  return GATE_DEFS.map((g) => {
+  return SEQUENTIAL_GATES.map((g) => {
     const field = jiraData?.[g.fieldId];
     const dateLabel = fieldDisplayValue(field);
     const date = parseJiraDisplayDate(field?.value ?? field);
     const set = !!date;
-    const daysFromToday = set
-      ? Math.round((date.getTime() - today0.getTime()) / MS_PER_DAY)
-      : null;
     return {
       key: g.key,
       label: g.label,
       dateLabel: set ? dateLabel : 'Not Set',
-      daysFromToday,
+      daysFromToday: set ? Math.round((date.getTime() - today0.getTime()) / MS_PER_DAY) : null,
       dateMs: set ? date.getTime() : null,
       color: g.color,
       set,

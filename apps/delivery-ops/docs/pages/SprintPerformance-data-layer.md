@@ -27,11 +27,11 @@ route (sprint-performance.js)
   → sprintPerformanceReportService      list / read / write reports/, in-memory job per team
     → sprintPerformanceService.collectSprintPerformance
         → JIRA Agile  GET /rest/agile/1.0/board/{boardId}/sprint      (originBoardId filter, cadence slots)
-             Window = slots `[currentSlot − windowSlots … currentSlot − 1]` where `currentSlot` is the
-             in-flight cadence slot for today (`Math.floor` from `cadenceLabelAnchor` — not `round`,
-             which would advance mid-sprint). Immediately past sprint = `currentSlot − 1`. When the
-             next sprint starts (~3 weeks later), that past slot rolls forward; **Regenerate** re-fetches
-             its JIRA Sprint Report (and live status) so closed-sprint numbers refresh.
+             Window = slots `[currentSlot − windowSlots + 1 … currentSlot]` where `currentSlot` is the
+             in-flight cadence slot for today (`Math.floor` from `cadenceLabelAnchor`, e.g. 2026-10-07
+             → S60 until 2026-10-28). Includes today's sprint; excludes future start dates.
+             `windowSlots` default 26 ≈ 18 months lookback from that end. When the next sprint starts
+             (e.g. 28 Oct), end rolls forward and **Regenerate** re-pulls from the new end back ~18 months.
         → JIRA GET /rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=&sprintId=   per sprint, concurrency 4
              (completedIssues, issuesNotCompletedInCurrentSprint, puntedIssues, issuesCompletedInAnotherSprint,
               issueKeysAddedDuringSprint, entityData.types/statuses, currentEstimateStatistic)

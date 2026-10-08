@@ -215,8 +215,8 @@ Key fields used by the UI:
 - `customfield_11260` (PM Owner), `customfield_27764` (TPM / Program Mgr)
 - `assigneeManager` (display name) / `assigneeManagerEmail` — from `customfield_19262`; powers the client-side **Assignee Mgr** filter and the release-versions email manager CC
 - `customfield_11067` (CC Date), `customfield_35863` (CG Date), `customfield_35864` (PG Date)
-- `customfield_23560` (Risk Indicator — rendered as RAG chip)
-- `customfield_47780` (Risk Assessment), `customfield_55664` (Path to Green)
+- `customfield_23560` (Risk Indicator — RAG chip + strikethrough history trail from `sos-items-history`)
+- `customfield_47780` (Risk Assessment), `customfield_55664` (Path to Green) — both rendered under the Risk Indicator in the State column
 - `customfield_55662` (Link to CG checklist), `customfield_55663` (Link to PG checklist)
 - `customfield_38460` (AI Executive Summary — displayed in ExecSummaryCell)
 - `customfield_45660` (Status Update Date — staleness check in ExecSummaryCell)

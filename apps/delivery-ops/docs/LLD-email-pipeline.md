@@ -76,40 +76,41 @@ function normalizeRecipients(input) {
 ```
 POST /api/email/send
 {
-  "executiveSummary": "string (required)",
-  "additionalDetails": "HTML string (from ReactQuill)",
+  "additionalDetails": "HTML string (from ReactQuill) — Highlights/Lowlights/Support",
+  "aiSummary": "string — NAI risk brief (client-required before send)",
   "emailRecipients": "a@nutanix.com; b@nutanix.com",
   "emailSubject": "optional string",
   "jiraKey": "FEAT-16821 (optional)",
   "jiraData": { ...ticket fields },
   "epics": [ { key, summary, childEpics } ],
   "issueBreakdown": { total, breakdown, overallStats },
-  "attachPdf": false
+  "sprintGanttData": { sprintTickets, timelineColumns, sprintStats },
+  "attachPdf": false,
+  "isTest": false
 }
 ```
 
 ### 5.2 Server Processing Pipeline
 
 ```
-1. Validate: executiveSummary required → 400 if missing
+1. Validate: additionalDetails + required Highlights sections → 400 if missing
 2. Normalize recipients via normalizeRecipients()
-3. Add namratha.singh@nutanix.com to CC unconditionally
-4. sanitize(additionalDetails) — strip dangerous HTML tags/attributes
-5. Format HTML body:
-   a. Executive Summary block (plain text wrapped in styled div)
-   b. Additional Details (sanitized HTML)
-   c. JIRA ticket card (if jiraKey provided)
-   d. Epics hierarchy table (if epics[] provided)
-   e. Issue breakdown stats table (if issueBreakdown provided)
-6. nodemailer.sendMail({
-     from: SMTP_USER env var,
-     to: recipients[],
-     cc: ['namratha.singh@nutanix.com', ...configured CC from emailConfig.json],
-     subject: emailSubject || 'Status Update',
+3. CC sender + emailSenderCCConfig.defaultCC (@nutanix.com only)
+4. Format HTML body:
+   a. Highlights and Lowlights (sanitized Quill HTML)
+   b. AI risk summary (if aiSummary provided)
+   c. Risk context + Gates vs dates (from jiraData)
+   d. JIRA ticket card / epics / issue breakdown
+   e. Sprint timeline (from sprintGanttData via sprintGanttEmail.js)
+5. nodemailer.sendMail({
+     from: SMTP service account,
+     to: recipients[] (test mode: sender only),
+     cc: …,
+     subject: emailSubject (prefixed [TEST] in test mode),
      html: formattedHTML
    })
-7. Write audit record to email history
-8. Return { success: true, message: "Email sent successfully", recipients }
+6. Write audit record to email history
+7. Return { success: true, message: "Email sent successfully", recipients }
 ```
 
 ---

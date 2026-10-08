@@ -173,7 +173,8 @@ router.post('/release-kpi-results-batch', validateJiraTokenMiddleware, apiLimite
 /**
  * Run all team KPIs scoped by release version, split by resolution
  * (total / done / open). Powers the retrospective cross-release comparison.
- * POST /api/jira/release-kpi-breakdown-batch  body: { releaseVersion, teamId }
+ * POST /api/jira/release-kpi-breakdown-batch  body: { releaseVersion, teamId, jqlExtra? }
+ * Optional jqlExtra is AND-ed onto every bucket (e.g. Assignee Manager scope for leader SoS).
  * Returns { success: true, results: { [kpiId]: { name, total, done, open, links } | { error } } }
  */
 
@@ -184,11 +185,16 @@ router.post('/release-kpi-breakdown-batch', validateJiraTokenMiddleware, apiLimi
     if (!authorized) {
       return res.status(403).json({ error: 'Access denied. You are not authorized to view KPI results.' });
     }
-    const { releaseVersion, teamId } = req.body || {};
+    const { releaseVersion, teamId, jqlExtra } = req.body || {};
     if (!releaseVersion || !teamId) {
       return res.status(400).json({ error: 'releaseVersion and teamId are required' });
     }
-    const results = await kpiService.getReleaseKpiResolutionBreakdown({ token: req.jiraToken, releaseVersion, teamId });
+    const results = await kpiService.getReleaseKpiResolutionBreakdown({
+      token: req.jiraToken,
+      releaseVersion,
+      teamId,
+      jqlExtra: typeof jqlExtra === 'string' ? jqlExtra : null,
+    });
     return res.json({ success: true, results });
   } catch (err) {
     console.error('Error in /api/jira/release-kpi-breakdown-batch:', err?.response?.data || err.message);

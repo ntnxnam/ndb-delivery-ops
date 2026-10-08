@@ -20,6 +20,7 @@ import EmailHistoryTab from './components/EmailHistoryTab';
 import SprintReportPage from './components/SprintReportPage';
 import SprintPerformancePage from './components/SprintPerformancePage';
 import KPIPage from './components/KPIPage';
+import SystemTestScalePage from './components/SystemTestScalePage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
 import ReleaseBriefPage from './release/ReleaseBriefPage';
@@ -28,6 +29,7 @@ import ChatbotPage from './release/ChatbotPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
 import { ComponentReport } from './components/ComponentReport';
 import SosSummaryPage from './components/SosSummaryPage';
+import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
 
 import './App.css';
 
@@ -221,6 +223,17 @@ const AuthenticatedApp = () => {
                     </ProtectedRoute>
                   } 
                 />
+
+                <Route
+                  path="/system-test-scale"
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout wide>
+                        <SystemTestScalePage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
                 
                 <Route
                   path="/team-management"
@@ -308,6 +321,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout wide>
                         <SosSummaryPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/sos-leader-summary"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout wide>
+                        <SosLeaderSummaryPage />
                       </Layout>
                     </ProtectedRoute>
                   }

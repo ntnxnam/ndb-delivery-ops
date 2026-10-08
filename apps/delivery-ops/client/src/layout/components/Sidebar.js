@@ -126,6 +126,12 @@ export const Sidebar = () => {
       description: 'Scrum of Scrums — live Feature/Initiative status across all active releases'
     },
     {
+      path: '/sos-leader-summary',
+      label: 'SoS by Leader (temp)',
+      icon: '👥',
+      description: 'TEMP — SoS regrouped by NDB eng leader for layout review'
+    },
+    {
       path: '/component-report',
       label: 'Component Report',
       icon: '📊',
@@ -136,6 +142,12 @@ export const Sidebar = () => {
       label: 'KPIs',
       icon: '📈',
       description: 'KPI dashboard'
+    },
+    {
+      path: '/system-test-scale',
+      label: 'System-Test Scale',
+      icon: '🧪',
+      description: 'System-Test bug scale, regressions (cf[13260]), and release trends'
     },
     {
       path: '/chatbot',

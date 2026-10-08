@@ -1,0 +1,131 @@
+{
+  "_description": "NDB engineering leader org map for leader-grouped SoS. Attribution uses Assignee Manager (customfield_19262) display name → leader. Edit managers here; client reads via GET /api/config/ndb-leader-org.",
+  "root": "Ashish Mohindroo",
+  "rootChain": [
+    {
+      "displayName": "Ashish Mohindroo",
+      "role": "svp",
+      "note": "Top of chain. No SoS section — Assignee Manager tickets on him are unexpected and stay Unmapped."
+    },
+    {
+      "displayName": "Bharat",
+      "role": "eng_leader",
+      "matchNames": [
+        "Bharat Kumar Beedu",
+        "Bharath Kumar Beedu",
+        "Bharat Beedu",
+        "Bharath Beedu",
+        "Bharat",
+        "Bharath"
+      ],
+      "note": "Above Anil / Naveen / Jovan / Ashish Kumar. Not a SoS section — stays Unmapped unless added later."
+    }
+  ],
+  "_notes": [
+    "Ashish Mohindroo = SVP (root). Ideal: zero tickets with him as Assignee Manager.",
+    "Bharat = Bharat Kumar Beedu / Bharath. Above the four SoS section leaders.",
+    "Narayan Rajaram owns NDB + DR QA. Ashish Kumar owns NDB charter and reports to Narayan.",
+    "All QA work (Narayan, Ashish Kumar, Sam Hopkins, Srikanth/Srikant, Saurabh, …) attributes to the Ashish SoS section.",
+    "Sam Hopkins: solid line to Narayan Rajaram; dotted into Ashish Kumar — SoS attribution uses Ashish."
+  ],
+  "leaders": [
+    {
+      "id": "anil",
+      "displayName": "Anil",
+      "role": "dev_senior_director",
+      "matchNames": ["Anil Madan", "Anil"],
+      "managers": [
+        { "displayName": "Pranay Ega", "role": "dev_director" },
+        { "displayName": "Adil Gul Rather", "role": "manager", "note": "DBE" }
+      ]
+    },
+    {
+      "id": "naveen",
+      "displayName": "Naveen",
+      "role": "dev_senior_director",
+      "matchNames": ["Naveen Kumar", "Naveen", "nkumar", "naveen"],
+      "managers": [
+        {
+          "displayName": "Akshay Chandak",
+          "role": "dev_director",
+          "reports": [
+            { "displayName": "Balram Parmar", "role": "manager" },
+            {
+              "displayName": "Shurya Kumar N S",
+              "role": "manager",
+              "matchNames": ["Shurya Kumar N S", "Shurya Kumar"],
+              "reportsTo": "Akshay Chandak"
+            },
+            {
+              "displayName": "Aditya Sinha",
+              "role": "manager",
+              "reportsTo": "Akshay Chandak"
+            }
+          ]
+        },
+        {
+          "displayName": "Tarun Mehta",
+          "role": "manager",
+          "reports": [
+            {
+              "displayName": "Tinku Kumar",
+              "role": "manager",
+              "reportsTo": "Tarun Mehta"
+            }
+          ]
+        },
+        {
+          "displayName": "Suseendran Babu N",
+          "role": "manager",
+          "matchNames": ["Suseendran Babu N", "Susee"],
+          "reportsTo": "Naveen Kumar"
+        }
+      ]
+    },
+    {
+      "id": "jovan",
+      "displayName": "Jovan",
+      "role": "dev_senior_director",
+      "matchNames": ["Jovan Cukalovic", "Jovan"],
+      "reportsTo": "Bharat Kumar Beedu",
+      "managers": [
+        {
+          "displayName": "Mihailo Jelesijević",
+          "role": "manager",
+          "matchNames": ["Mihailo Jelesijević", "Mihailo Jelesijevic"]
+        },
+        {
+          "displayName": "Boban Petković",
+          "role": "manager",
+          "matchNames": ["Boban Petković", "Boban Petkovic"]
+        }
+      ]
+    },
+    {
+      "id": "ashish",
+      "displayName": "Ashish",
+      "role": "qa_director",
+      "matchNames": ["Ashish Kumar"],
+      "reportsTo": "Narayan Rajaram",
+      "note": "NDB charter. All NDB/DR QA SoS rows roll up here.",
+      "managers": [
+        {
+          "displayName": "Narayan Rajaram",
+          "role": "qa_owner",
+          "note": "Owns NDB + DR QA. Ashish reports to him; SoS still shows under Ashish section."
+        },
+        {
+          "displayName": "Srikant CG",
+          "role": "manager",
+          "matchNames": ["Srikant CG", "Srikanth CG"]
+        },
+        { "displayName": "Saurabh Srivastava", "role": "manager" },
+        {
+          "displayName": "Sam Hopkins",
+          "role": "manager",
+          "note": "Solid line: Narayan Rajaram; dotted into Ashish — attributed to Ashish for SoS"
+        }
+      ]
+    }
+  ]
+}

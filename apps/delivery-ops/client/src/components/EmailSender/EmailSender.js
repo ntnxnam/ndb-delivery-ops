@@ -67,6 +67,7 @@ function buildWeeklyUpdateSubject({ issueType, summary, fixVersions }) {
 
 function EmailSender({ onLogout: _onLogout }) {
   const [additionalDetails, setAdditionalDetails] = useState('');
+  const [aiSummaryDraft, setAiSummaryDraft] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
   const [emailRecipientsError, setEmailRecipientsError] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
@@ -586,6 +587,10 @@ function EmailSender({ onLogout: _onLogout }) {
       );
       return;
     }
+    if (!String(aiSummaryDraft || '').trim()) {
+      setError('Generate AI risk summary before sending (required in the email body).');
+      return;
+    }
     if (!jiraKey.trim()) {
       setError('JIRA key is required');
       return;
@@ -632,12 +637,14 @@ function EmailSender({ onLogout: _onLogout }) {
       const response = await authenticatedPost('/api/email/send', {
         executiveSummary: '', // Deprecated: narrative is in additionalDetails (Highlights and Lowlights)
         additionalDetails,
+        aiSummary: aiSummaryDraft.trim(),
         emailRecipients: normalizedRecipients,
         emailSubject: emailSubject || undefined,
         jiraKey: jiraKey.trim(),
         jiraData: jiraData || undefined,
         epics: epics || undefined,
         issueBreakdown: issueBreakdown || undefined,
+        sprintGanttData: sprintGanttData || undefined,
         attachPdf: attachPdf,
         isTest: testMode,
         dryRun: dryRun
@@ -667,6 +674,7 @@ function EmailSender({ onLogout: _onLogout }) {
 
   const handleClearAll = () => {
     setAdditionalDetails('');
+    setAiSummaryDraft('');
     setEmailRecipients('');
     setEmailSubject('');
     setJiraKey('');
@@ -789,25 +797,51 @@ function EmailSender({ onLogout: _onLogout }) {
               {jiraValidationStatus.message}
             </div>
           )}
-          <small className="help-text">
-            Must be a Feature, Initiative, X-FEAT, or Capability issue type
-          </small>
           {(!jiraToken || !username) && (
-            <small className="help-text" style={{ color: '#dc3545', display: 'block', marginTop: '5px' }}>
-              ⚠️ JIRA credentials not configured. Please logout and configure JIRA token in the authentication screen.
+            <small className="help-text" style={{ color: '#dc3545', display: 'block', marginTop: '4px' }}>
+              JIRA credentials missing — log in again.
             </small>
           )}
         </div>
 
         {jiraData && (
-          <div className="form-group" style={{
-            marginTop: '20px',
-            padding: '15px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '4px',
-            border: '1px solid #dee2e6'
-          }}>
-            <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>Jira ticket details</h3>
+          <div className="email-sender-strip">
+            <a
+              href={`${jiraBaseUrl}/browse/${jiraData.key}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {jiraData.key}
+            </a>
+            <span className="email-sender-strip-sep">·</span>
+            <span className="email-sender-strip-summary" title={jiraData.summary}>{jiraData.summary}</span>
+            <span className="email-sender-strip-sep">·</span>
+            <span>{jiraData.status}</span>
+            {jiraData.fixVersions && jiraData.fixVersions !== 'N/A' && (
+              <>
+                <span className="email-sender-strip-sep">·</span>
+                <span>{jiraData.fixVersions}</span>
+              </>
+            )}
+            {jiraData.customfield_23560?.value && (
+              <span
+                className="email-sender-strip-risk"
+                style={{
+                  backgroundColor: jiraData.customfield_23560.color || '#e9ecef',
+                  color: jiraData.customfield_23560.color ? '#fff' : '#1a1a1a',
+                }}
+              >
+                {jiraData.customfield_23560.value}
+              </span>
+            )}
+          </div>
+        )}
+
+        {jiraData && (
+          <details className="email-sender-more">
+            <summary>Pulled ticket data — dates, status update, users, epics, breakdown, sprint</summary>
+            <div className="email-sender-more-body">
+            <h3 className="email-sender-more-title">Jira ticket details</h3>
             
             {/* Row 1: Key, Summary, Status, Fix Version, Labels - all in one row */}
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px' }}>
@@ -967,7 +1001,6 @@ function EmailSender({ onLogout: _onLogout }) {
               return null;
             })()}
 
-            <GateDatesBarChart jiraData={jiraData} />
 
             {EXTRA_FETCH_FIELDS.some(([id]) => jiraData[id]?.name) && (
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
@@ -1995,39 +2028,43 @@ function EmailSender({ onLogout: _onLogout }) {
               )}
             </div>
           )}
-          </div>
+            </div>
+          </details>
+        )}
+
+        {jiraData && (
+          <>
+            <GateDatesBarChart jiraData={jiraData} />
+            <RiskAndPathBoxes jiraData={jiraData} />
+          </>
         )}
 
         {jiraData && (
           <div className="form-group">
-            <label id="email-subject-label">Email Subject Line</label>
+            <label id="email-subject-label">Subject</label>
             <div
               id="email-subject"
               role="textbox"
               aria-labelledby="email-subject-label"
               aria-readonly="true"
               style={{
-                padding: '10px',
+                padding: '6px 8px',
                 backgroundColor: '#f8f9fa',
                 border: '1px solid #dee2e6',
                 borderRadius: '4px',
-                fontSize: '14px',
+                fontSize: '0.8125rem',
                 color: '#495057',
-                minHeight: '20px'
               }}
             >
-              {emailSubject || 'Subject will be auto-populated after fetching JIRA data'}
+              {emailSubject || 'Auto-filled after fetch'}
             </div>
-            <small className="help-text">
-              Subject line is automatically populated from JIRA ticket data
-            </small>
           </div>
         )}
 
         {jiraData && (
           <>
             <div className="form-group">
-              <label id="highlights-lowlights-label">Highlights and Lowlights *</label>
+              <label id="highlights-lowlights-label">Highlights / Lowlights / Support *</label>
               <div id="highlights-lowlights" role="textbox" aria-labelledby="highlights-lowlights-label" aria-multiline="true">
                 <ReactQuill
                   ref={quillRef}
@@ -2073,12 +2110,16 @@ function EmailSender({ onLogout: _onLogout }) {
               })()}
             </div>
 
-            <AiSummaryDraft
-              jiraData={jiraData}
-              issueBreakdown={issueBreakdown}
-              release={jiraData.fixVersions && jiraData.fixVersions !== 'N/A' ? jiraData.fixVersions.split(',')[0].trim() : null}
-            />
-            <RiskAndPathBoxes jiraData={jiraData} />
+            <details className="email-sender-ai" open>
+              <summary>AI risk summary (required — included in email)</summary>
+              <AiSummaryDraft
+                jiraData={jiraData}
+                issueBreakdown={issueBreakdown}
+                release={jiraData.fixVersions && jiraData.fixVersions !== 'N/A' ? jiraData.fixVersions.split(',')[0].trim() : null}
+                draft={aiSummaryDraft}
+                onDraftChange={setAiSummaryDraft}
+              />
+            </details>
 
             <div className="form-group">
               <label htmlFor="email-recipients">Additional Recipients</label>
@@ -2115,9 +2156,7 @@ function EmailSender({ onLogout: _onLogout }) {
                   {emailRecipientsError}
                 </div>
               )}
-              <small className="help-text">
-                Enter Nutanix email addresses (user@nutanix.com) or usernames (user.name). Separate multiple with semicolons (;). Optional - if not provided, email will only be sent to CC recipients.
-              </small>
+              <small className="help-text">Optional. Semicolon-separated Nutanix emails or usernames.</small>
             </div>
 
 
@@ -2189,7 +2228,9 @@ function EmailSender({ onLogout: _onLogout }) {
                   ? 'Highlights and Lowlights is required'
                   : missing.length > 0
                     ? `Missing sections: ${missing.join('; ')}`
-                    : '';
+                    : !String(aiSummaryDraft || '').trim()
+                      ? 'Generate AI risk summary before sending'
+                      : '';
               return (
                 <>
                   <button
@@ -2206,12 +2247,14 @@ function EmailSender({ onLogout: _onLogout }) {
                       getPreview={async () => {
                         const res = await authenticatedPost('/api/email/preview', {
                           additionalDetails,
+                          aiSummary: aiSummaryDraft.trim() || undefined,
                           emailRecipients: emailRecipients && emailRecipients.trim() ? normalizeEmailRecipients(emailRecipients) : '',
                           emailSubject: emailSubject || undefined,
                           jiraKey: jiraKey.trim(),
                           jiraData: jiraData || undefined,
                           epics: epics || undefined,
-                          issueBreakdown: issueBreakdown || undefined
+                          issueBreakdown: issueBreakdown || undefined,
+                          sprintGanttData: sprintGanttData || undefined
                         }, { jiraToken, username });
                         return res.data;
                       }}
@@ -2222,6 +2265,8 @@ function EmailSender({ onLogout: _onLogout }) {
             })()}
           </div>
         )}
+
+
       </div>
     </div>
   );

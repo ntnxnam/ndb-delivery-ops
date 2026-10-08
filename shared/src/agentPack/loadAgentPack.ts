@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import type {
   AgentPack,
   AgentPackManifest,
+  LoadedContextDoc,
   LoadedIdentity,
+  LoadedPrompt,
   LoadedRule,
   LoadedSkill,
   LoadedWorkflow,
@@ -137,6 +139,27 @@ export function loadAgentPack(explicitRoot?: string): AgentPack {
     readFileSync(join(root, manifest.memorySchema), 'utf8')
   );
 
+  const context = new Map<string, LoadedContextDoc>();
+  for (const entry of manifest.context || []) {
+    const doc = readMarkdown(root, entry.path);
+    context.set(entry.name, {
+      ...doc,
+      name: entry.name,
+      kind: entry.kind,
+    });
+  }
+
+  const prompts = new Map<string, LoadedPrompt>();
+  for (const entry of manifest.prompts || []) {
+    const doc = readMarkdown(root, entry.path);
+    prompts.set(entry.name, {
+      ...doc,
+      name: entry.name,
+      status: entry.status,
+      area: entry.area,
+    });
+  }
+
   return {
     root,
     manifest,
@@ -147,8 +170,16 @@ export function loadAgentPack(explicitRoot?: string): AgentPack {
     skills,
     workflows,
     constitutionalRules,
+    context,
+    prompts,
     memorySchema,
   };
+}
+
+/** Extract the fenced System Prompt body from a pack prompt markdown file. */
+export function extractSystemPromptBody(prompt: LoadedPrompt): string | null {
+  const match = prompt.body.match(/## System Prompt\s*```\r?\n([\s\S]*?)```/);
+  return match ? match[1].trimEnd() : null;
 }
 
 export function listSkillsByType(pack: AgentPack, type: LoadedSkill['capabilityType']): LoadedSkill[] {

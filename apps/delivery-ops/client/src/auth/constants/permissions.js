@@ -39,6 +39,8 @@ export const TAB_PERMISSIONS = {
   '/release/retrospective': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/feature-dashboard': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/component-report': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+  '/sos-summary': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+  '/sos-leader-summary': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/chatbot': [PERMISSIONS.AI_INSIGHTS_VIEW],
   '/release-setup': [PERMISSIONS.RELEASE_SETUP_MANAGE],
   '/release-config': [PERMISSIONS.RELEASE_CONFIG_MANAGE],
@@ -47,6 +49,7 @@ export const TAB_PERMISSIONS = {
   '/sprint-report': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/sprint-performance': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/kpis': [PERMISSIONS.KPI_VIEW],
+  '/system-test-scale': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS]
 };
 

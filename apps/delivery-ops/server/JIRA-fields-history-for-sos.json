@@ -1,542 +1,562 @@
 [
   {
-    "key": "FEAT-17691",
+    "key": "FEAT-18520",
     "codeCompleteDate": [
-      "2025-10-15",
-      "2025-10-31",
-      "2025-11-10",
-      "2025-11-14",
-      "2025-11-21",
-      "2025-11-28"
+      "2026-09-01",
+      "2026-09-29",
+      "2026-10-23"
     ],
-    "numberofTimesCCMDateMoved": 5,
-    "WeeksDiffbwOldestandLatestCCMDate": 6.29,
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 7.43,
     "PGCompleteDate": [
-      "2025-11-07",
-      "2025-11-21",
-      "2025-11-28",
-      "2025-12-05",
-      "2025-12-12",
-      "2025-12-19"
+      "2026-10-13",
+      "2026-10-15",
+      "2026-10-23",
+      "2026-11-06"
     ],
     "testPlanDate": [
-      "2025-08-20",
-      "2025-09-02"
+      "2026-07-24",
+      "2026-08-11"
     ],
     "numberOfTimesTestPlanDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestTestPlanDate": 1.86,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 2.57,
     "fsdsDoneDate": [
-      "2025-08-15",
-      "2025-08-20"
+      "2026-06-16",
+      "2026-06-19",
+      "2026-06-22"
     ],
-    "numberOfTimesFSDSDoneDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0.71,
+    "numberOfTimesFSDSDoneDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0.86,
     "codeCompleteDateFull": [
-      "2025-09-02",
-      "2025-09-12"
+      "2026-08-04",
+      "2026-08-07",
+      "2026-08-11"
     ],
-    "numberOfTimesCodeCompleteDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1.43,
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1,
     "statusUpdateDate": [],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
     "riskIndicatorHistory": [
       {
+        "value": "Green",
+        "changedAt": "2026-03-18T07:04:42.827+0000"
+      },
+      {
         "value": "Yellow",
-        "changedAt": "2025-07-21T16:31:49.236+0000"
+        "changedAt": "2026-07-15T18:32:22.069+0000"
       },
       {
         "value": "Red",
-        "changedAt": "2025-07-21T21:50:50.860+0000"
-      },
-      {
-        "value": "Yellow",
-        "changedAt": "2025-12-04T00:18:32.590+0000"
-      },
-      {
-        "value": "Green",
-        "changedAt": "2026-01-06T19:31:44.694+0000"
+        "changedAt": "2026-09-23T07:14:41.687+0000"
       }
     ],
     "dateMoveEvents": [
       {
         "field": "codeComplete",
-        "changedAt": "2025-07-11T18:37:04.191+0000",
+        "changedAt": "2026-06-11T04:58:41.491+0000",
         "from": null,
-        "to": "2025-09-12"
+        "to": "2026-08-04"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-06-11T05:15:35.783+0000",
+        "from": null,
+        "to": "2026-09-01"
       },
       {
         "field": "fsdsDone",
-        "changedAt": "2025-07-11T19:12:50.381+0000",
+        "changedAt": "2026-06-11T05:16:32.274+0000",
         "from": null,
-        "to": "2025-08-15"
+        "to": "2026-06-16"
       },
       {
-        "field": "testPlan",
-        "changedAt": "2025-08-06T04:15:33.528+0000",
+        "field": "promotionGate",
+        "changedAt": "2026-06-11T05:20:10.611+0000",
         "from": null,
-        "to": "2025-08-20"
+        "to": "2026-10-13"
       },
       {
         "field": "fsdsDone",
-        "changedAt": "2025-08-06T04:16:04.669+0000",
-        "from": "2025-08-15",
-        "to": "2025-08-20"
+        "changedAt": "2026-06-16T09:39:26.201+0000",
+        "from": "2026-06-16",
+        "to": "2026-06-19"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-22T08:50:32.211+0000",
+        "from": "2026-06-19",
+        "to": "2026-06-22"
       },
       {
         "field": "testPlan",
-        "changedAt": "2025-08-20T08:50:30.214+0000",
+        "changedAt": "2026-07-01T08:34:17.286+0000",
         "from": null,
-        "to": "2025-08-20"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2025-09-05T07:41:51.379+0000",
-        "from": null,
-        "to": "2025-09-02"
+        "to": "2026-07-24"
       },
       {
         "field": "commitGate",
-        "changedAt": "2025-09-08T02:58:20.545+0000",
-        "from": null,
-        "to": "2025-10-15"
+        "changedAt": "2026-07-15T15:58:12.246+0000",
+        "from": "2026-09-01",
+        "to": "2026-09-29"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2025-09-08T02:58:20.545+0000",
-        "from": null,
-        "to": "2025-11-07"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2025-09-17T03:27:51.472+0000",
-        "from": "2025-10-15",
-        "to": "2025-10-31"
-      },
-      {
-        "field": "promotionGate",
-        "changedAt": "2025-09-17T03:28:01.841+0000",
-        "from": "2025-11-07",
-        "to": "2025-11-21"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2025-09-23T09:02:01.424+0000",
-        "from": "2025-10-31",
-        "to": "2025-11-10"
-      },
-      {
-        "field": "promotionGate",
-        "changedAt": "2025-09-23T09:02:45.255+0000",
-        "from": "2025-11-21",
-        "to": "2025-11-28"
+        "changedAt": "2026-07-15T15:58:12.246+0000",
+        "from": "2026-10-13",
+        "to": "2026-10-15"
       },
       {
         "field": "codeComplete",
-        "changedAt": "2025-09-23T21:04:15.608+0000",
-        "from": "2025-09-12",
-        "to": "2025-09-02"
+        "changedAt": "2026-08-05T16:31:48.005+0000",
+        "from": "2026-08-04",
+        "to": "2026-08-07"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-05T16:32:12.292+0000",
+        "from": "2026-07-24",
+        "to": "2026-08-11"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-11T16:51:58.997+0000",
+        "from": "2026-08-07",
+        "to": "2026-08-11"
       },
       {
         "field": "commitGate",
-        "changedAt": "2025-10-15T19:14:30.237+0000",
-        "from": "2025-11-10",
-        "to": "2025-11-14"
+        "changedAt": "2026-08-14T05:40:12.437+0000",
+        "from": "2026-09-29",
+        "to": "2026-10-23"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2025-10-15T19:14:47.875+0000",
-        "from": "2025-11-28",
-        "to": "2025-12-05"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2025-11-11T00:41:58.615+0000",
-        "from": "2025-11-14",
-        "to": "2025-11-21"
+        "changedAt": "2026-08-14T05:40:21.289+0000",
+        "from": "2026-10-15",
+        "to": "2026-10-23"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2025-11-11T00:42:08.131+0000",
-        "from": "2025-12-05",
-        "to": "2025-12-12"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2025-11-24T16:42:42.222+0000",
-        "from": "2025-11-21",
-        "to": "2025-11-28"
-      },
-      {
-        "field": "promotionGate",
-        "changedAt": "2025-11-24T16:42:58.980+0000",
-        "from": "2025-12-12",
-        "to": "2025-12-19"
+        "changedAt": "2026-09-23T07:14:41.687+0000",
+        "from": "2026-10-23",
+        "to": "2026-11-06"
       }
     ]
   },
   {
-    "key": "FEAT-18289",
+    "key": "FEAT-19398",
     "codeCompleteDate": [
-      "2025-11-28"
+      "2026-10-10",
+      "2026-10-23",
+      "2026-11-06"
     ],
-    "numberofTimesCCMDateMoved": 0,
-    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.86,
     "PGCompleteDate": [
-      "2025-11-28"
+      "2026-10-15",
+      "2026-10-23",
+      "2026-11-06"
     ],
-    "testPlanDate": [],
-    "numberOfTimesTestPlanDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
-    "fsdsDoneDate": [],
-    "numberOfTimesFSDSDoneDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "testPlanDate": [
+      "2026-07-24",
+      "2026-08-05"
+    ],
+    "numberOfTimesTestPlanDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 1.71,
+    "fsdsDoneDate": [
+      "2026-06-19",
+      "2026-06-24"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0.71,
     "codeCompleteDateFull": [
-      "2025-09-19",
-      "2025-09-25"
+      "2026-07-31",
+      "2026-08-05",
+      "2026-08-06"
     ],
-    "numberOfTimesCodeCompleteDateMoved": 1,
+    "numberOfTimesCodeCompleteDateMoved": 2,
     "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.86,
     "statusUpdateDate": [],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
     "riskIndicatorHistory": [
       {
-        "value": "Red",
-        "changedAt": "2025-10-07T19:22:34.578+0000"
-      },
-      {
         "value": "Yellow",
-        "changedAt": "2025-12-10T03:38:20.263+0000"
+        "changedAt": "2026-06-15T10:14:37.470+0000"
       },
       {
         "value": "Green",
-        "changedAt": "2025-12-23T17:44:59.939+0000"
-      }
-    ],
-    "dateMoveEvents": [
-      {
-        "field": "codeComplete",
-        "changedAt": "2025-09-10T20:38:53.546+0000",
-        "from": null,
-        "to": "2025-09-19"
+        "changedAt": "2026-06-24T05:20:50.235+0000"
       },
       {
-        "field": "codeComplete",
-        "changedAt": "2025-09-22T21:32:39.297+0000",
-        "from": "2025-09-19",
-        "to": "2025-09-25"
+        "value": "Deep",
+        "changedAt": "2026-08-19T06:53:23.570+0000"
       },
       {
-        "field": "commitGate",
-        "changedAt": "2025-10-07T14:44:06.465+0000",
-        "from": null,
-        "to": "2025-11-28"
+        "value": "Yellow",
+        "changedAt": "2026-09-09T06:58:47.689+0000"
       },
-      {
-        "field": "promotionGate",
-        "changedAt": "2025-10-07T14:44:06.465+0000",
-        "from": null,
-        "to": "2025-11-28"
-      }
-    ]
-  },
-  {
-    "key": "FEAT-17029",
-    "codeCompleteDate": [
-      "2026-04-28",
-      "2026-05-05",
-      "2026-05-06"
-    ],
-    "numberofTimesCCMDateMoved": 2,
-    "WeeksDiffbwOldestandLatestCCMDate": 1.14,
-    "PGCompleteDate": [
-      "2026-05-12",
-      "2026-05-20",
-      "2026-06-09"
-    ],
-    "testPlanDate": [
-      "2026-01-20",
-      "2026-02-03",
-      "2026-02-10",
-      "2026-02-20",
-      "2026-02-27"
-    ],
-    "numberOfTimesTestPlanDateMoved": 4,
-    "weeksDiffBetweenOldestAndLatestTestPlanDate": 5.43,
-    "fsdsDoneDate": [
-      "2026-01-20"
-    ],
-    "numberOfTimesFSDSDoneDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
-    "codeCompleteDateFull": [
-      "2026-02-27",
-      "2026-03-16"
-    ],
-    "numberOfTimesCodeCompleteDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 2.43,
-    "statusUpdateDate": [],
-    "numberOfTimesStatusUpdateDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
-    "riskIndicatorHistory": [
       {
         "value": "Red",
-        "changedAt": "2026-01-07T21:33:23.324+0000"
+        "changedAt": "2026-09-25T15:00:25.454+0000"
       }
     ],
     "dateMoveEvents": [
       {
         "field": "codeComplete",
-        "changedAt": "2025-10-27T17:17:09.533+0000",
+        "changedAt": "2026-06-09T08:40:09.128+0000",
         "from": null,
-        "to": "2026-02-27"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-01-14T04:26:53.878+0000",
-        "from": null,
-        "to": "2026-01-20"
+        "to": "2026-07-31"
       },
       {
         "field": "fsdsDone",
-        "changedAt": "2026-01-15T18:48:30.688+0000",
+        "changedAt": "2026-06-09T08:42:35.649+0000",
         "from": null,
-        "to": "2026-01-20"
+        "to": "2026-06-19"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-17T06:54:46.489+0000",
+        "from": "2026-06-19",
+        "to": "2026-06-24"
       },
       {
         "field": "testPlan",
-        "changedAt": "2026-01-21T04:26:44.822+0000",
-        "from": "2026-01-20",
-        "to": "2026-02-03"
+        "changedAt": "2026-07-01T08:34:03.735+0000",
+        "from": null,
+        "to": "2026-07-24"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-29T15:12:35.059+0000",
+        "from": "2026-07-24",
+        "to": "2026-08-05"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-05T06:48:23.821+0000",
+        "from": null,
+        "to": "2026-10-10"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-05T06:48:23.821+0000",
+        "from": null,
+        "to": "2026-10-15"
       },
       {
         "field": "codeComplete",
-        "changedAt": "2026-02-11T04:11:50.283+0000",
-        "from": "2026-02-27",
-        "to": "2026-03-16"
+        "changedAt": "2026-08-05T07:04:11.472+0000",
+        "from": "2026-07-31",
+        "to": "2026-08-06"
       },
       {
-        "field": "testPlan",
-        "changedAt": "2026-02-18T03:59:32.383+0000",
-        "from": "2026-02-03",
-        "to": "2026-02-10"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-02-18T04:00:02.666+0000",
-        "from": "2026-02-10",
-        "to": "2026-02-20"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-02-25T04:18:54.215+0000",
-        "from": "2026-02-20",
-        "to": "2026-02-27"
+        "field": "codeComplete",
+        "changedAt": "2026-08-05T18:57:15.041+0000",
+        "from": "2026-08-06",
+        "to": "2026-08-05"
       },
       {
         "field": "commitGate",
-        "changedAt": "2026-03-03T20:01:10.034+0000",
-        "from": null,
-        "to": "2026-04-28"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:38:16.320+0000",
-        "from": "2026-04-28",
-        "to": "2026-05-06"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:38:47.923+0000",
-        "from": "2026-05-06",
-        "to": "2026-05-05"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:39:52.296+0000",
-        "from": "2026-05-05",
-        "to": "2026-04-28"
-      },
-      {
-        "field": "commitGate",
-        "changedAt": "2026-03-20T12:36:35.753+0000",
-        "from": "2026-04-28",
-        "to": "2026-05-05"
+        "changedAt": "2026-08-21T04:55:53.085+0000",
+        "from": "2026-10-10",
+        "to": "2026-10-23"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2026-03-20T12:37:00.467+0000",
-        "from": null,
-        "to": "2026-05-12"
+        "changedAt": "2026-08-21T04:56:01.721+0000",
+        "from": "2026-10-15",
+        "to": "2026-10-23"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-29T11:11:13.344+0000",
+        "from": "2026-10-23",
+        "to": "2026-11-06"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2026-05-11T15:52:52.797+0000",
-        "from": "2026-05-12",
-        "to": "2026-05-20"
-      },
-      {
-        "field": "promotionGate",
-        "changedAt": "2026-06-08T16:16:28.153+0000",
-        "from": "2026-05-20",
-        "to": "2026-06-09"
+        "changedAt": "2026-09-29T11:11:23.151+0000",
+        "from": "2026-10-23",
+        "to": "2026-11-06"
       }
     ]
   },
   {
-    "key": "FEAT-17702",
+    "key": "ERA-62216",
     "codeCompleteDate": [
-      "2026-04-28",
-      "2026-05-05",
-      "2026-05-06"
+      "2026-08-18",
+      "2026-09-14"
     ],
-    "numberofTimesCCMDateMoved": 2,
-    "WeeksDiffbwOldestandLatestCCMDate": 1.14,
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.86,
     "PGCompleteDate": [
-      "2026-05-12",
-      "2026-05-20",
-      "2026-06-04",
-      "2026-06-09"
+      "2026-09-29",
+      "2026-10-23",
+      "2026-10-24"
     ],
     "testPlanDate": [
-      "2026-01-20",
-      "2026-02-03",
-      "2026-02-10",
-      "2026-02-20",
-      "2026-02-27"
+      "2026-07-07",
+      "2026-07-10",
+      "2026-07-29"
     ],
-    "numberOfTimesTestPlanDateMoved": 4,
-    "weeksDiffBetweenOldestAndLatestTestPlanDate": 5.43,
-    "fsdsDoneDate": [],
-    "numberOfTimesFSDSDoneDateMoved": 0,
-    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "numberOfTimesTestPlanDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 3.14,
+    "fsdsDoneDate": [
+      "2026-06-05",
+      "2026-07-03",
+      "2026-07-07"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 4.57,
     "codeCompleteDateFull": [
-      "2026-02-27",
-      "2026-03-16"
+      "2026-07-07",
+      "2026-07-14"
     ],
     "numberOfTimesCodeCompleteDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 2.43,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1,
     "statusUpdateDate": [],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
     "riskIndicatorHistory": [
       {
         "value": "Green",
-        "changedAt": "2026-01-07T21:52:50.067+0000"
-      },
-      {
-        "value": "Yellow",
-        "changedAt": "2026-01-13T19:49:48.344+0000"
+        "changedAt": "2026-05-21T06:57:29.284+0000"
       },
       {
         "value": "Red",
-        "changedAt": "2026-01-14T04:13:28.150+0000"
-      },
-      {
-        "value": "Green",
-        "changedAt": "2026-03-17T20:49:00.207+0000"
+        "changedAt": "2026-07-22T06:06:54.513+0000"
       },
       {
         "value": "Yellow",
-        "changedAt": "2026-03-18T04:18:18.257+0000"
+        "changedAt": "2026-07-30T04:51:56.719+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:50:51.459+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-26T05:08:11.896+0000"
       }
     ],
     "dateMoveEvents": [
       {
         "field": "codeComplete",
-        "changedAt": "2026-01-06T21:01:21.665+0000",
+        "changedAt": "2026-05-21T05:49:40.256+0000",
         "from": null,
-        "to": "2026-02-27"
+        "to": "2026-07-07"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-09T08:13:35.169+0000",
+        "from": null,
+        "to": "2026-06-05"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-06-09T08:15:12.837+0000",
+        "from": null,
+        "to": "2026-08-18"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-06-09T08:15:12.837+0000",
+        "from": null,
+        "to": "2026-09-29"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-09T08:24:30.941+0000",
+        "from": "2026-06-05",
+        "to": "2026-07-03"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-11T12:45:38.257+0000",
+        "from": "2026-07-03",
+        "to": "2026-07-07"
       },
       {
         "field": "testPlan",
-        "changedAt": "2026-01-14T04:18:54.707+0000",
+        "changedAt": "2026-06-11T12:46:39.781+0000",
         "from": null,
-        "to": "2026-01-20"
+        "to": "2026-07-10"
       },
       {
         "field": "codeComplete",
-        "changedAt": "2026-01-14T04:32:38.129+0000",
-        "from": "2026-02-27",
-        "to": "2026-03-16"
+        "changedAt": "2026-06-17T11:40:43.803+0000",
+        "from": "2026-07-07",
+        "to": "2026-07-14"
       },
       {
         "field": "testPlan",
-        "changedAt": "2026-01-21T04:27:03.793+0000",
-        "from": "2026-01-20",
-        "to": "2026-02-03"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-02-18T03:59:40.468+0000",
-        "from": "2026-02-03",
-        "to": "2026-02-10"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-02-18T04:00:04.966+0000",
-        "from": "2026-02-10",
-        "to": "2026-02-20"
-      },
-      {
-        "field": "testPlan",
-        "changedAt": "2026-02-25T04:04:33.231+0000",
-        "from": "2026-02-20",
-        "to": "2026-02-27"
+        "changedAt": "2026-06-30T06:42:22.236+0000",
+        "from": "2026-07-10",
+        "to": "2026-07-07"
       },
       {
         "field": "commitGate",
-        "changedAt": "2026-03-03T20:00:05.158+0000",
+        "changedAt": "2026-08-04T06:55:06.431+0000",
+        "from": "2026-08-18",
+        "to": "2026-09-14"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-04T06:55:34.552+0000",
+        "from": "2026-09-29",
+        "to": "2026-10-23"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-04T06:57:40.107+0000",
+        "from": "2026-07-07",
+        "to": "2026-07-29"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-04T08:04:40.852+0000",
+        "from": "2026-10-23",
+        "to": "2026-10-24"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-16815",
+    "codeCompleteDate": [
+      "2026-09-18",
+      "2026-09-23",
+      "2026-10-01"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 1.86,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [
+      "2026-07-17",
+      "2026-08-06"
+    ],
+    "numberOfTimesTestPlanDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 2.86,
+    "fsdsDoneDate": [
+      "2026-06-23"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-04-30",
+      "2026-06-01",
+      "2026-06-10",
+      "2026-06-19",
+      "2026-06-26",
+      "2026-06-30",
+      "2026-07-01"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 6,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-15T13:16:57.982+0000"
+      },
+      {
+        "value": "Deep",
+        "changedAt": "2026-08-19T06:57:46.674+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-30T06:46:32.580+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-04-20T07:43:04.869+0000",
         "from": null,
-        "to": "2026-04-28"
+        "to": "2026-04-30"
       },
       {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:38:26.356+0000",
-        "from": "2026-04-28",
-        "to": "2026-05-06"
+        "field": "codeComplete",
+        "changedAt": "2026-05-29T05:56:40.375+0000",
+        "from": "2026-04-30",
+        "to": "2026-06-10"
       },
       {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:38:50.151+0000",
-        "from": "2026-05-06",
-        "to": "2026-05-05"
+        "field": "codeComplete",
+        "changedAt": "2026-06-15T05:54:32.694+0000",
+        "from": "2026-06-10",
+        "to": "2026-06-19"
       },
       {
-        "field": "commitGate",
-        "changedAt": "2026-03-18T03:40:07.799+0000",
-        "from": "2026-05-05",
-        "to": "2026-04-28"
-      },
-      {
-        "field": "promotionGate",
-        "changedAt": "2026-03-18T19:01:08.128+0000",
+        "field": "fsdsDone",
+        "changedAt": "2026-06-17T06:46:14.827+0000",
         "from": null,
-        "to": "2026-05-12"
+        "to": "2026-06-23"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-17T06:47:05.655+0000",
+        "from": "2026-06-19",
+        "to": "2026-06-26"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-29T07:39:24.850+0000",
+        "from": "2026-06-26",
+        "to": "2026-06-30"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-01T08:44:30.964+0000",
+        "from": null,
+        "to": "2026-07-17"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-07-02T05:09:11.069+0000",
+        "from": "2026-06-30",
+        "to": "2026-06-01"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-07-09T09:31:06.986+0000",
+        "from": "2026-06-01",
+        "to": "2026-07-01"
       },
       {
         "field": "commitGate",
-        "changedAt": "2026-04-29T15:30:30.116+0000",
-        "from": "2026-04-28",
-        "to": "2026-05-05"
+        "changedAt": "2026-07-15T15:54:23.650+0000",
+        "from": null,
+        "to": "2026-09-18"
       },
       {
         "field": "promotionGate",
-        "changedAt": "2026-05-11T15:52:50.811+0000",
-        "from": "2026-05-12",
-        "to": "2026-05-20"
+        "changedAt": "2026-07-15T15:54:23.650+0000",
+        "from": null,
+        "to": "2026-10-15"
       },
       {
-        "field": "promotionGate",
-        "changedAt": "2026-06-01T15:34:44.500+0000",
-        "from": "2026-05-20",
-        "to": "2026-06-04"
+        "field": "testPlan",
+        "changedAt": "2026-08-05T06:54:47.351+0000",
+        "from": "2026-07-17",
+        "to": "2026-08-06"
       },
       {
-        "field": "promotionGate",
-        "changedAt": "2026-06-08T16:16:03.702+0000",
-        "from": "2026-06-04",
-        "to": "2026-06-09"
+        "field": "commitGate",
+        "changedAt": "2026-08-25T15:16:05.719+0000",
+        "from": "2026-09-18",
+        "to": "2026-09-23"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-23T06:36:58.387+0000",
+        "from": "2026-09-23",
+        "to": "2026-10-01"
       }
     ]
   },
@@ -695,6 +715,638 @@
         "changedAt": "2026-10-01T15:21:41.096+0000",
         "from": "2026-10-12",
         "to": "2026-10-14"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19440",
+    "codeCompleteDate": [
+      "2026-09-07",
+      "2026-09-15",
+      "2026-09-30"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 3.29,
+    "PGCompleteDate": [
+      "2026-10-15",
+      "2026-11-03"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-30",
+      "2026-08-25",
+      "2026-09-04",
+      "2026-09-18",
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 4,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-03T17:19:55.202+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-24T15:29:19.660+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-10-01T15:29:50.917+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-30T13:37:44.414+0000",
+        "from": null,
+        "to": "2026-07-30"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-17T15:05:44.286+0000",
+        "from": null,
+        "to": "2026-10-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-19T15:51:23.839+0000",
+        "from": "2026-07-30",
+        "to": "2026-08-25"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-27T15:33:43.862+0000",
+        "from": "2026-08-25",
+        "to": "2026-09-04"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-27T15:50:17.056+0000",
+        "from": null,
+        "to": "2026-09-07"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-27T15:51:22.343+0000",
+        "from": "2026-09-07",
+        "to": "2026-09-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-03T15:36:54.353+0000",
+        "from": "2026-09-04",
+        "to": "2026-09-18"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-10T13:32:52.487+0000",
+        "from": "2026-09-15",
+        "to": "2026-09-30"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-10T13:32:52.487+0000",
+        "from": "2026-10-15",
+        "to": "2026-11-03"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-22T00:29:06.941+0000",
+        "from": "2026-09-18",
+        "to": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "key": "ERA-61284",
+    "codeCompleteDate": [
+      "2026-09-04"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [
+      "2026-07-24"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-02-20"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-04T06:56:26.263+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:56:36.387+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-18T06:48:46.910+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-04-28T08:02:32.567+0000",
+        "from": null,
+        "to": "2026-05-04"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-21T17:02:43.850+0000",
+        "from": null,
+        "to": "2026-07-24"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-04T06:41:29.200+0000",
+        "from": null,
+        "to": "2026-09-04"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-04T06:42:06.333+0000",
+        "from": null,
+        "to": "2026-10-15"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-11T11:58:17.362+0000",
+        "from": null,
+        "to": "2026-02-20"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64035",
+    "codeCompleteDate": [
+      "2026-08-18",
+      "2026-08-28"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 1.43,
+    "PGCompleteDate": [
+      "2026-09-29",
+      "2026-10-15",
+      "2026-10-16"
+    ],
+    "testPlanDate": [
+      "2026-07-27"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-06-09"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-19"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-06-02T09:34:57.882+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-15T09:25:38.654+0000",
+        "from": null,
+        "to": "2026-06-19"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-15T09:30:13.067+0000",
+        "from": null,
+        "to": "2026-06-09"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-06-15T09:41:29.046+0000",
+        "from": null,
+        "to": "2026-08-18"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-06-15T09:41:29.046+0000",
+        "from": null,
+        "to": "2026-09-29"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-23T15:36:48.148+0000",
+        "from": "2026-08-18",
+        "to": "2026-08-28"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-23T15:36:48.148+0000",
+        "from": "2026-09-29",
+        "to": "2026-10-16"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-23T15:42:31.006+0000",
+        "from": "2026-08-28",
+        "to": "2026-08-18"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-23T15:42:31.006+0000",
+        "from": "2026-10-16",
+        "to": "2026-09-29"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-23T16:39:55.732+0000",
+        "from": "2026-08-18",
+        "to": "2026-08-28"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-23T16:39:55.732+0000",
+        "from": "2026-09-29",
+        "to": "2026-10-15"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-24T04:30:20.105+0000",
+        "from": null,
+        "to": "2026-07-27"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64393",
+    "codeCompleteDate": [
+      "2026-09-15",
+      "2026-09-22"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 1,
+    "PGCompleteDate": [
+      "2026-10-13"
+    ],
+    "testPlanDate": [
+      "2001-07-14",
+      "2001-07-24",
+      "2026-08-06"
+    ],
+    "numberOfTimesTestPlanDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 1307.71,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-28"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-06-02T09:31:32.072+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-08-04T06:45:40.609+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-18T06:38:47.942+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-25T06:52:25.743+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-03T05:44:34.030+0000",
+        "from": null,
+        "to": "2026-05-28"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-06-30T06:49:50.691+0000",
+        "from": null,
+        "to": "2001-07-14"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-23T15:34:36.908+0000",
+        "from": null,
+        "to": "2001-07-14"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-24T06:04:52.579+0000",
+        "from": "2001-07-14",
+        "to": "2001-07-24"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-04T06:34:02.322+0000",
+        "from": null,
+        "to": "2026-09-22"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-04T06:34:02.322+0000",
+        "from": null,
+        "to": "2026-10-13"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-04T06:43:06.165+0000",
+        "from": null,
+        "to": "2026-08-06"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-08T06:27:03.436+0000",
+        "from": "2026-09-22",
+        "to": "2026-09-15"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64543",
+    "codeCompleteDate": [
+      "2026-06-30",
+      "2026-09-11",
+      "2026-09-15"
+    ],
+    "numberofTimesCCMDateMoved": 2,
+    "WeeksDiffbwOldestandLatestCCMDate": 11,
+    "PGCompleteDate": [
+      "2026-10-12",
+      "2026-10-15"
+    ],
+    "testPlanDate": [
+      "2026-07-24"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-06-05",
+      "2026-06-19"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 2,
+    "codeCompleteDateFull": [
+      "2026-06-30",
+      "2026-07-06",
+      "2026-07-08",
+      "2026-07-13"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-08-25T08:50:15.570+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-03T05:13:05.934+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-29T09:23:40.093+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "commitGate",
+        "changedAt": "2026-05-28T08:07:27.612+0000",
+        "from": null,
+        "to": "2026-06-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-28T08:09:48.294+0000",
+        "from": null,
+        "to": "2026-06-30"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-01T07:26:03.492+0000",
+        "from": null,
+        "to": "2026-06-05"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-16T05:58:21.339+0000",
+        "from": "2026-06-05",
+        "to": "2026-06-19"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-30T08:36:43.674+0000",
+        "from": "2026-06-30",
+        "to": "2026-07-06"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-07-07T10:06:38.395+0000",
+        "from": "2026-07-06",
+        "to": "2026-07-08"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-24T05:53:25.346+0000",
+        "from": null,
+        "to": "2026-09-11"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-24T05:53:44.623+0000",
+        "from": null,
+        "to": "2026-10-12"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-30T08:18:58.278+0000",
+        "from": null,
+        "to": "2026-07-24"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-07-31T10:57:30.123+0000",
+        "from": "2026-07-08",
+        "to": "2026-07-13"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-03T05:06:53.912+0000",
+        "from": "2026-09-11",
+        "to": "2026-09-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-10-06T08:44:26.462+0000",
+        "from": "2026-10-12",
+        "to": "2026-10-15"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-16814",
+    "codeCompleteDate": [
+      "2026-09-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-15"
+    ],
+    "testPlanDate": [
+      "2026-07-15"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-12-10"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-03-31",
+      "2026-04-14",
+      "2026-04-30",
+      "2027-05-14",
+      "2027-05-25"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 4,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 60,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-07-01T06:22:01.030+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2025-07-04T16:50:38.501+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-08-18T06:33:30.774+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-28T04:36:34.365+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-17T16:46:27.753+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-11-18T05:06:17.905+0000",
+        "from": null,
+        "to": "2026-03-31"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-01-08T04:24:33.021+0000",
+        "from": null,
+        "to": "2025-12-10"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-03-31T17:37:23.495+0000",
+        "from": "2026-03-31",
+        "to": "2026-04-14"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-04-20T07:41:19.523+0000",
+        "from": "2026-04-14",
+        "to": "2026-04-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-04-20T07:42:46.358+0000",
+        "from": "2026-04-30",
+        "to": "2026-04-14"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-19T06:44:32.407+0000",
+        "from": "2026-04-14",
+        "to": "2027-05-14"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-19T06:44:53.854+0000",
+        "from": "2027-05-14",
+        "to": "2027-05-25"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-06-05T15:38:00.375+0000",
+        "from": null,
+        "to": "2026-07-15"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-07T01:08:09.801+0000",
+        "from": null,
+        "to": "2026-09-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-07T01:08:09.801+0000",
+        "from": null,
+        "to": "2026-10-15"
       }
     ]
   },
@@ -948,7 +1600,233 @@
     ]
   },
   {
-    "key": "FEAT-18523",
+    "key": "FEAT-19669",
+    "codeCompleteDate": [
+      "2026-09-04",
+      "2026-09-25"
+    ],
+    "numberofTimesCCMDateMoved": 1,
+    "WeeksDiffbwOldestandLatestCCMDate": 3,
+    "PGCompleteDate": [
+      "2026-10-09"
+    ],
+    "testPlanDate": [
+      "2026-07-14"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-06-01"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-10",
+      "2026-06-30",
+      "2026-07-10",
+      "2026-07-31"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 7.29,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-05-06T21:39:13.450+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-25T15:16:58.873+0000"
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-03T18:04:58.199+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-13T18:57:48.826+0000",
+        "from": null,
+        "to": "2026-07-31"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-15T19:07:51.126+0000",
+        "from": "2026-07-31",
+        "to": "2026-06-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-25T15:17:33.825+0000",
+        "from": "2026-06-30",
+        "to": "2026-06-10"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-25T15:18:54.553+0000",
+        "from": "2026-06-10",
+        "to": "2026-07-10"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-09T15:09:34.483+0000",
+        "from": null,
+        "to": "2026-07-14"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-07-23T16:06:08.622+0000",
+        "from": null,
+        "to": "2026-09-04"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-07-23T16:06:27.413+0000",
+        "from": null,
+        "to": "2026-10-09"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-20T00:47:42.840+0000",
+        "from": null,
+        "to": "2026-06-01"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-24T15:20:07.724+0000",
+        "from": "2026-09-04",
+        "to": "2026-09-25"
+      }
+    ]
+  },
+  {
+    "key": "ERA-70299",
+    "codeCompleteDate": [
+      "2026-10-30"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-10-30"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-10-16"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-10-08T05:38:48.023+0000",
+        "from": null,
+        "to": "2026-10-16"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-10-08T05:38:48.023+0000",
+        "from": null,
+        "to": "2026-10-30"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-10-08T05:38:48.023+0000",
+        "from": null,
+        "to": "2026-10-30"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19657",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "ERA-38582",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-06-01",
+      "2026-07-31",
+      "2026-08-31",
+      "2026-10-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 21.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2025-03-17T10:17:51.759+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-12-16T17:39:51.199+0000",
+        "from": null,
+        "to": "2026-06-01"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-03-05T20:36:51.247+0000",
+        "from": "2026-06-01",
+        "to": "2026-07-31"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-04-11T03:26:04.689+0000",
+        "from": "2026-07-31",
+        "to": "2026-08-31"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-11T15:10:00.653+0000",
+        "from": "2026-08-31",
+        "to": "2026-10-30"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49565",
     "codeCompleteDate": [],
     "numberofTimesCCMDateMoved": 0,
     "WeeksDiffbwOldestandLatestCCMDate": 0,
@@ -957,44 +1835,1855 @@
     "numberOfTimesTestPlanDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
     "fsdsDoneDate": [
-      "2026-02-18"
+      "2026-08-11"
     ],
     "numberOfTimesFSDSDoneDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
     "codeCompleteDateFull": [
-      "2026-02-27",
-      "2026-04-30"
+      "2026-12-11"
     ],
-    "numberOfTimesCodeCompleteDateMoved": 1,
-    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.86,
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
     "statusUpdateDate": [],
     "numberOfTimesStatusUpdateDateMoved": 0,
     "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
     "riskIndicatorHistory": [
       {
         "value": "Red",
-        "changedAt": "2026-01-13T04:52:25.210+0000"
+        "changedAt": "2025-07-23T10:40:58.494+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-23T13:46:30.569+0000",
+        "from": null,
+        "to": "2026-08-11"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-23T13:46:50.331+0000",
+        "from": null,
+        "to": "2026-12-11"
+      }
+    ]
+  },
+  {
+    "key": "ERA-67814",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-28",
+      "2026-09-25",
+      "2027-09-15",
+      "2027-09-20"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 3,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 55.43,
+    "codeCompleteDateFull": [
+      "2026-11-20"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-08-19T04:54:21.221+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-19T04:49:51.281+0000",
+        "from": null,
+        "to": "2026-08-28"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-19T04:50:44.749+0000",
+        "from": null,
+        "to": "2026-11-20"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-09T03:35:03.733+0000",
+        "from": "2026-08-28",
+        "to": "2027-09-15"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-17T15:36:20.360+0000",
+        "from": "2027-09-15",
+        "to": "2027-09-20"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-23T05:20:02.433+0000",
+        "from": "2027-09-20",
+        "to": "2026-09-25"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-16856",
+    "codeCompleteDate": [
+      "2027-01-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-06-30",
+      "2026-08-15"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 6.57,
+    "codeCompleteDateFull": [
+      "2026-10-31",
+      "2026-12-15"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 6.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Deep",
+        "changedAt": "2026-09-22T06:31:47.165+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-22T07:10:02.084+0000"
       }
     ],
     "dateMoveEvents": [
       {
         "field": "codeComplete",
-        "changedAt": "2026-01-06T21:07:36.051+0000",
+        "changedAt": "2026-06-03T19:26:46.431+0000",
         "from": null,
-        "to": "2026-02-27"
+        "to": "2026-10-31"
       },
       {
         "field": "fsdsDone",
-        "changedAt": "2026-01-13T04:51:50.226+0000",
+        "changedAt": "2026-06-03T19:26:59.860+0000",
         "from": null,
-        "to": "2026-02-18"
+        "to": "2026-06-30"
       },
       {
         "field": "codeComplete",
-        "changedAt": "2026-03-05T00:30:06.451+0000",
-        "from": "2026-02-27",
-        "to": "2026-04-30"
+        "changedAt": "2026-08-13T13:24:53.398+0000",
+        "from": "2026-10-31",
+        "to": "2026-12-15"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-13T13:25:26.430+0000",
+        "from": "2026-06-30",
+        "to": "2026-08-15"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-26T10:33:44.768+0000",
+        "from": null,
+        "to": "2027-01-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-26T10:33:44.768+0000",
+        "from": null,
+        "to": "2027-02-23"
       }
     ]
+  },
+  {
+    "key": "FEAT-17455",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-30",
+      "2026-12-10"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 1.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-07-01T10:05:04.251+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-07-16T04:40:33.695+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-10-08T05:12:39.171+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-23T08:14:11.505+0000",
+        "from": null,
+        "to": "2026-11-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-10-08T05:16:47.256+0000",
+        "from": "2026-11-30",
+        "to": "2026-12-10"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18587",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [
+      "2026-11-16"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-09-17"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-10-12",
+      "2026-11-16",
+      "2026-11-23"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 6,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-28T17:08:12.919+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-30T21:49:06.627+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-03T21:26:01.496+0000",
+        "from": null,
+        "to": "2026-10-12"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-03T21:26:43.773+0000",
+        "from": null,
+        "to": "2026-09-17"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-29T20:20:16.516+0000",
+        "from": "2026-10-12",
+        "to": "2026-11-16"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-29T22:46:40.771+0000",
+        "from": "2026-11-16",
+        "to": "2026-11-23"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-10-07T15:43:37.327+0000",
+        "from": null,
+        "to": "2026-11-16"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19626",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [
+      "2026-02-18"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-11-30",
+      "2026-10-26"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 47.14,
+    "codeCompleteDateFull": [
+      "2026-06-30",
+      "2026-12-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 24.29,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": null
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-28T08:46:36.932+0000",
+        "from": "2026-06-30",
+        "to": "2026-12-17"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-10-05T08:51:30.886+0000",
+        "from": null,
+        "to": "2026-10-26"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19660",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [
+      "2026-09-25"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-31",
+      "2026-09-25"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 3.57,
+    "codeCompleteDateFull": [
+      "2026-11-20",
+      "2026-12-15",
+      "2026-12-18"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 4,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-09-15T10:10:25.523+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-15T10:11:54.197+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-10-06T16:55:37.231+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-19T04:50:21.367+0000",
+        "from": null,
+        "to": "2026-11-20"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-26T05:06:22.724+0000",
+        "from": "2026-11-20",
+        "to": "2026-12-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-08T15:05:19.367+0000",
+        "from": "2026-12-15",
+        "to": "2026-12-18"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-09-15T05:56:45.219+0000",
+        "from": null,
+        "to": "2026-09-25"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-15T05:58:25.620+0000",
+        "from": null,
+        "to": "2026-08-31"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-15T10:07:39.453+0000",
+        "from": "2026-08-31",
+        "to": "2026-09-25"
+      }
+    ]
+  },
+  {
+    "key": "ERA-62640",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-31"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-16"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-18T06:59:06.946+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-18T06:59:06.946+0000",
+        "from": null,
+        "to": "2026-11-16"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-18T06:59:06.946+0000",
+        "from": null,
+        "to": "2026-08-31"
+      }
+    ]
+  },
+  {
+    "key": "ERA-62743",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-02"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-11"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Red",
+        "changedAt": "2026-06-17T09:13:31.300+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-30T07:35:57.921+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-19T11:57:47.494+0000",
+        "from": null,
+        "to": "2026-11-17"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-08T15:11:27.801+0000",
+        "from": null,
+        "to": "2026-12-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-08T15:11:27.801+0000",
+        "from": null,
+        "to": "2027-02-02"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-08T15:18:00.109+0000",
+        "from": null,
+        "to": "2026-08-11"
+      }
+    ]
+  },
+  {
+    "key": "ERA-67955",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-09-04"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-26T06:25:31.549+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-26T05:53:53.447+0000",
+        "from": null,
+        "to": "2026-09-04"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-26T05:54:17.614+0000",
+        "from": null,
+        "to": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18943",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-10-12"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-30",
+      "2026-12-31"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 4.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-06-01T06:43:32.984+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-26T06:56:50.369+0000",
+        "from": null,
+        "to": "2026-12-31"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-23T16:04:42.166+0000",
+        "from": "2026-12-31",
+        "to": "2026-11-30"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-23T16:05:50.048+0000",
+        "from": null,
+        "to": "2026-10-12"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19178",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-02"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-05",
+      "2026-08-10"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0.71,
+    "codeCompleteDateFull": [
+      "2026-09-21",
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 8.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-27T15:44:30.050+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-08T14:04:20.095+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-22T16:07:49.530+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-21T13:07:10.557+0000",
+        "from": null,
+        "to": "2026-09-21"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-21T13:07:35.778+0000",
+        "from": null,
+        "to": "2026-08-10"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-21T13:07:45.727+0000",
+        "from": "2026-08-10",
+        "to": "2026-08-05"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-08T15:06:55.621+0000",
+        "from": null,
+        "to": "2026-12-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-08T15:06:55.621+0000",
+        "from": null,
+        "to": "2027-02-02"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-14T12:19:47.191+0000",
+        "from": "2026-09-21",
+        "to": "2026-11-17"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19454",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-23"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-07-15"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-05-06T08:56:32.773+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-25T15:05:26.813+0000"
+      },
+      {
+        "value": "Red",
+        "changedAt": "2026-09-08T14:40:38.334+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-15T12:04:30.332+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-19T11:58:38.561+0000",
+        "from": null,
+        "to": "2026-11-17"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-28T12:34:22.500+0000",
+        "from": null,
+        "to": "2026-07-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-08T15:13:00.927+0000",
+        "from": null,
+        "to": "2027-02-23"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-08T15:14:44.919+0000",
+        "from": null,
+        "to": "2026-12-15"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19749",
+    "codeCompleteDate": [
+      "2026-12-15"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-02"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-08-05",
+      "2026-10-01"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 8.14,
+    "codeCompleteDateFull": [
+      "2026-11-17",
+      "2029-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 156.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-09-24T15:02:17.390+0000"
+      },
+      {
+        "value": "Yellow",
+        "changedAt": "2026-09-29T15:48:31.341+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-18T11:40:55.021+0000",
+        "from": null,
+        "to": "2029-11-17"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-18T11:41:04.815+0000",
+        "from": "2029-11-17",
+        "to": "2026-11-17"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-08-27T17:08:41.143+0000",
+        "from": null,
+        "to": "2026-08-05"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-09-24T15:02:17.390+0000",
+        "from": null,
+        "to": "2026-12-15"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-09-24T15:02:17.390+0000",
+        "from": null,
+        "to": "2027-02-02"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-10-05T08:39:47.767+0000",
+        "from": "2026-08-05",
+        "to": "2026-10-01"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19966",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [
+      "2026-11-02",
+      "2026-11-06"
+    ],
+    "numberOfTimesTestPlanDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0.57,
+    "fsdsDoneDate": [
+      "2026-09-16"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-12-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-08-19T15:27:15.712+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-07T19:48:36.490+0000",
+        "from": null,
+        "to": "2026-12-04"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-14T17:53:10.697+0000",
+        "from": null,
+        "to": "2026-09-16"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-10-06T04:31:37.577+0000",
+        "from": null,
+        "to": "2026-11-02"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-10-06T04:32:34.519+0000",
+        "from": "2026-11-02",
+        "to": "2026-11-06"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-20195",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-10-16"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2027-02-28"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": "2026-10-01T05:56:12.566+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-30T12:46:04.384+0000",
+        "from": null,
+        "to": "2027-02-28"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-10-05T08:57:36.607+0000",
+        "from": null,
+        "to": "2026-10-16"
+      }
+    ]
+  },
+  {
+    "key": "ERA-47856",
+    "codeCompleteDate": [
+      "2026-12-01"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2027-02-01"
+    ],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2026-06-15",
+      "2026-08-15"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 8.71,
+    "codeCompleteDateFull": [
+      "2025-08-20",
+      "2025-09-17",
+      "2025-10-08",
+      "2025-10-15",
+      "2026-02-20",
+      "2026-06-15",
+      "2026-10-01",
+      "2026-10-15"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 7,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 60.14,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-07-23T10:12:34.593+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-07-23T10:14:06.739+0000",
+        "from": null,
+        "to": "2025-08-20"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-02T08:48:11.568+0000",
+        "from": "2025-08-20",
+        "to": "2025-09-17"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-23T09:02:32.341+0000",
+        "from": "2025-09-17",
+        "to": "2025-10-08"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-23T09:04:54.373+0000",
+        "from": "2025-10-08",
+        "to": "2025-10-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-02-11T17:06:54.317+0000",
+        "from": "2025-10-15",
+        "to": "2026-02-20"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-07T12:53:31.356+0000",
+        "from": "2026-02-20",
+        "to": "2026-06-15"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-01T16:53:45.470+0000",
+        "from": null,
+        "to": "2026-06-15"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-07-22T13:36:51.155+0000",
+        "from": "2026-06-15",
+        "to": "2026-08-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-31T22:35:01.743+0000",
+        "from": "2026-06-15",
+        "to": "2026-10-01"
+      },
+      {
+        "field": "commitGate",
+        "changedAt": "2026-08-31T22:46:15.817+0000",
+        "from": null,
+        "to": "2026-12-01"
+      },
+      {
+        "field": "promotionGate",
+        "changedAt": "2026-08-31T22:46:15.817+0000",
+        "from": null,
+        "to": "2027-02-01"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-30T08:43:20.557+0000",
+        "from": "2026-10-01",
+        "to": "2026-10-15"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49556",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-08-29",
+      "2025-09-15",
+      "2025-09-30",
+      "2025-10-17",
+      "2026-01-30",
+      "2026-02-27",
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 6,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 56.71,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:21:07.039+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-05-20T10:25:50.419+0000",
+        "from": null,
+        "to": "2025-08-29"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-05-21T06:26:25.912+0000",
+        "from": "2025-08-29",
+        "to": "2025-09-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-02T08:50:00.452+0000",
+        "from": "2025-09-15",
+        "to": "2025-09-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-02T08:51:17.605+0000",
+        "from": "2025-09-30",
+        "to": "2025-10-17"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-12-12T06:39:53.988+0000",
+        "from": "2025-10-17",
+        "to": "2026-01-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-02-09T05:56:41.081+0000",
+        "from": "2026-01-30",
+        "to": "2026-02-27"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T04:59:20.841+0000",
+        "from": "2026-02-27",
+        "to": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49560",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-09-05"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-09-30",
+      "2025-11-14",
+      "2026-05-15",
+      "2026-08-31",
+      "2026-09-18",
+      "2026-10-16"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 5,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 54.43,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:32:16.466+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-05-21T06:23:36.363+0000",
+        "from": null,
+        "to": "2025-09-30"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2025-09-02T08:57:39.355+0000",
+        "from": null,
+        "to": "2025-09-05"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-09-02T12:02:25.127+0000",
+        "from": "2025-09-30",
+        "to": "2025-11-14"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-01-22T13:53:11.650+0000",
+        "from": "2025-11-14",
+        "to": "2026-05-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-25T14:05:50.335+0000",
+        "from": "2026-05-15",
+        "to": "2026-08-31"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-03T11:32:10.070+0000",
+        "from": "2026-08-31",
+        "to": "2026-09-18"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T05:02:42.552+0000",
+        "from": "2026-09-18",
+        "to": "2026-10-16"
+      }
+    ]
+  },
+  {
+    "key": "ERA-49562",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-06-13",
+      "2026-10-30",
+      "2027-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 119.86,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2025-05-20T10:33:58.949+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2025-05-21T09:45:14.542+0000",
+        "from": null,
+        "to": "2025-06-13"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-25T13:59:54.316+0000",
+        "from": "2025-06-13",
+        "to": "2027-09-30"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-23T09:35:52.149+0000",
+        "from": "2027-09-30",
+        "to": "2026-10-30"
+      }
+    ]
+  },
+  {
+    "key": "ERA-59313",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-09-05"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2025-11-14",
+      "2026-11-13"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 52,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T05:07:44.536+0000",
+        "from": null,
+        "to": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "key": "ERA-59316",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "ERA-63073",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-12-19"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-03-06",
+      "2027-11-10"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 87.71,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-22T22:33:39.443+0000",
+        "from": null,
+        "to": "2027-11-10"
+      }
+    ]
+  },
+  {
+    "key": "ERA-64402",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-06"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-09-09T09:00:49.204+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-30T08:51:52.110+0000",
+        "from": null,
+        "to": "2026-11-06"
+      }
+    ]
+  },
+  {
+    "key": "ERA-68591",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-09-08"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-05-29",
+      "2026-09-25",
+      "2026-10-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 22,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": null
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-10T12:09:15.907+0000",
+        "from": "2026-05-29",
+        "to": "2026-09-25"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T05:11:20.149+0000",
+        "from": "2026-09-25",
+        "to": "2026-10-30"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19443",
+    "codeCompleteDate": [
+      "2026-04-28"
+    ],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [
+      "2026-05-12"
+    ],
+    "testPlanDate": [
+      "2026-02-27"
+    ],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [
+      "2025-09-30",
+      "2026-09-30"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 52.14,
+    "codeCompleteDateFull": [
+      "2026-03-16",
+      "2026-08-15",
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 28.29,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Yellow",
+        "changedAt": null
+      },
+      {
+        "value": "Green",
+        "changedAt": "2026-09-08T17:06:48.808+0000"
+      }
+    ],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-05-13T04:46:16.924+0000",
+        "from": null,
+        "to": "2026-08-15"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-08T17:07:10.402+0000",
+        "from": "2026-08-15",
+        "to": "2026-09-30"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-29T20:48:30.557+0000",
+        "from": null,
+        "to": "2025-09-30"
+      },
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-09-29T20:48:37.263+0000",
+        "from": "2025-09-30",
+        "to": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-19980",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [
+      {
+        "value": "Green",
+        "changedAt": "2026-08-21T04:10:55.935+0000"
+      }
+    ],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "ERA-48194",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-13"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T04:56:16.510+0000",
+        "from": null,
+        "to": "2026-11-13"
+      }
+    ]
+  },
+  {
+    "key": "ERA-60011",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-17T13:55:40.233+0000",
+        "from": null,
+        "to": "2026-11-17"
+      }
+    ]
+  },
+  {
+    "key": "ERA-62664",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "ERA-63552",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-10-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-09-24T15:41:48.379+0000",
+        "from": null,
+        "to": "2026-10-30"
+      }
+    ]
+  },
+  {
+    "key": "ERA-67841",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-11-17"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-26T06:56:49.553+0000",
+        "from": null,
+        "to": "2026-11-17"
+      }
+    ]
+  },
+  {
+    "key": "ERA-68685",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "ERA-69545",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": []
+  },
+  {
+    "key": "FEAT-17235",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [
+      "2026-08-03",
+      "2026-08-05",
+      "2026-08-06"
+    ],
+    "numberOfTimesTestPlanDateMoved": 2,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0.43,
+    "fsdsDoneDate": [
+      "2026-06-23"
+    ],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-07-31",
+      "2026-08-04"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 1,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0.57,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "fsdsDone",
+        "changedAt": "2026-06-15T10:36:06.033+0000",
+        "from": null,
+        "to": "2026-06-23"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-06-15T10:38:01.337+0000",
+        "from": null,
+        "to": "2026-07-31"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-07-29T06:51:23.632+0000",
+        "from": null,
+        "to": "2026-08-03"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-03T05:45:15.765+0000",
+        "from": "2026-08-03",
+        "to": "2026-08-06"
+      },
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-05T06:43:42.438+0000",
+        "from": "2026-07-31",
+        "to": "2026-08-04"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-05T06:44:22.896+0000",
+        "from": "2026-08-06",
+        "to": "2026-08-05"
+      },
+      {
+        "field": "testPlan",
+        "changedAt": "2026-08-05T06:44:44.598+0000",
+        "from": "2026-08-05",
+        "to": "2026-08-06"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18787",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [
+      "2026-09-30"
+    ],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": [
+      {
+        "field": "codeComplete",
+        "changedAt": "2026-08-21T21:46:23.254+0000",
+        "from": null,
+        "to": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "key": "FEAT-18820",
+    "codeCompleteDate": [],
+    "numberofTimesCCMDateMoved": 0,
+    "WeeksDiffbwOldestandLatestCCMDate": 0,
+    "PGCompleteDate": [],
+    "testPlanDate": [],
+    "numberOfTimesTestPlanDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestTestPlanDate": 0,
+    "fsdsDoneDate": [],
+    "numberOfTimesFSDSDoneDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestFSDSDoneDate": 0,
+    "codeCompleteDateFull": [],
+    "numberOfTimesCodeCompleteDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestCodeCompleteDate": 0,
+    "statusUpdateDate": [],
+    "numberOfTimesStatusUpdateDateMoved": 0,
+    "weeksDiffBetweenOldestAndLatestStatusUpdateDate": 0,
+    "riskIndicatorHistory": [],
+    "dateMoveEvents": []
   }
 ]

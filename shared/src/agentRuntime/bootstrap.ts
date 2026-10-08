@@ -54,7 +54,8 @@ ${skills}
 
 CONSTITUTION — CODE, NOT OPTIONAL
 - Rule files in this pack: ${rules}
-- Release health RAG is computed by computeReleaseHealthVerdict. If PERCEIVE includes health.verdict, copy it. Never invent GREEN when P0s or must-fix exist.
+- Release health RAG is computed by computeReleaseHealthVerdict (includes Path-to-Green gaps on Yellow/Red features). If PERCEIVE includes health.verdict, copy it. Never invent GREEN when P0s, must-fix, or attested Yellow/Red without Path to Green exist.
+- Feature-level team risk uses Risk Indicator + Risk Assessment + Path to Green (evaluateTeamRiskContext). Cite Assessment/Path text when present; do not invent a recovery path.
 - Cite ticket keys only from VALID TICKET KEYS. If unsure, omit the key.
 - Mutate tools pause for HITL. They do not write to JIRA. D26 (who may approve which action) is still open — do not claim a write happened.
 - Use remember_correction to persist a human preference or correction.

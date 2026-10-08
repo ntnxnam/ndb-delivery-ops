@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -8,100 +8,115 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  ReferenceLine,
 } from 'recharts';
-import { buildGateChartRows } from './gateDateUtils';
+import { authenticatedGet } from '../../utils/api';
+import {
+  buildSequentialGateSegments,
+  resolvePrimaryFixVersion,
+} from './gateDateUtils';
 
 /**
- * Horizontal bar chart: gates vs days from today.
+ * Sequential waterfall: EC → FS/DS → Test Plan → CC → CG → PG.
+ * Each bar is one leg's duration, offset from EC (not parallel days-from-today).
  */
 function GateDatesBarChart({ jiraData }) {
-  const rows = useMemo(() => buildGateChartRows(jiraData), [jiraData]);
-  const chartData = useMemo(
-    () => rows.filter((r) => r.set).map((r) => ({
-      ...r,
-      // Recharts needs a numeric bar value; keep sign (past negative / future positive)
-      days: r.daysFromToday,
-    })),
-    [rows]
+  const [ecDate, setEcDate] = useState(null);
+  const [ecLoading, setEcLoading] = useState(false);
+  const [ecError, setEcError] = useState('');
+
+  const fixVersion = useMemo(() => resolvePrimaryFixVersion(jiraData), [jiraData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!fixVersion) {
+      setEcDate(null);
+      setEcError('');
+      return undefined;
+    }
+
+    setEcLoading(true);
+    setEcError('');
+    authenticatedGet('/api/config/release-versions')
+      .then((resp) => {
+        if (cancelled) return;
+        const cfg = resp.data?.releaseGateDates?.[fixVersion];
+        const ec = cfg?.ecDate || null;
+        setEcDate(ec);
+        if (!ec) setEcError(`No EC date in release config for ${fixVersion}`);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setEcDate(null);
+        setEcError(err.message || 'Failed to load EC date');
+      })
+      .finally(() => {
+        if (!cancelled) setEcLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [fixVersion]);
+
+  const { ecLabel, segments, missing } = useMemo(
+    () => buildSequentialGateSegments(jiraData, ecDate),
+    [jiraData, ecDate]
   );
 
   if (!jiraData) return null;
 
-  const unset = rows.filter((r) => !r.set);
-
   return (
-    <div className="form-group" style={{ marginTop: '0.5rem' }}>
-      <label>Gates vs dates</label>
-      {chartData.length === 0 ? (
-        <div
-          style={{
-            padding: '12px',
-            border: '1px solid #dee2e6',
-            borderRadius: '4px',
-            background: '#fff3cd',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-          }}
-        >
-          No gate dates set on this ticket.
+    <div className="form-group" style={{ marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+      <label style={{ marginBottom: '0.25rem' }}>
+        Gates
+        {ecLabel ? <span style={{ fontWeight: 400, color: '#666' }}> · EC {ecLabel}{fixVersion ? ` · ${fixVersion}` : ''}</span> : null}
+      </label>
+      {ecLoading && (
+        <div style={{ fontSize: '0.75rem', color: '#666' }}>Loading EC…</div>
+      )}
+      {!ecLoading && !ecDate && (
+        <div style={{ padding: '6px 8px', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff3cd', fontSize: '0.75rem', fontWeight: 600 }}>
+          {ecError || 'No EC in release config — set EC to show the timeline.'}
         </div>
-      ) : (
-        <div
-          style={{
-            border: '1px solid #dee2e6',
-            borderRadius: '4px',
-            background: '#fff',
-            padding: '8px 8px 4px',
-          }}
-        >
-          <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 40 + 40)}>
+      )}
+      {!ecLoading && ecDate && segments.length === 0 && (
+        <div style={{ padding: '6px 8px', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff3cd', fontSize: '0.75rem', fontWeight: 600 }}>
+          No gate dates after EC.
+        </div>
+      )}
+      {!ecLoading && ecDate && segments.length > 0 && (
+        <div style={{ border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff', padding: '4px 4px 0' }}>
+          <ResponsiveContainer width="100%" height={Math.max(140, segments.length * 28 + 28)}>
             <BarChart
-              data={chartData}
+              data={segments}
               layout="vertical"
-              margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
+              margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" />
-              <XAxis
-                type="number"
-                tick={{ fontSize: 11 }}
-                label={{ value: 'Days from today', position: 'insideBottom', offset: -2, fontSize: 11 }}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={110}
-                tick={{ fontSize: 11 }}
-              />
+              <XAxis type="number" tick={{ fontSize: 10 }} />
+              <YAxis type="category" dataKey="label" width={118} tick={{ fontSize: 10 }} />
               <Tooltip
-                formatter={(value, _name, props) => {
+                formatter={(value, name, props) => {
+                  if (name === 'offset') return [null, null];
                   const row = props?.payload;
-                  const dayLabel = value === 0
-                    ? 'today'
-                    : value > 0
-                      ? `${value} days ahead`
-                      : `${Math.abs(value)} days ago`;
-                  return [dayLabel, row?.dateLabel || ''];
+                  if (!row) return [value, 'days'];
+                  const span = row.inverted
+                    ? `${Math.abs(row.daySpan)}d (inverted)`
+                    : `${row.daySpan}d`;
+                  return [`${row.fromDateLabel} → ${row.toDateLabel} (${span})`, 'Duration'];
                 }}
-                labelFormatter={(label) => label}
               />
-              <ReferenceLine x={0} stroke="#495057" strokeWidth={1} />
-              <Bar dataKey="days" barSize={18} radius={[0, 3, 3, 0]}>
-                {chartData.map((entry) => (
-                  <Cell
-                    key={entry.key}
-                    fill={entry.days < 0 ? '#adb5bd' : entry.color}
-                  />
+              <Bar dataKey="offset" stackId="seq" barSize={12} fill="transparent" isAnimationActive={false} />
+              <Bar dataKey="duration" stackId="seq" barSize={12} radius={[0, 2, 2, 0]}>
+                {segments.map((entry) => (
+                  <Cell key={entry.key} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <div style={{ fontSize: '0.75rem', color: '#666', padding: '0 8px 8px' }}>
-            Negative = past · Positive = upcoming · Grey bars are past dates
-            {unset.length > 0 && (
-              <span> · Not set: {unset.map((u) => u.label).join(', ')}</span>
-            )}
-          </div>
+          {missing.length > 0 && (
+            <div style={{ fontSize: '0.7rem', color: '#888', padding: '0 6px 4px' }}>
+              Skipped: {missing.join(', ')}
+            </div>
+          )}
         </div>
       )}
     </div>

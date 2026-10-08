@@ -77,7 +77,7 @@ function needsSummary(item) {
    Hook: useMultiReleaseGateData
 ───────────────────────────────────────────────────────────── */
 
-function useMultiReleaseGateData(releases) {
+export function useMultiReleaseGateData(releases) {
   const [gateDataMap, setGateDataMap] = useState({});
   const [loadingGates, setLoadingGates] = useState(false);
   const [gateError, setGateError] = useState(null);
@@ -141,17 +141,20 @@ function useMultiReleaseGateData(releases) {
    Hook: useReleaseDatesConfig — loads release gate dates config
 ───────────────────────────────────────────────────────────── */
 
-function useReleaseDatesConfig() {
+export function useReleaseDatesConfig() {
   const [releases, setReleases] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch('/api/config/release-dates')
-      .then(res => res.ok ? res.json() : Promise.reject(res.status))
-      .then(data => { if (!cancelled) setReleases(data.releases || {}); })
-      .catch(() => { /* non-fatal — Gantt just won't render */ })
+    // Prefer authenticated helper so cookies / auth headers match the rest of the app
+    // (bare fetch can miss the session and return an empty body → no history enrich keys).
+    authenticatedGet('/api/config/release-dates')
+      .then((resp) => {
+        if (!cancelled) setReleases(resp.data?.releases || {});
+      })
+      .catch(() => { /* non-fatal — Gantt / history enrich just won't run */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -435,11 +438,25 @@ function BulkReviewPanel({ pendingReviews, onPushOne, onDiscardOne, onPushAll, o
 
 const SOS_COLUMNS = [
   { key: 'identity',   label: 'Feature / Initiative', width: '200px' },
-  { key: 'state',      label: 'State',                width: '90px'  },
+  { key: 'state',      label: 'State',                width: '160px' },
   { key: 'dates',      label: 'Dates',                width: '130px' },
   { key: 'aiSummary',  label: 'AI Summary',           width: '300px' },
   { key: 'breakdown',  label: 'Breakdown',            width: '180px' },
 ];
+
+/** Plain text for Risk Assessment / Path to Green (string or { value }). */
+function riskTextField(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    return !t || t === 'Not Set' || t === 'N/A' ? null : t;
+  }
+  if (typeof raw === 'object') {
+    const v = raw.value ?? raw.display ?? raw.name ?? null;
+    return riskTextField(v);
+  }
+  return null;
+}
 
 const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 
@@ -505,6 +522,9 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
   const breakdown = breakdownDataMap[item.key] || null;
   const ragColor = getRagColor(item.customfield_23560);
   const ragLabel = getRagLabel(item.customfield_23560);
+  const riskAssessment = riskTextField(item.customfield_47780);
+  const pathToGreen = riskTextField(item.customfield_55664);
+  const riskTrail = formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory);
   const testLead = personName(item.customfield_11065);
   const qaContact = personName(item.customfield_10860);
   const pmOwner = personName(item.customfield_11260);
@@ -558,9 +578,9 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
         )}
       </td>
 
-      {/* ── State: RAG dot + status stacked ── */}
-      <td style={{ padding: '8px 10px', width: '90px', verticalAlign: 'top' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+      {/* ── State: RAG + history trail + Assessment / Path to Green + status ── */}
+      <td style={{ padding: '8px 10px', width: '160px', verticalAlign: 'top' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
           <span
             style={{
               display: 'inline-block', width: '10px', height: '10px',
@@ -572,9 +592,56 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
             {ragLabel === 'not set' ? <span style={{ color: '#bbb' }}>—</span> : ragLabel}
           </span>
         </div>
-        {ragLabel !== 'not set' && (
-          <div style={{ fontSize: '10px', color: '#888' }}>
-            {formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory)}
+        {riskTrail && (
+          <div style={{ marginBottom: '4px' }} title="Risk Indicator history (newest → oldest)">
+            {riskTrail}
+          </div>
+        )}
+        {riskAssessment && (
+          <div style={{ marginTop: '4px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.4px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              Assessment
+            </span>
+            <div
+              title={riskAssessment}
+              style={{
+                fontSize: '10px', color: '#333', lineHeight: 1.35,
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                maxHeight: '3.6em', overflow: 'hidden',
+              }}
+            >
+              {riskAssessment}
+            </div>
+          </div>
+        )}
+        {pathToGreen && (
+          <div style={{ marginTop: '4px' }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#aaa',
+              textTransform: 'uppercase', letterSpacing: '0.4px',
+              display: 'block', marginBottom: '1px',
+            }}>
+              Path to Green
+            </span>
+            <div
+              title={pathToGreen}
+              style={{
+                fontSize: '10px', color: '#333', lineHeight: 1.35,
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                maxHeight: '3.6em', overflow: 'hidden',
+              }}
+            >
+              {pathToGreen}
+            </div>
+          </div>
+        )}
+        {!riskAssessment && !pathToGreen && (
+          <div style={{ fontSize: '9px', color: '#ccc', marginTop: '2px' }}>
+            No assessment / path
           </div>
         )}
         <div style={{ fontSize: '10px', color: '#555', marginTop: '4px', fontStyle: 'italic' }}>
@@ -636,7 +703,7 @@ function SosItemsTable({ items, version, ganttConfig, breakdownDataMap, loadingB
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '820px' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '900px' }}>
         <thead>
           <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
             {SOS_COLUMNS.map((col) => (
@@ -701,7 +768,7 @@ function CollapsibleSection({ title, count, defaultOpen = true, children, accent
    Sub-component: per-release section
 ───────────────────────────────────────────────────────────── */
 
-function ReleaseSection({
+export function ReleaseSection({
   version,
   items,
   breakdownDataMap,
@@ -772,6 +839,15 @@ function ReleaseSection({
   const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : ragCounts.Green > 0 ? 'Green' : 'NotSet';
   const ragColor = RAG_COLORS[overallRag] || RAG_COLORS.NotSet;
 
+  // Status-update staleness (customfield_45660): missing or ≥ STALE_DAYS old.
+  const staleItems = useMemo(() => {
+    return (items || []).filter((item) => {
+      const age = daysOld(item?.customfield_45660);
+      return age === null || age >= STALE_DAYS;
+    });
+  }, [items]);
+  const staleCount = staleItems.length;
+
   const TIER_TITLES = {
     feat: 'FEAT Work',
     standalone: 'Standalone Epics',
@@ -786,7 +862,7 @@ function ReleaseSection({
       {/* Release header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <h3 style={{ margin: 0, fontSize: '15px', color: '#1a1a2e', fontWeight: 700 }}>{version}</h3>
             {items.length > 0 && (
               <span style={{
@@ -794,6 +870,34 @@ function ReleaseSection({
                 padding: '1px 8px', fontSize: '11px', fontWeight: 700,
               }}>
                 {overallRag === 'NotSet' ? 'not set' : overallRag}
+              </span>
+            )}
+            {staleCount > 0 && (
+              <span
+                title={
+                  `${staleCount} Feature/Initiative${staleCount === 1 ? '' : 's'} with status update ` +
+                  `missing or ≥${STALE_DAYS} days old — dig into these projects:\n` +
+                  staleItems.slice(0, 12).map((i) => i.key).join(', ') +
+                  (staleItems.length > 12 ? ` (+${staleItems.length - 12} more)` : '')
+                }
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  background: '#fff3e0',
+                  color: '#bf360c',
+                  border: '2px solid #e65100',
+                  borderRadius: 4,
+                  padding: '2px 10px',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.02em',
+                  boxShadow: '0 0 0 2px rgba(230, 81, 0, 0.15)',
+                  cursor: 'help',
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 13 }}>⚠</span>
+                {staleCount} stale update{staleCount === 1 ? '' : 's'}
               </span>
             )}
           </div>
@@ -1041,13 +1145,15 @@ function SosSummaryPage() {
   // React StrictMode's double-invoke and the cache→live byVersion update don't
   // fire duplicate walks. Both run even in degraded mode — the server serves
   // history from its snapshot rather than re-tripping JIRA.
+  // lastSyncIso is included so Refresh (which clears breakdownDataMap) re-arms
+  // the walks even when the key-set signature is unchanged.
   const lastEnrichRef = useRef('');
   const lastBreakdownRef = useRef('');
   useEffect(() => {
     if (!selectedTeamId) return;
 
     if (enrichKeys.length > 0) {
-      const sig = `${selectedTeamId}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
+      const sig = `${selectedTeamId}|${lastSyncIso || ''}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
       if (lastEnrichRef.current !== sig) {
         lastEnrichRef.current = sig;
         fetchHistory(selectedTeamId, enrichKeys);
@@ -1055,13 +1161,13 @@ function SosSummaryPage() {
     }
 
     if (breakdownKeys.length > 0) {
-      const sig = `${selectedTeamId}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
+      const sig = `${selectedTeamId}|${lastSyncIso || ''}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
       if (lastBreakdownRef.current !== sig) {
         lastBreakdownRef.current = sig;
         fetchBreakdowns(breakdownKeys);
       }
     }
-  }, [selectedTeamId, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
+  }, [selectedTeamId, lastSyncIso, enrichKeys, breakdownKeys, fetchHistory, fetchBreakdowns]);
 
   // ── Filters ────────────────────────────────────────────────────────────────
 

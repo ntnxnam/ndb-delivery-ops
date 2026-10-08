@@ -217,6 +217,9 @@ function buildFeatureRecord(item) {
     summary: '',
     status: 'Unknown',
     jiraRisk: 'not set',
+    riskAssessment: null,
+    pathToGreen: null,
+    pathToGreenMissing: false,
     phase: 'Unknown',
     criticalRisks: [],
     assignee: 'Unassigned',
@@ -224,6 +227,18 @@ function buildFeatureRecord(item) {
     statusUpdateAgeDays: null,
     dates: { codeComplete: null, commitGate: null, promotionGate: null },
     buckets: ['watching'],
+  };
+}
+
+function evaluateTeamRiskContext() {
+  return {
+    indicator: 'not_set',
+    assessment: '',
+    pathToGreen: '',
+    assessmentMissing: true,
+    pathToGreenMissing: true,
+    gaps: [],
+    verdictFloor: null,
   };
 }
 
@@ -346,6 +361,7 @@ module.exports = {
   getSprintMetrics,
   countSelfReportedRisk,
   computeReleaseHealthVerdict,
+  evaluateTeamRiskContext,
   computeRecentSprintVelocity: jest.fn().mockResolvedValue([]),
   computeRecentSprintVelocityFromTickets: jest.fn().mockReturnValue([]),
   computeLandingForecast: jest.fn().mockResolvedValue({}),

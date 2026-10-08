@@ -9,7 +9,7 @@
 
 ## Purpose
 
-This is a leadership view of sprint delivery across every scrum team on a product board, for the last ~2 years (35 three-week cadence slots, configurable via `windowSlots`). Per-sprint numbers come from JIRA's own Sprint Report, so they match board → Reports → Sprint Report exactly. It answers three questions: "are we doing what we said?", "which org, manager or team is improving or slipping?" and "what should leadership act on?"
+This is a leadership view of sprint delivery across every scrum team on a product board, for about the last 18 months (`windowSlots` three-week cadence slots, default 26). The window always ends on the in-flight sprint (today and before) and rolls when the next sprint starts. Per-sprint numbers come from JIRA's own Sprint Report, so they match board → Reports → Sprint Report exactly. It answers three questions: "are we doing what we said?", "which org, manager or team is improving or slipping?" and "what should leadership act on?"
 
 The page embeds a self-contained interactive HTML report. The same file can be downloaded and forwarded by email as is.
 
@@ -95,8 +95,8 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 | Assignee with no `Team-*-DirectReports` group | Grouped under "Unmapped (no manager group)"; the ownership-gap lowlight fires at ≥5%. |
 | Matrix org (manager's reports split across leaders) | Manager placed under the majority leader. `managerLeaderOverrides` in config can force placement. |
 | Latest slot still active | Appendix notes the slot is still closing (teams that have not clicked Complete Sprint yet). |
-| Mid-sprint regenerate | Window still ends at the immediately past cadence slot — the in-flight sprint is never included. |
-| Next sprint starts (~3 weeks later) | Past slot rolls forward; regenerate re-pulls that sprint’s Sprint Report from JIRA. |
+| Mid-sprint regenerate | Window end stays on the sprint that started on the cadence floor (e.g. 7 Oct) until the next start (28 Oct). |
+| Next sprint starts (~3 weeks later) | End rolls forward; regenerate looks back ~18 months from that new end and re-pulls Sprint Reports. |
 | Filter yields no rows | Tables show "No items for this filter." |
 
 ---

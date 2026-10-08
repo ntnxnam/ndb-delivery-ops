@@ -47,6 +47,11 @@ export function getUserFacingMessage(err, options = {}) {
     return 'Request timed out. Please try again.';
   }
   if (status >= 500) {
+    // Server often wraps axios timeouts as 502 with "timeout of Nms exceeded".
+    const serverMsg = err?.response?.data?.error || err?.response?.data?.message || message;
+    if (/timeout|timed out|ECONNABORTED/i.test(String(serverMsg))) {
+      return 'AI generation timed out. Please try again.';
+    }
     return 'Server error. Please try again in a moment.';
   }
 

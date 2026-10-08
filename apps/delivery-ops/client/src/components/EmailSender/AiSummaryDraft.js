@@ -5,18 +5,17 @@ import { jiraDataToAiItem } from './gateDateUtils';
 const DATE_PREFIX_REGEX = /^\[\d{4}-\d{2}-\d{2}\]\s*/;
 
 /**
- * Ephemeral AI draft for Email Sender — same NAI gateway as Project Status.
- * Does not push to JIRA or include in the outbound email.
+ * AI risk summary for Email Sender — same NAI gateway as Project Status.
+ * Parent owns draft state so it can be included in the outbound email.
  */
-function AiSummaryDraft({ jiraData, issueBreakdown, release }) {
-  const [draft, setDraft] = useState('');
+function AiSummaryDraft({ jiraData, issueBreakdown, release, draft, onDraftChange }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setDraft('');
+    onDraftChange?.('');
     setError('');
-  }, [jiraData?.key]);
+  }, [jiraData?.key]); // eslint-disable-line react-hooks/exhaustive-deps -- reset only on ticket change
 
   const handleGenerate = useCallback(async () => {
     const item = jiraDataToAiItem(jiraData);
@@ -41,35 +40,31 @@ function AiSummaryDraft({ jiraData, issueBreakdown, release }) {
         setError('AI returned an empty summary. Please regenerate.');
         return;
       }
-      setDraft(summary);
+      onDraftChange?.(summary);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Generation failed');
     } finally {
       setGenerating(false);
     }
-  }, [jiraData, issueBreakdown, release]);
+  }, [jiraData, issueBreakdown, release, onDraftChange]);
 
   if (!jiraData) return null;
 
   return (
     <div className="form-group">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
-        <label htmlFor="ai-summary-draft" style={{ marginBottom: 0 }}>
-          AI summary draft
-        </label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.35rem' }}>
         <button
           type="button"
           onClick={handleGenerate}
           disabled={generating}
           style={{
-            fontSize: '0.8125rem',
-            padding: '4px 12px',
+            fontSize: '0.75rem',
+            padding: '3px 10px',
             cursor: generating ? 'wait' : 'pointer',
             border: '1px solid #1a1a1a',
             borderRadius: '4px',
             background: generating ? '#e9ecef' : '#fff',
             color: '#1a1a1a',
-            whiteSpace: 'nowrap',
           }}
         >
           {generating ? 'Generating…' : 'Generate Fresh AI Summary'}
@@ -77,21 +72,18 @@ function AiSummaryDraft({ jiraData, issueBreakdown, release }) {
       </div>
       <textarea
         id="ai-summary-draft"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        rows={5}
-        placeholder="Click Generate Fresh AI Summary to draft from JIRA signals (not saved, not emailed)…"
+        value={draft || ''}
+        onChange={(e) => onDraftChange?.(e.target.value)}
+        rows={3}
+        placeholder="Generate AI risk summary — included in the email when you send…"
         className="text-input"
-        style={{ fontFamily: 'inherit', lineHeight: 1.5 }}
+        style={{ fontFamily: 'inherit', lineHeight: 1.4, fontSize: '0.8125rem' }}
       />
       {error && (
-        <div style={{ marginTop: '0.4rem', fontSize: '0.8125rem', color: '#c53030' }}>
+        <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: '#c53030' }}>
           {error}
         </div>
       )}
-      <small className="help-text">
-        Scratch pad only — copy useful lines into Highlights and Lowlights. Nothing is written to JIRA.
-      </small>
     </div>
   );
 }

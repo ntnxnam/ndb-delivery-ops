@@ -17,6 +17,11 @@ export interface ReleaseHealthInput {
   darkCount: number;
   committedCount: number;
   complianceAtRiskCount: number;
+  /**
+   * Features with Risk Indicator Yellow/Red but Path to Green empty.
+   * Counts toward YELLOW (rule 5) — team attested risk without a recovery path.
+   */
+  pathToGreenGapCount?: number;
 }
 
 export interface ReleaseHealthResult {
@@ -25,17 +30,68 @@ export interface ReleaseHealthResult {
   rule: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
+export interface TeamRiskContextInput {
+  indicator: unknown;
+  assessment: unknown;
+  pathToGreen: unknown;
+}
+
+export interface TeamRiskContext {
+  indicator: RiskBucket;
+  assessment: string;
+  pathToGreen: string;
+  assessmentMissing: boolean;
+  pathToGreenMissing: boolean;
+  /** Imperative phrases for criticalRisks / hygiene (feature-level AI). */
+  gaps: string[];
+  /**
+   * Soft floor for feature-level AI TLDR from team attestation + narrative gaps.
+   * null = no floor from this context alone.
+   */
+  verdictFloor: ReleaseHealthVerdict | null;
+}
+
 const MUSTFIX_RED_DAYS_TO_PG = 14;
+const MAX_NARRATIVE_CHARS = 600;
+
+function extractAdfPlain(raw: unknown): string {
+  if (!raw || typeof raw !== 'object') return '';
+  const parts: string[] = [];
+  function walk(node: Record<string, unknown>): void {
+    if (node.type === 'text' && typeof node.text === 'string') {
+      parts.push(node.text);
+    }
+    const children = node.content as Record<string, unknown>[] | undefined;
+    if (Array.isArray(children)) children.forEach(walk);
+  }
+  walk(raw as Record<string, unknown>);
+  return parts.join(' ').trim();
+}
 
 /** Pull a display string out of a JIRA select / string / object field. */
 export function extractRiskText(raw: unknown): string {
   if (raw == null) return '';
   if (typeof raw === 'string') return raw;
   if (typeof raw === 'object') {
-    const obj = raw as { value?: string; name?: string };
+    const obj = raw as { value?: string; name?: string; type?: string };
+    if (obj.type === 'doc') return extractAdfPlain(raw);
     return String(obj.value ?? obj.name ?? '');
   }
   return String(raw);
+}
+
+/** Plain text for Risk Assessment / Path to Green (string, select, or ADF). */
+export function extractNarrativeRiskText(raw: unknown): string {
+  const text = extractRiskText(raw).trim();
+  if (!text) return '';
+  return text.length > MAX_NARRATIVE_CHARS
+    ? `${text.slice(0, MAX_NARRATIVE_CHARS)}…`
+    : text;
+}
+
+function isBlankNarrative(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return !t || t === 'not set' || t === 'n/a' || t === 'na' || t === 'none';
 }
 
 /**
@@ -63,6 +119,47 @@ export function classifyRiskIndicator(raw: unknown): RiskBucket {
   return 'not_set';
 }
 
+/**
+ * Feature-level team risk context: Indicator + Risk Assessment + Path to Green.
+ * Used by deriveSignals / exec summary and to count release-level path gaps.
+ */
+export function evaluateTeamRiskContext(input: TeamRiskContextInput): TeamRiskContext {
+  const indicator = classifyRiskIndicator(input.indicator);
+  const assessment = extractNarrativeRiskText(input.assessment);
+  const pathToGreen = extractNarrativeRiskText(input.pathToGreen);
+  const assessmentMissing = isBlankNarrative(assessment);
+  const pathToGreenMissing = isBlankNarrative(pathToGreen);
+  const gaps: string[] = [];
+
+  if (indicator === 'yellow' || indicator === 'red') {
+    const color = indicator === 'red' ? 'Red' : 'Yellow';
+    if (pathToGreenMissing) {
+      gaps.push(
+        `Path to Green not set while Risk Indicator is ${color} — team attested risk without a recovery path.`
+      );
+    }
+    if (assessmentMissing) {
+      gaps.push(
+        `Risk Assessment not set while Risk Indicator is ${color} — no written rationale for the color.`
+      );
+    }
+  }
+
+  let verdictFloor: ReleaseHealthVerdict | null = null;
+  if (indicator === 'red') verdictFloor = 'RED';
+  else if (indicator === 'yellow' || gaps.length > 0) verdictFloor = 'YELLOW';
+
+  return {
+    indicator,
+    assessment: assessmentMissing ? '' : assessment,
+    pathToGreen: pathToGreenMissing ? '' : pathToGreen,
+    assessmentMissing,
+    pathToGreenMissing,
+    gaps,
+    verdictFloor,
+  };
+}
+
 export function countSelfReportedRisk(
   values: unknown[]
 ): Record<'red' | 'yellow' | 'green' | 'notSet', number> {
@@ -83,6 +180,7 @@ export function computeReleaseHealthVerdict(input: ReleaseHealthInput): ReleaseH
   const darkPct =
     input.committedCount > 0 ? (input.darkCount / input.committedCount) * 100 : 0;
   const daysToPg = input.daysToPg;
+  const pathGaps = input.pathToGreenGapCount ?? 0;
 
   if (input.openP0Blockers > 0) {
     return {
@@ -115,13 +213,17 @@ export function computeReleaseHealthVerdict(input: ReleaseHealthInput): ReleaseH
   if (
     input.gateLaggingCount >= 1 ||
     darkPct > 20 ||
-    input.complianceAtRiskCount > 0
+    input.complianceAtRiskCount > 0 ||
+    pathGaps > 0
   ) {
     const parts = [];
     if (input.gateLaggingCount >= 1) parts.push(`${input.gateLaggingCount} gate-lagging`);
     if (darkPct > 20) parts.push(`dark ${darkPct.toFixed(0)}%`);
     if (input.complianceAtRiskCount > 0) {
       parts.push(`${input.complianceAtRiskCount} compliance-at-risk`);
+    }
+    if (pathGaps > 0) {
+      parts.push(`${pathGaps} Yellow/Red without Path to Green`);
     }
     return {
       verdict: 'YELLOW',
@@ -132,7 +234,8 @@ export function computeReleaseHealthVerdict(input: ReleaseHealthInput): ReleaseH
   return {
     verdict: 'GREEN',
     rule: 6,
-    reason: 'No open P0s, must-fix, gate-lag, dark>20%, or compliance-at-risk',
+    reason:
+      'No open P0s, must-fix, gate-lag, dark>20%, compliance-at-risk, or Path-to-Green gaps',
   };
 }
 

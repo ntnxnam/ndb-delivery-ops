@@ -56,6 +56,7 @@ export function useSosItems() {
 
     setLoading(true);
     setError(null);
+    setBreakdownDataMap({});
 
     try {
       const resp = await authenticatedPost(
@@ -75,10 +76,8 @@ export function useSosItems() {
       setDegraded(Boolean(payload.degraded));
       setLastSyncIso(payload.lastSyncIso || null);
 
-      // NOTE: task-breakdown fetches are no longer fired here for every key.
-      // The page scopes them to the tracked upcoming releases (enrichKeys) and
-      // calls fetchBreakdowns(enrichKeys) itself — so master / Era Future /
-      // untracked versions are never walked.
+      // NOTE: task-breakdown fetches are driven by the page (breakdownKeys), not
+      // here — so master / Era Future / untracked versions are never walked.
     } catch (err) {
       setError(getUserFacingMessage(err, {
         context: 'sos-items',

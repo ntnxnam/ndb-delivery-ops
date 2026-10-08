@@ -34,7 +34,9 @@ export type {
 } from './connectors/aiConnector.js';
 export {
   extractRiskText,
+  extractNarrativeRiskText,
   classifyRiskIndicator,
+  evaluateTeamRiskContext,
   countSelfReportedRisk,
   computeReleaseHealthVerdict,
   bucketCounts,
@@ -44,6 +46,8 @@ export type {
   ReleaseHealthInput,
   ReleaseHealthResult,
   ReleaseHealthVerdict,
+  TeamRiskContext,
+  TeamRiskContextInput,
 } from './services/riskIndicator.js';
 export { ProductService, getProductService } from './services/productService.js';
 export { StatusService } from './services/statusService.js';
@@ -335,13 +339,16 @@ export {
   resolveAgentPackRoot,
   listSkillsByType,
   listSkillsByToolClass,
+  extractSystemPromptBody,
 } from './agentPack/index.js';
 export type {
   AgentPack,
   AgentPackManifest,
   CapabilityType,
   IdentityRole,
+  LoadedContextDoc,
   LoadedIdentity,
+  LoadedPrompt,
   LoadedRule,
   LoadedSkill,
   LoadedWorkflow,

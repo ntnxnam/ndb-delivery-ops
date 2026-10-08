@@ -68,8 +68,10 @@ Apply in order — first match wins:
 | 2 | `OPEN_MUSTFIX_TICKETS > 0` AND `DAYS_TO_PG ≤ 14` | **RED** |
 | 3 | `gate-lagging > 2` features | **RED** |
 | 4 | `OPEN_MUSTFIX_TICKETS > 0` | **YELLOW** |
-| 5 | gate-lagging 1–2 OR dark > 20% of committed count OR compliance-at-risk > 0 | **YELLOW** |
+| 5 | gate-lagging 1–2 OR dark > 20% of committed count OR compliance-at-risk > 0 OR Yellow/Red features missing Path to Green | **YELLOW** |
 | 6 | All of the above are zero/clear | **GREEN** |
+
+Feature-level team narrative (Indicator + Risk Assessment + Path to Green) is evaluated by `evaluateTeamRiskContext` and exposed via `deriveSignals` for per-feature AI summaries.
 
 ### Anti-hallucination (critical)
 

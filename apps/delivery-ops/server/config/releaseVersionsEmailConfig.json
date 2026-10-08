@@ -367,16 +367,48 @@
         "style": "dotted"
       },
       "ga1": {
-        "label": "GA (old)",
+        "label": "GA 1",
         "date": "2027-02-09",
         "color": "#28a745",
         "style": "dotted"
       },
       "ga2": {
-        "label": "GA",
+        "label": "GA 2",
+        "date": "2027-03-01",
+        "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga3": {
+        "label": "GA 3",
         "date": "2027-03-09",
         "color": "#28a745",
-        "style": "solid"
+        "style": "dotted"
+      },
+      "ga4": {
+        "label": "GA 4",
+        "date": "2027-03-15",
+        "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga5": {
+        "label": "GA 5",
+        "date": "2027-04-01",
+        "color": "#28a745",
+        "style": "dotted"
+      },
+      "ga6": {
+        "label": "GA 6",
+        "date": "2027-04-15",
+        "color": "#28a745",
+        "style": "dotted",
+        "reason": "KRonos.1 delayed"
+      },
+      "ga7": {
+        "label": "GA 7",
+        "date": "2027-05-15",
+        "color": "#28a745",
+        "style": "solid",
+        "reason": "Kronos.1 moved futher"
       }
     },
     "NDB-3.1": {

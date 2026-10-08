@@ -100,7 +100,7 @@ async function buildReleaseKpiCombinedJql(releaseVersion, kpiBaseQuery, cleanTok
  * When no release base filter is configured, the KPI saved filter is
  * resolved to underlying JQL and the same clauses are appended.
  */
-async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket, cleanToken, httpsAgent, teamId = null) {
+async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket, cleanToken, httpsAgent, teamId = null, jqlExtra = null) {
   const trimmedKpi = (kpiBaseQuery || '').trim();
   if (!trimmedKpi) return null;
   const releaseBaseFilter = getReleaseBaseFilter(releaseVersion, teamId);
@@ -115,6 +115,11 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
     const resolved = await resolveKpiJql(kpiBaseQuery, cleanToken, httpsAgent);
     if (!resolved) return null;
     base = `(${resolved})`;
+  }
+
+  const extra = (jqlExtra || '').trim();
+  if (extra) {
+    base = `(${base}) AND (${extra})`;
   }
 
   // Four resolution buckets — status is the gating condition:
@@ -134,11 +139,12 @@ async function buildReleaseKpiResolutionJql(releaseVersion, kpiBaseQuery, bucket
  * release, plus the JQL used for each (for click-through). Count-only
  * queries via jira.searchCount (maxResults=0).
  */
-async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId }) {
+async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId, jqlExtra = null }) {
   const { kpis, normalizedTeamId } = getTeamKpis(teamId);
   if (!kpis || kpis.length === 0) return {};
   const jira = await getJira(token);
   const results = {};
+  const extra = (jqlExtra || '').trim() || null;
 
   for (const kpi of kpis) {
     const baseQuery = (kpi.baseQuery || '').trim();
@@ -148,7 +154,7 @@ async function getReleaseKpiResolutionBreakdown({ token, releaseVersion, teamId 
     }
     try {
       const buildBucket = async (bucket) => {
-        let jql = await buildReleaseKpiResolutionJql(releaseVersion, baseQuery, bucket, token, null, normalizedTeamId);
+        let jql = await buildReleaseKpiResolutionJql(releaseVersion, baseQuery, bucket, token, null, normalizedTeamId, extra);
         if (!jql) return null;
         if (kpi.excludeDeferred) jql = appendDeferredExclusion(jql, releaseVersion);
         return jql;

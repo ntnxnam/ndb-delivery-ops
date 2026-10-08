@@ -54,6 +54,7 @@ When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.
 |---|---|
 | `server/services/naiService.js` | `EXEC_SUMMARY_SYSTEM_PROMPT` — per-feature summaries |
 | `server/services/naiService.js` | `RELEASE_SUMMARY_SYSTEM_PROMPT` — release briefings |
+| `server/services/naiService.js` | `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` — Sprint Performance org-wide asks |
 | Any future AI summary service | Any prompt that produces bullet lists with ticket keys |
 
 ## RAG Verdict — Release-Level Rules
@@ -66,11 +67,12 @@ When generating a release-level health verdict, apply in this order (first match
 | `OPEN_MUSTFIX_TICKETS > 0` AND `DAYS_TO_PG ≤ 14` | **RED** |
 | gate-lagging features > 2 | **RED** |
 | `OPEN_MUSTFIX_TICKETS > 0` | **YELLOW** |
-| gate-lagging 1–2 OR dark > 20% OR compliance-at-risk > 0 | **YELLOW** |
+| gate-lagging 1–2 OR dark > 20% OR compliance-at-risk > 0 OR Yellow/Red features missing Path to Green | **YELLOW** |
 | All of the above are zero | **GREEN** |
 
 `GREEN` is only valid when ALL conditions are clean. An open must-fix ticket
-label count > 0 is never GREEN.
+label count > 0 is never GREEN. Feature-level AI also consumes Risk Assessment
+and Path to Green via `evaluateTeamRiskContext` / `deriveSignals` (not Indicator alone).
 
 ## UI — No Triple RAG Colouring
 

@@ -1,46 +1,55 @@
 /**
- * useReleaseKpiBreakdown — lazily fetch KPI resolution breakdown for a single
- * release version.
+ * useReleaseKpiBreakdown — lazily fetch KPI resolution breakdown for a release.
  *
- * Calls POST /api/jira/release-kpi-breakdown-batch  { releaseVersion, teamId }
- * Returns { kpiId: { name, total, done, open, links } | { error } }
+ * Calls POST /api/jira/release-kpi-breakdown-batch
+ *   { releaseVersion, teamId, jqlExtra? }
  *
- * Fetch is triggered explicitly via `load()` — the caller (ReleaseSection) can
- * kick it off on mount or on user demand.
+ * Cache key is `${releaseVersion}` or `${releaseVersion}::${scopeKey}` when
+ * a scopeKey / jqlExtra is provided (leader-scoped SoS).
  */
 
 import { useState, useCallback } from 'react';
 import { authenticatedPost } from '../utils/api';
+
+function cacheKey(releaseVersion, scopeKey) {
+  if (scopeKey) return `${releaseVersion}::${scopeKey}`;
+  return releaseVersion;
+}
 
 export function useReleaseKpiBreakdown() {
   const [dataByRelease, setDataByRelease] = useState({});
   const [loadingRelease, setLoadingRelease] = useState({});
   const [errorByRelease, setErrorByRelease] = useState({});
 
-  const load = useCallback(async (releaseVersion, teamId) => {
+  const load = useCallback(async (releaseVersion, teamId, opts = {}) => {
     if (!releaseVersion || !teamId) return;
+    const { jqlExtra = null, scopeKey = null } = opts;
+    const key = cacheKey(releaseVersion, scopeKey);
+
     // Skip if already loaded or in-flight
-    if (dataByRelease[releaseVersion] || loadingRelease[releaseVersion]) return;
+    if (dataByRelease[key] || loadingRelease[key]) return;
 
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
-    setLoadingRelease((prev) => ({ ...prev, [releaseVersion]: true }));
-    setErrorByRelease((prev) => ({ ...prev, [releaseVersion]: null }));
+    setLoadingRelease((prev) => ({ ...prev, [key]: true }));
+    setErrorByRelease((prev) => ({ ...prev, [key]: null }));
 
     try {
+      const body = { releaseVersion, teamId };
+      if (jqlExtra) body.jqlExtra = jqlExtra;
       const resp = await authenticatedPost(
         '/api/jira/release-kpi-breakdown-batch',
-        { releaseVersion, teamId },
+        body,
         { jiraToken, username }
       );
       const results = resp.data?.results || {};
-      setDataByRelease((prev) => ({ ...prev, [releaseVersion]: results }));
+      setDataByRelease((prev) => ({ ...prev, [key]: results }));
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'KPI load failed';
-      setErrorByRelease((prev) => ({ ...prev, [releaseVersion]: msg }));
+      setErrorByRelease((prev) => ({ ...prev, [key]: msg }));
     } finally {
-      setLoadingRelease((prev) => ({ ...prev, [releaseVersion]: false }));
+      setLoadingRelease((prev) => ({ ...prev, [key]: false }));
     }
   }, [dataByRelease, loadingRelease]);
 

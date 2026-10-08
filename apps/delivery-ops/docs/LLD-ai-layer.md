@@ -179,7 +179,8 @@ function computeRAGVerdict({
   daysToNextGate,
   gateLaggingCount,
   darkFeaturePercent,
-  complianceAtRiskCount
+  complianceAtRiskCount,
+  pathToGreenGapCount, // Yellow/Red indicator with empty Path to Green
 }) {
   // Rules applied in order; first match wins:
   if (openP0Blockers > 0)                                              return 'RED';
@@ -187,12 +188,14 @@ function computeRAGVerdict({
   if (gateLaggingCount > 2)                                            return 'RED';
   if (openMustFixTickets > 0)                                          return 'YELLOW';
   if (gateLaggingCount >= 1 || darkFeaturePercent > 20
-      || complianceAtRiskCount > 0)                                    return 'YELLOW';
+      || complianceAtRiskCount > 0 || pathToGreenGapCount > 0)         return 'YELLOW';
   return 'GREEN';  // only when ALL above conditions are zero
 }
 ```
 
 **GREEN is only valid when ALL conditions are clean. An open must-fix count > 0 is never GREEN.**
+
+**Feature-level team narrative** (`evaluateTeamRiskContext`): Risk Indicator + Risk Assessment + Path to Green. Yellow/Red without Assessment or Path → `criticalRisks` + TLDR floor; exec-summary SIGNALS expose `riskAssessment`, `pathToGreen`, `teamRisk`.
 
 ### 5.2 Intelligence Package Assembly
 

@@ -337,12 +337,18 @@ async function fetchFieldHistory(jiraKey, token, options = {}) {
         // First try by fieldId, then by field name
         let matchingFieldKey = null;
         
-        // Try matching by fieldId first using config
+        // Try matching by fieldId first using config.
+        // getAllFields() sets category to the parent group key ("checkpointDates"),
+        // while the JSON field's own category is "checkpoint" — accept both.
         if (fieldId) {
           // Skip immediately if this fieldId isn't in our active set
           if (!activeFieldIds.has(fieldId)) return;
           const fieldConfig = getFieldConfigById(fieldId);
-          if (fieldConfig && fieldConfig.category === 'checkpoint' && fieldConfig.type === 'date') {
+          const cat = fieldConfig?.category;
+          const isCheckpointDate =
+            fieldConfig?.type === 'date' &&
+            (cat === 'checkpoint' || cat === 'checkpointDates');
+          if (isCheckpointDate && fieldConfig.logicalKey && activeFields[fieldConfig.logicalKey]) {
             matchingFieldKey = fieldConfig.logicalKey;
           }
         }

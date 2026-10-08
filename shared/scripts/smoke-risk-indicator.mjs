@@ -5,6 +5,7 @@ import {
   computeReleaseHealthVerdict,
   countSelfReportedRisk,
   bucketCounts,
+  evaluateTeamRiskContext,
 } from '../dist/services/riskIndicator.js';
 
 assert.equal(classifyRiskIndicator({ value: 'Red - High' }), 'red');
@@ -13,6 +14,24 @@ assert.equal(classifyRiskIndicator(null), 'not_set');
 
 const counts = countSelfReportedRisk(['red', 'yellow', '', { name: 'Green' }]);
 assert.deepEqual(counts, { red: 1, yellow: 1, green: 1, notSet: 1 });
+
+const teamGap = evaluateTeamRiskContext({
+  indicator: 'Yellow',
+  assessment: '',
+  pathToGreen: '',
+});
+assert.equal(teamGap.verdictFloor, 'YELLOW');
+assert.equal(teamGap.pathToGreenMissing, true);
+assert.ok(teamGap.gaps.length >= 2);
+
+const teamOk = evaluateTeamRiskContext({
+  indicator: 'Yellow',
+  assessment: 'Blocked on dependency',
+  pathToGreen: 'Unblock FEAT-1 by Friday',
+});
+assert.equal(teamOk.pathToGreenMissing, false);
+assert.equal(teamOk.gaps.length, 0);
+assert.equal(teamOk.verdictFloor, 'YELLOW');
 
 assert.equal(
   computeReleaseHealthVerdict({
@@ -64,6 +83,20 @@ assert.equal(
     complianceAtRiskCount: 0,
   }).verdict,
   'GREEN'
+);
+
+assert.equal(
+  computeReleaseHealthVerdict({
+    openP0Blockers: 0,
+    openMustFixTickets: 0,
+    daysToPg: 40,
+    gateLaggingCount: 0,
+    darkCount: 0,
+    committedCount: 10,
+    complianceAtRiskCount: 0,
+    pathToGreenGapCount: 2,
+  }).verdict,
+  'YELLOW'
 );
 
 assert.deepEqual(bucketCounts({ a: [1], b: [] }), { a: 1, b: 0 });

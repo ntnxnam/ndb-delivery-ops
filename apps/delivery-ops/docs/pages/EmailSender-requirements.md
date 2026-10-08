@@ -29,15 +29,19 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 
 ## UI Behaviour
 
-1. **JIRA key + Fetch** — user enters a Feature/Initiative/X-FEAT/Capability key and fetches ticket data.
-2. **Subject field** — auto-populated as `{issue type} - {summary} - {fix version} - Weekly Update - {dd/Mmm/yyyy}`. Fix version is omitted when the ticket has none.
-3. **Highlights and Lowlights** (ReactQuill) — required sections: Highlights, Lowlights, Support needed from leaders. Risk reason / Path to green are **not** in this editor.
-4. **AI summary draft** — “Generate Fresh AI Summary” calls `POST /api/ai/exec-summary` (same NAI path as Project Status). Scratch pad only; not saved, not emailed.
-5. **Risk context boxes** (below Highlights) — Risk Indicator (`customfield_23560`), Risk Assessment (`customfield_47780`), Path to Green (`customfield_55664`), read-only from JIRA.
-6. **Gates vs dates chart** — horizontal bars of FS/DS, Test Plan, Code Complete, Commit Gate, Promotion Gate vs days from today. Mirrored in outbound email as an HTML bar table.
-7. **Recipient fields** — Additional Recipients text input; comma-separated usernames/emails.
-8. **Send button** — disabled while loading; on success shows toast, on failure shows error message.
-9. **Outlook fallback** — copy-to-clipboard for HTML body when the client strips rich text.
+**UI is the reverse of the email body** — pulled data on top, typed entry above Send.
+
+| UI (top → bottom) | Email body (top → bottom) |
+|---|---|
+| Ticket strip + pulled details (incl. sprint Gantt) | Highlights / Lowlights / Support |
+| Gates chart | AI risk summary |
+| Risk row | Risk context |
+| Subject (header only) · Highlights · AI · Recipients · **Send** | Gates vs dates → JIRA ticket / epics / breakdown → Sprint timeline |
+
+1. **JIRA key + Fetch** — Feature / Initiative / X-FEAT / Capability.
+2. **Pulled** — strip, collapsed ticket data, sprint Gantt, gates (EC→…→PG), risk (Indicator / Assessment / Path to Green).
+3. **Entry** — Subject (email header only), Highlights (required sections), **AI risk summary (required — emailed)**, Recipients.
+4. **Send** + Outlook copy fallback (preview includes AI + sprint timeline).
 
 ---
 

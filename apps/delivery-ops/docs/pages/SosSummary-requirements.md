@@ -49,6 +49,8 @@ SoS Summary
 
 - Page load shows a spinner while the dataset cache (or live JIRA on Refresh All) is in flight.
 - Task breakdowns load independently after the main items load (same pattern as Project Status).
+- State column shows Risk Indicator (with changelog strikethrough trail when history loads), plus Risk Assessment and Path to Green under it.
+- Dates column shows current gate dates with prior values struck through once `/sos-items-history` returns.
 - KPI widgets load lazily when the KPI subsection is first expanded.
 - AI exec summaries are generated on demand (click Generate on each row) or auto-generated in bulk (toolbar button).
 

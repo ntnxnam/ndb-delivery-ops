@@ -101,6 +101,102 @@ function getStringValue(field) {
   return String(field).trim();
 }
 
+const MAX_NARRATIVE_CHARS = 600;
+
+function extractAdfPlain(raw) {
+  if (!raw || typeof raw !== 'object') return '';
+  const parts = [];
+  function walk(node) {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'text' && typeof node.text === 'string') parts.push(node.text);
+    if (Array.isArray(node.content)) node.content.forEach(walk);
+  }
+  walk(raw);
+  return parts.join(' ').trim();
+}
+
+/** Plain text for Risk Assessment / Path to Green (string, select, or ADF). */
+function extractNarrativeField(raw) {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'string') return raw.trim();
+  if (typeof raw === 'object') {
+    if (raw.type === 'doc') return extractAdfPlain(raw);
+    const v = raw.value ?? raw.name ?? raw.display ?? '';
+    if (typeof v === 'string') return v.trim();
+    if (v && typeof v === 'object' && v.type === 'doc') return extractAdfPlain(v);
+  }
+  return String(raw).trim();
+}
+
+function isBlankNarrative(text) {
+  const t = (text || '').trim().toLowerCase();
+  return !t || t === 'not set' || t === 'n/a' || t === 'na' || t === 'none';
+}
+
+function classifyIndicatorBucket(raw) {
+  const v = (typeof raw === 'string' ? raw : getStringValue(raw)).toLowerCase().trim();
+  if (!v) return 'not_set';
+  if (v.includes('red') || v.includes('critical') || v.includes('high') || v.includes('big risk')) {
+    return 'red';
+  }
+  if (
+    v.includes('yellow') ||
+    v.includes('amber') ||
+    v.includes('moderate') ||
+    v.includes('medium') ||
+    v.includes('at risk')
+  ) {
+    return 'yellow';
+  }
+  if (v.includes('green') || v.includes('on track') || v.includes('low')) {
+    return 'green';
+  }
+  return 'not_set';
+}
+
+/**
+ * Mirrors evaluateTeamRiskContext in riskIndicator.ts — keep rules in sync.
+ */
+function evaluateTeamRiskNarrative(indicatorRaw, assessmentText, pathText) {
+  const indicator = classifyIndicatorBucket(indicatorRaw);
+  const assessment = (assessmentText || '').trim();
+  const pathToGreen = (pathText || '').trim();
+  const assessmentMissing = isBlankNarrative(assessment);
+  const pathToGreenMissing = isBlankNarrative(pathToGreen);
+  const gaps = [];
+
+  if (indicator === 'yellow' || indicator === 'red') {
+    const color = indicator === 'red' ? 'Red' : 'Yellow';
+    if (pathToGreenMissing) {
+      gaps.push(
+        `Path to Green not set while Risk Indicator is ${color} — team attested risk without a recovery path.`
+      );
+    }
+    if (assessmentMissing) {
+      gaps.push(
+        `Risk Assessment not set while Risk Indicator is ${color} — no written rationale for the color.`
+      );
+    }
+  }
+
+  let verdictFloor = null;
+  if (indicator === 'red') verdictFloor = 'RED';
+  else if (indicator === 'yellow' || gaps.length > 0) verdictFloor = 'YELLOW';
+
+  const clip = (s) =>
+    s.length > MAX_NARRATIVE_CHARS ? `${s.slice(0, MAX_NARRATIVE_CHARS)}…` : s;
+
+  return {
+    indicator,
+    assessment: assessmentMissing ? '' : clip(assessment),
+    pathToGreen: pathToGreenMissing ? '' : clip(pathToGreen),
+    assessmentMissing,
+    pathToGreenMissing,
+    gaps,
+    verdictFloor,
+  };
+}
+
 function parseDate(value) {
   const str = getStringValue(value);
   if (!str) return null;
@@ -681,6 +777,12 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
   const riskRaw = item.customfield_23560;
   const jiraRiskIndicator = (riskRaw && typeof riskRaw === 'object') ? (riskRaw.value || riskRaw.name) : (riskRaw || null);
 
+  // Risk Assessment (47780) + Path to Green (55664) — team narrative next to the RAG chip.
+  // Mirrors evaluateTeamRiskContext in shared/src/services/riskIndicator.ts (keep in sync).
+  const riskAssessmentText = extractNarrativeField(item.customfield_47780);
+  const pathToGreenText = extractNarrativeField(item.customfield_55664);
+  const teamRisk = evaluateTeamRiskNarrative(jiraRiskIndicator, riskAssessmentText, pathToGreenText);
+
   // --- Dates
   const fsdsDoneDate = parseDate(item.customfield_13861);
   const testPlanDate = parseDate(item.customfield_11068);
@@ -882,6 +984,11 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
     criticalRisks.push(`Status update is ${statusUpdateAgeDays} days old; signals may be out of date.`);
   }
 
+  // Team risk narrative gaps (Yellow/Red without Assessment or Path to Green)
+  for (const gap of teamRisk.gaps) {
+    criticalRisks.push(gap);
+  }
+
   // Compliance (security / legal / docs) within the 21-day CG window.
   //
   // Four-state model — only the first two are real release risks:
@@ -930,6 +1037,15 @@ function deriveSignals({ item, ganttConfig = null, breakdownData = null, narrati
     teamNA,
     jiraStatus: statusLabel,
     jiraRiskIndicator,
+    riskAssessment: teamRisk.assessment || null,
+    pathToGreen: teamRisk.pathToGreen || null,
+    teamRisk: {
+      indicator: teamRisk.indicator,
+      assessmentMissing: teamRisk.assessmentMissing,
+      pathToGreenMissing: teamRisk.pathToGreenMissing,
+      verdictFloor: teamRisk.verdictFloor,
+      gaps: teamRisk.gaps,
+    },
     people: {
       assignee: extractName(item.assignee),
       qaContact: extractName(item.customfield_10860),

@@ -15,9 +15,13 @@ Do not fork skills per surface.
 | `skills/` | `skills.md` | Isolated, repeatable SOPs |
 | `workflows/` | process graphs | Multi-step playbooks that chain skills |
 | `rules/` | constitution | Runtime constraints the model cannot override |
+| `context/` | domain + page briefs | Host-agnostic knowledge so leaving Cursor is not a rewrite |
+| `prompts/` | LLM system prompts | Production + draft prompts; canonical copy for every generative surface |
 | `memory/` | `memory.md` schema | Session / user / org memory contract (store is runtime) |
-| `manifest.json` | registry | Capability type, tool class, owner, paths |
+| `manifest.json` | registry | Capability type, tool class, owner, paths, context, prompts |
 | `adapters/` | host notes | How Cursor / web / a future host consume this pack |
+
+Start on a new host: `context/INDEX.md` → `prompts/INDEX.md` → identity.
 
 ## Capability types (Stage 6)
 
@@ -42,15 +46,21 @@ LLM in type `deterministic`.
 ## How a host loads the pack
 
 ```ts
-import { loadAgentPack } from '@portfolio-delivery-ops/shared';
+import { loadAgentPack, extractSystemPromptBody } from '@portfolio-delivery-ops/shared';
 
 const pack = loadAgentPack(); // or loadAgentPack('/path/to/agent-pack')
 pack.identity.orchestrator.body;
 pack.skills.get('team-exec-status-answer');
 pack.constitutionalRules.map((r) => r.body);
+pack.context.get('sos-leader')?.body;
+const sys = extractSystemPromptBody(pack.prompts.get('release-health-briefing')!);
 ```
 
 `AGENT_PACK_ROOT` overrides the default repo-relative path.
+
+**Prompt sync:** production prompt markdown under `prompts/production/` is the
+portable source of truth. `apps/delivery-ops/server/services/naiService.js`
+still embeds copies until runtime wiring uses `extractSystemPromptBody`.
 
 ## What does **not** live here
 

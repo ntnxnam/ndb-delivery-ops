@@ -4,6 +4,7 @@ const router = express.Router();
 router.use('/', require('./diagnostic'));
 router.use('/', require('./shared'));
 router.use('/', require('./kpi'));
+router.use('/', require('./system-test-scale'));
 router.use('/', require('./changelog'));
 router.use('/', require('./sprints'));
 router.use('/', require('./sprint-performance'));

@@ -310,6 +310,22 @@ router.get('/teams', (req, res) => {
 });
 
 /**
+ * NDB engineering leader org map (Assignee Manager → SoS leader sections)
+ * GET /api/config/ndb-leader-org
+ */
+router.get('/ndb-leader-org', (req, res) => {
+  try {
+    const configPath = path.join(__dirname, '../config/ndbLeaderOrgConfig.json');
+    delete require.cache[require.resolve(configPath)];
+    const config = require(configPath);
+    res.json(config);
+  } catch (error) {
+    console.error('Error loading NDB leader org config:', error);
+    res.status(500).json({ error: 'Failed to load NDB leader org configuration' });
+  }
+});
+
+/**
  * Update team base filter (for KPI: query = team-base-filter AND kpi-filter)
  * POST /api/config/team-base-filter  body: { teamId, baseFilter }
  * Requires KPI tab permission.

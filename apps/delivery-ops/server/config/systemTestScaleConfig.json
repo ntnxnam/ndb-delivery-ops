@@ -1,0 +1,40 @@
+{
+  "regressionField": "cf[13260]",
+  "regressionFieldName": "Regression?",
+  "anyRegressionJql": "cf[13260] in (\"Yes-build-to-build\", \"Yes-release-to-release\", \"Yes\")",
+  "regressionTypes": {
+    "b2b": "cf[13260] = \"Yes-build-to-build\"",
+    "r2r": "cf[13260] = \"Yes-release-to-release\"",
+    "yes": "cf[13260] = \"Yes\"",
+    "no": "cf[13260] = \"No\"",
+    "empty": "cf[13260] is EMPTY"
+  },
+  "kpiFilterTemplate": "filter={teamCode}-System-Test",
+  "defaultTeamId": "ndb",
+  "jiraBaseUrlDefault": "https://jira.nutanix.com",
+  "defaultCurrentRelease": "NDB-2.11",
+  "defaultCompareRelease": "NDB-2.10",
+  "releases": ["NDB-2.10", "NDB-2.10.1", "NDB-2.11", "NDB-2.12"],
+  "carryPairs": [
+    ["NDB-2.10", "NDB-2.11"],
+    ["NDB-2.11", "NDB-2.12"],
+    ["NDB-2.10", "NDB-2.10.1"],
+    ["NDB-2.10.1", "NDB-2.11"]
+  ],
+  "componentReleases": ["NDB-2.11", "NDB-2.12"],
+  "teams": {
+    "ndb": {
+      "teamCode": "NDB",
+      "defaultCurrentRelease": "NDB-2.11",
+      "defaultCompareRelease": "NDB-2.10",
+      "releases": ["NDB-2.10", "NDB-2.10.1", "NDB-2.11", "NDB-2.12"],
+      "carryPairs": [
+        ["NDB-2.10", "NDB-2.11"],
+        ["NDB-2.11", "NDB-2.12"],
+        ["NDB-2.10", "NDB-2.10.1"],
+        ["NDB-2.10.1", "NDB-2.11"]
+      ],
+      "componentReleases": ["NDB-2.11", "NDB-2.12"]
+    }
+  }
+}

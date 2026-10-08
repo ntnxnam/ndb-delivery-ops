@@ -62,15 +62,20 @@ function slotFor(startIso, anchor, sprintDays) {
 }
 
 /**
- * In-flight cadence slot for "today". Must use floor — Math.round advances
- * halfway through the sprint and would treat the still-active slot as "past"
- * (and drop the immediately completed slot from the window too early).
- * Window end is always currentSlot - 1 = immediately past sprint; when the
- * next sprint starts (~3 weeks later), lastSlot rolls forward and regenerate
- * re-fetches that past sprint's Sprint Report from JIRA.
+ * In-flight cadence slot for "today". Must use floor — Math.round jumps a
+ * half-sprint early (e.g. Oct 17 would look like Oct 28's slot).
+ *
+ * Example with cadenceLabelAnchor 2026-10-07 = S60:
+ *   Oct 7–27 → currentSlot 60 (floor stays on the sprint that started Oct 7)
+ *   Oct 28   → currentSlot 61 (next sprint start / previous end boundary)
  */
 function currentSlotFor(today, anchor, sprintDays) {
   return anchor.number + Math.floor(slotDelta(today, anchor, sprintDays) + 1e-9);
+}
+
+function utcDay(isoOrDate) {
+  const t = new Date(isoOrDate);
+  return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
 }
 
 function scrumTeamName(sprintName, prefix) {
@@ -78,11 +83,17 @@ function scrumTeamName(sprintName, prefix) {
   return (raw.split(/-?\s*S\d+/i)[0] || raw).replace(/[-\s]+$/, '').trim() || sprintName;
 }
 
+/**
+ * Window = in-flight slot + the prior `windowSlots − 1` slots (~18 months when
+ * windowSlots=26). Includes today's sprint; excludes future starts. When the
+ * next sprint begins (e.g. 28 Oct), lastSlot rolls forward and regenerate
+ * re-pulls Sprint Reports from that new end back ~18 months.
+ */
 function selectWindowSprints(boardSprints, { boardId, anchor, sprintDays, windowSlots, today, teamPrefix }) {
   const own = boardSprints.filter((s) => s.originBoardId === boardId && s.startDate);
-  const currentSlot = currentSlotFor(today, anchor, sprintDays);
-  const lastSlot = currentSlot - 1;
+  const lastSlot = currentSlotFor(today, anchor, sprintDays);
   const firstSlot = lastSlot - windowSlots + 1;
+  const todayDay = utcDay(today);
   return own
     .map((s) => ({
       id: s.id,
@@ -94,7 +105,8 @@ function selectWindowSprints(boardSprints, { boardId, anchor, sprintDays, window
       slot: slotFor(s.startDate, anchor, sprintDays),
       scrumTeam: scrumTeamName(s.name, teamPrefix),
     }))
-    .filter((s) => s.slot >= firstSlot && s.slot <= lastSlot)
+    // "Today and before" — never pull sprints that have not started yet.
+    .filter((s) => s.slot >= firstSlot && s.slot <= lastSlot && utcDay(s.startDate) <= todayDay)
     .sort((a, b) => a.slot - b.slot || a.scrumTeam.localeCompare(b.scrumTeam));
 }
 

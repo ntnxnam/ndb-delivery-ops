@@ -37,9 +37,11 @@ A slipped date is **always a new numbered entry**, not an overwrite. The previou
 ### Slip pattern rules
 
 1. Find the **highest-numbered key** for the gate (e.g. `ga2`, `commitGate2`).
-2. Change its `"style"` from `"solid"` to `"dotted"`.
+2. Change its `"style"` from `"solid"` to `"dotted"` — keep any existing `reason` on that entry.
 3. Add a new entry with the next number (e.g. `ga3`, `commitGate3`) using `"style": "solid"` and the new date.
-4. Use a label like `"General Availability 3"`, `"Commit Gate 3"`, etc.
+4. Write the slip `reason` on the **new** entry (each revision owns its own `reason`).
+5. Use a label like `"GA 3"`, `"Commit Gate 3"`, `"Promotion Gate 3"`, etc.
+6. **Never** overwrite an existing slot, rotate keys, or push into `gaOverflow` / `promotionGateOverflow`.
 
 ### Example — GA slipping from June 15 to July 14 on NDB-2.11
 

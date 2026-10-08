@@ -2,8 +2,7 @@ import React from 'react';
 import { fieldDisplayValue } from './gateDateUtils';
 
 /**
- * Three read-only boxes: Risk Indicator | Risk Assessment | Path to Green.
- * Placed below Highlights and Lowlights on Email Sender.
+ * Compact risk row: Indicator | Assessment | Path to Green.
  */
 function RiskAndPathBoxes({ jiraData }) {
   if (!jiraData) return null;
@@ -21,74 +20,61 @@ function RiskAndPathBoxes({ jiraData }) {
   const assessmentUnset = !assessmentValue || assessmentValue === 'Not Set';
   const pathUnset = !pathValue || pathValue === 'Not Set';
 
-  const boxStyle = {
-    flex: '1 1 0',
-    minWidth: '180px',
-    border: '1px solid #dee2e6',
-    borderRadius: '4px',
-    background: '#fff',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  };
-
-  const headerStyle = {
-    padding: '8px 10px',
+  const cell = (unset) => ({
+    padding: '6px 8px',
     fontSize: '0.8125rem',
-    fontWeight: 600,
-    color: '#1a1a1a',
-    background: '#f8f9fa',
-    borderBottom: '1px solid #dee2e6',
-  };
-
-  const bodyStyle = (unset) => ({
-    padding: '10px 12px',
-    fontSize: '0.875rem',
-    lineHeight: 1.5,
-    color: '#1a1a1a',
-    minHeight: '72px',
+    lineHeight: 1.35,
     backgroundColor: unset ? '#fff3cd' : 'transparent',
     fontWeight: unset ? 600 : 400,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
-    flex: 1,
+    maxHeight: '4.5rem',
+    overflowY: 'auto',
   });
 
   return (
-    <div className="form-group" style={{ marginTop: '0.75rem' }}>
-      <label style={{ marginBottom: '0.5rem' }}>Risk context (from JIRA)</label>
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
-        <div style={boxStyle}>
-          <div style={headerStyle}>{risk?.name || 'Risk Indicator'}</div>
+    <div className="form-group" style={{ marginTop: '0.35rem' }}>
+      <label style={{ marginBottom: '0.3rem' }}>Risk</label>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(110px, 0.7fr) 1.4fr 1.4fr',
+          gap: 0,
+          border: '1px solid #dee2e6',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          background: '#fff',
+        }}
+      >
+        <div style={{ borderRight: '1px solid #dee2e6' }}>
+          <div style={{ padding: '4px 8px', fontSize: '0.7rem', fontWeight: 600, background: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
+            {risk?.name || 'Indicator'}
+          </div>
           <div
             style={{
-              ...bodyStyle(riskUnset),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              ...cell(riskUnset),
               textAlign: 'center',
               backgroundColor: riskUnset ? '#fff3cd' : (riskColor || 'transparent'),
-              color: !riskUnset && riskColor ? '#ffffff' : '#1a1a1a',
-              fontWeight: 600,
+              color: !riskUnset && riskColor ? '#fff' : '#1a1a1a',
+              fontWeight: 700,
             }}
           >
             {riskValue}
           </div>
         </div>
-
-        <div style={boxStyle}>
-          <div style={headerStyle}>{assessment?.name || 'Risk Assessment'}</div>
-          <div style={bodyStyle(assessmentUnset)}>{assessmentValue}</div>
+        <div style={{ borderRight: '1px solid #dee2e6' }}>
+          <div style={{ padding: '4px 8px', fontSize: '0.7rem', fontWeight: 600, background: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
+            {assessment?.name || 'Assessment'}
+          </div>
+          <div style={cell(assessmentUnset)}>{assessmentValue}</div>
         </div>
-
-        <div style={boxStyle}>
-          <div style={headerStyle}>{pathToGreen?.name || 'Path to Green'}</div>
-          <div style={bodyStyle(pathUnset)}>{pathValue}</div>
+        <div>
+          <div style={{ padding: '4px 8px', fontSize: '0.7rem', fontWeight: 600, background: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
+            {pathToGreen?.name || 'Path to Green'}
+          </div>
+          <div style={cell(pathUnset)}>{pathValue}</div>
         </div>
       </div>
-      <small className="help-text">
-        Read-only from JIRA. Update the ticket fields if these need to change.
-      </small>
     </div>
   );
 }

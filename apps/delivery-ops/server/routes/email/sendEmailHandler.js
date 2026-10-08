@@ -5,22 +5,29 @@ const logger = require('../../utils/logger');
 const { sendEmailDirect, getDefaultFromAddress, parseEmailRecipients, formatDateForEmail } = require('../../services/emailService');
 const { extractEmailFromJiraUser, extractEmailsFromJiraUserArray } = require('../../services/userService');
 const { formatContentForEmail } = require('../../utils/emailFormatter');
+const {
+  renderAiRiskSummaryEmailSection,
+  renderSprintGanttEmailSection,
+} = require('../../utils/sprintGanttEmail');
 const emailConfig = require('../../config/emailConfig.json');
 const emailSenderCCConfig = require('../../config/emailSenderCCConfig.json');
 const { saveEmailHistory } = require('../../utils/emailHistoryDB');
 const { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } = require('./middleware');
+
+const releaseVersionsEmailConfig = require('../../config/releaseVersionsEmailConfig.json');
 
 const EXTRA_EMAIL_FIELDS = [
   ['customfield_55662', 'Link to CG checklist'],
   ['customfield_55663', 'Link to PG checklist'],
 ];
 
-const GATE_CHART_DEFS = [
-  { label: 'FS/DS Done', fieldId: 'customfield_13861', color: '#6c757d' },
-  { label: 'Test Plan', fieldId: 'customfield_11068', color: '#17a2b8' },
-  { label: 'Code Complete', fieldId: 'customfield_11067', color: '#1f77b4' },
-  { label: 'Commit Gate', fieldId: 'customfield_35863', color: '#ff7f0e' },
-  { label: 'Promotion Gate', fieldId: 'customfield_35864', color: '#2ca02c' },
+/** Sequential gates after EC (EC is the timeline origin from release config). */
+const SEQUENTIAL_GATE_DEFS = [
+  { key: 'fsds', label: 'FS/DS Done', fieldId: 'customfield_13861', color: '#6c757d' },
+  { key: 'testPlan', label: 'Test Plan', fieldId: 'customfield_11068', color: '#17a2b8' },
+  { key: 'cc', label: 'Code Complete', fieldId: 'customfield_11067', color: '#1f77b4' },
+  { key: 'cg', label: 'Commit Gate', fieldId: 'customfield_35863', color: '#ff7f0e' },
+  { key: 'pg', label: 'Promotion Gate', fieldId: 'customfield_35864', color: '#2ca02c' },
 ];
 
 const MONTH_INDEX = {
@@ -116,58 +123,117 @@ function renderRiskContextSection(jiraData) {
   `;
 }
 
-/** Email-safe horizontal bars: gates vs days from today. */
+function resolveEcDateForJiraData(jiraData) {
+  const raw = jiraData?.fixVersions;
+  if (!raw || raw === 'N/A') return { version: null, ecDate: null };
+  const version = String(raw).split(',')[0].trim();
+  const cfg = releaseVersionsEmailConfig.releaseGateDates?.[version];
+  return { version, ecDate: cfg?.ecDate || null };
+}
+
+function formatEmailGateDate(date) {
+  if (!date) return 'Not Set';
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day}/${months[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+/** Email-safe sequential waterfall: EC → FS/DS → Test Plan → CC → CG → PG. */
 function renderGateDatesChartSection(jiraData) {
   if (!jiraData) return '';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const rows = GATE_CHART_DEFS.map((g) => {
-    const field = jiraData[g.fieldId];
-    const dateLabel = fieldText(field);
-    const date = parseEmailDisplayDate(field?.value ?? field);
-    const days = date ? Math.round((date.getTime() - today.getTime()) / 86400000) : null;
-    return { ...g, dateLabel, days, set: date != null };
-  });
-  const setRows = rows.filter((r) => r.set);
-  if (setRows.length === 0) {
+  const { version, ecDate: ecRaw } = resolveEcDateForJiraData(jiraData);
+  const ecDate = parseEmailDisplayDate(ecRaw);
+  if (!ecDate) {
     return `
             <h2>Gates vs dates</h2>
-            <p style="font-size: 0.875rem; background: #fff3cd; padding: 8px; border: 1px solid #1a1a1a;">No gate dates set on this ticket.</p>
+            <p style="font-size: 0.875rem; background: #fff3cd; padding: 8px; border: 1px solid #1a1a1a;">EC date is required as the timeline start${version ? ` (no EC in release config for ${version})` : ''}.</p>
     `;
   }
-  const maxAbs = Math.max(1, ...setRows.map((r) => Math.abs(r.days)));
-  const bars = setRows.map((r) => {
-    const pct = Math.max(4, Math.round((Math.abs(r.days) / maxAbs) * 100));
-    const fill = r.days < 0 ? '#adb5bd' : r.color;
-    const dayLabel = r.days === 0 ? 'today' : (r.days > 0 ? `+${r.days}d` : `${r.days}d`);
+
+  const points = [{ key: 'ec', label: 'EC', date: ecDate, dateLabel: formatEmailGateDate(ecDate), color: '#9467bd' }];
+  const missing = [];
+  SEQUENTIAL_GATE_DEFS.forEach((g) => {
+    const date = parseEmailDisplayDate(jiraData[g.fieldId]?.value ?? jiraData[g.fieldId]);
+    if (!date) {
+      missing.push(g.label);
+      return;
+    }
+    points.push({
+      key: g.key,
+      label: g.label,
+      date,
+      dateLabel: formatEmailGateDate(date),
+      color: g.color,
+    });
+  });
+
+  if (points.length < 2) {
+    return `
+            <h2>Gates vs dates</h2>
+            <p style="font-size: 0.875rem; background: #fff3cd; padding: 8px; border: 1px solid #1a1a1a;">EC is ${formatEmailGateDate(ecDate)}, but no later gate dates are set on this ticket.</p>
+    `;
+  }
+
+  const segments = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const from = points[i - 1];
+    const to = points[i];
+    const daySpan = Math.round((to.date.getTime() - from.date.getTime()) / 86400000);
+    const inverted = daySpan < 0;
+    const duration = Math.max(1, Math.abs(daySpan));
+    const offset = Math.max(0, Math.round((from.date.getTime() - ecDate.getTime()) / 86400000));
+    segments.push({
+      label: `${from.label} → ${to.label}`,
+      fromDateLabel: from.dateLabel,
+      toDateLabel: to.dateLabel,
+      daySpan,
+      duration,
+      offset,
+      color: inverted ? '#dc3545' : to.color,
+      inverted,
+    });
+  }
+
+  const totalSpan = Math.max(
+    1,
+    ...segments.map((s) => s.offset + s.duration)
+  );
+
+  const bars = segments.map((s) => {
+    const offsetPct = Math.round((s.offset / totalSpan) * 100);
+    const durPct = Math.max(2, Math.round((s.duration / totalSpan) * 100));
+    const spanLabel = s.inverted
+      ? `${Math.abs(s.daySpan)}d (inverted)`
+      : `${s.daySpan}d`;
     return `
                 <tr>
-                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 22%; font-weight: 600;">${r.label}</td>
-                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 18%;">${r.dateLabel}</td>
-                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 12%;">${dayLabel}</td>
-                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; width: 48%;">
-                    <div style="background: #f1f3f5; height: 14px; width: 100%;">
-                      <div style="background: ${fill}; height: 14px; width: ${pct}%;"></div>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 22%; font-weight: 600;">${s.label}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 28%;">${s.fromDateLabel} → ${s.toDateLabel}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; width: 10%;">${spanLabel}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #1a1a1a; width: 40%;">
+                    <div style="background: #f1f3f5; height: 14px; width: 100%; position: relative;">
+                      <div style="position: absolute; left: ${offsetPct}%; width: ${durPct}%; background: ${s.color}; height: 14px;"></div>
                     </div>
                   </td>
                 </tr>`;
   }).join('');
-  const unset = rows.filter((r) => !r.set).map((r) => r.label);
+
   return `
             <h2>Gates vs dates</h2>
+            <p style="font-size: 0.8125rem; margin: 0 0 8px;">Start: <strong>EC ${formatEmailGateDate(ecDate)}</strong>${version ? ` · ${version}` : ''} · sequential legs</p>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
               <thead>
                 <tr>
-                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Gate</th>
-                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Date</th>
-                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">vs today</th>
-                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Relative</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Leg</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Dates</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">Days</th>
+                  <th style="padding: 6px 8px; border: 1px solid #1a1a1a; font-size: 0.8125rem; text-align: left;">From EC</th>
                 </tr>
               </thead>
               <tbody>${bars}
               </tbody>
             </table>
-            <p style="font-size: 0.75rem; color: #666; margin-top: 0;">Negative days = past · Grey bars = past dates${unset.length ? ` · Not set: ${unset.join(', ')}` : ''}</p>
+            <p style="font-size: 0.75rem; color: #666; margin-top: 0;">Each bar is one sequential leg from EC${missing.length ? ` · Skipped (not set): ${missing.join(', ')}` : ''}</p>
   `;
 }
 
@@ -192,13 +258,15 @@ module.exports = async function sendEmailHandler(req, res) {
   try {
     const { 
       executiveSummary, 
-      additionalDetails, 
+      additionalDetails,
+      aiSummary,
       emailRecipients, 
       emailSubject,
       jiraKey,
       jiraData,
       epics,
       issueBreakdown,
+      sprintGanttData,
       attachPdf
     } = req.body;
     
@@ -349,6 +417,9 @@ module.exports = async function sendEmailHandler(req, res) {
             <h2>Highlights and Lowlights</h2>
             <div>${additionalDetails && additionalDetails.trim() ? formatContentForEmail(additionalDetails) : '<p style="color: #666; font-style: italic;">No highlights and lowlights provided.</p>'}</div>
     `;
+
+    // AI risk brief sits with narrative (Highlights) before JIRA-backed risk/gates.
+    emailHtml += renderAiRiskSummaryEmailSection(aiSummary);
 
     // Risk boxes + gate chart sit between narrative and ticket tables (matches UI)
     if (jiraData) {
@@ -921,6 +992,8 @@ module.exports = async function sendEmailHandler(req, res) {
         `;
       }
     }
+
+    emailHtml += renderSprintGanttEmailSection(sprintGanttData);
     
     emailHtml += `
             <div class="footer">
