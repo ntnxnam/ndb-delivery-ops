@@ -14,6 +14,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { collectSprintPerformance, computeFromRaw } = require('../services/sprintPerformanceService');
 const { writeReport, REPORTS_DIR } = require('../services/sprintPerformanceReportService');
+const { enrichModelAsksWithAi } = require('../services/sprintLeadershipAsksService');
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -31,6 +32,9 @@ function arg(name, fallback) {
     log: (m) => console.log(m),
   });
   const model = computeFromRaw(raw);
+  console.log('AI: Asks of leadership…');
+  await enrichModelAsksWithAi(model);
+  console.log(`asksSource=${model.asksSource || 'rules'}${model.asksError ? ` (${model.asksError})` : ''}`);
   const file = writeReport(model);
   if (process.argv.includes('--json')) {
     const jsonPath = path.join(REPORTS_DIR, file.replace(/\.html$/, '.json'));

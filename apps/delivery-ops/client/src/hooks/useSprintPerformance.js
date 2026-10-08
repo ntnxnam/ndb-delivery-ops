@@ -23,6 +23,7 @@ export function useSprintPerformance(teamId = 'ndb') {
   const [job, setJob] = useState({ state: 'idle' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [iframeKey, setIframeKey] = useState(0);
   const pollRef = useRef(null);
 
   const loadReport = useCallback(async (file) => {
@@ -39,9 +40,16 @@ export function useSprintPerformance(teamId = 'ndb') {
         setSelected(null);
         return;
       }
-      const resp = await authenticatedGet('/api/jira/sprint-performance/report', { teamId, file: target }, creds(), { responseType: 'text' });
-      setHtml(resp.data);
+      // Cache-bust: report HTML is a static file; browsers/proxies otherwise keep a stale iframe body.
+      const resp = await authenticatedGet(
+        '/api/jira/sprint-performance/report',
+        { teamId, file: target, _: Date.now() },
+        creds(),
+        { responseType: 'text' }
+      );
+      setHtml(typeof resp.data === 'string' ? resp.data : String(resp.data || ''));
       setSelected(target);
+      setIframeKey((k) => k + 1);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -77,7 +85,7 @@ export function useSprintPerformance(teamId = 'ndb') {
     return () => clearInterval(pollRef.current);
   }, [running, teamId, loadReport]);
 
-  return { reports, html, selected, job, loading, error, loadReport, generate };
+  return { reports, html, selected, job, loading, error, iframeKey, loadReport, generate };
 }
 
 export default useSprintPerformance;

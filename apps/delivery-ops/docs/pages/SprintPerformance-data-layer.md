@@ -27,18 +27,27 @@ route (sprint-performance.js)
   → sprintPerformanceReportService      list / read / write reports/, in-memory job per team
     → sprintPerformanceService.collectSprintPerformance
         → JIRA Agile  GET /rest/agile/1.0/board/{boardId}/sprint      (originBoardId filter, cadence slots)
+             Window = slots `[currentSlot − windowSlots … currentSlot − 1]` where `currentSlot` is the
+             in-flight cadence slot for today (`Math.floor` from `cadenceLabelAnchor` — not `round`,
+             which would advance mid-sprint). Immediately past sprint = `currentSlot − 1`. When the
+             next sprint starts (~3 weeks later), that past slot rolls forward; **Regenerate** re-fetches
+             its JIRA Sprint Report (and live status) so closed-sprint numbers refresh.
         → JIRA GET /rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=&sprintId=   per sprint, concurrency 4
              (completedIssues, issuesNotCompletedInCurrentSprint, puntedIssues, issuesCompletedInAnotherSprint,
               issueKeysAddedDuringSprint, entityData.types/statuses, currentEstimateStatistic)
         → JIRA GET /rest/api/2/user?username=&expand=groups           per assignee (org directory)
         → JIRA POST /rest/api/2/search  key in (…100 keys…)          current status, resolution, resolutiondate, fixVersions (raw.live)
     → orgDirectory.buildOrgDirectory      manager = Team-*-DirectReports, leader = largest Team-*-Org ≤70% share
-    → sprintPerformanceMetrics.computeSprintPerformance   rows, aggregates, narrative
+    → sprintPerformanceMetrics.computeSprintPerformance   rows, aggregates, narrative (rule-based asks seed)
     → sprintReleaseGates.releaseGatesForSlots   releaseVersionsEmailConfig.json → releaseGateDates, parsed by
                                                 shared parseReleaseGateTimeline, mapped to slots (meta.releases)
+    → sprintLeadershipAsksService.enrichModelAsksWithAi   NAI `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT`
+         (fallback: keep rule-based asks; sets model.asksSource = ai|rules)
     → sprintPerformanceHtml.renderSprintPerformanceHtml   static sections + embedded payload + inline app
   → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.html
 ```
+
+On-demand (same prompt, no full regenerate): `POST /api/ai/sprint-leadership-asks` — see [`docs/api/ai.md`](../api/ai.md).
 
 The CLI `server/scripts/generateSprintPerformanceReport.js` uses the same service (`writeReport`).
 

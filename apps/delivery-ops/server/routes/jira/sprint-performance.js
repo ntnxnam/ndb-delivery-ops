@@ -21,6 +21,7 @@ router.get('/sprint-performance/report', ...auth, (req, res) => {
     const report = reports.readReport(req.query.teamId || 'ndb', req.query.file);
     if (!report) return res.status(404).json({ success: false, error: 'No sprint performance report generated yet' });
     if (req.query.download === '1') res.setHeader('Content-Disposition', `attachment; filename="${report.file}"`);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res.type('html').send(report.html);
   } catch (error) {
     return fail(res, error, 'Failed to read sprint performance report');

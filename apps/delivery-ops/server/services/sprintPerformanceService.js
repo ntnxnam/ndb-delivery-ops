@@ -45,9 +45,32 @@ async function fetchBoardSprints(jira, boardId) {
   return all;
 }
 
+/** Cadence delta in sprint lengths (UTC calendar day vs anchor start). */
+function slotDelta(isoOrDate, anchor, sprintDays) {
+  const t = new Date(isoOrDate);
+  const dayUtc = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+  const anchorUtc = new Date(`${anchor.startIso}T00:00:00.000Z`).getTime();
+  return (dayUtc - anchorUtc) / (sprintDays * DAY_MS);
+}
+
+/**
+ * Label a sprint by its start date. Uses round so small timezone skew on
+ * JIRA startDate still lands on the intended cadence number.
+ */
 function slotFor(startIso, anchor, sprintDays) {
-  const delta = (new Date(startIso).getTime() - new Date(anchor.startIso).getTime()) / (sprintDays * DAY_MS);
-  return anchor.number + Math.round(delta);
+  return anchor.number + Math.round(slotDelta(startIso, anchor, sprintDays));
+}
+
+/**
+ * In-flight cadence slot for "today". Must use floor — Math.round advances
+ * halfway through the sprint and would treat the still-active slot as "past"
+ * (and drop the immediately completed slot from the window too early).
+ * Window end is always currentSlot - 1 = immediately past sprint; when the
+ * next sprint starts (~3 weeks later), lastSlot rolls forward and regenerate
+ * re-fetches that past sprint's Sprint Report from JIRA.
+ */
+function currentSlotFor(today, anchor, sprintDays) {
+  return anchor.number + Math.floor(slotDelta(today, anchor, sprintDays) + 1e-9);
 }
 
 function scrumTeamName(sprintName, prefix) {
@@ -57,7 +80,7 @@ function scrumTeamName(sprintName, prefix) {
 
 function selectWindowSprints(boardSprints, { boardId, anchor, sprintDays, windowSlots, today, teamPrefix }) {
   const own = boardSprints.filter((s) => s.originBoardId === boardId && s.startDate);
-  const currentSlot = slotFor(today.toISOString(), anchor, sprintDays);
+  const currentSlot = currentSlotFor(today, anchor, sprintDays);
   const lastSlot = currentSlot - 1;
   const firstSlot = lastSlot - windowSlots + 1;
   return own
@@ -75,7 +98,29 @@ function selectWindowSprints(boardSprints, { boardId, anchor, sprintDays, window
     .sort((a, b) => a.slot - b.slot || a.scrumTeam.localeCompare(b.scrumTeam));
 }
 
-const LIVE_FIELDS = ['status', 'resolution', 'resolutiondate', 'fixVersions'];
+const LIVE_FIELDS = ['status', 'resolution', 'resolutiondate', 'fixVersions', 'issuetype'];
+
+/** First Resolved / Closed transition dates from a JIRA changelog (handles reopen cycles). */
+function resolvedClosedFromChangelog(changelog) {
+  let resolvedAt = null;
+  let closedAt = null;
+  const histories = [...(changelog?.histories || [])].reverse();
+  for (const h of histories) {
+    const day = (h.created || '').slice(0, 10);
+    for (const item of h.items || []) {
+      if (item.field !== 'status') continue;
+      const to = item.toString || '';
+      if (to === 'Resolved') resolvedAt = day;
+      if (to === 'Closed') closedAt = day;
+      // Re-opened out of Closed/Resolved — wait for the next cycle.
+      if (item.fromString === 'Closed' && to !== 'Closed') {
+        resolvedAt = to === 'Resolved' ? day : null;
+        closedAt = null;
+      }
+    }
+  }
+  return { resolvedAt, closedAt };
+}
 
 /** Current status / resolution / fix versions per key (sprint reports only carry the status at sprint close). */
 async function fetchLiveIssues(jira, keys, log) {
@@ -94,11 +139,62 @@ async function fetchLiveIssues(jira, keys, log) {
         statusCategory: f.status?.statusCategory?.key || '',
         resolution: f.resolution?.name || '',
         resolved: f.resolutiondate ? f.resolutiondate.slice(0, 10) : '',
+        issuetype: f.issuetype?.name || '',
         fixVersions: (f.fixVersions || []).map((v) => ({ name: v.name, released: Boolean(v.released), releaseDate: v.releaseDate || '' })),
+        closed: '',
       };
     });
   }), 4);
   return out;
+}
+
+/**
+ * Attach Resolved→Closed dates from changelog. Waiting queue (status=Resolved) already
+ * has resolutiondate — no changelog needed. For Closed lag, only Bug/Improvement
+ * (QA verification types), newest-resolved first, capped to keep regenerate fast.
+ */
+async function enrichQaLagDates(jira, live, log, {
+  maxClosed = 2500,
+  qaTypes = ['Bug', 'Improvement'],
+  typeByKey = {},
+} = {}) {
+  const qa = new Set(qaTypes);
+  const typeOf = (key, v) => v.issuetype || typeByKey[key] || '';
+  const closedKeys = Object.entries(live)
+    .filter(([k, v]) => v.status === 'Closed' && qa.has(typeOf(k, v)) && !v.closed)
+    .sort((a, b) => String(b[1].resolved || '').localeCompare(String(a[1].resolved || '')))
+    .slice(0, maxClosed)
+    .map(([k]) => k);
+  if (!closedKeys.length) {
+    log('QA lag: no Closed Bug/Improvement tickets need changelog enrichment');
+    return live;
+  }
+  const batches = [];
+  for (let i = 0; i < closedKeys.length; i += 40) batches.push(closedKeys.slice(i, i + 40));
+  log(`Fetching Resolved→Closed dates for ${closedKeys.length} Closed Bug/Improvement tickets (${batches.length} batches)…`);
+  let done = 0;
+  await runWithConcurrency(batches.map((batch) => async () => {
+    const r = await withRetry(() => jira.post('/rest/api/2/search', {
+      jql: `key in (${batch.join(',')})`,
+      fields: ['status', 'resolutiondate'],
+      expand: ['changelog'],
+      maxResults: batch.length,
+      validateQuery: false,
+    }, { timeout: 90000 }));
+    (r.data?.issues || []).forEach((it) => {
+      const cur = live[it.key];
+      if (!cur) return;
+      const { resolvedAt, closedAt } = resolvedClosedFromChangelog(it.changelog);
+      if (resolvedAt) cur.resolved = resolvedAt;
+      else if (!cur.resolved && it.fields?.resolutiondate) cur.resolved = it.fields.resolutiondate.slice(0, 10);
+      // Ignore Closed-before-Resolved pairs (reopen / odd histories).
+      if (closedAt && cur.resolved && closedAt >= cur.resolved) cur.closed = closedAt;
+      else if (closedAt && !cur.resolved) cur.closed = closedAt;
+    });
+    done += batch.length;
+    if (done % 400 === 0 || done >= closedKeys.length) log(`  QA lag changelog ${done}/${closedKeys.length}`);
+  }), 4);
+  return live;
 }
 
 const reportKeys = (raw) => Array.from(new Set(raw.perSprint.flatMap((p) => p.issues.map((i) => i.key))));
@@ -112,6 +208,14 @@ async function collectSprintPerformance({ token, teamId, today = new Date(), cac
     if (!cached.live && jira) {
       cached.live = await fetchLiveIssues(jira, reportKeys(cached), log);
       cached.liveFetchedAt = new Date().toISOString();
+      dirty = true;
+    }
+    const needsQaLag = cached.live && !cached.qaLagFetchedAt && jira;
+    if (needsQaLag) {
+      const typeByKey = {};
+      (cached.perSprint || []).forEach((p) => (p.issues || []).forEach((i) => { if (i.key) typeByKey[i.key] = i.issuetype; }));
+      await enrichQaLagDates(jira, cached.live, log, { typeByKey });
+      cached.qaLagFetchedAt = new Date().toISOString();
       dirty = true;
     }
     if (!cached.groupOwners && jira && cached.users) {
@@ -175,6 +279,10 @@ async function collectSprintPerformance({ token, teamId, today = new Date(), cac
   };
   raw.live = await fetchLiveIssues(jira, reportKeys(raw), log);
   raw.liveFetchedAt = new Date().toISOString();
+  const typeByKey = {};
+  raw.perSprint.forEach((p) => p.issues.forEach((i) => { if (i.key) typeByKey[i.key] = i.issuetype; }));
+  await enrichQaLagDates(jira, raw.live, log, { typeByKey });
+  raw.qaLagFetchedAt = new Date().toISOString();
   if (cachePath) fs.writeFileSync(cachePath, JSON.stringify(raw));
   return raw;
 }
@@ -236,4 +344,12 @@ async function buildSprintPerformance(opts) {
   return computeFromRaw(await collectSprintPerformance(opts));
 }
 
-module.exports = { collectSprintPerformance, computeFromRaw, buildSprintPerformance, scrumTeamName, slotFor };
+module.exports = {
+  collectSprintPerformance,
+  computeFromRaw,
+  buildSprintPerformance,
+  scrumTeamName,
+  slotFor,
+  currentSlotFor,
+  selectWindowSprints,
+};

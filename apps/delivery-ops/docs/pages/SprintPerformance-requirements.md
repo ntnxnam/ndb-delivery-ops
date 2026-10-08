@@ -44,6 +44,9 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 | SP-12 | As a director, I can narrow the range to the last 6 / 12 / 18 sprints or keep all ~2 years. |
 | SP-13 | As a director, I read a plain-language discipline timeline ("between date X and date Y discipline was strong, after that it dwindled") with each phase's say/do, completion, scope added and the release gates that fell inside it. |
 | SP-14 | As a TPM, I see say/do in the 2 sprints before, the sprint of, and the 2 sprints after every release gate (CC / CG / PG / GA, optionally EC), and can toggle gate types and superseded dates. |
+| SP-15 | As a director, I see Dev→QA lag: days from Resolved to Closed, plus the current Resolved queue aged since Dev finished — so QA bandwidth waits are visible separate from sprint say/do. |
+| SP-16 | As a director, I see a second scrum-team heatmap where Do = Resolved∪Closed (status at sprint close), same planned membership as JIRA Completed say/do — so Dev finish is not understated by QA close lag. |
+| SP-17 | As a director, **Asks of leadership (org-wide)** are drafted by AI from sprint metrics (separate sprint prompt — not the release briefing). On AI failure, rule-based asks remain. |
 | SP-10 | As any user, filter state is kept in the URL hash, so a downloaded file reopens with the same view. |
 
 ---
@@ -57,14 +60,14 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
    - a status line showing the file name and modified time, job progress, or the last error.
 2. **Report iframe** (`srcDoc`, sandboxed `allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads`) fills the remaining height.
 3. **Inside the report:**
-   - **Org-wide (not filtered):** verdict, highlights/lowlights, sprint hygiene, asks of leadership, appendix.
+   - **Org-wide (not filtered):** verdict, highlights/lowlights, sprint hygiene, asks of leadership (AI via `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` at regenerate; **AI generated** banner above the table when `asksSource=ai`, else **Rules** banner), appendix.
    - **Filtered (sticky filter bar):**
-     - six KPI tiles (Say/Do, Completion, Scope added, Items delivered, Carried over, QA queue);
+     - six KPI tiles in a 3×2 grid telling the QA-bandwidth story first: Say/Do (JIRA Completed), Dev finished (Resolved∪Closed), QA bandwidth gap (pts), then QA queue, Scope added, Tickets that slipped;
      - discipline timeline: auto-detected phases (split where say/do shifts ≥ `phaseMinShiftPts` for ≥ `phaseMinSprints` sprints), narrative per phase, say/do chart with phase bands, one lane per release with gate markers (hollow ◇ = superseded date), and a say/do-around-each-gate table;
      - delivery-trend chart and three-velocity-streams chart;
-     - scrum-team heatmap (sortable columns; cells drill down);
+     - scrum-team heatmaps (sortable; cells drill down): (1) JIRA Completed say/do, (2) Dev-finished say/do where Do = Resolved∪Closed at sprint close, same planned denominator;
      - leader/manager table (sort by items, say/do or decline; sparkline per row);
-     - chronic carry-over table: every ticket planned into 3+ sprints (scroll box, sticky header, search), with live status, resolution, closed date, fix versions and "shipped in" (earliest released fix version on/after the closed date); tabs for Still open / Resolved — awaiting QA / Closed / All.
+     - chronic carry-over table: every ticket planned into 3+ sprints (search + tabs for Still open / Resolved — awaiting QA / Closed / All), with live status, resolution, closed date, fix versions and "shipped in"; **paginated 20 rows per page** (Prev/Next) — no endless scroll.
    - **Drill-down:** a side panel that closes with ✕, Esc, or a click on the backdrop.
 4. **Empty state:** a dashed box prompting **Regenerate from JIRA**.
 
@@ -91,7 +94,9 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 | Team with fewer than `minPlannedForRanking` planned items | Not scored and excluded from highlight/lowlight rankings. |
 | Assignee with no `Team-*-DirectReports` group | Grouped under "Unmapped (no manager group)"; the ownership-gap lowlight fires at ≥5%. |
 | Matrix org (manager's reports split across leaders) | Manager placed under the majority leader. `managerLeaderOverrides` in config can force placement. |
-| Latest slot still active | Appendix notes the slot is still closing. |
+| Latest slot still active | Appendix notes the slot is still closing (teams that have not clicked Complete Sprint yet). |
+| Mid-sprint regenerate | Window still ends at the immediately past cadence slot — the in-flight sprint is never included. |
+| Next sprint starts (~3 weeks later) | Past slot rolls forward; regenerate re-pulls that sprint’s Sprint Report from JIRA. |
 | Filter yields no rows | Tables show "No items for this filter." |
 
 ---

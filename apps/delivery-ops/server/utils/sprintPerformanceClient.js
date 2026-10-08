@@ -33,7 +33,14 @@ function sprintPerformanceApp(D) {
     return kept.length ? kept : candidate;
   };
   const sprintLink = (id, text) => `<a href="${esc(D.meta.sprintReportBase + id)}" target="_blank" rel="noopener" title="Open JIRA Sprint Report">${text}</a>`;
-  const state = Object.assign({ range: 'all', leader: '', manager: '', team: '', work: 'all', q: '', orgSort: 'items', heatSort: 'sayDo', showRetired: false, chronicView: 'all' }, readHash());
+  const CHRONIC_PAGE_SIZE = 20;
+  const state = Object.assign({
+    range: 'all', leader: '', manager: '', team: '', work: 'all', q: '',
+    orgSort: 'items', heatSort: 'sayDo', heatSortDev: 'sayDoDevFinished', showRetired: false,
+    chronicView: 'all', chronicPage: 1,
+  }, readHash());
+  // Page is UI-only — never restore from URL hash.
+  state.chronicPage = 1;
   const $ = (id) => document.getElementById(id);
   const pctTxt = (v) => (v == null ? '–' : `${v}%`);
   const creepTxt = (v) => (v == null ? '–' : v > 200 ? '>200%' : `${v}%`);
@@ -137,23 +144,28 @@ function sprintPerformanceApp(D) {
     const s = seriesOf(rs);
     const w = agg(rs, cfg);
     const sayDo = halves(s, K);
-    const compl = halfAvg(s, 'done', 'committed');
+    const devFin = halfAvg(s, 'devFinishedPlanned', 'planned');
     const creep = halfAvg(s, 'added', 'planned');
     const all = jiraFor(rs);
-    const span = `${slots[0].name}–${slots[slots.length - 1].name}`;
+    const qaUrl = jiraFor(rs, [`status = ${JSON.stringify(cfg.pendingQAStatusName || 'Resolved')}`]);
     const slipped = new Set(rs.filter((r) => r.carried).map((r) => r.key));
     const slippedOpen = Array.from(slipped).filter((k) => rs.some((r) => r.key === k && r.unresolvedNow)).length;
+    const gapPts = (a, b) => (a == null || b == null ? null : Math.max(0, a - b));
+    const gapRecent = gapPts(devFin.recent, sayDo.recent);
+    const gapEarly = gapPts(devFin.early, sayDo.early);
+    // Row 1 = QA-bandwidth story (JIRA Completed vs Dev finished). Row 2 = queue + hygiene.
     const tiles = [
-      ['Say / Do', pctTxt(sayDo.recent), `last ${K} sprints · target ≥${cfg.rag.greenSayDoPct}% ${deltaHtml(sayDo.early, sayDo.recent)}`, all],
-      ['Completion', pctTxt(compl.recent), `completed ÷ all items, last ${K} ${deltaHtml(compl.early, compl.recent)}`, all],
-      ['Scope added mid-sprint', pctTxt(creep.recent), `of planned, last ${K} sprints ${deltaHtml(creep.early, creep.recent, false)}`, all],
-      ['Items completed', w.done.toLocaleString(), `${span} · ${w.sp.toLocaleString()} story points`, all],
-      ['Tickets that slipped', slipped.size.toLocaleString(), `unfinished at sprint end at least once · ${slippedOpen.toLocaleString()} still open today`, all],
-      ['QA queue (Resolved)', w.pendingQA.toLocaleString(), 'awaiting verification now', jiraFor(rs, ['status = Resolved'])],
+      ['Say / Do (JIRA)', pctTxt(sayDo.recent), `Completed ÷ planned · last ${K} · target ≥${cfg.rag.greenSayDoPct}% ${deltaHtml(sayDo.early, sayDo.recent)}`, all, ''],
+      ['Dev finished', pctTxt(devFin.recent), `Resolved∪Closed ÷ planned · last ${K} ${deltaHtml(devFin.early, devFin.recent)}`, all, ''],
+      ['QA bandwidth gap', gapRecent == null ? '–' : `${gapRecent} pts`, `Dev finished − JIRA Say/Do · last ${K}${gapEarly != null && gapRecent != null ? ` ${deltaHtml(gapEarly, gapRecent, false)}` : ''} · mainly waiting on QA close`, qaUrl, 'story'],
+      ['QA queue (Resolved)', w.pendingQA.toLocaleString(), 'awaiting verification now · see Dev→QA lag below', qaUrl, ''],
+      ['Scope added mid-sprint', pctTxt(creep.recent), `of planned · last ${K} ${deltaHtml(creep.early, creep.recent, false)}`, all, ''],
+      ['Tickets that slipped', slipped.size.toLocaleString(), `unfinished at sprint end at least once · ${slippedOpen.toLocaleString()} still open today`, all, ''],
     ];
-    $('tiles').innerHTML = tiles.map(([label, value, sub, url]) => `<div class="tile"><div class="tile-label">${esc(label)}</div>
+    $('tiles').innerHTML = tiles.map(([label, value, sub, url, cls]) => `<div class="tile${cls ? ` ${cls}` : ''}"><div class="tile-label">${esc(label)}</div>
       <div class="tile-value">${linkOr(url, esc(value))}</div>
-      <div class="tile-sub">${sub}</div></div>`).join('');
+      <div class="tile-sub">${sub}</div></div>`).join('')
+      + `<div class="tiles-caption">JIRA Say/Do only counts Sprint Report <b>Completed</b> (usually Closed). <b>Dev finished</b> counts Resolved∪Closed at sprint close — the <b>gap</b> is the QA-bandwidth story, not “Dev missed the sprint.” Detail in Dev→QA lag and the second heatmap.</div>`;
   }
 
   function renderCharts(rs) {
@@ -209,39 +221,61 @@ function sprintPerformanceApp(D) {
     $('timeline-gates').innerHTML = out.table;
   }
 
-  function renderHeatmap(rs) {
+  /**
+   * Scrum-team heatmap. mode 'jira' = Sprint Report Completed say/do;
+   * mode 'devFinished' = Resolved∪Closed as Do (same planned denominator).
+   */
+  function renderHeatmap(rs, mode) {
+    const isDev = mode === 'devFinished';
+    const elId = isDev ? 'heatmap-dev' : 'heatmap';
+    const sortKey = isDev ? 'heatSortDev' : 'heatSort';
+    const sortAttr = isDev ? 'data-heatsortdev' : 'data-heatsort';
+    const metric = isDev ? 'sayDoDevFinished' : 'sayDo';
+    const doneKey = isDev ? 'devFinishedPlanned' : 'donePlanned';
+    const el = $(elId);
+    if (!el) return;
+
     const teams = Array.from(groupBy(rs, (r) => r.scrumTeam).entries()).map(([name, tr]) => {
       const series = seriesOf(tr);
       const window = agg(tr, cfg);
       const bySlot = groupBy(tr, (r) => r.slot);
       const sprintIds = new Map(slots.map((s) => [s.slot, Array.from(new Set((bySlot.get(s.slot) || []).map((r) => r.sprintId)))]));
       const active = series.slice(-K).some((x) => x.committed > 0);
-      return { name, series, window, trend: halves(series, K), unmeasurable: window.planned < cfg.minPlannedForRanking, active, rows: tr, sprintIds };
+      const trend = isDev
+        ? halfAvg(series, 'devFinishedPlanned', 'planned')
+        : halves(series, K);
+      return { name, series, window, trend, unmeasurable: window.planned < cfg.minPlannedForRanking, active, rows: tr, sprintIds };
     });
-    const key = state.heatSort;
+    const key = state[sortKey];
     const val = (t) => (key === 'name' ? t.name : key === 'trend' ? ((t.trend.recent ?? -999) - (t.trend.early ?? 0)) : (t.window[key] ?? -1));
     teams.sort((a, b) => b.active - a.active || a.unmeasurable - b.unmeasurable || (key === 'name' ? val(a).localeCompare(val(b)) : val(b) - val(a)));
     const retired = teams.filter((t) => !t.active).length;
     const shownTeams = state.showRetired || state.team ? teams : teams.filter((t) => t.active);
-    const th = (k, label) => `<th class="sort${state.heatSort === k ? ' on' : ''}" data-heatsort="${k}">${label}</th>`;
+    const th = (k, label) => `<th class="sort${state[sortKey] === k ? ' on' : ''}" ${sortAttr}="${k}">${label}</th>`;
     const body = shownTeams.map((t) => {
       const cells = t.series.map((x) => {
         if (!x.committed) return `<td class="num" style="${heat(null)}"></td>`;
         const names = t.sprintIds.get(x.slot).map((id) => D.sprints[id]).join(', ');
-        const tip = `${names}\n${x.donePlanned}/${x.planned} planned completed · ${x.added} added · ${x.removed} removed · click for the sprint report`;
-        return `<td class="num cell" style="${heat(t.unmeasurable ? null : x.sayDo)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(tip)}">${x.sayDo == null ? '·' : x.sayDo}</td>`;
+        const cellVal = x[metric];
+        const tip = isDev
+          ? `${names}\n${x[doneKey]}/${x.planned} planned Resolved∪Closed · Sprint Report completed ${x.donePlanned}/${x.planned} · click for lists`
+          : `${names}\n${x.donePlanned}/${x.planned} planned completed · ${x.added} added · ${x.removed} removed · click for the sprint report`;
+        return `<td class="num cell" style="${heat(t.unmeasurable ? null : cellVal)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(tip)}">${cellVal == null ? '·' : cellVal}</td>`;
       }).join('');
+      const rangeVal = t.window[metric];
       return `<tr${t.unmeasurable || !t.active ? ' class="dim"' : ''}>
         <td class="name">${pick('team', t.name, esc(t.name))}${ext(jiraFor(t.rows))}</td>${cells}
-        ${t.unmeasurable ? `<td class="num" style="${heat(null)}">n/a</td>` : `<td class="num strong" style="${heat(t.window.sayDo)}">${pctTxt(t.window.sayDo)}</td>`}
+        ${t.unmeasurable ? `<td class="num" style="${heat(null)}">n/a</td>` : `<td class="num strong" style="${heat(rangeVal)}">${pctTxt(rangeVal)}</td>`}
         <td style="white-space:nowrap">${t.unmeasurable ? `<span class="muted small" title="only ${t.window.planned} items planned at sprint start">not scored</span>` : deltaHtml(t.trend.early, t.trend.recent)}</td>
         <td class="num">${t.window.committed}</td>
         <td class="num ${!t.unmeasurable && t.window.scopeCreep > cfg.scopeCreepAlertPct ? 'warn' : ''}">${t.unmeasurable ? '–' : creepTxt(t.window.scopeCreep)}</td>
-        <td class="num">${t.window.carried}</td></tr>`;
+        <td class="num">${isDev ? t.window.notDevFinishedPlanned : t.window.carried}</td></tr>`;
     }).join('');
-    $('heatmap').innerHTML = `<table class="heat"><thead><tr>${th('name', 'Team')}${slots.map((s) => `<th title="${esc(s.range)} ${esc(s.startIso.slice(0, 4))}">${s.name}</th>`).join('')}
-      ${th('sayDo', 'Range')}${th('trend', `Trend (${K} v ${K})`)}${th('committed', 'Items')}${th('scopeCreep', 'Added')}${th('carried', 'Not done')}</tr></thead><tbody>${body || `<tr><td colspan="${slots.length + 6}" class="muted">No items for this filter.</td></tr>`}</tbody></table>
-      ${retired && !state.team ? `<button class="btn link" id="retired-toggle">${state.showRetired ? 'Hide' : 'Show'} ${retired} team(s) with no sprint in the last ${K} slots</button>` : ''}`;
+    const notDoneLabel = isDev ? 'Not Res/Clo' : 'Not done';
+    const notDoneSort = isDev ? 'notDevFinishedPlanned' : 'carried';
+    el.innerHTML = `<table class="heat"><thead><tr>${th('name', 'Team')}${slots.map((s) => `<th title="${esc(s.range)} ${esc(s.startIso.slice(0, 4))}">${s.name}</th>`).join('')}
+      ${th(metric, 'Range')}${th('trend', `Trend (${K} v ${K})`)}${th('committed', 'Items')}${th('scopeCreep', 'Added')}${th(notDoneSort, notDoneLabel)}</tr></thead><tbody>${body || `<tr><td colspan="${slots.length + 6}" class="muted">No items for this filter.</td></tr>`}</tbody></table>
+      ${!isDev && retired && !state.team ? `<button class="btn link" id="retired-toggle">${state.showRetired ? 'Hide' : 'Show'} ${retired} team(s) with no sprint in the last ${K} slots</button>` : ''}`;
   }
 
   function summarise(name, rs) {
@@ -378,6 +412,96 @@ function sprintPerformanceApp(D) {
       : (i[4] ? '<span class="muted">not in a released version</span>' : '');
     return `<td class="muted">${esc(dict.resolutions[i[3]] || '')}</td><td style="white-space:nowrap">${fmtDay(i[4])}</td><td>${fix || '<span class="muted">–</span>'}</td><td style="white-space:nowrap">${shippedTxt}</td>`;
   }
+
+  function daysBetween(a, b) {
+    if (!a || !b) return null;
+    const ms = Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`);
+    if (!Number.isFinite(ms) || ms < 0) return null;
+    return Math.round(ms / 86400000);
+  }
+  function percentile(sorted, p) {
+    if (!sorted.length) return null;
+    const i = (sorted.length - 1) * p;
+    const lo = Math.floor(i); const hi = Math.ceil(i);
+    if (lo === hi) return sorted[lo];
+    return Math.round(sorted[lo] * (hi - i) + sorted[hi] * (i - lo));
+  }
+  function ageBuckets(daysList) {
+    const b = [
+      { label: '0–2d', max: 2, n: 0 },
+      { label: '3–7d', max: 7, n: 0 },
+      { label: '8–14d', max: 14, n: 0 },
+      { label: '15–30d', max: 30, n: 0 },
+      { label: '31d+', max: Infinity, n: 0 },
+    ];
+    daysList.forEach((d) => {
+      const row = b.find((x) => d <= x.max);
+      if (row) row.n += 1;
+    });
+    return b;
+  }
+  function bucketBars(buckets, color) {
+    const max = Math.max(1, ...buckets.map((x) => x.n));
+    return `<div style="display:flex;align-items:flex-end;gap:8px;height:88px;margin:8px 0 4px">${buckets.map((x) => {
+      const h = Math.max(x.n ? 8 : 2, Math.round((x.n / max) * 72));
+      return `<div style="flex:1;text-align:center"><div style="height:${h}px;background:${color};border-radius:4px 4px 0 0" title="${x.label}: ${x.n}"></div><div class="small muted" style="margin-top:4px">${esc(x.label)}<br><b style="color:#212529">${x.n}</b></div></div>`;
+    }).join('')}</div>`;
+  }
+  function renderQaLag(rs) {
+    const today = (D.meta.generatedAt || new Date().toISOString()).slice(0, 10);
+    const seen = new Map();
+    rs.forEach((r) => { if (!seen.has(r.key)) seen.set(r.key, r); });
+    const waiting = [];
+    const closed = [];
+    seen.forEach((r, key) => {
+      const i = D.issues[key] || [];
+      const status = dict.statuses[i[1]] || '';
+      const resolved = i[4] || '';
+      const closedOn = i[7] || '';
+      if (status === QA_STATUS && resolved) {
+        const d = daysBetween(resolved, today);
+        if (d != null) waiting.push({ key, days: d, resolved, assignee: r.assignee, team: r.scrumTeam, manager: r.manager });
+      } else if (status === 'Closed' && resolved && closedOn) {
+        const d = daysBetween(resolved, closedOn);
+        if (d != null) closed.push({ key, days: d, resolved, closedOn, assignee: r.assignee, team: r.scrumTeam, manager: r.manager });
+      }
+    });
+    waiting.sort((a, b) => b.days - a.days);
+    closed.sort((a, b) => b.days - a.days);
+    const wDays = waiting.map((x) => x.days).sort((a, b) => a - b);
+    const cDays = closed.map((x) => x.days).sort((a, b) => a - b);
+    const med = (arr) => percentile(arr, 0.5);
+    const p90 = (arr) => percentile(arr, 0.9);
+    const waitUrl = jiraFor(rs, [`status = ${JSON.stringify(QA_STATUS)}`]);
+    const stat = (label, value, sub) => `<div class="tile" style="margin:0"><div class="tile-label">${esc(label)}</div><div class="tile-value">${value}</div><div class="tile-sub">${sub}</div></div>`;
+    const topWait = waiting.slice(0, 12);
+    $('qa-lag').innerHTML = `
+      <div class="tiles" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">
+        ${stat('Still waiting on QA', linkOr(waitUrl, String(waiting.length)), `currently ${esc(QA_STATUS)} · median ${med(wDays) ?? '–'}d · p90 ${p90(wDays) ?? '–'}d`)}
+        ${stat('Median close lag', cDays.length ? `${med(cDays)}d` : '–', `Resolved → Closed · ${closed.length.toLocaleString()} closed tickets with both dates`)}
+        ${stat('P90 close lag', cDays.length ? `${p90(cDays)}d` : '–', '9 of 10 closed within this many days')}
+        ${stat('Closed after 14d wait', String(closed.filter((x) => x.days > 14).length), `of ${closed.length.toLocaleString()} closed · long QA queue signal`)}
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="small" style="font-weight:600">Still waiting — age since Resolved</div>
+          ${waiting.length ? bucketBars(ageBuckets(wDays), '#e67700') : '<div class="muted small">None in Resolved for this filter.</div>'}
+        </div>
+        <div>
+          <div class="small" style="font-weight:600">Closed tickets — days Dev waited for QA</div>
+          ${closed.length ? bucketBars(ageBuckets(cDays), '#5f3dc4') : '<div class="muted small">No Closed tickets with Resolved→Closed dates yet for this filter.</div>'}
+        </div>
+      </div>
+      ${topWait.length ? `<div style="margin-top:10px"><div class="small" style="font-weight:600;margin-bottom:4px">Longest waits still in ${esc(QA_STATUS)}</div>
+        <div class="scrollbox" style="max-height:220px"><table class="small-table"><thead><tr><th>Key</th><th>Days waiting</th><th>Resolved on</th><th>Team</th><th>Assignee</th><th>Manager</th></tr></thead><tbody>
+        ${topWait.map((x) => `<tr>
+          <td><a href="${esc(D.meta.jiraBaseUrl)}/browse/${esc(x.key)}" target="_blank" rel="noopener">${esc(x.key)}</a></td>
+          <td class="num warn">${x.days}</td><td>${fmtDay(x.resolved)}</td>
+          <td>${esc(x.team)}</td><td>${esc(x.assignee)}</td><td class="muted">${esc(x.manager)}</td>
+        </tr>`).join('')}
+        </tbody></table></div></div>` : ''}`;
+  }
+
   function renderChronic(rs) {
     const q = state.q.trim().toLowerCase();
     const seen = new Map();
@@ -394,12 +518,31 @@ function sprintPerformanceApp(D) {
     const counts = { open: 0, qa: 0, closed: 0 };
     list.forEach((r) => { counts[chronicState(r)] += 1; });
     const shown = state.chronicView === 'all' ? list : list.filter((r) => chronicState(r) === state.chronicView);
+    const totalPages = Math.max(1, Math.ceil(shown.length / CHRONIC_PAGE_SIZE));
+    const page = Math.min(Math.max(1, Number(state.chronicPage) || 1), totalPages);
+    state.chronicPage = page;
+    const start = (page - 1) * CHRONIC_PAGE_SIZE;
+    const pageRows = shown.slice(start, start + CHRONIC_PAGE_SIZE);
+    const from = shown.length ? start + 1 : 0;
+    const to = Math.min(start + CHRONIC_PAGE_SIZE, shown.length);
     $('chronic-title').textContent = `Chronic carry-over — ${list.length} tickets planned into ${cfg.chronicCarryoverSprints}+ sprints · ${counts.open} still open`;
     const tab = (v, label, n) => `<button class="btn${state.chronicView === v ? ' on' : ''}" data-chronic="${v}">${label} (${n.toLocaleString()})</button>`;
+    const pager = shown.length > CHRONIC_PAGE_SIZE
+      ? `<div class="chronic-pager" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="small muted">Showing ${from.toLocaleString()}–${to.toLocaleString()} of ${shown.length.toLocaleString()}</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            <button type="button" class="btn" data-chronic-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
+            <span class="small">Page ${page} / ${totalPages}</span>
+            <button type="button" class="btn" data-chronic-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>Next →</button>
+          </span>
+        </div>`
+      : (shown.length
+        ? `<div class="small muted" style="margin-top:6px">Showing ${shown.length.toLocaleString()} ticket${shown.length === 1 ? '' : 's'}</div>`
+        : '');
     $('chronic').innerHTML = `<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">${tab('open', 'Still open', counts.open)}${tab('qa', `${QA_STATUS} — awaiting QA`, counts.qa)}${tab('closed', 'Closed', counts.closed)}${tab('all', 'All', list.length)}</div>
-      <div class="scrollbox"><table class="small-table"><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status now</th><th>Resolution</th><th>Closed on</th><th>Fix Version(s)</th><th>Shipped in</th><th>Sprints</th><th>Team</th><th>Assignee</th><th>Manager</th></tr></thead><tbody>
-      ${shown.map((r) => `<tr>${issueRow(r.key, `${versionCells(r.key)}<td class="num warn">${r.sprintCountEver}</td><td>${esc(r.scrumTeam)}</td><td>${esc(r.assignee)}</td><td class="muted">${esc(r.manager)}</td>`)}</tr>`).join('') || '<tr><td colspan="12" class="muted">None for this filter.</td></tr>'}
-      </tbody></table></div>`;
+      <table class="small-table"><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status now</th><th>Resolution</th><th>Closed on</th><th>Fix Version(s)</th><th>Shipped in</th><th>Sprints</th><th>Team</th><th>Assignee</th><th>Manager</th></tr></thead><tbody>
+      ${pageRows.map((r) => `<tr>${issueRow(r.key, `${versionCells(r.key)}<td class="num warn">${r.sprintCountEver}</td><td>${esc(r.scrumTeam)}</td><td>${esc(r.assignee)}</td><td class="muted">${esc(r.manager)}</td>`)}</tr>`).join('') || '<tr><td colspan="12" class="muted">None for this filter.</td></tr>'}
+      </tbody></table>${pager}`;
   }
 
   function openDrill(team, slot) {
@@ -437,9 +580,11 @@ function sprintPerformanceApp(D) {
     slots = slotsWithWork(rangeSlots(), rs);
     renderFilters();
     renderTiles(rs);
+    renderQaLag(rs);
     renderTimeline(rs);
     renderCharts(rs);
-    renderHeatmap(rs);
+    renderHeatmap(rs, 'jira');
+    renderHeatmap(rs, 'devFinished');
     renderOrg(rs);
     renderSprintRoster(rs);
     renderChronic(rs);
@@ -447,7 +592,10 @@ function sprintPerformanceApp(D) {
   }
 
   function set(patch) {
+    const resetsChronicPage = ['leader', 'manager', 'team', 'work', 'range', 'chronicView', 'q']
+      .some((k) => Object.prototype.hasOwnProperty.call(patch, k));
     Object.assign(state, patch);
+    if (resetsChronicPage && !('chronicPage' in patch)) state.chronicPage = 1;
     if ('leader' in patch && patch.leader && state.manager && !rows.some((r) => r.leader === patch.leader && r.manager === state.manager)) state.manager = '';
     if ('manager' in patch && patch.manager) state.leader = rows.find((r) => r.manager === patch.manager)?.leader || state.leader;
     render();
@@ -465,6 +613,8 @@ function sprintPerformanceApp(D) {
     }
     const hs = e.target.closest('[data-heatsort]');
     if (hs) { set({ heatSort: hs.dataset.heatsort }); return; }
+    const hsd = e.target.closest('[data-heatsortdev]');
+    if (hsd) { set({ heatSortDev: hsd.dataset.heatsortdev }); return; }
     const cell = e.target.closest('td.cell');
     if (cell) { openDrill(cell.dataset.team, Number(cell.dataset.slot)); return; }
     const cj = e.target.closest('.copyjql');
@@ -483,9 +633,15 @@ function sprintPerformanceApp(D) {
       return;
     }
     const cv = e.target.closest('[data-chronic]');
-    if (cv) { set({ chronicView: cv.dataset.chronic }); return; }
+    if (cv) { set({ chronicView: cv.dataset.chronic, chronicPage: 1 }); return; }
+    const cp = e.target.closest('[data-chronic-page]');
+    if (cp && !cp.disabled) {
+      const next = Number(cp.dataset.chronicPage);
+      if (Number.isFinite(next) && next >= 1) set({ chronicPage: next });
+      return;
+    }
     if (e.target.id === 'retired-toggle') { set({ showRetired: !state.showRetired }); return; }
-    if (e.target.id === 'f-reset') { set({ leader: '', manager: '', team: '', work: 'all', q: '' }); $('f-q').value = ''; return; }
+    if (e.target.id === 'f-reset') { set({ leader: '', manager: '', team: '', work: 'all', q: '', chronicPage: 1 }); $('f-q').value = ''; return; }
     if (e.target.id === 'drill-close' || e.target.id === 'drill') $('drill').classList.remove('open');
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('drill').classList.remove('open'); });
@@ -496,7 +652,11 @@ function sprintPerformanceApp(D) {
   $('f-work').addEventListener('change', (e) => set({ work: e.target.value }));
   $('f-orgsort').addEventListener('change', (e) => set({ orgSort: e.target.value }));
   $('gate-kinds').addEventListener('change', () => renderTimeline(filtered()));
-  $('f-q').addEventListener('input', (e) => { state.q = e.target.value; renderChronic(filtered()); });
+  $('f-q').addEventListener('input', (e) => {
+    state.q = e.target.value;
+    state.chronicPage = 1;
+    renderChronic(filtered());
+  });
 
   render();
 }

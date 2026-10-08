@@ -54,6 +54,8 @@ HYGIENE FIELDS TO CHECK (emit as bullets only when actually missing):
 - Test Plan Link not set (SIGNALS.testPlanLink is null or empty)
 - Design Doc not set (SIGNALS.designDocLink is null or empty)
 - Requirements Link not set (SIGNALS.requirementsLink is null or empty)
+- Risk Assessment not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.assessmentMissing)
+- Path to Green not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.pathToGreenMissing)
 
 REASONING REQUIREMENTS (used to populate TLDR and Key Risks — do NOT surface reasoning text in output):
 - Every claim in Key Risks MUST connect to a cause from TICKET CONTEXT or SIGNALS. No claim without a source.
@@ -85,9 +87,12 @@ CLOSEST-DATE-THAT-PASSED RULE (primary verdict anchor):
 - When CRITICAL_RISKS contains a "MISSED GATE" entry, set TLDR verdict to RED and lead with it.
 - daysAgo urgency: ≤7 days = YELLOW (if no other RED signals); 8–21 days = RED; >21 days = RED + escalation language.
 
-JIRA RISK INDICATOR ALIGNMENT:
+JIRA RISK INDICATOR + TEAM NARRATIVE ALIGNMENT:
 - SIGNALS.jiraRiskIndicator (Green / Yellow / Red) is the team's own attestation. Your RAG verdict in TLDR should match it.
-- If you diverge, TLDR MUST cite the specific evidence (a CRITICAL_RISKS entry, an open P0/P1 blocker, or a comment within 14 days naming a regression).
+- SIGNALS.riskAssessment and SIGNALS.pathToGreen are the team's written rationale and recovery plan. When present, TLDR/Key Risks MUST use them (plain English) — do not invent a different story.
+- If SIGNALS.teamRisk.verdictFloor is YELLOW or RED, TLDR must not be greener than that floor unless you cite overriding CRITICAL_RISKS / blocker evidence.
+- If Indicator is Yellow/Red and Path to Green or Risk Assessment is missing, that gap is already in CRITICAL_RISKS — lead with it when it is the most severe hygiene gap.
+- If you diverge from the Indicator, TLDR MUST cite the specific evidence (a CRITICAL_RISKS entry, an open P0/P1 blocker, or a comment within 14 days naming a regression).
 - Never silently override the team's attestation.
 
 COMMENT STALENESS FLOOR:
@@ -844,14 +849,222 @@ async function generateSosTierSummary(payload) {
   return trimmed;
 }
 
+// ── Sprint Performance — Asks of leadership (org-wide) ───────────────────────
+// Separate from RELEASE_SUMMARY: this is sprint discipline / say-do / QA lag /
+// hygiene — not gate dates, P0 release blockers, or feature buckets.
+
+const SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT = `You are a senior TPM writing org-wide "Asks of leadership" for a multi-sprint Sprint Performance report. Audience: Director / Team Executive. They will skim this in under 30 seconds.
+
+This is NOT a release health briefing. Do not invent gate dates, P0 release blockers, must-fix labels, or feature commit status. Work only from the sprint metrics packet in the user message.
+
+Sprint signals in the packet (use them):
+- JIRA Completed say/do vs Dev-finished say/do (Resolved∪Closed) — gap = QA close lag, not "Dev missed the sprint"
+- Dev→QA lag (still waiting in Resolved, median/p90 close lag)
+- Leader / manager say/do rankings
+- Three velocity streams (Dev done, QA verification ×1/3, Test tasks)
+- Scope creep, declining/improving teams, chronic carry-over keys, unmapped ownership, sprint hygiene
+
+OUTPUT FORMAT (strict — nothing else):
+## Asks of Leadership
+1. Ask: <one concrete leadership ask> | Owner: <named role or person role from the data, e.g. Team EMs + TPM>
+2. Ask: ... | Owner: ...
+(up to 5 lines; fewer is fine if the org is healthy)
+
+RULES:
+- Each ask must be actionable this sprint cycle (decision, freeze, deep-dive, burn-down, close hygiene) — never "monitor" or "continue to watch".
+- Prioritise: say/do declines → Dev-finished vs Completed gap / QA lag → mid-sprint scope chaos → trailing leader/manager orgs → chronic carry-over keys → unmapped ownership → sprint hygiene.
+- When Dev-finished say/do is materially higher than JIRA Completed say/do, frame QA bandwidth — do not blame Dev for that gap.
+- Name scrum teams / leaders / managers only if they appear in the packet.
+- If SEED_ASKS are provided, refine and prioritise them; you may drop weak ones and add stronger ones grounded in the metrics.
+- If the org is clean (no meaningful lowlights / gaps), emit 1–2 light asks or a single line: "1. Ask: No org-wide leadership asks this cycle — keep current sprint discipline. | Owner: TPM"
+- Under 220 words total.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from the data provided.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+  You are transcribing keys given to you — not recalling from memory.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key in your response, confirm it appears
+  verbatim in VALID TICKET KEYS above.
+`;
+
+/**
+ * Build user prompt for sprint leadership asks.
+ * @param {object} intelligence - Output of buildSprintAsksIntelligence
+ */
+function buildSprintLeadershipAsksPrompt(intelligence) {
+  const pack = intelligence || {};
+  const o = pack.overall || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const chronic = Array.isArray(pack.chronic) ? pack.chronic : [];
+  const waits = pack.qaLag?.longestWaits || [];
+  const keys = [];
+  const seenKey = new Set();
+  [...chronic.map((c) => c.key), ...waits.map((w) => w.key)].forEach((k) => {
+    if (k && !seenKey.has(k)) { seenKey.add(k); keys.push(k); }
+  });
+  const keyBlock = keys.length
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${keys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')}`
+    : 'VALID TICKET KEYS: none provided';
+
+  const lineList = (label, arr) => {
+    const items = (arr || []).filter(Boolean);
+    if (!items.length) return `${label}: none`;
+    return `${label}:\n${items.map((t) => `  - ${t}`).join('\n')}`;
+  };
+
+  const fmtRank = (rows) => (rows || []).map((r) => {
+    const who = r.leader ? `${r.name} (under ${r.leader})` : r.name;
+    return `${who}: ${r.sayDo ?? '—'}% say/do · ${r.people ?? '—'} people · ${r.committed ?? '—'} items`;
+  });
+
+  const gap = pack.devFinishedGap || {};
+  const gapTeamLines = (gap.largestTeamGaps || []).map(
+    (t) => `${t.name}: Completed ${t.jiraSayDo}% → Dev-finished ${t.devFinishedSayDo}% (gap +${t.gapPts} pts)`
+  );
+  const gapBlock = [
+    'DEV_FINISHED_VS_COMPLETED (same planned membership; gap ≈ QA close lag):',
+    `  Org JIRA Completed say/do: ${gap.orgJiraSayDo ?? o.sayDo ?? '—'}%`,
+    `  Org Dev-finished say/do (Resolved∪Closed): ${gap.orgDevFinishedSayDo ?? o.sayDoDevFinished ?? '—'}%`,
+    `  Org gap (Dev-finished − Completed): ${gap.orgGapPts != null ? `${gap.orgGapPts} pts` : '—'}`,
+    gapTeamLines.length ? `  Largest team gaps:\n${gapTeamLines.map((t) => `    - ${t}`).join('\n')}` : '  Largest team gaps: none',
+  ].join('\n');
+
+  const q = pack.qaLag || {};
+  const waitLines = (q.longestWaits || []).map(
+    (w) => `${w.key}: ${w.days}d waiting (Team: ${w.scrumTeam || '—'}; Assignee: ${w.assignee || '—'}; Manager: ${w.manager || '—'})`
+  );
+  const qaLagBlock = [
+    'QA_LAG (Resolved → Closed):',
+    `  Still waiting (status=Resolved): ${q.stillWaiting ?? 0} · median ${q.waitingMedianDays ?? '—'}d · p90 ${q.waitingP90Days ?? '—'}d`,
+    `  Closed lag: median ${q.closedMedianLagDays ?? '—'}d · p90 ${q.closedP90LagDays ?? '—'}d · closed after >14d: ${q.closedAfter14d ?? 0} of ${q.closedWithBothDates ?? 0}`,
+    waitLines.length ? `  Longest waits still in Resolved:\n${waitLines.map((t) => `    - ${t}`).join('\n')}` : '  Longest waits: none',
+  ].join('\n');
+
+  const ranks = pack.orgRankings || {};
+  const orgBlock = [
+    lineList('TOP_LEADERS_BY_SAY_DO', fmtRank(ranks.topLeaders)),
+    lineList('TRAILING_LEADERS_BY_SAY_DO', fmtRank(ranks.trailingLeaders)),
+    lineList('TOP_MANAGERS_BY_SAY_DO', fmtRank(ranks.topManagers)),
+    lineList('TRAILING_MANAGERS_BY_SAY_DO', fmtRank(ranks.trailingManagers)),
+  ].join('\n\n');
+
+  const vel = pack.velocityStreams || {};
+  const vw = vel.window || {};
+  const vr = vel.lastTrendSlots || {};
+  const velocityBlock = [
+    'VELOCITY_STREAMS:',
+    `  Full window — Dev done: ${vw.devDone ?? '—'} · QA verification (adj): ${vw.qaVerifiedAdj ?? '—'} · Test tasks: ${vw.testDone ?? '—'}`,
+    `  Last ${vr.slots ?? '—'} slots — Dev: ${vr.devDone ?? '—'} · QA verify adj: ${vr.qaVerifiedAdj ?? '—'} · Test: ${vr.testDone ?? '—'}`,
+  ].join('\n');
+
+  const chronicBlock = chronic.length
+    ? `CHRONIC CARRY-OVER (open, planned into many sprints):\n${chronic.map((c) => `  - ${c.key}: ${c.summary || ''} [${c.sprints} sprints] (Assignee: ${c.assignee || '—'}; Team: ${c.scrumTeam || '—'})`).join('\n')}`
+    : 'CHRONIC CARRY-OVER: none';
+
+  const hyg = pack.hygiene || {};
+  const hygieneLines = [
+    ...(hyg.staleActive || []).map((s) => `stale-open: ${s.name} (+${s.daysOverdue}d)`),
+    ...(hyg.startedEmpty || []).map((s) => `started-before-planned: ${s.name}`),
+    ...(hyg.lateClosed || []).map((s) => `late-closed: ${s.name} (+${s.daysLate}d)`),
+  ];
+
+  const seed = Array.isArray(pack.seedAsks) ? pack.seedAsks : [];
+  const seedBlock = seed.length
+    ? `SEED_ASKS (rule-based candidates — refine, do not invent facts beyond the packet):\n${seed.map((a, i) => `  ${i + 1}. ${a.text} | Owner: ${a.owner}`).join('\n')}`
+    : 'SEED_ASKS: none';
+
+  return [
+    `TODAY: ${today}`,
+    `PRODUCT_TEAM: ${pack.teamName || pack.teamId || '—'}`,
+    `SPRINT_WINDOW: ${pack.window || '—'}`,
+    `ORG_SAY_DO_RECENT: ${o.sayDoRecent ?? o.sayDo ?? '—'}%`,
+    `ORG_SAY_DO_TREND: ${o.trendEarly ?? '—'}% → ${o.trendRecent ?? '—'}%`,
+    `ORG_RAG: ${o.rag || '—'}`,
+    `SCOPE_CREEP_PCT: ${o.scopeCreep ?? '—'}`,
+    `COMPLETION_PCT: ${o.completion ?? '—'}`,
+    `PENDING_QA_RESOLVED: ${o.pendingQA ?? 0}`,
+    `CARRIED_ITEMS: ${o.carried ?? '—'}`,
+    `ITEMS_IN_WINDOW: ${o.committed ?? '—'}`,
+    `UNMAPPED_OWNERSHIP: ${o.unmappedPct ?? 0}% (${o.unmappedItems ?? 0} items)`,
+    '',
+    keyBlock,
+    '',
+    gapBlock,
+    '',
+    qaLagBlock,
+    '',
+    velocityBlock,
+    '',
+    orgBlock,
+    '',
+    lineList('HIGHLIGHTS', pack.highlights),
+    '',
+    lineList('LOWLIGHTS', pack.lowlights),
+    '',
+    lineList('DECLINING_TEAMS', pack.decliningTeams),
+    '',
+    lineList('IMPROVING_TEAMS', pack.improvingTeams),
+    '',
+    lineList('SCOPE_CREEP_TEAMS', pack.scopeCreepTeams),
+    '',
+    chronicBlock,
+    '',
+    lineList('SPRINT_HYGIENE', hygieneLines),
+    '',
+    seedBlock,
+    '',
+    'Write the Asks of Leadership section now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.',
+  ].join('\n');
+}
+
+/**
+ * Parse strict "N. Ask: … | Owner: …" lines from the model.
+ * @returns {{ text: string, owner: string }[]}
+ */
+function parseSprintLeadershipAsks(text) {
+  const asks = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || /^##/.test(line)) continue;
+    const m = line.match(/^\d+\.\s*(?:Ask:\s*)?(.+?)\s*\|\s*Owner:\s*(.+)$/i);
+    if (!m) continue;
+    const askText = m[1].replace(/^Ask:\s*/i, '').trim();
+    const owner = m[2].trim();
+    if (askText && owner) asks.push({ text: askText, owner });
+  }
+  return asks.slice(0, 5);
+}
+
+/**
+ * Generate AI-refined org-wide leadership asks for Sprint Performance.
+ * @param {object} intelligence - buildSprintAsksIntelligence output
+ * @returns {Promise<{ text: string, owner: string }[]>}
+ */
+async function generateSprintLeadershipAsks(intelligence) {
+  const messages = [
+    { role: 'system', content: SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT },
+    { role: 'user', content: buildSprintLeadershipAsksPrompt(intelligence) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const asks = parseSprintLeadershipAsks(text);
+  if (!asks.length) {
+    throw new Error('NAI returned no parseable sprint leadership asks');
+  }
+  return asks;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
   generateSosTierSummary,
+  generateSprintLeadershipAsks,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   SOS_TIER_SYSTEM_PROMPT,
+  SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
     buildUserPrompt,
@@ -861,6 +1074,8 @@ module.exports = {
     buildReleaseSummaryPrompt,
     buildSchedulePressureBlock,
     buildSosTierPrompt,
+    buildSprintLeadershipAsksPrompt,
+    parseSprintLeadershipAsks,
     extractKeysFromItems,
     collectCalloutKeys,
     formatCalloutsBlock,

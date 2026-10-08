@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSprintPerformance } from '../../hooks/useSprintPerformance';
 
 const bar = { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '6px 0 10px' };
@@ -20,10 +20,23 @@ function openBlob(html, file, download) {
 }
 
 export default function SprintPerformancePage() {
-  const { reports, html, selected, job, loading, error, loadReport, generate } = useSprintPerformance('ndb');
+  const { reports, html, selected, job, loading, error, iframeKey, loadReport, generate } = useSprintPerformance('ndb');
+  const [blobUrl, setBlobUrl] = useState('');
   const running = job.state === 'running';
   const current = reports.find((r) => r.file === selected);
   const onPick = useCallback((e) => loadReport(e.target.value), [loadReport]);
+
+  // Large reports (~2–3MB) truncate when stuffed into iframe srcDoc — heatmaps stay empty
+  // because the payload script at the end never runs. Blob URLs carry the full HTML.
+  useEffect(() => {
+    if (!html) {
+      setBlobUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [html, iframeKey]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
@@ -37,7 +50,7 @@ export default function SprintPerformancePage() {
         <button type="button" style={primary} onClick={generate} disabled={running}>
           {running ? 'Generating…' : 'Regenerate from JIRA'}
         </button>
-        <button type="button" style={btn} onClick={() => loadReport(selected)} disabled={loading}>Reload</button>
+        <button type="button" style={btn} onClick={() => loadReport()} disabled={loading} title="Fetch the newest report from the server">Reload</button>
         <button type="button" style={btn} disabled={!html} onClick={() => openBlob(html, selected, true)}>Download HTML</button>
         <button type="button" style={btn} disabled={!html} onClick={() => openBlob(html, selected, false)}>Open in new tab</button>
         <span style={note}>
@@ -53,11 +66,12 @@ export default function SprintPerformancePage() {
         </div>
       )}
       {loading && !html && <div style={note}>Loading report…</div>}
-      {html && (
+      {blobUrl && (
         <iframe
+          key={iframeKey || selected || 'report'}
           title="Sprint Performance report"
-          srcDoc={html}
-          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads"
+          src={blobUrl}
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
           allow="clipboard-write"
           style={{ flex: 1, width: '100%', border: '1px solid #dee2e6', borderRadius: 8, background: '#f8f9fa' }}
         />

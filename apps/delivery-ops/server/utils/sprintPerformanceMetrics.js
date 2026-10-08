@@ -145,6 +145,12 @@ function assignLeaderByManagerMajority(rows) {
   return rows;
 }
 
+/** Dev finished = Resolved or Closed at Sprint Report close (statusAtClose on client payload). */
+function isDevFinished(r) {
+  const s = r.statusAtClose || r.status || '';
+  return s === 'Resolved' || s === 'Closed';
+}
+
 // committed = every issue in the Sprint Report; planned = committed − added (the start-of-sprint commitment).
 function agg(rows, cfg) {
   const count = (fn) => rows.reduce((n, r) => (fn(r) ? n + 1 : n), 0);
@@ -155,6 +161,9 @@ function agg(rows, cfg) {
   const donePlanned = count((r) => r.done && !r.added);
   const carried = count((r) => r.carried);
   const qaVerified = count((r) => r.qaVerified);
+  // Same membership / planned denominator as sayDo; Do = Resolved∪Closed (not Sprint Report "Completed").
+  const devFinished = count((r) => isDevFinished(r));
+  const devFinishedPlanned = count((r) => isDevFinished(r) && !r.added);
   return {
     committed,
     planned,
@@ -165,7 +174,9 @@ function agg(rows, cfg) {
     carried,
     removed: count((r) => r.removed),
     sayDo: pct(donePlanned, planned),
+    sayDoDevFinished: pct(devFinishedPlanned, planned),
     completion: pct(done, committed),
+    completionDevFinished: pct(devFinished, committed),
     scopeCreep: pct(added, planned),
     carryover: pct(carried, committed),
     sp: Math.round(rows.reduce((a, r) => a + r.sp, 0)),
@@ -174,6 +185,9 @@ function agg(rows, cfg) {
     qaVerified,
     qaVerifiedAdj: Math.round(qaVerified * cfg.qaVerificationRatio * 10) / 10,
     pendingQA: new Set(rows.filter((r) => r.pendingQA).map((r) => r.key)).size,
+    devFinished,
+    devFinishedPlanned,
+    notDevFinishedPlanned: Math.max(0, planned - devFinishedPlanned),
   };
 }
 
@@ -487,4 +501,6 @@ function buildNarrative(model, cfg) {
 }
 
 module.exports = {
-  shippedIn, computeSprintPerformance, sprintReportUrl, loadPerformanceConfig, itemWeights, agg, pct, halves, jiraUrl, sprintInJql, UNASSIGNED, UNMAPPED, MANAGER_LEFT };
+  shippedIn, computeSprintPerformance, sprintReportUrl, loadPerformanceConfig, itemWeights, agg, pct, halves,
+  isDevFinished, jiraUrl, sprintInJql, UNASSIGNED, UNMAPPED, MANAGER_LEFT,
+};

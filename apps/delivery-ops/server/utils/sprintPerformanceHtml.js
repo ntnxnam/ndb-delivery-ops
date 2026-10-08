@@ -40,7 +40,7 @@ function buildPayload(model) {
       const lv = r.live || {};
       const shipped = metrics.shippedIn(r.live);
       issues[r.key] = [r.summary.slice(0, 100), d.statuses.id(r.statusNow), d.types.id(r.issuetype), d.resolutions.id(lv.resolution || ''),
-        lv.resolved || '', (lv.fixVersions || []).map(ver), shipped ? ver(shipped) : -1];
+        lv.resolved || '', (lv.fixVersions || []).map(ver), shipped ? ver(shipped) : -1, lv.closed || ''];
     }
     if (r.managerGroup) groups.managers[r.manager] = r.managerGroup;
     if (r.leaderGroup) groups.leaders[r.leader] = r.leaderGroup;
@@ -103,7 +103,9 @@ function appendix(model) {
     <li><b>Source:</b> JIRA Sprint Report for every board ${esc(String(model.meta.boardId))} sprint in the window (board → Reports → Sprint Report). Per-sprint Completed / Not Completed / Removed counts match that page. Click a heatmap cell → sprint name to compare.</li>
     <li><b>Unit:</b> one issue listed in one sprint's report. <b>Items</b> = Completed + Not Completed + Removed (+ completed outside the sprint).</li>
     <li><b>Done (sprint math)</b> = JIRA "Completed Issues" when the sprint closed. <b>Planned</b> = items − mid-sprint adds (*). <b>Say/Do</b> = planned completed ÷ planned. <b>Completion</b> = all completed ÷ all items. <b>Scope added</b> = added ÷ planned.</li>
+    <li><b>Dev-finished say/do</b> (second heatmap) = same planned membership; <b>Do</b> = status at sprint close was Resolved or Closed. Compare to JIRA Completed say/do to see QA lag inside the same sprint window.</li>
     <li><b>Tickets that slipped</b> = distinct tickets that appeared in "Issues Not Completed" at least once in the selected range (not a sum of per-sprint rows). "Still open today" uses each ticket's <i>current</i> JIRA status.</li>
+    <li><b>Dev → QA lag:</b> Dev finishes at <b>Resolved</b>; QA finishes at <b>Closed</b>. Waiting age = days since Resolved for tickets still in Resolved. Close lag = days Resolved→Closed from changelog (Closed Bug/Improvement sample). This is a QA bandwidth signal — not a sprint say/do failure by itself.</li>
     <li><b>Status now vs at close:</b> KPI tiles, chronic list and QA queue use live status / fix versions fetched at report generation. The sprint drill-down keeps the status from the Sprint Report (at close) so it matches JIRA.</li>
     <li><b>Chronic carry-over:</b> tickets planned into ${cfg.chronicCarryoverSprints}+ sprints in the window (non-removed appearances). Tabs split Still open / Resolved (awaiting QA) / Closed. <b>Shipped in</b> = earliest released fix version dated on/after the closed date.</li>
     <li><b>Discipline timeline:</b> splits say/do into phases where the level shifts ≥${cfg.phaseMinShiftPts || 8} pts for ≥${cfg.phaseMinSprints || 3} sprints. Release gates come from the curated <code>releaseGateDates</code> calendar (CC / CG / PG / GA; hollow ◇ = superseded date).</li>
@@ -137,15 +139,22 @@ header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
 h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.04em;color:#495057}h3{font-size:14px;margin:0 0 8px}
 .muted{color:#868e96}.small{font-size:12px}.caption{font-size:11px;color:#868e96;margin-top:6px}.ok{color:#2b8a3e;font-weight:600}
 .badge{display:inline-block;border:1px solid #dee2e6;border-radius:12px;padding:2px 10px;font-size:11px;color:#495057;background:#fff}
+.ai-banner{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;margin:0 0 10px;border-radius:6px;background:#e7f5ff;border:1px solid #74c0fc;color:#1864ab;font-size:12px;line-height:1.4}
+.ai-banner .ai-pill{flex:0 0 auto;background:#1c7ed6;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.ai-banner .ai-body{flex:1 1 auto}.ai-banner .ai-body b{font-weight:700}
+.rules-banner{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;margin:0 0 10px;border-radius:6px;background:#f8f9fa;border:1px solid #dee2e6;color:#495057;font-size:12px;line-height:1.4}
+.rules-banner .rules-pill{flex:0 0 auto;background:#868e96;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .verdict{display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:6px;margin:8px 0 12px;font-size:14px}
 .rag{color:#fff;font-weight:700;border-radius:4px;padding:3px 10px;font-size:12px;letter-spacing:.05em}
 .filters{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:8px 12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .filters select,.filters input{font:inherit;padding:4px 8px;min-height:2rem;border:1px solid #ced4da;border-radius:6px;background:#fff;max-width:240px}
 .filters .summary{flex:1 1 100%;font-size:12px;color:#495057}
 .btn{font:inherit;min-height:2rem;padding:4px 12px;border:1px solid #ced4da;border-radius:6px;background:#fff;cursor:pointer}.btn:hover{background:#f1f3f5}.copyjql{font:inherit;font-size:10px;font-weight:500;color:#1c7ed6;background:#e7f5ff;border:1px solid #a5d8ff;border-radius:4px;padding:0 5px;margin-left:3px;cursor:pointer;vertical-align:middle;letter-spacing:0;text-transform:none}.copyjql:hover{background:#d0ebff}.btn.on{background:#e7f5ff;border-color:#74c0fc;color:#1864ab;font-weight:600}.btn.link{border:0;background:none;color:#1c7ed6;padding:6px 0}
-.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.tile{background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:10px 12px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}.tile{background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:10px 12px}
+.tile.story{border-color:#ffc078;background:#fff9db}.tile.story .tile-label{color:#e67700;font-weight:600}
 .tile-label{font-size:11px;text-transform:uppercase;color:#868e96;letter-spacing:.04em}.tile-value{font-size:26px;font-weight:700;margin:2px 0}.tile-value a{color:#212529}
-.tile-sub{font-size:11px;color:#868e96}.delta{font-weight:600;margin-left:4px}.delta.up{color:#2b8a3e}.delta.down{color:#c92a2a}.delta.flat{color:#868e96}
+.tile-sub{font-size:11px;color:#868e96;line-height:1.35}.tiles-caption{grid-column:1/-1;font-size:12px;color:#495057;line-height:1.4;padding:2px 2px 4px}
+.delta{font-weight:600;margin-left:4px}.delta.up{color:#2b8a3e}.delta.down{color:#c92a2a}.delta.flat{color:#868e96}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:12px 14px;margin-bottom:12px;overflow-x:auto}
 ul.hl,ul.ll{margin:0;padding-left:18px}ul.hl li,ul.ll li{margin:5px 0}ul.hl li::marker{content:"▲  ";color:#2b8a3e}ul.ll li::marker{content:"▼  ";color:#c92a2a}
 .cite{font-size:11px;color:#868e96}.cite a{color:#868e96;border-bottom:1px dotted #adb5bd}
@@ -160,7 +169,8 @@ a.pick{color:#212529;border-bottom:1px dashed #adb5bd}a.pick:hover{color:#1c7ed6
 #drill{display:none;position:fixed;inset:0;background:rgba(33,37,41,.35);z-index:20}#drill.open{display:block}
 #drill .panel{position:absolute;top:0;right:0;bottom:0;width:min(860px,95vw);background:#fff;box-shadow:-4px 0 18px rgba(0,0,0,.15);padding:16px 18px;overflow:auto}
 @media print{body{background:#fff}.filters{position:static}.card{break-inside:avoid}}
-@media (max-width:1100px){.tiles{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}`;
+@media (max-width:1100px){.tiles{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media (max-width:700px){.tiles{grid-template-columns:1fr}}`;
 
 function inlineLibs() {
   return [
@@ -171,6 +181,8 @@ function inlineLibs() {
     svg.subLabelHeight.toString(),
     svg.subLabelText.toString(),
     `const pct = ${metrics.pct.toString()};`,
+    // Browser bundle has no module scope — helpers agg() closes over must be inlined too.
+    metrics.isDevFinished.toString(),
     metrics.agg.toString(),
     metrics.halves.toString(),
     timeline.segmentPhases.toString(),
@@ -219,6 +231,12 @@ ${verdict(model)}
 </div>
 <div class="tiles" id="tiles"></div>
 
+<div class="card" id="qa-lag-card">
+  <h3>Dev done → QA close lag</h3>
+  <div id="qa-lag"></div>
+  <div class="caption">Dev finishes work by moving the ticket to <b>Resolved</b>. QA closes it later. Lag = days from Resolved → Closed (changelog). “Still waiting” = currently Resolved, aged from the Resolved date. Follows the filters above — bandwidth signal for Bharat / Ashish directs.</div>
+</div>
+
 <h2>Discipline timeline</h2>
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h3>When was sprint discipline strong, and when did it slip?</h3>
@@ -244,7 +262,9 @@ ${verdict(model)}
 
 <h2>Scrum teams</h2>
 <div class="card"><h3>Say/do by sprint</h3><div id="heatmap"></div>
-<div class="caption">Cells show say/do % per sprint. Click a cell for the same Completed / Not Completed / Removed lists as JIRA, with a link to that sprint's JIRA Sprint Report · click a team name to filter · click a column header to sort.</div></div>
+<div class="caption">Cells show say/do % per sprint (JIRA Sprint Report <b>Completed</b> ÷ planned). Click a cell for Completed / Not Completed / Removed lists · click a team name to filter · click a column header to sort. Quiet teams: use “Show N team(s)…” under this table.</div></div>
+<div class="card" style="margin-top:12px"><h3>Say/do by sprint — Dev finished (Resolved ∪ Closed)</h3><div id="heatmap-dev"></div>
+<div class="caption">Same teams, slots, membership and <b>planned</b> denominator as the table above. <b>Do</b> = ticket status at sprint close was <b>Resolved or Closed</b> (Dev done, including waiting on QA). Gap vs the JIRA Completed heatmap is usually QA bandwidth, not “Dev missed the sprint.” Click a cell for the same drill-down lists.</div></div>
 
 <h2 id="org-heading">Organisation</h2>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 id="org-title">By leader and manager</h3>
@@ -264,9 +284,14 @@ ${verdict(model)}
 <div class="card"><h3>Sprint hygiene <span class="muted small">(org-wide)</span></h3>${hygieneTable(model)}</div>
 
 <h2>Asks of leadership <span class="muted small">(org-wide)</span></h2>
-<div class="card"><table><thead><tr><th>#</th><th>Ask</th><th>Owner</th></tr></thead><tbody>
-${model.asks.map((x, i) => `<tr><td class="num">${i + 1}</td><td>${esc(x.text)}</td><td class="muted">${esc(x.owner)}</td></tr>`).join('')}
-</tbody></table></div>
+<div class="card">
+${model.asksSource === 'ai'
+    ? `<div class="ai-banner" role="status"><span class="ai-pill">AI generated</span><div class="ai-body"><b>The asks in the table below were drafted by AI</b> from org-wide sprint metrics (say/do, Dev-finished gap, QA lag, org rankings, velocity streams, chronic carry-over, hygiene). Review before acting. Ticket keys are limited to keys in the prompt.</div></div>`
+    : `<div class="rules-banner" role="status"><span class="rules-pill">Rules</span><div class="ai-body"><b>The asks below are rule-based</b> (AI unavailable or failed). Same metric signals; not LLM-drafted.</div></div>`}
+<table><thead><tr><th>#</th><th>Ask</th><th>Owner</th></tr></thead><tbody>
+${(model.asks || []).map((x, i) => `<tr><td class="num">${i + 1}</td><td>${esc(x.text)}</td><td class="muted">${esc(x.owner)}</td></tr>`).join('')}
+</tbody></table>
+</div>
 
 ${appendix(model)}
 <footer>Source: JIRA Sprint Report (board ${esc(String(meta.boardId || ''))}) for each sprint via sprintPerformanceService · generated ${esc(meta.generatedAt.replace('T', ' ').slice(0, 16))} UTC · every number links to the JIRA query behind it.</footer>

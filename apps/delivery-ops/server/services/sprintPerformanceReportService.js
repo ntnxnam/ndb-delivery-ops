@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { collectSprintPerformance, computeFromRaw } = require('./sprintPerformanceService');
 const { renderSprintPerformanceHtml } = require('../utils/sprintPerformanceHtml');
+const { enrichModelAsksWithAi } = require('./sprintLeadershipAsksService');
 const { getTeamById } = require('../utils/teamConfig');
 
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'reports');
@@ -62,9 +63,14 @@ function startGeneration({ token, teamId }) {
   const job = { state: 'running', teamId: team.id, startedAt: new Date().toISOString(), progress: 'Starting…', token };
   jobs.set(team.id, job);
   collectSprintPerformance({ token, teamId: team.id, log: (m) => { job.progress = String(m).trim(); } })
-    .then((raw) => {
-      job.file = writeReport(computeFromRaw(raw));
+    .then(async (raw) => {
+      job.progress = 'Computing metrics…';
+      const model = computeFromRaw(raw);
+      job.progress = 'AI: Asks of leadership…';
+      await enrichModelAsksWithAi(model);
+      job.file = writeReport(model);
       job.state = 'done';
+      job.asksSource = model.asksSource || 'rules';
     })
     .catch((err) => {
       job.state = 'error';
