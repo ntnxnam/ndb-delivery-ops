@@ -33,6 +33,32 @@ function statusTone(status) {
   return 'other';
 }
 
+function isTerminalStatus(status) {
+  const s = String(status || '').toLowerCase();
+  // Closed / Resolved (and Done/Complete) — past dates are fine; otherwise overdue screams
+  return (
+    s.includes('closed') ||
+    s.includes('resolved') ||
+    s.includes('done') ||
+    s === 'complete' ||
+    s.endsWith(' complete')
+  );
+}
+
+function todayIsoLocal() {
+  const t = new Date();
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, '0');
+  const d = String(t.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** True when target date is before today (calendar day). */
+export function isDatePast(isoDay) {
+  if (!isoDay) return false;
+  return String(isoDay).slice(0, 10) < todayIsoLocal();
+}
+
 /** Hierarchy target date: Code Complete / Due / Sprint end (inferred). */
 export function targetDateMeta(issue) {
   if (!issue) return null;
@@ -50,12 +76,15 @@ export function targetDateMeta(issue) {
           : 'Target');
   const inferred = source === 'sprint_end';
   const sprintHint = inferred && issue.sprintName ? ` (${issue.sprintName})` : '';
+  const baseText = inferred ? `${label}: ${date}${sprintHint}` : `${label}: ${date}`;
+  const overdue = isDatePast(date) && !isTerminalStatus(issue.status);
   return {
     date,
     source: source || 'unknown',
     label,
     inferred,
-    text: inferred ? `${label}: ${date}${sprintHint}` : `${label}: ${date}`,
+    overdue,
+    text: overdue ? `OVERDUE · ${baseText}` : baseText,
   };
 }
 
@@ -96,12 +125,15 @@ export default function TicketChip({
       `Due inferred from sprint end${issue.sprintName ? ` (${issue.sprintName})` : ''}`
     );
   }
+  if (dateMeta?.overdue) {
+    flagBits.push('Target date / sprint end is in the past and ticket is not Closed/Resolved');
+  }
 
   return (
     <a
       className={`dv-chip${fyi ? ' dv-chip--fyi' : ''}${hy || missingAsk ? ' dv-chip--hygiene' : ''}${
         emphasize ? ' dv-chip--linked' : ''
-      }`}
+      }${dateMeta?.overdue ? ' dv-chip--overdue' : ''}`}
       href={browseUrl(jiraBaseUrl, issue.key)}
       target="_blank"
       rel="noopener noreferrer"
@@ -111,6 +143,9 @@ export default function TicketChip({
         status ? `Status: ${status}` : '',
         issueType ? `Type: ${issueType}` : '',
         dateMeta ? dateMeta.text : 'No target date',
+        dateMeta?.overdue
+          ? 'OVERDUE — date/sprint ended and ticket is still open'
+          : null,
         fv ? `fixVersion: ${fv}` : 'No real fixVersion',
         nature ? `Release Commit: ${nature}` : 'Release Commit blank',
         issue.spanInfo?.label || '',
@@ -130,7 +165,9 @@ export default function TicketChip({
         {issueType ? <span className="dv-issuetype">{issueType}</span> : null}
         {dateMeta ? (
           <span
-            className={`dv-date dv-date--${dateMeta.source}${dateMeta.inferred ? ' dv-date--inferred' : ''}`}
+            className={`dv-date dv-date--${dateMeta.source}${
+              dateMeta.inferred ? ' dv-date--inferred' : ''
+            }${dateMeta.overdue ? ' dv-date--overdue' : ''}`}
           >
             {dateMeta.text}
           </span>

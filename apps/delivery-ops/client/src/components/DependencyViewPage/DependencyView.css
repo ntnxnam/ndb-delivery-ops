@@ -346,6 +346,44 @@
   font-weight: 500;
 }
 
+/* Past due / past sprint end while ticket still open — cannot miss */
+.dv-date--overdue {
+  background: #c53030 !important;
+  color: #fff !important;
+  border: 2px solid #742a2a !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 2px rgba(197, 48, 48, 0.35);
+  animation: dv-overdue-pulse 1.4s ease-in-out infinite;
+}
+
+.dv-chip--overdue {
+  border-color: #c53030;
+  box-shadow: inset 3px 0 0 #c53030;
+}
+
+.dv-edge-project--overdue {
+  border-color: #c53030;
+  box-shadow: inset 3px 0 0 #c53030;
+}
+
+@keyframes dv-overdue-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(197, 48, 48, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(197, 48, 48, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dv-date--overdue {
+    animation: none;
+  }
+}
+
 .dv-project-stack {
   display: flex;
   flex-direction: column;

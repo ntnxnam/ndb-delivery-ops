@@ -481,7 +481,7 @@ function ProjectCard({ node, jiraBaseUrl }) {
   const dateMeta = targetDateMeta(node);
   return (
     <a
-      className="dv-edge-project"
+      className={`dv-edge-project${dateMeta?.overdue ? ' dv-edge-project--overdue' : ''}`}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
@@ -491,6 +491,9 @@ function ProjectCard({ node, jiraBaseUrl }) {
         status ? `Status: ${status}` : '',
         issueType ? `Type: ${issueType}` : '',
         dateMeta ? dateMeta.text : '',
+        dateMeta?.overdue
+          ? 'OVERDUE — date/sprint ended and ticket is still open'
+          : null,
         fv ? `fixVersion: ${fv}` : '',
       ]
         .filter(Boolean)
@@ -506,7 +509,9 @@ function ProjectCard({ node, jiraBaseUrl }) {
         {issueType ? <span className="dv-issuetype">{issueType}</span> : null}
         {dateMeta ? (
           <span
-            className={`dv-date dv-date--${dateMeta.source}${dateMeta.inferred ? ' dv-date--inferred' : ''}`}
+            className={`dv-date dv-date--${dateMeta.source}${
+              dateMeta.inferred ? ' dv-date--inferred' : ''
+            }${dateMeta.overdue ? ' dv-date--overdue' : ''}`}
           >
             {dateMeta.text}
           </span>
