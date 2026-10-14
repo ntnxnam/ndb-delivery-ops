@@ -254,8 +254,11 @@ function PageHeader({
         <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
           Portfolio Delivery Ops · Release Brief
         </div>
-        <div className="rb-header__title">
-          {selectedRelease || 'Release Brief'}
+        <div className="rb-header__title-row">
+          <div className="rb-header__title">
+            {selectedRelease || 'Release Brief'}
+          </div>
+          <Pill tone="warning">WIP</Pill>
         </div>
       </div>
       <div className="rb-header__controls">

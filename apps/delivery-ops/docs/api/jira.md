@@ -238,20 +238,25 @@ Per-KPI `error` strings are returned inline; a failing KPI does not fail the bat
 
 ### POST /api/jira/release-versions
 
-**Purpose**: List unreleased versions in the selected team's JIRA project (`GET /project/{projectKey}/versions`).
+**Purpose**: List versions in the selected team's JIRA project (`GET /project/{projectKey}/versions`). Default is unreleased only; pass `includeReleased: true` for Retrospective and other past-release pickers.
 
 **Auth**: required + `releaseVersions` permission
 
-**Request** — Body: `{ teamId: string }` (required). No fallback to another team when missing or unknown.
+**Request** — Body:
+- `teamId` (string, required). No fallback to another team when missing or unknown.
+- `includeReleased` (boolean, optional, default `false`). When `true`, also return shipped (`released: true`) versions. Archived versions are always excluded.
 
 **Server flow**
-`jira/versions.js` → `releaseDataService.listOpenReleaseVersions` → `listFixVersionsForTeam` → `GET /rest/api/2/project/{team.projectKey}/versions` → keep `released !== true && archived !== true` → pick next upcoming `releaseDate` as `defaultVersion`
+`jira/versions.js` → `releaseDataService.listOpenReleaseVersions` → `listFixVersionsForTeam` → `GET /rest/api/2/project/{team.projectKey}/versions` → drop archived → optionally keep released → pick next upcoming unreleased `releaseDate` as `defaultVersion`
 
 **Response shape**
 ```json
 {
   "success": true,
-  "versions": [{ "name": "MSP-2.1", "released": false, "releaseDate": "2026-10-01" }],
+  "versions": [
+    { "name": "MSP-2.1", "released": false, "releaseDate": "2026-10-01" },
+    { "name": "MSP-2.0", "released": true, "releaseDate": "2026-01-01" }
+  ],
   "projectKey": "ENG",
   "defaultVersion": "MSP-2.1",
   "teamId": "prism-infra"
@@ -264,9 +269,11 @@ Per-KPI `error` strings are returned inline; a failing KPI does not fail the bat
 | 400 | teamId missing, unknown, or team has no `projectKey` | Show Fetch / Admin error |
 | 429 | JIRA rate limit | Retry later |
 
-**Caching**: ~10 min per team on the server.
+**Caching**: ~10 min per team on the server (shared across includeReleased true/false).
 
 > ⚠️ Breaking change in 2026-08-26: versions are unreleased names from `GET /project/{team.projectKey}/versions` (one call). No ticket search.
+>
+> 2026-10-15: optional `includeReleased` for Retrospective past-release dropdown. Default behaviour unchanged.
 
 ---
 
@@ -620,7 +627,13 @@ Route handler → `checkKpiViewAuthorization` → `systemTestScaleService.getDas
   "stPulse": {
     "global": { "all": { "count": 0, "jql": "..." }, "open": {}, "resolvedNotClosed": {} },
     "byRelease": { "NDB-2.12": { "affectedOpen": {}, "fixVersionOpen": {} } },
-    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 }
+    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 },
+    "byLabel": {
+      "longevity": { "key": "longevity", "title": "Longevity", "label": "longevity", "all": {}, "open": {} },
+      "smoke": { "key": "smoke", "title": "System Smoke", "label": "ndb-system-smoke-test", "all": {}, "open": {} },
+      "functional": { "key": "functional", "title": "Functional (ST-found)", "label": "ndb-systest-found-functional-bug", "all": {}, "open": {} },
+      "scale": { "key": "scale", "title": "Scale", "label": "ndb-scale", "all": {}, "open": {} }
+    }
   },
   "trends": { "series": [], "rateSeries": [] },
   "components": { },

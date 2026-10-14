@@ -28,7 +28,7 @@ is the primary live tenant today.
 | `/release/brief` | Release Brief | Release RAG + blockers + 7-day asks | `release-health-briefing` | `release-ai-briefing` |
 | `/release-config` | Release Config | Gate date config | none | rm |
 | `/team-management` | Admin | Teams / RBAC | none | admin |
-| `/dependency-view` | Dependency View | Partnership + companion deps (read-only) | none | `dependency-walk`, dependency-tracker |
+| `/dependency-view` | Dependency View | 3-axis deps matrix + hygiene (read-only) | none | `dependency-walk`, dependency-tracker |
 
 ## Non-UI surfaces
 

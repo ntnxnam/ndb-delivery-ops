@@ -120,6 +120,29 @@ describe('listFixVersionsForTeam', () => {
     });
   });
 
+  test('includeReleased returns shipped versions alongside open ones', async () => {
+    const jira = {
+      getProjectVersions: async () => [
+        { name: 'MSP-2.1', released: false, archived: false, releaseDate: '2026-10-01' },
+        { name: 'MSP-2.0', released: true, archived: false, releaseDate: '2026-01-01' },
+        { name: 'old', released: false, archived: true, releaseDate: '2025-01-01' },
+      ],
+    };
+
+    const versions = await listFixVersionsForTeam(
+      { id: 'prism-infra', projectKey: 'ENG' },
+      jira,
+      { includeReleased: true }
+    );
+
+    expect(versions.map((v) => v.name)).toEqual(['MSP-2.1', 'MSP-2.0']);
+    expect(versions.find((v) => v.name === 'MSP-2.0')).toEqual({
+      name: 'MSP-2.0',
+      released: true,
+      releaseDate: '2026-01-01',
+    });
+  });
+
   test('does not silently fall back when projectKey is missing', async () => {
     const jira = { getProjectVersions: jest.fn() };
     await expect(listFixVersionsForTeam({ id: 'prism-infra' }, jira))

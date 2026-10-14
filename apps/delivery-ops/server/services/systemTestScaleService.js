@@ -204,6 +204,29 @@ function buildStPulseJql(cfg, key, rel) {
   return map[key] || null;
 }
 
+/**
+ * Single-label ST slice (longevity / smoke / functional / scale).
+ * Same project + issuetype envelope as ST pulse; one labels = clause.
+ */
+function buildStPulseLabelJql(cfg, label, openOnly = false) {
+  const st = cfg.stPulse || {};
+  const project = st.project || 'ERA';
+  const types = formatJqlList(st.issueTypes || ['Bug', 'Improvement']);
+  const labelTok = formatJqlList([label]);
+  if (!labelTok || !types) return null;
+  const base = andParts(
+    `project = ${project}`,
+    `labels = ${labelTok}`,
+    `issuetype in (${types})`
+  );
+  return openOnly ? andParts(base, 'statusCategory != Done') : base;
+}
+
+function stPulseLabelWidgets(cfg) {
+  const widgets = (cfg.stPulse && cfg.stPulse.labelWidgets) || [];
+  return Array.isArray(widgets) ? widgets.filter((w) => w && w.key && w.label) : [];
+}
+
 function carryJql(cfg, prev, curr) {
   return andParts(
     cfg.kpiFilter,
@@ -278,6 +301,13 @@ function buildQueries(cfg) {
       queries[`st|${rel}|affectedOpen`] = buildStPulseJql(cfg, 'affectedOpen', rel);
       queries[`st|${rel}|fixVersionOpen`] = buildStPulseJql(cfg, 'fixVersionOpen', rel);
     }
+  }
+
+  for (const w of stPulseLabelWidgets(cfg)) {
+    const allJql = buildStPulseLabelJql(cfg, w.label, false);
+    const openJql = buildStPulseLabelJql(cfg, w.label, true);
+    if (allJql) queries[`st|label|${w.key}|all`] = allJql;
+    if (openJql) queries[`st|label|${w.key}|open`] = openJql;
   }
 
   return queries;
@@ -523,6 +553,22 @@ async function getDashboard({
       ),
     };
   }
+  const stPulseByLabel = {};
+  for (const w of stPulseLabelWidgets(cfg)) {
+    stPulseByLabel[w.key] = {
+      key: w.key,
+      title: w.title || w.key,
+      label: w.label,
+      all: cell(
+        results[`st|label|${w.key}|all`],
+        buildStPulseLabelJql(cfg, w.label, false)
+      ),
+      open: cell(
+        results[`st|label|${w.key}|open`],
+        buildStPulseLabelJql(cfg, w.label, true)
+      ),
+    };
+  }
 
   return {
     generatedAt: new Date().toISOString(),
@@ -554,6 +600,7 @@ async function getDashboard({
     stPulse: {
       global: stPulseGlobal,
       byRelease: stPulseByRelease,
+      byLabel: stPulseByLabel,
       sourceFilters: (cfg.stPulse && cfg.stPulse.sourceFilters) || null,
     },
     carry,
@@ -570,5 +617,6 @@ module.exports = {
   getDashboard,
   buildMetricJql,
   buildStPulseJql,
+  buildStPulseLabelJql,
   carryJql,
 };

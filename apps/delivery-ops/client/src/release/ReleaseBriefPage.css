@@ -23,6 +23,13 @@
   gap: var(--ds-space-3, 0.75rem);
 }
 
+.rb-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
 .rb-header__title {
   font-size: 1.5rem;
   font-weight: 700;

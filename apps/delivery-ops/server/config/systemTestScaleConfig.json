@@ -28,7 +28,13 @@
       "resolvedNotClosed": 188193,
       "affectedOpen": 188194,
       "fixVersionOpen": 188195
-    }
+    },
+    "labelWidgets": [
+      { "key": "longevity", "label": "longevity", "title": "Longevity" },
+      { "key": "smoke", "label": "ndb-system-smoke-test", "title": "System Smoke" },
+      { "key": "functional", "label": "ndb-systest-found-functional-bug", "title": "Functional (ST-found)" },
+      { "key": "scale", "label": "ndb-scale", "title": "Scale" }
+    ]
   },
   "defaultTeamId": "ndb",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",

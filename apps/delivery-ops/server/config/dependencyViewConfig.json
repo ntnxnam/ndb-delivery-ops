@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "description": "Dependency View — mode = partnership|companionship; span = EW project type via JIRA labels",
+  "description": "Dependency View — Modes: Dependency (links) | Partnership (hierarchy). Project type via *-ew. Rules: agent-pack/context/domain/dependency_rule.md. Legacy section keys partnership*/companion* until renamed.",
   "defaultTeamId": "ndb",
   "defaultRelease": "NDB-3.0",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",
@@ -92,8 +92,8 @@
     }
   ],
   "modesOfOperation": {
-    "partnership": "JIRA issue links (blocks / is blocked by) between tickets",
-    "companionship": "Their tickets sit under our epics / companion root hierarchy (Parent Link)"
+    "dependency": "JIRA issue links (blocks / is blocked by)",
+    "partnership": "FEAT / Initiative → Epic hierarchy (Parent Link)"
   },
   "spans": [
     {
@@ -112,10 +112,10 @@
     },
     {
       "id": "ndb_ew",
-      "label": "NDB EW",
-      "short": "NDB",
+      "label": "Peer NDB",
+      "short": "Peer NDB",
       "jiraLabel": "ndb-ew",
-      "hint": "Type of project: Within NDB (label ndb-ew)."
+      "hint": "Peer NDB teams (still NDB) — cross-team within NDB; label ndb-ew. Not outside NDB."
     },
     {
       "id": "team_internal",
@@ -126,18 +126,25 @@
     }
   ],
   "spanTaxonomy": {
-    "description": "Span = type of project (EW bucket), from JIRA labels — not link hop count.",
+    "description": "Span = type of project (EW bucket). Prefer *-ew labels; else infer from links / epic-parent / project key.",
     "rules": [
       "global-ew → Global EW",
-      "nutanix-ew → Nutanix EW",
-      "ndb-ew → NDB EW",
-      "none of the above → Team internal"
+      "nutanix-ew → Nutanix (outside NDB)",
+      "ndb-ew → Peer NDB (still NDB)",
+      "no label → infer from linked tickets, epic/Parent Link, then project key",
+      "still unknown → Team internal (FYI)"
     ],
     "priority": [
       "global-ew",
       "nutanix-ew",
       "ndb-ew"
     ]
+  },
+  "projectSpanHints": {
+    "ndb": ["ERA", "FEAT"],
+    "nutanix": ["ENG", "NCM", "NCN", "PC", "AOS", "MSP", "XI", "CALM", "OBJECTS", "FLOW", "PRISM"],
+    "global": [],
+    "notes": "ERA/FEAT = NDB home. ENG, NCN, or any other project on an epic or its children → nutanix-ew."
   },
   "wishlist": {
     "labelSuffix": "wishlist",

@@ -16,6 +16,13 @@
   flex-wrap: wrap;
 }
 
+.retro-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+}
+
 .retro-header h2 {
   margin: 0;
   font-size: var(--ds-fs-page);

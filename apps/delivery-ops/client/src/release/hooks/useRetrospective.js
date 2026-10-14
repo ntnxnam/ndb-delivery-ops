@@ -7,6 +7,7 @@ import {
 } from '../services/retrospectiveService';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 import { useReleaseData } from '../../contexts/ReleaseDataContext';
+import { useRetroReleaseVersions } from './useRetroReleaseVersions';
 import {
   deriveRetroProjectsFromBundle,
   deriveRetroDetailFromBundle,
@@ -25,15 +26,24 @@ export function useRetrospective({
   const [projectDetail, setProjectDetail] = useState(null);
   const [retroFallback, setRetroFallback] = useState(null);
   const [hasFetched, setHasFetched] = useState(false);
+  // Selection stays in the shared context; version *options* come from the
+  // retro-scoped hook so shipped releases appear in Past Releases.
   const {
-    versions,
-    activeVersions,
-    inactiveVersions,
     selectedRelease,
     setSelectedRelease,
   } = useSelectedRelease();
+  const {
+    activeVersions,
+    inactiveVersions,
+    loadingVersions,
+    versionsError,
+    refetchVersions,
+  } = useRetroReleaseVersions({ teamId, jiraToken, username });
+  const versions = useMemo(
+    () => [...(activeVersions || []), ...(inactiveVersions || [])],
+    [activeVersions, inactiveVersions]
+  );
   const { releaseTickets, releaseError } = useReleaseData();
-  const [loadingVersions] = useState(false);
   const [loadingBootstrap, setLoadingBootstrap] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -199,6 +209,8 @@ export function useRetrospective({
       versions,
       activeVersions,
       inactiveVersions,
+      versionsError,
+      refetchVersions,
       hasFetched,
       bootstrap,
       projectsPage,
@@ -210,14 +222,16 @@ export function useRetrospective({
       selectedRelease,
       setSelectedRelease: onSelectRelease,
       loading: loadingVersions || loadingBootstrap || loadingProjects || loadingDetail || loadingFallback,
+      loadingVersions,
       loadingBootstrap,
       loadingProjects,
       loadingDetail,
       error,
       refresh,
     }),
-    [ready, versions, activeVersions, inactiveVersions, hasFetched, bootstrap, projectsPage, selectedProjectKey,
-     projectDetail, retroFallback, selectedRelease, onSelectRelease, selectProject,
-     loadingVersions, loadingBootstrap, loadingProjects, loadingDetail, loadingFallback, error, refresh]
+    [ready, versions, activeVersions, inactiveVersions, versionsError, refetchVersions, hasFetched,
+     bootstrap, projectsPage, selectedProjectKey, projectDetail, retroFallback, selectedRelease,
+     onSelectRelease, selectProject, loadingVersions, loadingBootstrap, loadingProjects,
+     loadingDetail, loadingFallback, error, refresh]
   );
 }

@@ -68,12 +68,15 @@ export function selectReleaseView(data, currentRelease, compareRelease) {
   const components = data.components?.[activeCurrent] || [];
   const stGlobal = data.stPulse?.global || {};
   const stRel = data.stPulse?.byRelease?.[activeCurrent] || {};
+  const byLabelMap = data.stPulse?.byLabel || {};
+  const byLabel = Object.keys(byLabelMap).map((k) => byLabelMap[k]).filter(Boolean);
   const stPulse = {
     all: stGlobal.all || null,
     open: stGlobal.open || null,
     resolvedNotClosed: stGlobal.resolvedNotClosed || null,
     affectedOpen: stRel.affectedOpen || null,
     fixVersionOpen: stRel.fixVersionOpen || null,
+    byLabel,
   };
   return {
     current,

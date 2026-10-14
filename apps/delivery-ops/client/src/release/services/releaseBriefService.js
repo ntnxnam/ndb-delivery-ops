@@ -18,16 +18,25 @@ import {
 const API_BASE = getApiBase();
 
 /**
- * List open release versions for a team.
+ * List release versions for a team.
  * Server endpoint exists already and is the same one Release Versions tab uses.
  *
+ * @param {object} opts
+ * @param {boolean} [opts.includeReleased=false] When true, also return shipped
+ *   versions (for Retrospective past-release picker). Default is unreleased only.
  * @returns {Promise<{versions: Array<{name: string, released: boolean, releaseDate?: string}>}>}
  */
-export async function listReleaseVersions({ teamId, jiraToken, username, ignoreFailureCooldown = false }) {
+export async function listReleaseVersions({
+  teamId,
+  jiraToken,
+  username,
+  includeReleased = false,
+  ignoreFailureCooldown = false,
+}) {
   if (!teamId) return { versions: [], defaultVersion: null, projectKey: '' };
   const res = await authenticatedPost(
     `${API_BASE}/api/jira/release-versions`,
-    { teamId },
+    { teamId, includeReleased: !!includeReleased },
     { jiraToken, username, ignoreFailureCooldown }
   );
   const data = res?.data || {};

@@ -17,6 +17,13 @@
     "delivery-ops:restart": "cd apps/delivery-ops && ./restart"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8",
+    "tar": "7.5.22",
+    "node-gyp": {
+      "undici": "6.29.0"
+    }
   }
 }

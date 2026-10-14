@@ -22,7 +22,8 @@
 | `domain/velocity-and-sprints.md` | Dev / QA verification / Test streams |
 | `domain/leader-org.md` | SoS-by-leader rollup (Anil/Naveen/Jovan/Ashish) |
 | `domain/ai-prompt-inventory.md` | Which production prompt lives where |
-| `domain/cross-team-dependencies.md` | Partnership / companion deps, aligned trains, Dependency View JQL |
+| `domain/dependency_rule.md` | **SoT** — 3-axis matrix, Modes, labels, hygiene (no Companionship) |
+| `domain/cross-team-dependencies.md` | Dependency View JQL Q1–Q7; defers naming to dependency_rule.md |
 
 ## 3. Page briefs (one per surface)
 

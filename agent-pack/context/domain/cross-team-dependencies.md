@@ -3,84 +3,78 @@ name: cross-team-dependencies
 area: domain
 ---
 
-# Cross-team dependencies
+# Cross-team dependencies (JQL & discovery)
 
-Canonical agent brief for partnership / companion dependencies and the
-Dependency View page. **MVP is read-only** — no issue-link or Parent Link
-mutates from the app.
+**Rules SoT:** `domain/dependency_rule.md` — matrix, modes, labels, hygiene.  
+This file holds **approved JQL / discovery** for Dependency View and agents.  
+**MVP is read-only** — no issue-link or Parent Link mutates from the app.
 
 Cross-references: D18, `skills/dependency-walk`, `dependency-tracker-specialist`,
-UI page `pages/dependency-view.md`.
+`pages/dependency-view.md`.
 
-## Mode of operation (how the dependency is structured)
+Companionship is **retired**. Do not use that term.
 
-| Mode | Meaning | Discovery |
-|---|---|---|
-| **Partnership** | Formal JIRA **issue links** (`blocks` / `is blocked by`) | `linkedIssuesOf` on release fixVersion (Q3/Q4) |
-| **Companionship** | Their tickets sit **under our epics** / companion root | Parent Link hierarchy + external filter (Q1/Q2) |
+---
 
-Example: Companionship UX = their work under our epics. Partnership = we linked tickets in JIRA.
+## Naming (must match dependency_rule.md)
+
+| Correct term | Meaning | Legacy (wrong) |
+|--------------|---------|----------------|
+| **Dependency** (Mode) | JIRA issue links `blocks` / `blocked by` | Was called “Partnership” |
+| **Partnership** (Mode) | Hierarchy FEAT / Initiative → Epic → work | Was called “Companionship” |
+| **Project type** | `global-ew` / `nutanix-ew` / `ndb-ew` / team-internal (FYI) | Was “Span” / Partner type |
+| **Aligned release** | NDB release ↔ train (e.g. NDB-3.1 ↔ Leto) | — |
+
+Mode applies only to project types **1–3**. Team-internal = FYI only.
 
 UI wait direction (orthogonal to mode):
 
-| UI | D18 / skill term | Link direction |
+| UI | Skill / D18 | Link direction |
 |---|---|---|
 | I wait on them | upstream | `is blocked by` |
 | They wait on me | downstream | `blocks` |
 
-### Span = type of project (EW labels)
-
-**Not** hop count or “influence score”. Span answers: *what kind of EW project is the other side?*
-
-| Span | JIRA label | Meaning |
-|---|---|---|
-| **Global EW** | `global-ew` | Global engineering work |
-| **Nutanix EW** | `nutanix-ew` | Within Nutanix, outside NDB |
-| **NDB EW** | `ndb-ew` | Within NDB |
-| **Team internal** | *(none of the above)* | Same team — no `*-ew` label |
-
-If multiple EW labels exist, widest wins: `global-ew` > `nutanix-ew` > `ndb-ew`.
-
-Example: `ndb-ew` + JIRA link → **Partnership + NDB EW**.
+---
 
 ## Aligned release trains
 
-AOS-family **train codenames** (Janus, Kronos, Leto, …) group partner version
-numbers that ship together. NDB releases align to those trains. Config SoT:
-`apps/delivery-ops/server/config/dependencyViewConfig.json` → `alignedTrains`.
+Config SoT: `apps/delivery-ops/server/config/dependencyViewConfig.json` → `alignedTrains`.
 
-| NDB release | Aligned train | Notes |
-|---|---|---|
-| NDB-2.11 | Janus | Historical |
-| NDB-2.12 | was Kronos | Kronos slipped — alignment broken / reassess |
-| NDB-3.0 | Kronos.1 | Current intended align |
-| NDB-3.1 | Leto | Planned |
-
-Dependency View trains panel = **NDB gates** side-by-side with the **aligned
-partner train**, not a generic partner list alone.
-
-## Labels vs commitment
-
-`ndb-{trainSlug}-dependency` and `ndb-{trainSlug}-asks` are the **same kind of
-callout on our tickets** — both mark a train-aligned dependency. Naming differs;
-relationship type does not.
-
-**Not Span.** Span is only EW type (`global-ew` / `nutanix-ew` / `ndb-ew` /
-team-internal). Train-dep / asks / wishlist labels must never be classified as
-Span.
-
-| State | How you know |
+| NDB release | Aligned train |
 |---|---|
-| Ask / not yet committed | Dependency callout, partner has not accepted |
-| Committed | Real `fixVersion` (not denylisted) **or** Release Commit (`customfield_11061`) = Commit |
+| NDB-2.12 | Kronos |
+| NDB-3.0 | Kronos.1 |
+| NDB-3.1 | Leto |
 
-Field id lives only in `jiraFieldsConfig.json` / productService.
+---
+
+## Labels (discovery — not Mode, not Project type)
+
+See `dependency_rule.md` §§2–6. Summary:
+
+| Label | Sits on | Meaning |
+|-------|---------|---------|
+| `ndb-{releaseSlug}-wishlist` | **NDB** tickets | Wish project into NDB release |
+| `ndb-{trainSlug}-ask` / `-asks` / `-dependency` | **Their** tickets | Ask other team for work in that train |
+
+Happy path (I depend on them): ask on them → Mode Dependency link on me → wishlist on NDB project.
+
+---
 
 ## Canonical JQL (approved for Dependency View MVP)
 
-Placeholders: `{rootKey}`, `{release}`, `{trainSlug}`.
+Placeholders: `{rootKey}`, `{release}`, `{trainSlug}`, `{releaseSlug}`.
 
-### Q1 — Companion hierarchy
+**JQL strings below are approved.** Do not change without explicit user approval
+(`jql-edit-approval`). Section **names** in code may still say partnership/companion
+until the UI rebuild renames them — map mentally:
+
+| Code / section key (legacy) | Correct Mode |
+|-----------------------------|--------------|
+| partnershipBlockedBy / partnershipBlocks (Q3/Q4) | **Dependency** |
+| companionHierarchy / companionExternal (Q1/Q2) | **Partnership** |
+
+### Q1 — Partnership hierarchy (under root)
 
 ```jql
 key = {rootKey}
@@ -88,7 +82,7 @@ OR "Parent Link" = {rootKey}
 OR issueFunction in issuesInEpics("\"Parent Link\" = {rootKey} and type = Epic")
 ```
 
-### Q2 — External / non-NDB-owned slice
+### Q2 — Partnership external / non-NDB-owned slice
 
 ```jql
 (
@@ -105,39 +99,40 @@ AND (
 )
 ```
 
-### Q3 — Partnership: I wait on them
+### Q3 — Dependency: I wait on them
 
 ```jql
 issueFunction in linkedIssuesOf("fixVersion = {release}", "is blocked by")
 ```
 
-### Q4 — Partnership: they wait on me
+### Q4 — Dependency: they wait on me
 
 ```jql
 issueFunction in linkedIssuesOf("fixVersion = {release}", "blocks")
 ```
 
-### Q5 — Train label discovery
+### Q5 — Train ask labels (on their tickets)
+
+Approved discovery form (do not change without approval):
 
 ```jql
 labels in ("ndb-{trainSlug}-dependency", "ndb-{trainSlug}-asks")
 ```
 
-### Q6 — Commit signal
+Conceptually `-ask` is the same callout family (`dependency_rule.md`); include in JQL only after explicit approval.
 
-Classification on fetched issues (not a discovery JQL): committed if real
-fixVersion or `customfield_11061` = Commit.
+### Q6 — Commitment nature (classification, not discovery JQL)
+
+Post-fetch on partner tickets:
+
+- Release Commit ∈ {Commit, Stretch} **and** real `fixVersion` (not denylist) → clean  
+- Commit/Stretch without real fixVersion → **their** hygiene  
+- Valid fixVersion with blank Release Commit → **their** hygiene  
+- Release Commit field = nature of their commitment (show as-is)
+
+Field id: `jiraFieldsConfig.json` / productService (`customfield_11061`).
 
 ### Q7 — Wishlist / pre-commit (NDB ↔ partner train)
-
-Pre-commit planning: NDB tickets labeled `ndb-{releaseSlug}-wishlist` (e.g.
-`ndb-3.1-wishlist`) cannot commit until partner work lands. Partner asks use
-`ndb-{trainSlug}-dependency` (e.g. `ndb-leto-dependency`). Links are optional
-and use many link types — **Q7b omits link-type filter by default** (all types).
-Tighten later via `dependencyViewConfig.wishlist.linkTypeFilter`.
-
-Placeholders: `{releaseSlug}` from release (`NDB-3.1` → `3.1`), `{trainSlug}`
-from aligned train config.
 
 #### Q7a — Wishlist (NDB side)
 
@@ -151,7 +146,7 @@ labels = "ndb-{releaseSlug}-wishlist"
 issueFunction in linkedIssuesOf("labels = \"ndb-{releaseSlug}-wishlist\"")
 ```
 
-#### Q7c — Wishlist with no links (forgotten)
+#### Q7c — Wishlist with no links (forgotten link — missing-link hygiene)
 
 ```jql
 labels = "ndb-{releaseSlug}-wishlist" AND issueFunction not in hasLinks()
@@ -163,20 +158,22 @@ labels = "ndb-{releaseSlug}-wishlist" AND issueFunction not in hasLinks()
 labels in ("ndb-{trainSlug}-dependency") AND issueFunction not in linkedIssuesOf("labels = \"ndb-{releaseSlug}-wishlist\"")
 ```
 
-## Spans
+---
 
-Spans 1–4 describe dependency distance / criticality for filtering in the UI.
-Partner project catalog (ENG+component, NCM, NCN, ERA/`NDB-*` unarchived) and
-Confluence train SoT URLs live in `dependencyViewConfig.json`.
+## Project type (runtime classification)
+
+Widest EW label wins: `global-ew` > `nutanix-ew` > `ndb-ew`; else `team_internal` (FYI).  
+Partner project catalog and Confluence train URLs: `dependencyViewConfig.json`.
+
+---
 
 ## Future write APIs (document only — not wired in MVP)
 
 | Mode | Future API |
 |---|---|
-| Partnership link | `POST /rest/api/2/issueLink` after `GET /issueLinkType` |
+| Dependency link | `POST /rest/api/2/issueLink` after `GET /issueLinkType` |
 | Remove link | `DELETE /rest/api/2/issueLink/{id}` |
-| Companion parent | `PUT` Parent Link (same as Feature Dashboard) |
-| Create ask ticket | `POST /rest/api/2/issue` then link/parent |
+| Partnership parent | `PUT` Parent Link (same as Feature Dashboard) |
+| Create ask ticket | `POST /rest/api/2/issue` then link |
 
-HITL / D26 when writes are added. D18: never auto-create from inferred
-Confluence/Slack.
+HITL / D26 when writes are added. D18: never auto-create from inferred Confluence/Slack.

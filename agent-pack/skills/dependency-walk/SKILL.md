@@ -130,13 +130,16 @@ The Dependency View page uses user-facing wait language; map to this skill:
 | I wait on them | `upstream` / `upstreamOf` | `is blocked by` |
 | They wait on me | `downstream` / `downstreamOf` | `blocks` |
 
-Release-level list queries (Q1–Q5) live in
+Release-level list queries (Q1–Q5 + Q7) live in
 `agent-pack/context/domain/cross-team-dependencies.md` and
-`dependencyViewService` — this skill remains the **ticket graph walk**.
+`dependencyViewService`. Naming / hygiene SoT:
+`agent-pack/context/domain/dependency_rule.md`.
+This skill remains the **ticket graph walk** (Mode Dependency links).
 
 ## Cross-references
 
-- `.cursor/agents/specialists/dependency-tracker-specialist.md`
+- `agent-pack/identity/specialists/dependency-tracker-specialist.md`
+- `agent-pack/context/domain/dependency_rule.md`
 - `agent-pack/context/domain/cross-team-dependencies.md`
 - `agent-pack/context/pages/dependency-view.md`
 - `.cursor/rules/citation-first-output.mdc`

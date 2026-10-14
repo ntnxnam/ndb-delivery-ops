@@ -127,6 +127,20 @@ export default function SystemTestScalePage() {
   const teamCode = data?.teamCode || selectedTeam?.releasePrefix?.replace(/-+$/, '') || (selectedTeam?.name || '').toUpperCase() || '—';
   const kpiFilter = data?.kpiFilter || (teamCode !== '—' ? `filter=${teamCode}-System-Test` : 'filter={teamCode}-System-Test');
 
+  const stLabelHeroes = useMemo(() => {
+    if (!stPulse?.byLabel?.length) return [];
+    return stPulse.byLabel.map((row) => ({
+      k: `${row.title || row.key} open`,
+      cell: row.open,
+      sub: (
+        <>
+          <Num cell={row.all} jiraBaseUrl={jiraBaseUrl} /> total · labels = {row.label}
+        </>
+      ),
+      cls: tone(row.open?.count),
+    }));
+  }, [stPulse, jiraBaseUrl]);
+
   const heroes = useMemo(() => {
     if (!data) return [];
     return [
@@ -286,6 +300,24 @@ export default function SystemTestScalePage() {
                     </div>
                   ))}
                 </div>
+                {stLabelHeroes.length > 0 ? (
+                  <>
+                    <p className="sts-hint" style={{ marginTop: '0.75rem' }}>
+                      By label — open count (statusCategory ≠ Done); click total for all statuses.
+                    </p>
+                    <div className="sts-stats sts-stats-st">
+                      {stLabelHeroes.map((h) => (
+                        <div className="sts-stat sts-card-filtered" key={h.k}>
+                          <div className="k">{h.k}</div>
+                          <div className={`v ${h.cls}`}>
+                            <Num cell={h.cell} jiraBaseUrl={jiraBaseUrl} />
+                          </div>
+                          <div className="s">{h.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
               </div>
             ) : null}
 

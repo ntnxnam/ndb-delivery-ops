@@ -152,32 +152,46 @@ function sortVersionNames(a: string, b: string): number {
   return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
 }
 
+export interface ListFixVersionsOptions {
+  /** When true, also return shipped (released=true) versions. Archived always excluded. */
+  includeReleased?: boolean;
+}
+
 /**
- * Unreleased versions in the team's JIRA project.
+ * Versions in the team's JIRA project.
  * One call: GET /rest/api/2/project/{projectKey}/versions.
  * Requires projectKey — never falls back to another team's project.
+ * Default (includeReleased=false) keeps the unreleased-only dropdown behaviour.
  */
 export async function listFixVersionsForTeam(
   team: TeamScopeInput,
-  jira: JiraVersionClient
+  jira: JiraVersionClient,
+  options: ListFixVersionsOptions = {}
 ): Promise<TeamFixVersion[]> {
+  const { includeReleased = false } = options;
   const projectKey = requireProjectKey(team);
   const cacheKey = String(team.id || projectKey);
+  let allVersions: TeamFixVersion[];
   const cached = versionListCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < VERSION_LIST_TTL_MS) {
-    return cached.versions;
+    allVersions = cached.versions;
+  } else {
+    const projectVersions = await jira.getProjectVersions(projectKey);
+    allVersions = (projectVersions || [])
+      .filter((v) => Boolean(v && v.name) && v.archived !== true)
+      .map((v) => ({
+        name: String(v.name),
+        released: !!v.released,
+        releaseDate: v.releaseDate || undefined,
+      }))
+      .sort((a, b) => sortVersionNames(a.name, b.name));
+    versionListCache.set(cacheKey, { fetchedAt: Date.now(), versions: allVersions });
   }
 
-  const projectVersions = await jira.getProjectVersions(projectKey);
-  const versions = (projectVersions || [])
-    .filter(isUnreleasedVersion)
-    .map((v) => ({
-      name: String(v.name),
-      released: false,
-      releaseDate: v.releaseDate || undefined,
-    }))
-    .sort((a, b) => sortVersionNames(a.name, b.name));
-
-  versionListCache.set(cacheKey, { fetchedAt: Date.now(), versions });
-  return versions;
+  if (includeReleased) {
+    return allVersions;
+  }
+  return allVersions
+    .filter((v) => v.released !== true)
+    .map((v) => ({ ...v, released: false }));
 }

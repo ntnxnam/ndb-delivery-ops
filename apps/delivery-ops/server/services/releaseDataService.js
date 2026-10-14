@@ -84,11 +84,15 @@ function wrapJiraError(apiError) {
 }
 
 /**
- * List unreleased versions in the requested team's JIRA project.
+ * List versions in the requested team's JIRA project.
  *
+ * @param {string} jiraToken
+ * @param {{ teamId?: string, includeReleased?: boolean }} [opts]
+ *   includeReleased — when true, also return shipped (released=true) versions
+ *   for pages like Retrospective that analyse past releases.
  * @returns {Promise<{ versions: Array, projectKey: string, defaultVersion: string|null }>}
  */
-async function listOpenReleaseVersions(jiraToken, { teamId } = {}) {
+async function listOpenReleaseVersions(jiraToken, { teamId, includeReleased = false } = {}) {
   const { effectiveTeamId, team, projectKey } = resolveRequestedTeam(teamId);
 
   if (!teamId || !effectiveTeamId) {
@@ -102,8 +106,11 @@ async function listOpenReleaseVersions(jiraToken, { teamId } = {}) {
     const jira = await createAxiosJira(jiraToken);
     const versions = await listFixVersionsForTeam(
       { id: effectiveTeamId, baseFilter: team.baseFilter, projectKey },
-      jira
+      jira,
+      { includeReleased: !!includeReleased }
     );
+    // Default always prefers an unreleased upcoming GA, even when past
+    // releases are included in the returned list.
     const defaultVersion = pickNextUpcomingGaVersion(versions);
     persistDefaultReleaseVersion(effectiveTeamId, defaultVersion);
     return { versions, projectKey, defaultVersion, teamId: effectiveTeamId };

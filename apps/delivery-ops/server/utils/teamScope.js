@@ -134,26 +134,43 @@ function sortVersionNames(a, b) {
   return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-async function listFixVersionsForTeam(team, jira) {
+/**
+ * Versions in the team's JIRA project.
+ * One call: GET /rest/api/2/project/{projectKey}/versions.
+ *
+ * @param {object} [opts]
+ * @param {boolean} [opts.includeReleased=false] When true, also return shipped
+ *   (released=true) versions. Archived versions are always excluded.
+ *   Default keeps the historical unreleased-only dropdown behaviour.
+ */
+async function listFixVersionsForTeam(team, jira, { includeReleased = false } = {}) {
   const projectKey = requireProjectKey(team);
   const cacheKey = String(team.id || projectKey);
+  let allVersions;
   const cached = versionListCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < VERSION_LIST_TTL_MS) {
-    return cached.versions;
+    allVersions = cached.versions;
+  } else {
+    const projectVersions = await jira.getProjectVersions(projectKey);
+    // Cache non-archived versions with real released flags so includeReleased
+    // callers can reuse the same GET without a second JIRA round-trip.
+    allVersions = (projectVersions || [])
+      .filter((v) => Boolean(v && v.name) && v.archived !== true)
+      .map((v) => ({
+        name: String(v.name),
+        released: !!v.released,
+        releaseDate: v.releaseDate || undefined,
+      }))
+      .sort((a, b) => sortVersionNames(a.name, b.name));
+    versionListCache.set(cacheKey, { fetchedAt: Date.now(), versions: allVersions });
   }
 
-  const projectVersions = await jira.getProjectVersions(projectKey);
-  const versions = (projectVersions || [])
-    .filter(isUnreleasedVersion)
-    .map((v) => ({
-      name: String(v.name),
-      released: false,
-      releaseDate: v.releaseDate || undefined,
-    }))
-    .sort((a, b) => sortVersionNames(a.name, b.name));
-
-  versionListCache.set(cacheKey, { fetchedAt: Date.now(), versions });
-  return versions;
+  if (includeReleased) {
+    return allVersions;
+  }
+  return allVersions
+    .filter((v) => v.released !== true)
+    .map((v) => ({ ...v, released: false }));
 }
 
 module.exports = {

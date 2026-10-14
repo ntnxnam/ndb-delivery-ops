@@ -14,7 +14,7 @@ import { ReleaseComparisonTable } from './components/ReleaseComparisonTable';
 import { NaughtyListTable, ReopenQualityPanel } from './components/NaughtyListTable';
 import { CompanionReadinessPanel } from './components/CompanionReadinessPanel';
 import { PgToGaPanel } from './components/PgToGaPanel';
-import { SectionPanel } from '../design-system';
+import { Pill, SectionPanel } from '../design-system';
 import './RetrospectivePage.css';
 import './ReleaseBriefPage.css';
 
@@ -117,6 +117,8 @@ export default function RetrospectivePage() {
     ready,
     activeVersions,
     inactiveVersions,
+    versionsError,
+    refetchVersions,
     hasFetched,
     bootstrap,
     projectsPage,
@@ -127,6 +129,7 @@ export default function RetrospectivePage() {
     selectedRelease,
     setSelectedRelease,
     loading,
+    loadingVersions,
     loadingBootstrap,
     loadingProjects,
     loadingDetail,
@@ -239,7 +242,10 @@ export default function RetrospectivePage() {
         <div className="ds-page__inner retrospective-page">
           <div className="retro-header">
             <div>
-              <h2>Release Retrospective</h2>
+              <div className="retro-header__title-row">
+                <h2>Release Retrospective</h2>
+                <Pill tone="warning">WIP</Pill>
+              </div>
               <div className="retro-hint">Team: {team?.name || '—'}</div>
             </div>
             <div className="retro-actions">
@@ -248,9 +254,11 @@ export default function RetrospectivePage() {
                 id="retro-release-select"
                 value={selectedRelease || ''}
                 onChange={(e) => setSelectedRelease(e.target.value)}
-                disabled={loading}
+                disabled={loadingVersions || loading}
               >
-                <option value="">— select —</option>
+                <option value="">
+                  {loadingVersions ? 'Loading releases…' : '— select —'}
+                </option>
                 {activeVersions.map((v) => (
                   <option key={v.name} value={v.name}>{v.name}</option>
                 ))}
@@ -262,15 +270,23 @@ export default function RetrospectivePage() {
                   </optgroup>
                 )}
               </select>
+              {versionsError ? (
+                <button onClick={refetchVersions} type="button" disabled={loadingVersions}>
+                  Retry releases
+                </button>
+              ) : null}
               <button onClick={refresh} type="button" disabled={loading || !selectedRelease || !ready}>
                 {loading ? 'Loading...' : 'Fetch'}
               </button>
             </div>
           </div>
 
+          {versionsError ? <div className="rb-error">{versionsError}</div> : null}
           {error ? <div className="rb-error">{error}</div> : null}
           {!ready ? (
             <div className="rb-empty">Pick a team in the header to load retrospective data.</div>
+          ) : !loadingVersions && !versionsError && activeVersions.length === 0 && inactiveVersions.length === 0 ? (
+            <div className="rb-empty">No releases found for this team.</div>
           ) : !hasFetched ? (
             <div className="rb-empty">Select a release and press <strong>Fetch</strong>.</div>
           ) : null}

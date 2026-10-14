@@ -34,6 +34,7 @@ Exec-facing dashboard for System-Test bug scale and regression health, scoped by
 | STS-04 | As a TPM, I can open any count in JIRA using the exact JQL that produced it. |
 | STS-05 | As a QA lead, I see component tiles for open / Yes* / open R2R on configured releases. |
 | STS-07 | As a TPM, I see label-based ST pulse widgets (all / open / resolved-not-closed / affected-open / fixVersion-open) matching JIRA filters 188191–188195, with release widgets following Current. |
+| STS-08 | As a TPM, I see per-label open widgets for longevity, ndb-system-smoke-test, ndb-systest-found-functional-bug, and ndb-scale (clickable total + open). |
 
 ---
 

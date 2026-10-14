@@ -2,16 +2,26 @@
 
 **Route**: `/release/retrospective`  
 **Server routes used**: `server/routes/releaseDataset.js` (retrospective sub-routes), `server/routes/jira/kpi.js` (`release-kpi-breakdown-batch`)  
-**Hooks**: `useRetrospective` (`release/hooks/useRetrospective.js`), `useRetroComparison` (`release/hooks/useRetroComparison.js`)  
-**Services**: `release/services/retrospectiveService.js`, `release/services/retroComparisonService.js`  
+**Hooks**: `useRetrospective` (`release/hooks/useRetrospective.js`), `useRetroReleaseVersions` (`release/hooks/useRetroReleaseVersions.js`), `useRetroComparison` (`release/hooks/useRetroComparison.js`)  
+**Services**: `release/services/retrospectiveService.js`, `release/services/retroComparisonService.js`, `release/services/releaseBriefService.js` (`listReleaseVersions`)  
 **Components**: `ProjectGateHealthTable`, `ReleaseComparisonTable`, `ComparisonTrendChart`  
 **Utils**: `release/utils/releaseCompareSet.js` (release-set picker)  
 **Bundle utility**: `release/utils/bundleUtils.js` (CRA copy of `shared/src/domain/bundleDerive.js`, D41)  
-**Contexts consumed**: `SelectedReleaseContext`, `ReleaseDataContext`
+**Contexts consumed**: `SelectedReleaseContext` (selection only), `ReleaseDataContext`
 
 ---
 
 ## API Calls (client → server) — 4-step waterfall
+
+### Step 0 — Release picker (includes shipped)
+
+```
+POST /api/jira/release-versions
+Body: { teamId, includeReleased: true }
+```
+
+**Hook**: `useRetroReleaseVersions` (wired by `useRetrospective`)  
+**Purpose**: Populate active + **Past Releases** optgroups from the team JIRA project (e.g. ERA → `NDB-*`). Global `SelectedReleaseContext` stays unreleased-only.
 
 The hook loads live JIRA for the selected release (`ReleaseDataContext` → `GET /per-release`). `productId` is the selected team id.
 

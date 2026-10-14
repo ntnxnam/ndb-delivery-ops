@@ -10,34 +10,36 @@ audience: tpm, rm, portfolio_mgr, feat
 **Audience**: `tpm, rm, portfolio_mgr, feat`  
 **Mode**: **read-only** (MVP) — no JIRA mutates from this page
 
+**Rules SoT:** `domain/dependency_rule.md`  
+**JQL / discovery:** `domain/cross-team-dependencies.md`
+
 ## Job
 
-Surface cross-team dependencies for an NDB release: Partnership (JIRA
-links), Companionship (under our epics), train-label asks, and wishlist.
+For a selected NDB release (aligned train), show the **3-axis** dependency
+matrix and hygiene chase:
 
-## Filters (UX)
+1. **Project type** — wait columns subdivided into `global-ew` / `nutanix-ew` / `ndb-ew` (team-internal = FYI only). Unlabeled tickets are parked via links / epic-parent / project key (see `dependency_rule.md`).
+2. **Mode** — **Dependency** (JIRA links) or **Partnership** (FEAT → Epic → work)
+3. **Aligned release** — e.g. NDB-3.1 ↔ Leto
 
-Two controls — no glossary required:
+Directions **I wait on them** vs **They wait on me** must be clearly demarcated.
+Primary visual: **swimlane matrix** (rows = project type, columns = direction).
+Full ticket lists are drill-in under the swimlanes. Include NDB↔NDB (`ndb-ew`).
+
+## Filters (UX target after rebuild)
 
 | Control | Question | Options |
 |---|---|---|
-| **Show** | What do I want to look at? | Everything · I'm waiting on them · They're waiting on me · Our labeled asks · Wishlist · Work under our epics |
-| **Partner type** | Which EW surface? | Any · Global / Nutanix / NDB EW · Team (no `*-ew`) |
+| **Show** | What do I want to look at? | Everything · I wait on them · They wait on me · Train asks · Wishlist · Early calls (planned trains) · Partnership hierarchy |
 
-Internally still three concepts (never mix in the UI):
+**Early calls:** While viewing a current release (e.g. NDB-3.0), also surfaces planned trains from `alignedTrains` with `status: planned` (e.g. NDB-3.1 ↔ Leto) via existing Q5 train labels + Q7 wishlist — for pre-CC/EC label-based asks before fixVersion partnership fills in.
+| **Project type** | Which EW surface? | Any · Global / Nutanix / NDB EW · Team (FYI) |
 
-| Concept | Meaning | Signals |
-|---|---|---|
-| Structure | Partnership vs Companionship | JIRA link vs Parent Link under epic |
-| Discovery | Callouts on **our** tickets | `ndb-*-dependency` / `-asks` / `-wishlist` |
-| Partner type | EW project type | `global-ew` / `nutanix-ew` / `ndb-ew` / team |
-
-**Never mix** train labels with Partner type — train-dep/asks are not `*-ew`.
+Never mix train ask/wishlist labels with Project type (`*-ew`).
 
 ## Prompts
 
-None dedicated. Domain brief: `domain/cross-team-dependencies.md`.  
-Skill: `dependency-walk` (ticket walk; UI uses release-level JQL Q1–Q5 + Q7).
+None dedicated. Skill: `dependency-walk` (ticket walk; UI uses release-level Q1–Q5 + Q7).
 
 ## Engineering docs
 
@@ -48,7 +50,8 @@ Skill: `dependency-walk` (ticket walk; UI uses release-level JQL Q1–Q5 + Q7).
 
 - Sidebar team via `useTeam()`; NDB-first.
 - Every count must link to the exact JQL that produced it.
-- Do not invent JQL — only Q1–Q5 / Q7 builders from domain context.
-- Wishlist Q7b defaults to all link types; UI Save persists `wishlist.linkTypeFilter` (and suffixes) to `dependencyViewConfig.json`.
-- Classification (partner type / commit) is post-fetch only — never change Q1–Q7 without approval.
+- Do not invent JQL — only Q1–Q5 / Q7 from `cross-team-dependencies.md`.
+- Classification (project type / commitment) is post-fetch only — never change Q1–Q7 without approval.
+- Hygiene: see `dependency_rule.md` §6 (NDB: Dependency without wishlist; them: Commit/Stretch/fixVersion gaps; missing labels on they-wait-on-me).
 - Do not propose JIRA link/parent write actions from this page until a later slice.
+- UI rebuild in progress — ignore stale component names that still say companionship/partnership-for-links.

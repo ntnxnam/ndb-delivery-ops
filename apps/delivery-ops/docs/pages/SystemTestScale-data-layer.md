@@ -57,12 +57,24 @@ Route (system-test-scale.js)
         "fixVersionOpen": { "count": 3, "jql": "… AND fixVersion in (ndb-2.12)" }
       }
     },
-    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 }
+    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 },
+    "byLabel": {
+      "longevity": {
+        "key": "longevity",
+        "title": "Longevity",
+        "label": "longevity",
+        "all": { "count": 12, "jql": "project = ERA AND labels = longevity AND issuetype in (Bug, Improvement)" },
+        "open": { "count": 4, "jql": "… AND statusCategory != Done" }
+      },
+      "smoke": { "key": "smoke", "title": "System Smoke", "label": "ndb-system-smoke-test", "all": {}, "open": {} },
+      "functional": { "key": "functional", "title": "Functional (ST-found)", "label": "ndb-systest-found-functional-bug", "all": {}, "open": {} },
+      "scale": { "key": "scale", "title": "Scale", "label": "ndb-scale", "all": {}, "open": {} }
+    }
   }
 }
 ```
 
-Client `selectReleaseView` merges `global` + `byRelease[current]` so Current/Compare switches instantly.
+Client `selectReleaseView` merges `global` + `byRelease[current]` so Current/Compare switches instantly, and flattens `byLabel` for the label widgets.
 
 ### Trends
 
@@ -89,7 +101,7 @@ Client `selectReleaseView` merges `global` + `byRelease[current]` so Current/Com
 `server/config/systemTestScaleConfig.json`
 
 - `kpiFilterTemplate` (`filter={teamCode}-System-Test`)
-- `stPulse`: project, labels, issueTypes, resolvedNotClosedResolutionExclude, sourceFilters (188191–188195)
+- `stPulse`: project, labels, issueTypes, resolvedNotClosedResolutionExclude, sourceFilters (188191–188195), labelWidgets (longevity / smoke / functional / scale)
 - `regressionTypes`, `defaultTeamId`
 - `teams.<teamId>`: `teamCode`, `releases`, `carryPairs`, `componentReleases`, optional `components`
 - Components default to flattened `teamBoardConfig.teams[].featureComponents` when not overridden

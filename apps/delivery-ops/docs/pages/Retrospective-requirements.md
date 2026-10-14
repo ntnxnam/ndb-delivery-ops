@@ -43,7 +43,7 @@ bug/improvement verification, and team KPI categories — all split by resolutio
    - Row groups: **Delivery** (task closure %, bugs total, P0 open, P1 open, reopen rate), **PG Verification** (bug/improvement unverified@PG, verify-lag median, reopen rate), **KPI Categories** (one row per team KPI from `kpiConfig.json`, split total/done/open)
    - Every numeric cell links to JIRA; each cell shows a coloured delta vs the release on its left (green = improved, red = regressed) and a trend sparkline
    - Delivery + PG rows are offline (per-release bundles); KPI rows are live release-scoped counts
-1. **Release picker** — shared with other pages via `SelectedReleaseContext`; defaults to last selected
+1. **Release picker** — selection shared via `SelectedReleaseContext`; options loaded with `includeReleased: true` so **Past Releases** (shipped fixVersions from the team project, e.g. `NDB-2.10`) appear under an optgroup alongside open releases
 2. **Gate timeline ruler** (`GateTimelineRuler`) — horizontal swimlane showing CCM / CG / PG / GA actual vs planned dates
 3. **Gate compliance cards** (`GateComplianceCard`) — one card per gate:
    - CCM: "Tasks + Unit Tests open at code complete" — count + closed %

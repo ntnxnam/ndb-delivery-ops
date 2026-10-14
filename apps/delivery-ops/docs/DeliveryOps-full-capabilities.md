@@ -5,8 +5,8 @@
 **Scope**: Every navigable page + shared platform chrome  
 **Depth**: Capabilities, audiences, outcomes, UI surface, trust model, and suggested slide talking points  
 
-> Single-page deep dive (Dependency View):  
-> [`docs/pages/DependencyView-capabilities.md`](./pages/DependencyView-capabilities.md)
+> Dependency rules SoT:  
+> [`agent-pack/context/domain/dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md)
 
 ---
 
@@ -231,7 +231,7 @@ Capabilities available across the app (not tied to one tab):
 
 **Pages**: Dependency View · SoS Summary · SoS by Leader  
 
-**What was done**: Surface partnership/companion/wishlist deps and a Scrum-of-Scrums control surface across all active releases — including leader org rollup.
+**What was done**: Surface Dependency / Partnership / wishlist deps and a Scrum-of-Scrums control surface across all active releases — including leader org rollup.
 
 **Slide bullets**:
 - Who waits on whom (swimlanes) + Ask vs Committed + train alignment
@@ -626,32 +626,25 @@ Director-focused component health: P0/P1, other priority, projects by fixVersion
 ### 8.15 Dependency View (`/dependency-view`)
 
 **Purpose**  
-Read-only NDB-first map of cross-team dependencies for a release: partnership, companionship, train labels, wishlist.
+Read-only NDB-first **3-axis** map for a release: project type × Mode (Dependency | Partnership) × aligned train — plus wishlist/ask discovery and hygiene chase. Companionship retired.
 
 **Audience**: TPM, Portfolio Manager, RM, FEAT manager  
 
 | Cap | Detail |
 |-----|--------|
-| Show filter | Everything · I wait · They wait · Labeled asks · Wishlist · Under our epics |
-| Partner type | `global-ew` / `nutanix-ew` / `ndb-ew` / team — **never** train-dep labels |
-| Partnership | `is blocked by` / `blocks` with wait-context sentences |
-| Companion | External work under configured epic roots (Parent Link) |
-| Train labels | `ndb-*-dependency` / `-asks` on our tickets |
-| Wishlist Q7 | Wishlist · linked partners · label-only/clone-only · partner orphans |
-| Ask vs Ok | fixVersion and/or Release Commit field; shows which signal |
-| Train panel | NDB gates side-by-side with Janus / Kronos / Leto alignment |
-| Next actions | Severity-ranked chase list (max 5) |
-| Swimlanes | Upstream → NDB asks → Partners → We owe → Hygiene |
-| Gantt | Optional collapsed timeline with link arrows |
-| Tables | Collapsed by default |
-| Config | Wishlist link-type / suffixes Save → local JSON only |
+| Axes | Project type (`*-ew`) · Mode Dependency (links) / Partnership (hierarchy) · Aligned release |
+| Directions | **I wait** vs **They wait** demarcated; includes NDB↔NDB (`ndb-ew`); team-internal FYI only |
+| Wishlist | `ndb-*-wishlist` on **NDB** tickets |
+| Train asks | `ndb-{train}-ask(s)/dependency` on **their** tickets |
+| Commitment | Release Commit = nature (Commit / Stretch / blank) + real fixVersion |
+| Hygiene | NDB: Dependency without wishlist · Them: Commit/Stretch↔fixVersion gaps · Missing labels on they-wait |
 | Safety | **No JIRA link/parent writes** in MVP |
 
-**Full inventory**: [`DependencyView-capabilities.md`](./pages/DependencyView-capabilities.md)
+**Rules SoT**: [`dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md) · page docs: requirements + data-layer (rebuild in progress)
 
 **Talking points**:
-- “Who waits on whom — and what’s still Ask — before the next gate.”
-- “Train-aligned labels kept separate from EW partner type — no glossary collision.”
+- “Who waits on whom — and whose hygiene is broken — before the next gate.”
+- “Train asks and EW project type stay separate — no glossary collision.”
 
 ---
 
@@ -817,7 +810,7 @@ App admin: RBAC, team onboarding from base filter, JIRA diagnostics, cache/sync.
 2. **Release membership**: `fixVersion` / `affectedVersion` / train & must-fix **labels** — with Ask vs Commit via fixVersion **or** Release Commit field.  
 3. **Gates live on FEAT-tier dates**; lower tiers use Due Date / Sprint end.  
 4. **Risk is three fields**: Indicator + Assessment + Path to Green (Yellow/Red require the last two).  
-5. **Deps are two structures**: Partnership (`blocks` / `is blocked by`) vs Companionship (sit under our epics).  
+5. **Deps are two Modes**: **Dependency** (`blocks` / `is blocked by`) vs **Partnership** (FEAT → Epic hierarchy). Companionship retired.  
 6. **`status=Resolved` ≠ done** — that is **TBV**; Closed + positive resolution = shipped.  
 7. **Hygiene = missing dates/links/risk/stale status** — phase-aware; never flag TEAM_NA.
 
@@ -864,12 +857,12 @@ Delivery Ops uses **three different wiring mechanisms**. Mixing them up is the #
 
 | Field | ID (SoT) | Links | Depicts |
 |-------|----------|-------|---------|
-| **Parent Link** | `customfield_20363` | Epic → Feature/Initiative (JPO) | “This epic belongs under that FEAT” — **Companionship** when partner work hangs under our epic |
+| **Parent Link** | `customfield_20363` | Epic → Feature/Initiative (JPO) | “This epic belongs under that FEAT” — Mode **Partnership** when multi-team delivery shares one hierarchy |
 | **Epic Link** | `customfield_10361` | Bug/Task/Test/… → Epic | “This work item is in that epic” |
 
 **Fetch strategy (release dataset)**: prefer indexed Parent Link / Epic Link waves over ScriptRunner when possible; click-through JQL may still use `portfolioChildrenOf` / `issuesInEpics` so a human can open one URL without pre-collecting keys.
 
-#### B. Formal issue links (partnership / dependency)
+#### B. Formal issue links (Mode Dependency)
 
 | Link type (name) | Direction in UI | Depicts |
 |------------------|-----------------|---------|
@@ -878,24 +871,23 @@ Delivery Ops uses **three different wiring mechanisms**. Mixing them up is the #
 | **relates to** (and others) | Wishlist Q7b (optional filter) | Soft association; default wishlist pull = **all** link types |
 | **Clone / Duplicate** | Ignored as dependency edges | Not a real “wait on” relationship — hygiene if wishlist only has these |
 
-Partnership discovery (Dependency View): `linkedIssuesOf("fixVersion = {release}", "is blocked by"|"blocks")`.
+Mode Dependency discovery: `linkedIssuesOf("fixVersion = {release}", "is blocked by"|"blocks")`.
 
 #### C. Labels (discovery & callouts — not structure)
 
-Labels mark intent / train / hygiene; they do **not** replace Parent Link or `blocks`.
+Labels mark intent / train / hygiene; they do **not** replace Parent Link or `blocks`. See `dependency_rule.md`.
 
 | Label pattern | Depicts | Used by |
 |---------------|---------|---------|
-| `ndb-{trainSlug}-dependency` | Train-aligned dependency callout on **our** ticket | Dependency View Q5 / orphans |
-| `ndb-{trainSlug}-asks` | Same kind of callout (naming differs; relationship type does not) | Dependency View Q5 |
-| `ndb-{releaseSlug}-wishlist` | Pre-commit wishlist on NDB side | Dependency View Q7 |
+| `ndb-{trainSlug}-dependency` / `-asks` / `-ask` | Train ask on **their** ticket | Dependency View Q5 / hygiene |
+| `ndb-{releaseSlug}-wishlist` | Wish into NDB release — on **NDB** tickets | Dependency View Q7 |
 | `{version}-mustfix` | Release-blocking regardless of hierarchy | Release Brief / RAG floor |
 | `{prefix}-*-long-term-funded` | Funded but not short-term commit (exclude from some commit counts) | Commit / brief queries |
-| `global-ew` / `nutanix-ew` / `ndb-ew` | **Partner type (EW span)** — kind of engineering work surface | Dependency View Partner type filter |
+| `global-ew` / `nutanix-ew` / `ndb-ew` | **Project type** (EW) — types 1–3 in matrix; team-internal FYI | Dependency View filter |
 | `longevity`, ST pulse labels | System-test / quality pulse | System-Test Scale |
 | `{release}-deferred` (and changelog kicks) | Deferral / kick patterns | Component / ST / deferral analysis |
 
-**Hard rule**: train-dep / asks / wishlist labels ≠ Partner type (`*-ew`). UI keeps them as separate controls.
+**Hard rule**: train ask / wishlist labels ≠ Project type (`*-ew`). UI keeps them as separate controls.
 
 ---
 
@@ -908,14 +900,14 @@ Labels mark intent / train / hygiene; they do **not** replace Parent Link or `bl
 | **fixVersion = ERA Future / Triage** | No real commit | Anomaly / data hygiene |
 | **affectedVersion** | Release impacted (bugs) | Valid for NDB-X.Y / master; ERA Future/Triage = anomaly |
 | **fixVersion was X** (changelog) | Historical membership / deferral kicks | Deferral = distinct fixVersions over time |
-| **Release Commit** field = Commit | Explicit commit signal even if fixVersion awkward | Dependency View Ask vs Ok (`customfield_11061`) |
-| **Ask** | Callout without commit signal | Chase partner / decide commit vs defer |
+| **Release Commit** field | Nature of **their** commitment (Commit / Stretch / blank) | Dependency View (`customfield_11061`) |
+| Train **ask** labels | Callout on their ticket for a train | Not the same as Release Commit nature |
 
-**Ask vs Committed (Dependency View Q6 — post-fetch classification)**:
+**Commitment hygiene (Dependency View Q6 — post-fetch; see `dependency_rule.md`)**:
 
 ```
-Committed  ⇔  real fixVersion (not denylisted)  OR  Release Commit = Commit
-Ask        ⇔  otherwise
+Clean     ⇔  Release Commit ∈ {Commit, Stretch}  AND  real fixVersion (not denylisted)
+Their fault ⇔  Commit/Stretch without real fixVersion  OR  valid fixVersion with blank Release Commit
 ```
 
 UI shows **which signal applied**: via fixVersion · via Release Commit field · both.
@@ -1127,8 +1119,8 @@ For FEAT / Initiative owners:
 3. Risk Indicator set; if Yellow/Red → Assessment + Path to Green filled.  
 4. Status Update kept fresh (&lt;14 days) — AI summaries consume it.  
 5. Collateral links (Requirements / Design / Test Plan) present by CG/PG.  
-6. Cross-team work: either **real** `blocks`/`is blocked by` links **or** companion Parent Link under our epics — plus train/wishlist labels when pre-commit.  
-7. Commit partner work with real fixVersion or Release Commit — not labels alone.  
+6. Cross-team work: Mode **Dependency** (`blocks`/`is blocked by`) and/or Mode **Partnership** (hierarchy) — plus train ask / wishlist labels per `dependency_rule.md`.  
+7. Partner commitment: real fixVersion **and** Release Commit in {Commit, Stretch} — not labels alone.  
 8. Never leave Regression? empty on System-Test bugs if ST Scale is used for leadership.
 
 For RMs / TPMs using the app:
@@ -1141,10 +1133,10 @@ For RMs / TPMs using the app:
 ### 12.12 Diagram — from JIRA object to Delivery Ops view
 
 ```
-                    ┌─ Parent Link / Epic Link ──► hierarchy tables, companion deps
-JIRA Issue ─────────┼─ blocks / is blocked by ──► partnership wait lanes
-                    ├─ fixVersion / Release Commit ► release membership, Ask/Ok
-                    ├─ labels (train, mustfix, ew) ► discovery / RAG / partner type
+                    ┌─ Parent Link / Epic Link ──► Partnership hierarchy
+JIRA Issue ─────────┼─ blocks / is blocked by ──► Mode Dependency (I wait / they wait)
+                    ├─ fixVersion / Release Commit ► release membership, commitment nature
+                    ├─ labels (train ask, wishlist, ew) ► discovery / RAG / project type
                     ├─ gate date customfields ─────► Gantt rulers, SoS date strip
                     ├─ Risk Indicator + RA + PtG ──► RAG, AI briefings, hygiene
                     ├─ Status Update (+ age) ──────► AI exec summary (not raw UI)
@@ -1161,8 +1153,8 @@ JIRA Issue ─────────┼─ blocks / is blocked by ──► pa
 | Routes / nav | `client/src/layout/utils/routeConfig.js`, `Sidebar.js` |
 | Page requirements | `docs/pages/*-requirements.md` |
 | Agent page briefs | `agent-pack/context/pages/*.md` |
-| Dependency deep dive | `docs/pages/DependencyView-capabilities.md` |
-| Domain (deps) | `agent-pack/context/domain/cross-team-dependencies.md` |
+| Dependency rules SoT | `agent-pack/context/domain/dependency_rule.md` |
+| Domain (deps JQL) | `agent-pack/context/domain/cross-team-dependencies.md` |
 | Domain (hygiene) | `agent-pack/context/domain/jira-hygiene-and-collaterals.md` |
 | Domain (workflows) | `agent-pack/context/domain/jira-workflows-and-resolutions.md` |
 | Domain (gates) | `agent-pack/context/domain/release-gates.md` |
