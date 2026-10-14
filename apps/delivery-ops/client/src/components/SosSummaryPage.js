@@ -780,8 +780,10 @@ export function ReleaseSection({
   tierSummaries = null,
   projectStatus = null,
   onRetryTier = null,
-  onGenerate = null,
-  generating = false,
+  /** When true, treat missing tier state as loading (SoS Summary auto-gen). */
+  autoTierSummary = false,
+  /** When false, hide FEAT / Standalone / Direct boxes (SoS by Leader). */
+  showTierSummary = true,
   kpiData = null,
   kpiLoading = false,
   kpiError = null,
@@ -813,6 +815,8 @@ export function ReleaseSection({
           case 'EC':
             // EC (Early Commitment) doesn't have a field in GateDateStrip, but we can track it
             config.ecDate = gate.iso;
+            break;
+          default:
             break;
         }
       }
@@ -913,23 +917,6 @@ export function ReleaseSection({
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {onGenerate && (
-            <button
-              type="button"
-              onClick={onGenerate}
-              disabled={generating}
-              title={`Team-exec briefing for FEAT / Standalone / Direct — ${version} only`}
-              style={{
-                fontSize: '11px', border: '1px solid #0d47a1', borderRadius: '4px',
-                background: generating ? '#e3f2fd' : '#0d47a1',
-                color: generating ? '#0d47a1' : '#fff',
-                cursor: generating ? 'not-allowed' : 'pointer',
-                padding: '3px 10px', fontWeight: 600,
-              }}
-            >
-              {generating ? '✦ Generating…' : '✦ Generate Exec Summary'}
-            </button>
-          )}
           <button
             onClick={onRefresh}
             title="Refresh from JIRA"
@@ -960,16 +947,18 @@ export function ReleaseSection({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
-        {SOS_TIERS.map((tier) => (
-          <SosTierSummaryBox
-            key={tier}
-            title={TIER_TITLES[tier]}
-            tierState={tierSummaries?.[tier] || { state: 'idle' }}
-            onRetry={onRetryTier ? () => onRetryTier(tier) : null}
-          />
-        ))}
-      </div>
+      {showTierSummary && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+          {SOS_TIERS.map((tier) => (
+            <SosTierSummaryBox
+              key={tier}
+              title={TIER_TITLES[tier]}
+              tierState={tierSummaries?.[tier] || { state: autoTierSummary ? 'loading' : 'idle' }}
+              onRetry={onRetryTier ? () => onRetryTier(tier) : null}
+            />
+          ))}
+        </div>
+      )}
 
       <SosReleaseCharts
         ragCounts={ragCounts}
@@ -1042,8 +1031,6 @@ function SosSummaryPage() {
   const {
     tierSummaries,
     projectStatusByRelease,
-    generating,
-    generatingRelease,
     generateError,
     generateForRelease,
     retryTier,
@@ -1242,18 +1229,6 @@ function SosSummaryPage() {
     runBatch(allItems, gateDataMap);
   }, [byVersion, gateDataMap, runBatch]);
 
-  const handleGenerateExecSummary = useCallback((version) => {
-    if (!productId || !version) return;
-    generateForRelease({
-      productId,
-      release: version,
-      items: byVersion[version] || [],
-      gateData: gateDataMap[version] || null,
-      breakdownDataMap,
-      checkpointHistory,
-    });
-  }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, generateForRelease]);
-
   const handleRetryTier = useCallback((version, tier) => {
     if (!productId) return;
     retryTier({
@@ -1266,6 +1241,74 @@ function SosSummaryPage() {
       checkpointHistory,
     });
   }, [productId, byVersion, gateDataMap, breakdownDataMap, checkpointHistory, retryTier]);
+
+  // Auto-generate tier exec summaries once SoS items + breakdowns + gates are ready.
+  // One release at a time; tiers inside each release are also sequential.
+  // Snapshot maps via refs so mid-flight history/breakdown updates do NOT cancel/restart the queue.
+  const autoTierStartedRef = useRef(new Set());
+  const autoTierRunningRef = useRef(false);
+  const byVersionRef = useRef(byVersion);
+  const gateDataMapRef = useRef(gateDataMap);
+  const breakdownDataMapRef = useRef(breakdownDataMap);
+  const checkpointHistoryRef = useRef(checkpointHistory);
+  byVersionRef.current = byVersion;
+  gateDataMapRef.current = gateDataMap;
+  breakdownDataMapRef.current = breakdownDataMap;
+  checkpointHistoryRef.current = checkpointHistory;
+
+  useEffect(() => {
+    autoTierStartedRef.current.clear();
+    autoTierRunningRef.current = false;
+  }, [lastSyncIso, selectedTeamId]);
+
+  useEffect(() => {
+    if (!productId || loading || loadingBreakdowns || loadingGates || error) return;
+    if (!activeVersions.length) return;
+    if (autoTierRunningRef.current) return;
+
+    const jobs = activeVersions
+      .filter((v) => (byVersionRef.current[v] || []).length > 0)
+      .filter((v) => !autoTierStartedRef.current.has(v))
+      .map((v) => ({ release: v, items: byVersionRef.current[v] || [] }));
+
+    if (jobs.length === 0) return;
+
+    let cancelled = false;
+    autoTierRunningRef.current = true;
+    (async () => {
+      try {
+        for (const job of jobs) {
+          if (cancelled) break;
+          autoTierStartedRef.current.add(job.release);
+          await generateForRelease({
+            productId,
+            release: job.release,
+            items: job.items,
+            gateData: gateDataMapRef.current[job.release] || null,
+            breakdownDataMap: breakdownDataMapRef.current,
+            checkpointHistory: checkpointHistoryRef.current,
+          });
+        }
+      } finally {
+        autoTierRunningRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      autoTierRunningRef.current = false;
+    };
+    // Intentionally omit byVersion / gateDataMap / breakdownDataMap / checkpointHistory — read via refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    productId,
+    loading,
+    loadingBreakdowns,
+    loadingGates,
+    error,
+    activeVersions,
+    generateForRelease,
+  ]);
 
   const RAG_CHIP_STYLE = (rag, active) => ({
     display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -1567,8 +1610,7 @@ function SosSummaryPage() {
             tierSummaries={tierSummaries[version] || null}
             projectStatus={projectStatusByRelease[version] || null}
             onRetryTier={(tier) => handleRetryTier(version, tier)}
-            onGenerate={() => handleGenerateExecSummary(version)}
-            generating={generating && generatingRelease === version}
+            autoTierSummary
             kpiData={kpiDataByRelease[version] || null}
             kpiLoading={kpiLoadingByRelease[version] || false}
             kpiError={kpiErrorByRelease[version] || null}

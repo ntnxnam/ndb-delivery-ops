@@ -99,18 +99,20 @@ function appendix(model) {
     <li><b>Who is in this report:</b> ${model.meta.scopeLabel
     ? `only assignees in ${scopeGroups} (today's JIRA group membership). Work by people outside those groups is excluded.`
     : 'all assignees on the board sprints in the window.'}</li>
-    <li><b>Window:</b> ${model.meta.slots.length} sprint slots (${esc(first.name)}–${esc(last.name)}, ${esc(first.startIso)} → end of ${esc(last.name)}). The current open slot is excluded so numbers don't move under the reader.</li>
+    <li><b>Window:</b> ${model.meta.slots.length} sprint slots (${esc(first.name)}–${esc(last.name)}, ${esc(first.startIso)} → end of ${esc(last.name)}). Includes the in-flight cadence slot so the chart can show it; <b>discipline phases</b> and gate before/after averages use only closed slots (cadence end before report as-of).</li>
     <li><b>Source:</b> JIRA Sprint Report for every board ${esc(String(model.meta.boardId))} sprint in the window (board → Reports → Sprint Report). Per-sprint Completed / Not Completed / Removed counts match that page. Click a heatmap cell → sprint name to compare.</li>
     <li><b>Unit:</b> one issue listed in one sprint's report. <b>Items</b> = Completed + Not Completed + Removed (+ completed outside the sprint).</li>
     <li><b>Done (sprint math)</b> = JIRA "Completed Issues" when the sprint closed. <b>Planned</b> = items − mid-sprint adds (*). <b>Say/Do</b> = planned completed ÷ planned. <b>Completion</b> = all completed ÷ all items. <b>Scope added</b> = added ÷ planned.</li>
     <li><b>Dev-finished say/do</b> (second heatmap) = same planned membership; <b>Do</b> = status at sprint close was Resolved or Closed. Compare to JIRA Completed say/do to see QA lag inside the same sprint window.</li>
+    <li><b>Completion by type</b> (third heatmap) = only when a scrum team is selected: three rows for that team (Dev→Resolved / QA Closed BI / Closed other), planned-only and type-matched. Hidden at org-wide scope.</li>
     <li><b>Tickets that slipped</b> = distinct tickets that appeared in "Issues Not Completed" at least once in the selected range (not a sum of per-sprint rows). "Still open today" uses each ticket's <i>current</i> JIRA status.</li>
     <li><b>Dev → QA lag:</b> Dev finishes at <b>Resolved</b>; QA finishes at <b>Closed</b>. Waiting age = days since Resolved for tickets still in Resolved. Close lag = days Resolved→Closed from changelog (Closed Bug/Improvement sample). This is a QA bandwidth signal — not a sprint say/do failure by itself.</li>
     <li><b>Status now vs at close:</b> KPI tiles, chronic list and QA queue use live status / fix versions fetched at report generation. The sprint drill-down keeps the status from the Sprint Report (at close) so it matches JIRA.</li>
     <li><b>Chronic carry-over:</b> tickets planned into ${cfg.chronicCarryoverSprints}+ sprints in the window (non-removed appearances). Tabs split Still open / Resolved (awaiting QA) / Closed. <b>Shipped in</b> = earliest released fix version dated on/after the closed date.</li>
-    <li><b>Discipline timeline:</b> splits say/do into phases where the level shifts ≥${cfg.phaseMinShiftPts || 8} pts for ≥${cfg.phaseMinSprints || 3} sprints. Release gates come from the curated <code>releaseGateDates</code> calendar (CC / CG / PG / GA; hollow ◇ = superseded date).</li>
+    <li><b>Discipline timeline:</b> splits JIRA Completed say/do into phases where the level shifts ≥${cfg.phaseMinShiftPts || 8} pts for ≥${cfg.phaseMinSprints || 3} closed sprints. In-flight slots stay on the chart (grey band, hollow markers) but are excluded from phase averages. Lines: purple = JIRA Completed say/do; blue dashed = Dev-finished (Resolved∪Closed); teal dotted = <b>Delivery progress</b> (Bug/Imp Resolved + Bug/Imp Closed + Test Closed + other Closed) ÷ planned. Release gates from <code>releaseGateDates</code> (CC / CG / PG / GA; hollow ◇ = superseded).</li>
     <li><b>Mid-sprint churn by release:</b> unique mid-sprint-added tickets attributed by current fix version (excludes <code>master</code> / long-lived buckets). Share is of those tickets that have a product fix version.</li>
     <li><b>Trend</b> = say/do of the last ${cfg.trendSlots} sprints vs the ${cfg.trendSlots} before. Teams with no sprint in the last ${cfg.trendSlots} slots are hidden from rankings unless you show retired teams.</li>
+    <li><b>Delivery trend chart:</b> membership bars = Say (planned) / Added / Removed. Solid % lines (planned-only, type-matched): Dev→Resolved (Bug/Imp) ÷ planned Bug/Imp; QA Closed (Bug/Imp) ÷ planned Bug/Imp; Closed (other) ÷ planned non-Bug/Imp. Extra overlays: teal <b>dotted Delivery progress</b> (BI Resolved + BI Closed + Test Closed + other Closed) ÷ planned, and black <b>dashed Avg of 3</b> type-matched rates. Legend sits above the chart. <b>BI</b> = Bug / Improvement. Release gates show as ◆ markers + chips + Gate(s) column.</li>
     <li><b>Velocity streams</b> exclude portfolio types (${esc(cfg.portfolioIssueTypes.join(', '))}); headline tiles include every issue type, as the Sprint Report does. <b>QA verification</b> = Bug/Improvement completed and Closed, ×${cfg.qaVerificationRatio} (adjusted count, not story points).</li>
     <li><b>Org roll-up:</b> manager = <code>Team-*-DirectReports</code>. ${cfg.scopeGroups?.length
     ? 'With a scope filter, each person rolls up under the matching scope org (e.g. BharatKumar Beedu / Ashish Kumar).'
@@ -155,7 +157,7 @@ h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 8px;text-transform:up
 .tile-label{font-size:11px;text-transform:uppercase;color:#868e96;letter-spacing:.04em}.tile-value{font-size:26px;font-weight:700;margin:2px 0}.tile-value a{color:#212529}
 .tile-sub{font-size:11px;color:#868e96;line-height:1.35}.tiles-caption{grid-column:1/-1;font-size:12px;color:#495057;line-height:1.4;padding:2px 2px 4px}
 .delta{font-weight:600;margin-left:4px}.delta.up{color:#2b8a3e}.delta.down{color:#c92a2a}.delta.flat{color:#868e96}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:12px 14px;margin-bottom:12px;overflow-x:auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.grid2>*{min-width:0;overflow:hidden}.grid2 .panel-title{font-weight:600;font-size:12px;line-height:1.35;margin:0 0 8px;color:#343a40;word-wrap:break-word}.card{background:#fff;border:1px solid #dee2e6;border-radius:8px;padding:12px 14px;margin-bottom:12px;overflow-x:auto}
 ul.hl,ul.ll{margin:0;padding-left:18px}ul.hl li,ul.ll li{margin:5px 0}ul.hl li::marker{content:"▲  ";color:#2b8a3e}ul.ll li::marker{content:"▼  ";color:#c92a2a}
 .cite{font-size:11px;color:#868e96}.cite a{color:#868e96;border-bottom:1px dotted #adb5bd}
 table{border-collapse:collapse;width:100%}th{font-size:11px;text-transform:uppercase;color:#868e96;text-align:left;padding:5px 6px;border-bottom:2px solid #dee2e6;white-space:nowrap}
@@ -183,10 +185,12 @@ function inlineLibs() {
     `const pct = ${metrics.pct.toString()};`,
     // Browser bundle has no module scope — helpers agg() closes over must be inlined too.
     metrics.isDevFinished.toString(),
+    metrics.statusAtClose.toString(),
     metrics.agg.toString(),
     metrics.halves.toString(),
     timeline.segmentPhases.toString(),
     timeline.disciplineChart.toString(),
+    timeline.disciplineLegendHtml.toString(),
     timeline.renderDisciplineTimeline.toString(),
     sprintPerformanceApp.toString(),
   ].join('\n');
@@ -249,15 +253,15 @@ ${verdict(model)}
     <label style="margin-left:8px"><input type="checkbox" id="gate-superseded" checked> superseded dates</label></div></div>
   <div id="timeline-narrative"></div>
   <div id="timeline-chart" style="margin-top:8px"></div>
-  <div class="caption">Phases are found automatically: the say/do series is split where the level shifts by ${model.meta.config.phaseMinShiftPts || 8}+ points for ${model.meta.config.phaseMinSprints || 3}+ sprints. Band colour = phase level (green ≥ ${model.meta.config.rag.greenSayDoPct}%, amber ≥ ${model.meta.config.rag.yellowSayDoPct}%). Gate dates come from the curated release gate calendar (releaseGateDates); hollow ◇ = a date that was later moved. Follows the filters above.</div>
+  <div class="caption">Phases use closed sprints only. <b>Ongoing</b> sprint = amber band + days left to sprint end (excluded from phase averages). Split where JIRA Completed say/do shifts by ${model.meta.config.phaseMinShiftPts || 8}+ points for ${model.meta.config.phaseMinSprints || 3}+ sprints. Line styles are in the legend above the chart. Band colour = phase level (green ≥ ${model.meta.config.rag.greenSayDoPct}%, amber ≥ ${model.meta.config.rag.yellowSayDoPct}%). Gates from releaseGateDates; hollow ◇ = date later moved. Follows the filters above.</div>
   <h3 style="margin-top:14px">Say/Do around each release gate</h3>
   <div id="timeline-gates"></div>
 </div>
 
 <h2>Trending</h2>
 <div>
-  <div class="card"><h3>Delivery trend</h3><div id="chart-trend"></div><div class="caption">Bars: items in sprint reports per slot (all scrum teams). Lines: say/do and completion.</div></div>
-  <div class="card"><h3>Three velocity streams</h3><div id="chart-streams"></div><div class="caption">Dev = non-Test items completed · QA verification = Bug/Improvement completed and Closed, adjusted 1:3 · Test = Test-type items completed.</div></div>
+  <div class="card"><h3>Delivery trend</h3><div id="chart-trend"></div><div id="chart-trend-gates"></div><div id="chart-trend-table" class="scrollbox" style="max-height:320px;margin-top:8px"></div><div class="caption"><b>BI</b> = Bug / Improvement. Bars: <b>Say</b> · <b>Added</b> · <b>Removed</b>. Solid lines: <b>Dev → Resolved (Bug/Imp)</b> · <b>QA Closed (Bug/Imp)</b> · <b>Closed (other)</b>. Dotted teal: <b>Delivery progress</b> (BI Res+Clo + Test/other Clo ÷ planned). Dashed black: <b>Avg of 3</b> type-matched rates. ◆ markers + chips = release gates (also Gate(s) column). Dev finishes at Resolved; QA closes later. Velocity streams use Closed BI ×${model.meta.config.qaVerificationRatio} for QA verification effort.</div></div>
+  <div class="card"><h3>Three velocity streams</h3><div id="chart-streams"></div><div class="caption">Dev = non-Test items completed · QA verification = Bug/Improvement completed and Closed, adjusted 1:3 · Test = Test-type items completed. Axis date = sprint end; the line under it names any release gate (CC / CG / PG / GA) that falls in that sprint.</div></div>
 </div>
 
 <h2>Scrum teams</h2>
@@ -265,6 +269,8 @@ ${verdict(model)}
 <div class="caption">Cells show say/do % per sprint (JIRA Sprint Report <b>Completed</b> ÷ planned). Click a cell for Completed / Not Completed / Removed lists · click a team name to filter · click a column header to sort. Quiet teams: use “Show N team(s)…” under this table.</div></div>
 <div class="card" style="margin-top:12px"><h3>Say/do by sprint — Dev finished (Resolved ∪ Closed)</h3><div id="heatmap-dev"></div>
 <div class="caption">Same teams, slots, membership and <b>planned</b> denominator as the table above. <b>Do</b> = ticket status at sprint close was <b>Resolved or Closed</b> (Dev done, including waiting on QA). Gap vs the JIRA Completed heatmap is usually QA bandwidth, not “Dev missed the sprint.” Click a cell for the same drill-down lists.</div></div>
+<div class="card" style="margin-top:12px"><h3>Completion by type — Dev→Resolved / QA Closed / Closed other</h3><div id="heatmap-completion"></div>
+<div class="caption">Shown only when a <b>scrum team</b> is selected — three rows for that team only. <b>Dev→Resolved</b> = planned Bug/Imp still Resolved at close ÷ planned Bug/Imp · <b>QA Closed BI</b> = planned Bug/Imp Closed ÷ planned Bug/Imp · <b>Closed other</b> = planned non-Bug/Imp Closed ÷ planned other. Hover for counts · click a cell for sprint lists.</div></div>
 
 <h2 id="org-heading">Organisation</h2>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 id="org-title">By leader and manager</h3>

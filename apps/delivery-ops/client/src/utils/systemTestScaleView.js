@@ -46,6 +46,7 @@ export function selectReleaseView(data, currentRelease, compareRelease) {
       rag: { level: 'yellow', why: 'No data yet.' },
       carry: null,
       components: [],
+      stPulse: null,
       activeCurrent: currentRelease || '',
       activeCompare: compareRelease || '',
     };
@@ -65,12 +66,22 @@ export function selectReleaseView(data, currentRelease, compareRelease) {
   const carryKey = `${activeCompare}->${activeCurrent}`;
   const carry = data.carry?.[carryKey] || null;
   const components = data.components?.[activeCurrent] || [];
+  const stGlobal = data.stPulse?.global || {};
+  const stRel = data.stPulse?.byRelease?.[activeCurrent] || {};
+  const stPulse = {
+    all: stGlobal.all || null,
+    open: stGlobal.open || null,
+    resolvedNotClosed: stGlobal.resolvedNotClosed || null,
+    affectedOpen: stRel.affectedOpen || null,
+    fixVersionOpen: stRel.fixVersionOpen || null,
+  };
   return {
     current,
     compare,
     rag: computeRag(current),
     carry,
     components,
+    stPulse,
     activeCurrent,
     activeCompare,
   };

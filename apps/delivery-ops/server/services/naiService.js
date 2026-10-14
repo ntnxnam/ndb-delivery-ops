@@ -1055,15 +1055,179 @@ async function generateSprintLeadershipAsks(intelligence) {
   return asks;
 }
 
+// ── SoS by Leader — overall + leader×release briefs ──────────────────────────
+
+const SOS_OVERALL_SYSTEM_PROMPT = `You are a senior TPM writing a cross-release Scrum-of-Scrums overall brief for engineering leadership. Skim time: under 30 seconds.
+
+OUTPUT FORMAT (exact order; omit empty sections):
+
+## Overall SoS
+
+🔴 TLDR: …  OR  🟡 TLDR: …  OR  🟢 TLDR: …
+(Use EXACTLY one emoji before TLDR.)
+1–2 sentences: org-wide health across the listed releases.
+
+📋 Key Risks:
+• ≤4 bullets. Cite counts/keys from the packet only. Name ticket keys only from VALID TICKET KEYS.
+
+✅ Next Owner Actions:
+• ≤3 bullets. Format: <role> — <specific ask>. No "monitor".
+
+RULES:
+- Under 200 words.
+- Use ONLY numbers and keys in the user message. Never invent tickets, owners, or dates.
+- Prefer P0/must-fix, Red RAG concentrations, and stale/NotSet hygiene over volume narration.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.`;
+
+const SOS_LEADER_RELEASE_SYSTEM_PROMPT = `You are a senior TPM writing a leader-scoped Scrum-of-Scrums brief for one eng leader and one release. Audience: that leader + Portfolio Manager. Skim time: under 20 seconds.
+
+This is NOT a full release-health briefing and NOT the three-tier FEAT/Standalone/Direct split. Focus on this leader's Feature/Initiative slice of the release.
+
+OUTPUT FORMAT (exact order; omit empty sections):
+
+## <LEADER_NAME> — <RELEASE>
+
+🔴 TLDR: …  OR  🟡 TLDR: …  OR  🟢 TLDR: …
+(Use EXACTLY one emoji before TLDR.)
+1–2 sentences on this leader's slice.
+
+⚠️ Call-outs:
+• Only when the packet has material hygiene (NotSet Risk Indicator, stale status ≥14d). Cite keys from VALID TICKET KEYS.
+
+📋 Key Risks:
+• ≤3 bullets grounded in the packet.
+
+✅ Next Owner Actions:
+• ≤2 bullets. Prefer Team Manager / FEAT Manager / assignees named in the packet. No "monitor".
+
+RULES:
+- Under 160 words.
+- Use ONLY data in the packet. Never invent tickets.
+- If itemCount is 0: output only the ## heading and "No Feature/Initiative items for this leader in this release."
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.`;
+
+function formatValidKeysBlock(keys) {
+  const list = (keys || []).filter(Boolean);
+  if (!list.length) return 'VALID TICKET KEYS: none provided';
+  return `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${list.map((k, i) => `  ${i + 1}. ${k}`).join('\n')}`;
+}
+
+function buildSosOverallPrompt(payload) {
+  const releases = Array.isArray(payload?.releases) ? payload.releases : [];
+  const keys = Array.isArray(payload?.validKeys) ? payload.validKeys : [];
+  const today = new Date().toISOString().slice(0, 10);
+  const releaseLines = releases.map((r) => {
+    const rag = r.ragCounts || {};
+    const cat = r.categoryCounts || {};
+    return (
+      `  - ${r.version}: items=${r.itemCount ?? 0}` +
+      ` RAG R/Y/G/NS=${rag.Red ?? 0}/${rag.Yellow ?? 0}/${rag.Green ?? 0}/${rag.NotSet ?? 0}` +
+      ` categories FEAT/Standalone/Direct=${cat.feat ?? 0}/${cat.standalone ?? 0}/${cat.direct ?? 0}` +
+      (r.gateDates?.cgDate ? ` CG=${r.gateDates.cgDate}` : '') +
+      (r.gateDates?.pgDate ? ` PG=${r.gateDates.pgDate}` : '')
+    );
+  });
+  return [
+    `TODAY: ${today}`,
+    formatValidKeysBlock(keys),
+    '',
+    'RELEASES:',
+    releaseLines.length ? releaseLines.join('\n') : '  (none)',
+    '',
+    `HYGIENE: staleStatusUpdates=${payload?.staleCount ?? 0} riskNotSet=${payload?.notSetCount ?? 0}`,
+    `OPEN_P0=${payload?.p0Count ?? 0} OPEN_MUSTFIX=${payload?.mustFixCount ?? 0}`,
+    '',
+    'When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.',
+  ].join('\n');
+}
+
+function buildSosLeaderReleasePrompt(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const keys = Array.isArray(payload?.validKeys) && payload.validKeys.length
+    ? payload.validKeys
+    : items.map((i) => i.key).filter(Boolean);
+  const rag = payload?.ragCounts || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const itemLines = items.slice(0, 40).map((i) => (
+    `  - ${i.key}: [${i.rag || 'NotSet'}] ${i.summary || ''} | status=${i.status || '—'}`
+  ));
+  return [
+    `TODAY: ${today}`,
+    `LEADER_NAME: ${payload?.leaderName || 'Leader'}`,
+    `LEADER_ID: ${payload?.leaderId || '—'}`,
+    `RELEASE: ${payload?.release || '—'}`,
+    formatValidKeysBlock(keys),
+    '',
+    `ITEM_COUNT: ${payload?.itemCount ?? items.length}`,
+    `RAG: Red=${rag.Red ?? 0} Yellow=${rag.Yellow ?? 0} Green=${rag.Green ?? 0} NotSet=${rag.NotSet ?? 0}`,
+    `GATE_DATES: CG=${payload?.gateDates?.cgDate || '—'} PG=${payload?.gateDates?.pgDate || '—'}`,
+    `STALE_STATUS (≥14d): ${payload?.staleCount ?? 0}`,
+    `RISK_NOT_SET: ${payload?.notSetCount ?? 0}`,
+    '',
+    'ITEMS:',
+    itemLines.length ? itemLines.join('\n') : '  (none)',
+    '',
+    'When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.',
+  ].join('\n');
+}
+
+async function generateSosOverallSummary(payload) {
+  const releases = Array.isArray(payload?.releases) ? payload.releases : [];
+  if (!releases.length) {
+    return '## Overall SoS\n\nNo active releases to summarise.';
+  }
+  const messages = [
+    { role: 'system', content: SOS_OVERALL_SYSTEM_PROMPT },
+    { role: 'user', content: buildSosOverallPrompt(payload) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty SoS overall summary after trim');
+  return trimmed;
+}
+
+async function generateSosLeaderReleaseSummary(payload) {
+  if (!payload?.release) {
+    throw new Error('release is required for SoS leader-release summary');
+  }
+  const itemCount = Number(payload.itemCount) || (payload.items || []).length || 0;
+  if (itemCount === 0) {
+    const name = payload.leaderName || 'Leader';
+    return `## ${name} — ${payload.release}\n\nNo Feature/Initiative items for this leader in this release.`;
+  }
+  const messages = [
+    { role: 'system', content: SOS_LEADER_RELEASE_SYSTEM_PROMPT },
+    { role: 'user', content: buildSosLeaderReleasePrompt(payload) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty SoS leader-release summary after trim');
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
   generateSosTierSummary,
+  generateSosOverallSummary,
+  generateSosLeaderReleaseSummary,
   generateSprintLeadershipAsks,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   SOS_TIER_SYSTEM_PROMPT,
+  SOS_OVERALL_SYSTEM_PROMPT,
+  SOS_LEADER_RELEASE_SYSTEM_PROMPT,
   SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
@@ -1074,6 +1238,8 @@ module.exports = {
     buildReleaseSummaryPrompt,
     buildSchedulePressureBlock,
     buildSosTierPrompt,
+    buildSosOverallPrompt,
+    buildSosLeaderReleasePrompt,
     buildSprintLeadershipAsksPrompt,
     parseSprintLeadershipAsks,
     extractKeysFromItems,

@@ -33,6 +33,7 @@ Exec-facing dashboard for System-Test bug scale and regression health, scoped by
 | STS-06 | As a TPM, changing Team rebuilds all JQL with `filter={teamCode}-System-Test`. |
 | STS-04 | As a TPM, I can open any count in JIRA using the exact JQL that produced it. |
 | STS-05 | As a QA lead, I see component tiles for open / Yes* / open R2R on configured releases. |
+| STS-07 | As a TPM, I see label-based ST pulse widgets (all / open / resolved-not-closed / affected-open / fixVersion-open) matching JIRA filters 188191–188195, with release widgets following Current. |
 
 ---
 
@@ -45,7 +46,7 @@ Header (title + Pull from JIRA + as-of stamp)
 
 Filtered view  (teal band · badge "Uses filters")
   Controls (team · current · compare)
-  RAG + hero metrics · delta table · carry-over · component map
+  RAG + hero metrics · ST pulse (label-based) · delta table · carry-over · component map
 
 All-release view  (slate band · badge "Ignores release filters")
   Regression heatmap (all configured releases for team; Current outlined)

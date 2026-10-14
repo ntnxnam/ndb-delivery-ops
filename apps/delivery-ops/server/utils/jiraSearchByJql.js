@@ -9,8 +9,15 @@ const { getAllFields } = require('./jiraFieldsConfig');
 const STANDARD_FIELD_NAMES = 'summary,status,assignee,reporter,issuetype,priority,fixVersions,versions,labels,duedate,watchers,resolution,created,updated,description,parent';
 const MAX_JQL_RESULTS = 500;
 
-async function runSearchByJql(token, jql, maxResults = 500) {
+/**
+ * @param {string} token
+ * @param {string} jql
+ * @param {number} [maxResults=500]
+ * @param {{ extraFields?: string[] }} [options] — e.g. { extraFields: ['issuelinks'] }
+ */
+async function runSearchByJql(token, jql, maxResults = 500, options = {}) {
   const limit = Math.min(Number(maxResults) || 100, MAX_JQL_RESULTS);
+  const extraFields = Array.isArray(options?.extraFields) ? options.extraFields : [];
 
   const customFieldIds = [];
   if (jiraFieldsConfig.fields) {
@@ -21,7 +28,7 @@ async function runSearchByJql(token, jql, maxResults = 500) {
       });
     });
   }
-  const fieldsParam = [STANDARD_FIELD_NAMES, ...customFieldIds].join(',');
+  const fieldsParam = [STANDARD_FIELD_NAMES, ...customFieldIds, ...extraFields].join(',');
 
   let allIssues = await searchPages(token, jql.trim(), fieldsParam, {
     pageSize: 100,

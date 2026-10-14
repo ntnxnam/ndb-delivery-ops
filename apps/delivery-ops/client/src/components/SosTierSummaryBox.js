@@ -188,11 +188,11 @@ export default function SosTierSummaryBox({ title, tierState, onRetry }) {
       <div style={{ padding: '10px 12px', flex: 1, minHeight: 80 }}>
         {state === 'idle' && (
           <p style={{ margin: 0, fontSize: 12, color: '#adb5bd' }}>
-            Click Generate Exec Summary to fill this box.
+            Waiting for JIRA data…
           </p>
         )}
         {state === 'loading' && (
-          <p style={{ margin: 0, fontSize: 12, color: '#868e96' }}>Generating…</p>
+          <p style={{ margin: 0, fontSize: 12, color: '#868e96' }}>Generating summary…</p>
         )}
         {state === 'error' && (
           <div>

@@ -586,7 +586,7 @@ Per-KPI `error` strings are returned inline; a failing KPI does not fail the bat
 
 ### GET /api/jira/system-test-scale
 
-**Purpose**: Return live System-Test scale dashboard counts, per-metric JQL, RAG, components, and release-over-release trends scoped by team KPI `filter={teamCode}-System-Test` with `cf[13260]` regression typing.
+**Purpose**: Return live System-Test scale dashboard counts, per-metric JQL, RAG, components, release-over-release trends, and label-based ST pulse (filters 188191–188195) scoped by team KPI `filter={teamCode}-System-Test` with `cf[13260]` regression typing.
 
 **Auth**: required · KPI view authorization (`kpi_view`)
 
@@ -617,6 +617,11 @@ Route handler → `checkKpiViewAuthorization` → `systemTestScaleService.getDas
   "current": { "open": { "count": 19, "jql": "..." }, "rates": { "regressionRate": 8.1 } },
   "compare": { },
   "byRelease": { },
+  "stPulse": {
+    "global": { "all": { "count": 0, "jql": "..." }, "open": {}, "resolvedNotClosed": {} },
+    "byRelease": { "NDB-2.12": { "affectedOpen": {}, "fixVersionOpen": {} } },
+    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 }
+  },
   "trends": { "series": [], "rateSeries": [] },
   "components": { },
   "carry": { }

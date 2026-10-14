@@ -2,583 +2,442 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Portfolio Delivery Ops — Executive Pitch</title>
+  <title>Project Lighthouse — Framework &amp; Weekly Ops</title>
   <style>
     @page { size: 13.333in 7.5in; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      background: #0b1016;
-      color: #e6edf3;
-      font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      background: #111; color: #e8e8e8;
+      font-family: "IBM Plex Sans", "Segoe UI", -apple-system, sans-serif;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
     .slide {
-      width: 13.333in;
-      height: 7.5in;
-      padding: 0.62in 0.72in;
-      page-break-after: always;
-      break-after: page;
-      position: relative;
-      overflow: hidden;
-      background: #0f1419;
+      width: 13.333in; height: 7.5in;
+      padding: 0.48in 0.62in 0.5in;
+      page-break-after: always; break-after: page;
+      position: relative; overflow: hidden;
+      background: #141414; border-left: 5px solid #e8a317;
     }
-    .slide:last-child { page-break-after: auto; break-after: auto; }
+    .slide:last-child { page-break-after: auto; }
     .eyebrow {
-      font-size: 11px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: #58a6ff;
-      font-weight: 600;
-      margin-bottom: 14px;
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #e8a317; font-weight: 700; margin-bottom: 8px;
     }
-    h1 {
-      font-size: 42px;
-      font-weight: 600;
-      line-height: 1.12;
-      letter-spacing: -0.03em;
-      color: #f0f6fc;
-    }
-    h2 {
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-      color: #f0f6fc;
-    }
-    .lede {
-      font-size: 17px;
-      line-height: 1.45;
-      color: #8b949e;
-      max-width: 8.4in;
-      margin-top: 16px;
-    }
+    h1 { font-size: 34px; font-weight: 650; line-height: 1.15; color: #fff; max-width: 11.5in; }
+    h2 { font-size: 24px; font-weight: 650; line-height: 1.2; color: #fff; }
+    .lede { font-size: 15px; line-height: 1.4; color: #b0b0b0; margin-top: 10px; max-width: 11in; }
     .foot {
-      position: absolute;
-      left: 0.72in;
-      right: 0.72in;
-      bottom: 0.38in;
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #6e7681;
+      position: absolute; left: 0.62in; right: 0.62in; bottom: 0.28in;
+      display: flex; justify-content: space-between;
+      font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #666;
     }
-    .accent-bar {
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 6px;
-      background: #58a6ff;
+    table.story { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    table.story th {
+      text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #888; padding: 7px 8px; border-bottom: 2px solid #333;
     }
-
-    /* Cover */
-    .cover { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 1.15in; }
-    .cover h1 { font-size: 56px; max-width: 11in; }
-    .cover .brand {
-      position: absolute;
-      top: 0.62in;
-      left: 0.72in;
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: #8b949e;
-      font-weight: 600;
+    table.story td {
+      padding: 7px 8px; border-bottom: 1px solid #2a2a2a; vertical-align: top;
+      color: #ddd; line-height: 1.3;
     }
-    .quote {
-      margin-top: 28px;
-      font-size: 22px;
-      color: #c9d1d9;
-      font-weight: 500;
-      letter-spacing: -0.01em;
+    table.story td.stage { font-weight: 700; color: #fff; white-space: nowrap; }
+    table.story td.was { color: #c97a7a; }
+    table.story td.now { color: #8fcf8f; }
+    table.story tr:nth-child(even) td { background: #181818; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .box { border: 1px solid #333; background: #1a1a1a; padding: 14px 16px; }
+    .box h3 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #e8a317; margin-bottom: 8px; }
+    .box ul { list-style: none; }
+    .box li { font-size: 13px; color: #ccc; padding: 3px 0 3px 12px; position: relative; line-height: 1.3; }
+    .box li::before { content: "–"; position: absolute; left: 0; color: #e8a317; }
+    .callout {
+      margin-top: 12px; padding: 10px 14px; border-left: 3px solid #e8a317;
+      background: #1a1a1a; font-size: 13px; color: #ccc; line-height: 1.35;
     }
-
-    /* Layouts */
-    .split { display: grid; grid-template-columns: 4.35in 1fr; gap: 0.42in; height: 5.95in; }
-    .split-wide { display: grid; grid-template-columns: 3.7in 1fr; gap: 0.4in; height: 5.95in; }
-    .copy p { color: #8b949e; font-size: 15px; line-height: 1.5; margin-top: 14px; }
-    .copy ul { margin-top: 18px; list-style: none; }
-    .copy li {
-      font-size: 14.5px;
-      color: #c9d1d9;
-      padding: 7px 0 7px 16px;
-      position: relative;
-      line-height: 1.35;
+    .numline { display: flex; gap: 22px; margin-top: 14px; flex-wrap: wrap; }
+    .numline .n { font-size: 26px; font-weight: 700; color: #e8a317; }
+    .numline .l { font-size: 11px; color: #888; margin-top: 3px; max-width: 2.2in; line-height: 1.25; }
+    .disc { margin-top: 10px; font-size: 11px; color: #666; }
+    .cover { display: flex; flex-direction: column; justify-content: center; min-height: 5.6in; }
+    .gates {
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 12px;
     }
-    .copy li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 14px;
-      width: 7px;
-      height: 7px;
-      background: #58a6ff;
+    .gate {
+      border: 1px solid #333; background: #1a1a1a; padding: 8px 6px; text-align: center; min-height: 1.35in;
     }
-
-    /* Product frame */
-    .frame {
-      background: #1a2332;
-      border: 1px solid #2d3a4d;
-      border-radius: 10px;
-      overflow: hidden;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
+    .gate.soft {
+      border: 1px dashed #e8a317; background: #1f1a10;
     }
-    .chrome {
-      background: #151c27;
-      border-bottom: 1px solid #2d3a4d;
-      padding: 8px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
+    .gate .tag {
+      font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #e8a317; margin-bottom: 4px; font-weight: 700;
     }
-    .dots { display: flex; gap: 5px; }
-    .dots i { width: 8px; height: 8px; border-radius: 50%; display: block; background: #3a4a60; }
-    .url {
-      flex: 1;
-      background: #0f1419;
-      border: 1px solid #2d3a4d;
-      border-radius: 5px;
-      padding: 4px 10px;
-      font-size: 10px;
-      color: #8b949e;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    .gate .g { font-size: 11px; font-weight: 700; color: #e8a317; margin-bottom: 5px; }
+    .gate.hard .g { color: #fff; }
+    .gate .d { font-size: 10px; color: #aaa; line-height: 1.25; }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px;
     }
-    .screen { flex: 1; overflow: hidden; position: relative; }
-    .screen img.live {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: 28% 0;
-      display: block;
-    }
-    .caption {
-      font-size: 10px;
-      color: #6e7681;
-      margin-top: 8px;
-      letter-spacing: 0.04em;
-    }
-
-    /* App chrome inside frames */
-    .app { display: flex; height: 100%; background: #f4f6f8; color: #1f2328; }
-    .side {
-      width: 132px;
-      background: #1b1f24;
-      color: #c9d1d9;
-      padding: 12px 8px;
-      font-size: 9px;
-      flex-shrink: 0;
-    }
-    .side .logo { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #58a6ff; margin-bottom: 12px; }
-    .nav-item { padding: 5px 7px; border-radius: 4px; margin-bottom: 2px; color: #8b949e; }
-    .nav-item.on { background: #21262d; color: #f0f6fc; }
-    .main { flex: 1; padding: 12px 14px; min-width: 0; }
-    .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .ph h3 { font-size: 13px; font-weight: 650; color: #1f2328; }
-    .btn {
-      background: #1565c0;
-      color: #fff;
-      font-size: 9px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-    .gates { display: flex; gap: 10px; font-size: 9px; color: #555; margin-bottom: 8px; }
-    .gates b { color: #222; }
-    table.mini { width: 100%; border-collapse: collapse; font-size: 8.5px; }
-    table.mini th {
-      text-align: left;
-      background: #eef1f4;
-      padding: 4px 5px;
-      font-size: 8px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #555;
-      border-bottom: 1px solid #d0d7de;
-    }
-    table.mini td { padding: 5px 5px; border-bottom: 1px solid #eee; vertical-align: top; color: #333; }
-    .key { color: #1565c0; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
-    .rag { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .g { background: #388e3c; }
-    .y { background: #f57c00; }
-    .r { background: #d32f2f; }
-    .ai { color: #444; font-size: 8px; line-height: 1.35; max-width: 160px; }
-    .barwrap { display: flex; height: 6px; width: 72px; border-radius: 3px; overflow: hidden; background: #e5e7eb; }
-    .barwrap span { display: block; height: 100%; }
-    .b-done { background: #388e3c; }
-    .b-wip { background: #1565c0; }
-    .b-open { background: #cfd8dc; }
-
-    /* Dark product (Release Brief) */
-    .app-dark { background: #0f1419; color: #e6edf3; }
-    .side-dark { background: #0b1016; border-right: 1px solid #2d3a4d; }
-    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 8px; }
     .kpi {
-      background: #1a2332;
-      border: 1px solid #2d3a4d;
-      border-radius: 6px;
-      padding: 8px 9px;
+      border: 1px solid #333; background: #1a1a1a; padding: 10px 12px;
     }
-    .kpi .l { font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #8b949e; }
-    .kpi .n { font-size: 20px; font-weight: 600; color: #f0f6fc; margin-top: 2px; }
-    .kpi .s { font-size: 8px; color: #8b949e; margin-top: 2px; }
-    .kpi.warn .n { color: #d29922; }
-    .kpi.bad .n { color: #f85149; }
-    .kpi.ok .n { color: #3fb950; }
-    .panel {
-      background: #1a2332;
-      border: 1px solid #2d3a4d;
-      border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 7px;
-    }
-    .panel h4 { font-size: 9px; color: #8b949e; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
-    .risk-row { display: flex; gap: 8px; align-items: flex-start; font-size: 9px; margin-bottom: 5px; color: #c9d1d9; }
+    .kpi .t { font-size: 12px; font-weight: 700; color: #fff; }
+    .kpi .s { font-size: 11px; color: #888; margin-top: 4px; line-height: 1.25; }
+    .kpi.hot { border-color: #e8a317; }
+    .pillrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .pill {
-      font-size: 8px;
-      padding: 1px 6px;
-      border-radius: 99px;
-      font-weight: 650;
-      letter-spacing: 0.04em;
-      flex-shrink: 0;
+      font-size: 11px; padding: 4px 8px; border: 1px solid #333; background: #1a1a1a; color: #ccc;
     }
-    .pill-red { background: rgba(248,81,73,.15); color: #f85149; }
-    .pill-yel { background: rgba(210,153,34,.15); color: #d29922; }
-    .pill-grn { background: rgba(63,185,80,.15); color: #3fb950; }
-    .tl { display: flex; align-items: center; gap: 0; margin: 8px 0 4px; }
-    .tl .gchip {
-      flex: 1;
-      text-align: center;
-      font-size: 8px;
-      padding: 5px 0;
-      border: 1px solid #2d3a4d;
-      color: #8b949e;
-    }
-    .tl .gchip:first-child { border-radius: 4px 0 0 4px; }
-    .tl .gchip:last-child { border-radius: 0 4px 4px 0; }
-    .tl .gchip.met { background: rgba(63,185,80,.12); color: #3fb950; border-color: rgba(63,185,80,.35); }
-    .tl .gchip.next { background: rgba(88,166,255,.12); color: #58a6ff; border-color: rgba(88,166,255,.4); }
-
-    /* Gantt */
-    .gantt { margin-top: 6px; }
-    .grow { display: grid; grid-template-columns: 118px 1fr; gap: 6px; align-items: center; margin-bottom: 5px; }
-    .glab { font-size: 8px; color: #555; white-space: nowrap; overflow: hidden; }
-    .gtrack { height: 10px; background: #e8ecf0; border-radius: 3px; position: relative; }
-    .gbar { position: absolute; top: 0; height: 100%; border-radius: 3px; }
-    .vline { position: absolute; top: -4px; bottom: -4px; width: 1px; background: #f85149; }
-
-    /* Chat */
-    .chat { display: flex; flex-direction: column; height: 100%; background: #fff; }
-    .bubble { max-width: 88%; font-size: 9.5px; line-height: 1.4; padding: 7px 9px; border-radius: 8px; margin-bottom: 7px; }
-    .me { align-self: flex-end; background: #1565c0; color: #fff; }
-    .bot { align-self: flex-start; background: #eef2f6; color: #222; }
-    .bot a { color: #1565c0; font-weight: 700; text-decoration: none; }
-
-    /* Toolbox */
-    .grid6 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 22px; }
-    .card {
-      border: 1px solid #2d3a4d;
-      background: #1a2332;
-      border-radius: 8px;
-      padding: 16px 16px 18px;
-      min-height: 1.55in;
-    }
-    .card .num {
-      font-size: 11px;
-      color: #58a6ff;
-      letter-spacing: 0.12em;
-      font-weight: 650;
-      margin-bottom: 8px;
-    }
-    .card h3 { font-size: 16px; font-weight: 600; color: #f0f6fc; margin-bottom: 8px; }
-    .card p { font-size: 13px; color: #8b949e; line-height: 1.4; }
-
-    /* Audiences */
-    .aud { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 28px; }
-    .aud-card {
-      border-top: 2px solid #58a6ff;
-      padding-top: 12px;
-    }
-    .aud-card h3 { font-size: 15px; margin-bottom: 6px; }
-    .aud-card p { font-size: 12.5px; color: #8b949e; line-height: 1.4; }
-    .note {
-      margin-top: 28px;
-      font-size: 14px;
-      color: #c9d1d9;
-      border-left: 2px solid #58a6ff;
-      padding-left: 14px;
-    }
-
-    /* Close */
-    .close { display: flex; flex-direction: column; justify-content: center; height: 100%; }
-    .close h1 { font-size: 40px; max-width: 11in; }
-    .stats { display: flex; gap: 36px; margin-top: 40px; }
-    .stat .n { font-size: 28px; font-weight: 600; color: #58a6ff; }
-    .stat .l { font-size: 12px; color: #8b949e; margin-top: 4px; }
-
-    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.32in; height: 4.85in; margin-top: 10px; }
-    .tiny-h { font-size: 12px; color: #8b949e; margin-bottom: 8px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 650; }
   </style>
 </head>
 <body>
 
-  <!-- 1 COVER -->
-  <section class="slide cover">
-    <div class="accent-bar"></div>
-    <div class="brand">Portfolio Delivery Ops</div>
-    <div class="eyebrow">Executive briefing</div>
-    <h1>The 30-second answer<br>to “how’s the release?”</h1>
-    <p class="quote">JIRA is the system of record. This is the system of understanding.</p>
-    <div class="foot">
-      <span>Nutanix Engineering · Portfolio operations</span>
-      <span>01 / 08</span>
+  <!-- 01 -->
+  <section class="slide">
+    <div class="eyebrow">01 · Project Lighthouse</div>
+    <div class="cover">
+      <h1>How we built the NDB delivery framework — and how it runs every week.</h1>
+      <p class="lede" style="margin-top:20px;font-size:17px;color:#ddd;max-width:10.5in">
+        <strong style="color:#fff">Mission:</strong> honest, usable operational truth with ownership on the person who can act.<br><br>
+        <strong style="color:#fff">Vision:</strong> Shine the problem → Suggest the fix → Fix under HITL.<br><br>
+        <strong style="color:#fff">The operating system:</strong> gate-train SDLC, Delivery Ops surfaces, weekly NDB Ops KPI rhythm (OnCalls, CFD/CFI), automated EM reminders, and clear RACI.
+      </p>
     </div>
+    <div class="foot"><span>NDB Engineering Operations</span><span>01 / 12</span></div>
   </section>
 
-  <!-- 2 THE JOB -->
+  <!-- 02 Framework pillars -->
   <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="eyebrow">The job</div>
-    <h2>Leadership should not have to assemble the story.</h2>
-    <p class="lede">Today, a status question means a JIRA filter, a Confluence page, a Slack thread, and a spreadsheet. Tomorrow, it is one login — and a view already shaped for the person in the room.</p>
-    <div class="grid6" style="margin-top:32px; grid-template-columns: 1fr 1fr 1fr 1fr;">
-      <div class="card">
-        <div class="num">01</div>
-        <h3>See</h3>
-        <p>Every committed Feature, across every active release, with RAG and remaining work.</p>
-      </div>
-      <div class="card">
-        <div class="num">02</div>
-        <h3>Judge</h3>
-        <p>A health verdict with named blockers — not a green badge with no receipts.</p>
-      </div>
-      <div class="card">
-        <div class="num">03</div>
-        <h3>Ask</h3>
-        <p>Plain English. Grounded in the release dataset. Ticket keys you can click.</p>
-      </div>
-      <div class="card">
-        <div class="num">04</div>
-        <h3>Send</h3>
-        <p>SoS, status email, brief — out the door from the same screen, not a copy-paste ritual.</p>
-      </div>
-    </div>
-    <div class="foot">
-      <span>One product surface · many personas</span>
-      <span>02 / 08</span>
-    </div>
-  </section>
-
-  <!-- 3 SOS -->
-  <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="split-wide">
-      <div class="copy">
-        <div class="eyebrow">Scrum of Scrums</div>
-        <h2>The staff-meeting screen.</h2>
-        <p>All active releases in one scroll. Features and Initiatives with AI exec summaries, gate dates, and done / remaining work — then Email SoS.</p>
+    <div class="eyebrow">02 · What Project Lighthouse is</div>
+    <h2>One operating system for NDB delivery — so leaders decide, not assemble status.</h2>
+    <p class="lede">If you are new here: we did not add another status deck. We wired four capabilities that already run the org’s release work into one place.</p>
+    <div class="three-col" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:14px">
+      <div class="box">
+        <h3>1 · Trust the numbers</h3>
         <ul>
-          <li>No more walking the room Feature by Feature</li>
-          <li>Risk is a color you can see from the back row</li>
-          <li>The briefing you just reviewed is the briefing you send</li>
+          <li>JIRA stays the single source of truth</li>
+          <li>We fixed hygiene at the board (not in slides)</li>
+          <li>Every count opens the real ticket list</li>
+          <li>No “trust me” spreadsheets</li>
         </ul>
       </div>
-      <div>
-        <div class="frame" style="height: 5.55in;">
-          <div class="chrome">
-            <div class="dots"><i></i><i></i><i></i></div>
-            <div class="url">/sos-summary</div>
-          </div>
-          <div class="screen">
-            <img class="live" src="shots/sos-summary.png" alt="Live SoS Summary — features, initiatives, and Email SoS" />
-          </div>
-        </div>
-        <div class="caption">Live product — SoS Summary. Timeline plus Feature / Initiative rows. Email SoS from this screen.</div>
-      </div>
-    </div>
-    <div class="foot">
-      <span>SoS Summary</span>
-      <span>03 / 08</span>
-    </div>
-  </section>
-
-  <!-- 4 RELEASE BRIEF -->
-  <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="split-wide">
-      <div class="copy">
-        <div class="eyebrow">Release Brief</div>
-        <h2>Health with receipts.</h2>
-        <p>A one-pager for the release: payload, gates, outstanding work, landing forecast. The verdict is RAG. The evidence is ticket keys — never invented, always clickable.</p>
+      <div class="box">
+        <h3>2 · Run the release train</h3>
         <ul>
-          <li>Open P0s and must-fix items named, not counted in the dark</li>
-          <li>Green only when the board is actually clean</li>
-          <li>Built for the person who will forward it upward</li>
+          <li>Shared calendar: planning → ship</li>
+          <li>Named gates everyone recognizes</li>
+          <li>Hotfixes use a shorter path</li>
+          <li>Same UI for every release type</li>
         </ul>
       </div>
-      <div>
-        <div class="frame" style="height: 5.55in;">
-          <div class="chrome">
-            <div class="dots"><i></i><i></i><i></i></div>
-            <div class="url">/release/brief</div>
-          </div>
-          <div class="screen">
-            <img class="live" src="shots/release-brief.png" alt="Live Release Brief — created vs resolved and landing forecast" />
-          </div>
-        </div>
-        <div class="caption">Live product — Release Brief for NDB-2.11. Burn-down, landing forecast, outstanding work.</div>
+      <div class="box">
+        <h3>3 · Pulse every week</h3>
+        <ul>
+          <li>Standing NDB Ops weekly review</li>
+          <li>OnCalls &amp; customer defects first</li>
+          <li>Then blockers, quality, security</li>
+          <li>Engineering Managers get auto-nudges</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>4 · Assist, then act safely</h3>
+        <ul>
+          <li>AI drafts briefs from live data</li>
+          <li>Suggestions always show the source</li>
+          <li>A human approves before any write</li>
+          <li>Never invents ticket IDs</li>
+        </ul>
       </div>
     </div>
-    <div class="foot">
-      <span>Release Brief</span>
-      <span>04 / 08</span>
-    </div>
+    <div class="callout">Next slides unpack the release train, the weekly scoreboard, and who owns each outcome — without assuming you already live in Delivery Ops.</div>
+    <div class="foot"><span>Project Lighthouse · NDB Engineering Operations</span><span>02 / 12</span></div>
   </section>
 
-  <!-- 5 GANTT + CHAT -->
+  <!-- 03 Gate train SDLC -->
   <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="eyebrow">Plan and probe</div>
-    <h2>See the timeline. Then ask the question.</h2>
-    <div class="two">
-      <div>
-        <div class="tiny-h">Project Status · gates</div>
-        <div class="frame" style="height: 4.45in;">
-          <div class="chrome">
-            <div class="dots"><i></i><i></i><i></i></div>
-            <div class="url">/project-status</div>
-          </div>
-          <div class="screen">
-            <img class="live" src="shots/project-status.png" alt="Live Project Status — gate timeline for NDB-2.11" />
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="tiny-h">AI Chatbot</div>
-        <div class="frame" style="height: 4.45in;">
-          <div class="chrome">
-            <div class="dots"><i></i><i></i><i></i></div>
-            <div class="url">/chatbot</div>
-          </div>
-          <div class="screen">
-            <img class="live" src="shots/chatbot.png" style="object-position: 70% 80%;" alt="Live AI chatbot answering a release-risk question" />
-          </div>
-        </div>
-      </div>
+    <div class="eyebrow">03 · SDLC = release gate train</div>
+    <h2>Hard gates everyone already knows — plus two new soft gates that force readiness early.</h2>
+    <p class="lede">Major/minor: <strong style="color:#fff">Pre-CC → CC → Pre-EC → EC → Code Complete → CG → PG → GA</strong>. Patch &amp; maintenance skip the long train: <strong style="color:#fff">Code Complete + GA only</strong>.</p>
+    <div class="gates">
+      <div class="gate soft"><div class="tag">New · Soft</div><div class="g">Pre-CC</div><div class="d">Design &amp; payload ready before Concept Commit</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">CC</div><div class="d">Concept Commit — release intent locked</div></div>
+      <div class="gate soft"><div class="tag">New · Soft</div><div class="g">Pre-EC</div><div class="d">Readiness check before Early Commitment</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">EC</div><div class="d">Early Commitment — scope intent locked</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">Code Complete</div><div class="d">Dev done for the train slice</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">CG</div><div class="d">Commit Gate readiness</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">PG</div><div class="d">Promotion Gate readiness</div></div>
+      <div class="gate hard"><div class="tag" style="color:#888">Hard</div><div class="g">GA</div><div class="d">Ship</div></div>
     </div>
-    <div class="foot">
-      <span>Project Status · AI Chatbot</span>
-      <span>05 / 08</span>
+    <div class="callout" style="margin-top:12px">
+      <strong style="color:#fff">Where capacity comes in:</strong> between <strong style="color:#e8a317">Pre-CC → CC</strong> (and before EC). Size the payload against team engineer-days (PTO, holidays), then bin-pack what fits — so EC is a commitment, not a hope. Capacity Planner / Bin-Packing live as services today; UI is the next beam.
     </div>
+    <table class="story" style="margin-top:10px">
+      <thead>
+        <tr><th>Gate focus</th><th>Who owns</th><th>What Lighthouse shows</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="stage">Pre-CC → CC</td><td>RM · FEAT · EM</td><td>Release Setup/Config · capacity sizing · bin-pack fit</td></tr>
+        <tr><td class="stage">Pre-EC → EC</td><td>FEAT · RM · PM</td><td>Feature readiness · Project Status · commit intent</td></tr>
+        <tr><td class="stage">Code Complete → CG → PG → GA</td><td>FEAT · Dev EM · QA · RM</td><td>Brief · SoS · Risk · Path to Green · forecast</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><span>CC = Concept Commit (hard). Pre-CC / Pre-EC = new soft gates — not JIRA workflow statuses.</span><span>03 / 12</span></div>
   </section>
 
-  <!-- 6 TOOLBOX -->
+  <!-- 04 Capability map -->
   <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="eyebrow">The rest of the toolbox</div>
-    <h2>Same dataset. Six more jobs.</h2>
-    <div class="grid6">
-      <div class="card">
-        <div class="num">Sprint</div>
-        <h3>Sprint Report</h3>
-        <p>Dev velocity, QA verification, and test work as three streams — not one misleading total.</p>
-      </div>
-      <div class="card">
-        <div class="num">Heat</div>
-        <h3>Component Report</h3>
-        <p>Which surface is on fire: P0/P1 age, deferrals, health per component.</p>
-      </div>
-      <div class="card">
-        <div class="num">Focus</div>
-        <h3>Feature Dashboard</h3>
-        <p>One FEAT. All children. Gate progress. Reconciliation against the release tag.</p>
-      </div>
-      <div class="card">
-        <div class="num">Honesty</div>
-        <h3>Retrospective</h3>
-        <p>Did teams honor CC / CG / PG / GA — or did the date move and the work follow later?</p>
-      </div>
-      <div class="card">
-        <div class="num">Outbox</div>
-        <h3>Status Email</h3>
-        <p>Confluence in, JIRA context in, SMTP out. History kept. No second tool.</p>
-      </div>
-      <div class="card">
-        <div class="num">Fresh</div>
-        <h3>Sync Hub</h3>
-        <p>The meeting starts with a dataset that was pulled on purpose — not last Thursday’s cache by accident.</p>
-      </div>
-    </div>
-    <div class="foot">
-      <span>Also: Release Setup · Gate Config · KPIs · JIRA Emailer · Admin</span>
-      <span>06 / 08</span>
-    </div>
+    <div class="eyebrow">04 · Full capability map</div>
+    <h2>Every job in Delivery Ops — what the framework actually does.</h2>
+    <table class="story">
+      <thead>
+        <tr><th>Job</th><th>Capability</th><th>Surface</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="stage">See release</td><td>FEAT table, Gantt, RAG, outstanding work</td><td>Project Status · Feature Dashboard · SoS</td></tr>
+        <tr><td class="stage">Judge health</td><td>Release RAG with named blockers / must-fix; green only when clean</td><td>Release Brief</td></tr>
+        <tr><td class="stage">Cross-team</td><td>Partnership + companion deps; ask vs committed</td><td>Dependency View</td></tr>
+        <tr><td class="stage">Sprint truth</td><td>Say/do; Dev / QA-verify / Test as three streams</td><td>Sprint Report · Sprint Performance</td></tr>
+        <tr><td class="stage">Weekly KPIs</td><td>OnCalls, Top/Non-Top CFD &amp; CFI, P0/P1, System Test, Smokes, PreCommits, CVE, Deferral</td><td>KPIs · SoS KPI strip</td></tr>
+        <tr><td class="stage">Remind EMs</td><td>Scheduled JQL → email (day/time/tz); Generic Reminder</td><td>JIRA Emailer schedules</td></tr>
+        <tr><td class="stage">Communicate</td><td>Status email, SoS email, weekly update subject, history</td><td>Email Sender · Email History</td></tr>
+        <tr><td class="stage">Component heat</td><td>Deferral / cleanup / burndown by component</td><td>Component Report · System-Test Scale</td></tr>
+        <tr><td class="stage">Ask / learn</td><td>AI briefings, leadership asks, chatbot (citations)</td><td>Brief · Chatbot · SoS by Leader</td></tr>
+        <tr><td class="stage">Govern</td><td>Release create/rename, gate config, teams/RBAC</td><td>Release Setup/Config · Admin</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><span>One product · many personas · product-agnostic design</span><span>04 / 12</span></div>
   </section>
 
-  <!-- 7 AUDIENCES -->
+  <!-- 05 Broken -->
   <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="eyebrow">Who it is for</div>
-    <h2>One truth. The density changes. The facts do not.</h2>
-    <div class="aud">
-      <div class="aud-card">
-        <h3>VP / Director</h3>
-        <p>RAG first. Risk register. Charts, not JQL. Counts that click.</p>
+    <div class="eyebrow">05 · What was not working</div>
+    <h2>Fog = broken truth + wrong RACI + no weekly scoreboard.</h2>
+    <div class="two-col">
+      <div class="box">
+        <h3>Broken truth</h3>
+        <ul>
+          <li>Inconsistent fields — Status / FixVersion / Component / Type</li>
+          <li>Resolved treated as done (it is TBV)</li>
+          <li>17+ apps / Slack / Excel for one story</li>
+          <li>Capacity workbook with `#REF!` cells</li>
+          <li>OnCalls / CFDs invisible until someone asked</li>
+        </ul>
       </div>
-      <div class="aud-card">
-        <h3>TPM / RM</h3>
-        <p>Gates, payload, must-fix, the email that leaves after the SoS.</p>
-      </div>
-      <div class="aud-card">
-        <h3>FEAT / EM</h3>
-        <p>One feature or one team. Remaining work. Sprint pulse.</p>
-      </div>
-      <div class="aud-card">
-        <h3>Ops</h3>
-        <p>Releases, permissions, sync — the machine behind the meeting.</p>
+      <div class="box">
+        <h3>Broken operating rhythm</h3>
+        <ul>
+          <li>TPM assembled narrative FEAT should own</li>
+          <li>EMs not nudged on stale / open queues</li>
+          <li>No standing weekly KPI pulse for Ops</li>
+          <li>Partners couldn’t see NDB asks</li>
+          <li>Gate slips without named owner</li>
+        </ul>
       </div>
     </div>
-    <p class="note">Product-agnostic by design. NDB is the first tenant. The same surface is built to carry the next product without a fork.</p>
-    <div class="foot">
-      <span>Role lens is a presenter, not a filter</span>
-      <span>07 / 08</span>
-    </div>
+    <div class="callout">If OnCalls and CFDs only surface in a fire drill, the framework failed. Weekly Ops exists so those numbers are routine — not exceptional.</div>
+    <div class="foot"><span>Problem statement</span><span>05 / 12</span></div>
   </section>
 
-  <!-- 8 CLOSE -->
+  <!-- 06 Radical + JCH -->
   <section class="slide">
-    <div class="accent-bar"></div>
-    <div class="close">
-      <div class="eyebrow">The ask</div>
-      <h1>Walk into the next staff meeting<br>with one URL.</h1>
-      <p class="lede">See the release. Name the risk. Send the brief. Ask a follow-up in English. That is the whole pitch.</p>
-      <div class="stats">
-        <div class="stat"><div class="n">1</div><div class="l">login · JIRA token</div></div>
-        <div class="stat"><div class="n">1</div><div class="l">source of truth</div></div>
-        <div class="stat"><div class="n">4</div><div class="l">jobs: see · judge · ask · send</div></div>
-        <div class="stat"><div class="n">0</div><div class="l">invented ticket keys</div></div>
-      </div>
+    <div class="eyebrow">06 · Radical change + JCH</div>
+    <h2>Fix the board. One surface. Cadence. Then assist.</h2>
+    <div class="numline">
+      <div><div class="n">249</div><div class="l">JCH filed (NDB eng reporters)</div></div>
+      <div><div class="n">239</div><div class="l">shipped board/process changes</div></div>
+      <div><div class="n">17→1</div><div class="l">app fog → Delivery Ops jobs</div></div>
+      <div><div class="n">0 invent</div><div class="l">ticket keys in AI for exec trust</div></div>
     </div>
-    <div class="foot">
-      <span>Portfolio Delivery Ops</span>
-      <span>08 / 08</span>
-    </div>
+    <table class="story">
+      <thead><tr><th>Shift</th><th>From</th><th>To</th></tr></thead>
+      <tbody>
+        <tr><td class="stage">Truth</td><td class="was">Interpret JIRA creatively</td><td class="now">JCH-enforced fields, workflows, versions</td></tr>
+        <tr><td class="stage">Surface</td><td class="was">Build another status app</td><td class="now">One Delivery Ops OS on the gate train</td></tr>
+        <tr><td class="stage">Ownership</td><td class="was">TPM owns green/red story</td><td class="now">FEAT owns Risk Indicator; tool shows receipts</td></tr>
+        <tr><td class="stage">Cadence</td><td class="was">Ad-hoc KPI asks</td><td class="now">Weekly NDB Ops on OnCalls / CFD / CFI / …</td></tr>
+        <tr><td class="stage">EM assist</td><td class="was">Hope people remember</td><td class="now">Scheduled reminder emails from live JQL</td></tr>
+        <tr><td class="stage">Velocity</td><td class="was">One blended number</td><td class="now">Dev · QA verification · Test streams</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">Executives get outcomes (counts by theme). Ticket lists stay in JCH for TPM audit — not this room.</div>
+    <div class="foot"><span>JCH live pull · 2026-10-14</span><span>06 / 12</span></div>
   </section>
 
-  <script>
-    (function () {
-      var m = /(?:\?|&)s=(\d+)/.exec(location.search || '');
-      if (!m) return;
-      var n = parseInt(m[1], 10);
-      document.querySelectorAll('.slide').forEach(function (el, i) {
-        el.style.display = (i + 1 === n) ? 'block' : 'none';
-        el.style.pageBreakAfter = 'auto';
-      });
-    })();
-  </script>
+  <!-- 07 Weekly NDB Ops -->
+  <section class="slide">
+    <div class="eyebrow">07 · NDB Ops weekly</div>
+    <h2>Standing weekly focus — OnCalls, CFDs, and the KPI scoreboard.</h2>
+    <p class="lede">Configured NDB KPI chips (clickable to JIRA). Same set surfaces in SoS. This is the weekly Ops pulse — not a one-off report.</p>
+    <div class="kpi-grid">
+      <div class="kpi hot"><div class="t">OnCalls</div><div class="s">project=OnCall — interrupt load every week</div></div>
+      <div class="kpi hot"><div class="t">Top-CFD</div><div class="s">Top customer-facing defects</div></div>
+      <div class="kpi hot"><div class="t">Top-CFI</div><div class="s">Top customer-facing improvements</div></div>
+      <div class="kpi hot"><div class="t">Non-Top CFD / CFI</div><div class="s">Breadth of defect/improvement backlog</div></div>
+      <div class="kpi"><div class="t">Product Blockers (P0)</div><div class="s">ERA P0 bugs</div></div>
+      <div class="kpi"><div class="t">Product Criticals (P1)</div><div class="s">ERA P1 bugs</div></div>
+      <div class="kpi"><div class="t">System Test</div><div class="s">System-test filter pulse</div></div>
+      <div class="kpi"><div class="t">Smokes</div><div class="s">Smoke health</div></div>
+      <div class="kpi"><div class="t">NDB PreCommits</div><div class="s">Pre-commit failures / load</div></div>
+      <div class="kpi"><div class="t">CVE</div><div class="s">Security queue</div></div>
+      <div class="kpi"><div class="t">Deferral</div><div class="s">Explicitly deferred work</div></div>
+      <div class="kpi"><div class="t">+ SoS / Brief</div><div class="s">Release RAG + must-fix beside KPIs</div></div>
+    </div>
+    <div class="callout"><strong>Weekly Ops contract:</strong> look at OnCalls + CFD/CFI first, then P0/P1, then quality trains (System Test / Smokes / PreCommits). Decisions stay with EM / QA / FEAT — Lighthouse only lights the board.</div>
+    <div class="foot"><span>Source: kpiConfig.json · /kpis · SoS KPI strip</span><span>07 / 12</span></div>
+  </section>
+
+  <!-- 08 EM reminders -->
+  <section class="slide">
+    <div class="eyebrow">08 · Automated reminders for EMs</div>
+    <h2>Nagging is a system job. Judgment stays with the EM.</h2>
+    <div class="two-col">
+      <div class="box">
+        <h3>What we automated</h3>
+        <ul>
+          <li>Generic Emailer: JQL → table → SMTP</li>
+          <li>Schedules: day · hour · minute · timezone</li>
+          <li>Recipients + optional project-team expand</li>
+          <li>Email History audit (generic-reminder type)</li>
+          <li>Same pattern for weekly / recurring EM nudges</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>What EMs still own</h3>
+        <ul>
+          <li>Act on the queue (close, defer, reassign)</li>
+          <li>Say/do and sprint hygiene</li>
+          <li>Capacity / commit honesty for their team</li>
+          <li>Respond to partner dependency asks</li>
+          <li>Risk Indicator when Yellow/Red on their FEATs</li>
+        </ul>
+      </div>
+    </div>
+    <table class="story">
+      <thead><tr><th>Cadence example</th><th>Purpose</th><th>Owner after send</th></tr></thead>
+      <tbody>
+        <tr><td class="stage">Scheduled reminder</td><td>Stale / open / OnCall / CFD slices land in EM inbox without TPM chase</td><td>EM</td></tr>
+        <tr><td class="stage">Monday weekly status</td><td>3-tier leadership digest (release → team → FEAT callouts)</td><td>TPM sends · leaders read</td></tr>
+        <tr><td class="stage">SoS / Brief send</td><td>Staff-meeting truth + email from same dataset</td><td>TPM/RM distribute</td></tr>
+        <tr><td class="stage">Friday leader email</td><td>Planned: SoS-by-leader coaching snapshot</td><td>Eng leader</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><span>JIRA Emailer schedules · weekly-status-email skill · SoS email</span><span>08 / 12</span></div>
+  </section>
+
+  <!-- 09 Stage actions -->
+  <section class="slide">
+    <div class="eyebrow">09 · Along the gate train — what we do</div>
+    <h2>Tool assists. Humans decide.</h2>
+    <table class="story">
+      <thead><tr><th>Phase</th><th>Lighthouse does</th><th>Human does</th></tr></thead>
+      <tbody>
+        <tr><td class="stage">Pre-CC → CC → EC</td><td>Capacity size + bin-pack; gates; feature readiness</td><td>RM/FEAT/EM set dates &amp; commit what fits</td></tr>
+        <tr><td class="stage">Build (sprints)</td><td>Say/do, three velocity streams, carry-over, EM reminders</td><td>EM re-plans; IC delivers</td></tr>
+        <tr><td class="stage">Verify</td><td>QA lag, System-Test Scale, weekly quality KPIs</td><td>QA closes TBV; owns bandwidth</td></tr>
+        <tr><td class="stage">CG → PG</td><td>Brief RAG, must-fix, Path to Green, deps</td><td>FEAT owns risk; partners accept asks</td></tr>
+        <tr><td class="stage">Weekly Ops</td><td>OnCalls · CFD/CFI · P0/P1 · CVE · Deferral chips</td><td>Ops + EMs triage and assign</td></tr>
+        <tr><td class="stage">GA / Learn</td><td>Retrospective, forecast, AI asks, chatbot</td><td>Ship/slip; HITL on any mutate</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><span>Shine live · Suggest expanding · Fix = HITL roadmap</span><span>09 / 12</span></div>
+  </section>
+
+  <!-- 10 RACI -->
+  <section class="slide">
+    <div class="eyebrow">10 · Fixing RACI</div>
+    <h2>Accountability on the person who can change the outcome.</h2>
+    <table class="story">
+      <thead><tr><th>Artifact</th><th>Was</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>“Is the release green?”</td><td class="was">TPM slide archaeology</td><td class="now"><strong>A:</strong> FEAT (Risk Indicator) · <strong>I:</strong> exec via Brief/SoS</td></tr>
+        <tr><td>OnCalls / CFD weekly</td><td class="was">Whoever remembered to check</td><td class="now"><strong>A:</strong> EM / Ops on KPI pulse · tool shows chips</td></tr>
+        <tr><td>EM queues</td><td class="was">TPM chase on Slack</td><td class="now"><strong>R:</strong> scheduler reminds · <strong>A:</strong> EM acts</td></tr>
+        <tr><td>Cross-team ask</td><td class="was">Side meeting</td><td class="now"><strong>A:</strong> FEAT/TPM · partner sees Dependency View</td></tr>
+        <tr><td>Sprint honesty</td><td class="was">Blended velocity</td><td class="now"><strong>A:</strong> EM say/do · <strong>A:</strong> QA verification lag</td></tr>
+        <tr><td>Gate move</td><td class="was">Silent field edit</td><td class="now"><strong>A:</strong> RM/FEAT + reason</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>A</strong> Accountable · <strong>R</strong> Responsible · <strong>I</strong> Informed. Lighthouse informs and reminds — it does not steal ownership.</div>
+    <div class="foot"><span>Accountability design</span><span>10 / 12</span></div>
+  </section>
+
+  <!-- 11 Savings -->
+  <section class="slide">
+    <div class="eyebrow">11 · Hours back → dollars · data from SAVINGS.md</div>
+    <h2>Full org — TPM, EM×8, Dir/VP, capacity. Hours first, then CTC.</h2>
+    <p class="lede">$ = hrs/wk × people × 52 × (CTC ÷ 2,080). Default CTC median <strong style="color:#fff">~$150k</strong> (~$72/hr). Geo bands: US ~$300k · India ~$150k · Mexico ~$75k.</p>
+    <table class="story" style="margin-top:8px;font-size:12px">
+      <thead>
+        <tr><th>Role</th><th>Ritual hrs (each)</th><th>People</th><th>Hrs/wk</th><th>Hrs/yr</th><th>$/yr @ $150k CTC</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="stage">TPM / RM</td>
+          <td>10 (3.5 Brief + 2 email + 2.5 chase + 1.5 KPI + 0.5 stitch)</td>
+          <td>1</td><td>10</td><td>520</td>
+          <td style="color:#e8a317;font-weight:700">~$37k</td>
+          <td class="now">Accruing</td>
+        </tr>
+        <tr>
+          <td class="stage">EM</td>
+          <td>5 (2 queue + 2 KPI hunt + 1 status)</td>
+          <td>8</td><td>40</td><td>2,080</td>
+          <td style="color:#e8a317;font-weight:700">~$150k</td>
+          <td class="now">Accruing</td>
+        </tr>
+        <tr>
+          <td class="stage">Director / VP</td>
+          <td>3 (1.5 staff stitch + 1 clarify + 0.5 ad-hoc KPI)</td>
+          <td>1</td><td>3</td><td>156</td>
+          <td style="color:#e8a317;font-weight:700">~$11k</td>
+          <td class="now">Accruing</td>
+        </tr>
+        <tr>
+          <td class="stage">Capacity owners</td>
+          <td>~4 avg (H2 workbook cycle)</td>
+          <td>1</td><td>~4</td><td>~210</td>
+          <td style="color:#e8a317;font-weight:700">~$15k</td>
+          <td class="was">Still ahead</td>
+        </tr>
+        <tr>
+          <td class="stage" style="color:#e8a317">Accruing now</td>
+          <td colspan="2">TPM + EM×8 + Dir/VP</td>
+          <td><strong>53</strong></td>
+          <td><strong>2,756</strong></td>
+          <td style="color:#e8a317;font-weight:700">~$199k</td>
+          <td class="now">Live rituals</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="numline" style="margin-top:10px">
+      <div><div class="n">~$199k</div><div class="l">/yr @ median CTC — EM×8 is ~75% of the dollars</div></div>
+      <div><div class="n">~$397k</div><div class="l">same hours if all US $300k CTC (sensitivity)</div></div>
+      <div><div class="n">~$99k</div><div class="l">same hours if all Mexico $75k CTC</div></div>
+    </div>
+    <p class="disc">Line-item ritual breakdowns: docs/exec-pitch/SAVINGS.md. Not Comp-approved. Not build-cost payback. +capacity → ~$214k @ median.</p>
+    <div class="foot"><span>Data SoT: SAVINGS.md</span><span>11 / 12</span></div>
+  </section>
+
+  <!-- 12 Ask -->
+  <section class="slide">
+    <div class="eyebrow">12 · The ask</div>
+    <div class="cover">
+      <h1>Run the gate train. Keep the weekly Ops pulse.<br>Fund the next beams.</h1>
+      <p class="lede">
+        Framework = Truth (JCH) + Gate SDLC + Weekly KPIs (OnCalls / CFD / …) + EM reminders + RACI.<br>
+        Still open: living Capacity UI, mutable deps, Sprint Planner, HITL agents, Confluence auto-publish.
+      </p>
+      <div class="pillrow" style="margin-top:28px">
+        <span class="pill">Pre-CC → GA</span>
+        <span class="pill">Weekly OnCalls · CFD · CFI</span>
+        <span class="pill">EM scheduled reminders</span>
+        <span class="pill">Shine → Suggest → Fix</span>
+        <span class="pill">One URL in staff</span>
+      </div>
+    </div>
+    <div class="foot"><span>Project Lighthouse</span><span>12 / 12</span></div>
+  </section>
+
 </body>
 </html>

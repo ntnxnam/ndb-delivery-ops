@@ -151,9 +151,17 @@ function isDevFinished(r) {
   return s === 'Resolved' || s === 'Closed';
 }
 
+/** Status at Sprint Report close (client: statusAtClose; server rows: status). */
+function statusAtClose(r) {
+  return r.statusAtClose || r.status || '';
+}
+
 // committed = every issue in the Sprint Report; planned = committed − added (the start-of-sprint commitment).
 function agg(rows, cfg) {
   const count = (fn) => rows.reduce((n, r) => (fn(r) ? n + 1 : n), 0);
+  const qaTypes = new Set(cfg.qaVerificationIssueTypes || ['Bug', 'Improvement']);
+  const isBugImp = (r) => qaTypes.has(r.issuetype);
+  const isPlanned = (r) => !r.added;
   const committed = rows.length;
   const added = count((r) => r.added);
   const planned = committed - added;
@@ -164,6 +172,19 @@ function agg(rows, cfg) {
   // Same membership / planned denominator as sayDo; Do = Resolved∪Closed (not Sprint Report "Completed").
   const devFinished = count((r) => isDevFinished(r));
   const devFinishedPlanned = count((r) => isDevFinished(r) && !r.added);
+  // Delivery-trend rates: planned-only numerators, type-matched denominators.
+  // Dev done for Bug/Imp = Resolved (QA not yet closed). Closed Bug/Imp = QA verification.
+  // Other types: Closed = done (no TBV hop).
+  const sayBugImp = count((r) => isPlanned(r) && isBugImp(r));
+  const sayOther = count((r) => isPlanned(r) && !isBugImp(r));
+  const resolvedBugImp = count((r) => isPlanned(r) && isBugImp(r) && statusAtClose(r) === 'Resolved');
+  const closedBugImp = count((r) => isPlanned(r) && isBugImp(r) && statusAtClose(r) === 'Closed');
+  const closedTest = count((r) => isPlanned(r) && r.issuetype === 'Test' && statusAtClose(r) === 'Closed');
+  const closedOtherNonTest = count((r) => isPlanned(r) && !isBugImp(r) && r.issuetype !== 'Test' && statusAtClose(r) === 'Closed');
+  const closedOther = closedTest + closedOtherNonTest;
+  // Combined delivery progress (shared planned denominator): Bug/Imp Resolved + Bug/Imp Closed
+  // + Test Closed + other Closed. (Bug/Imp Resolved and Closed are disjoint.)
+  const deliveryProgressPlanned = resolvedBugImp + closedBugImp + closedOther;
   return {
     committed,
     planned,
@@ -188,6 +209,18 @@ function agg(rows, cfg) {
     devFinished,
     devFinishedPlanned,
     notDevFinishedPlanned: Math.max(0, planned - devFinishedPlanned),
+    sayBugImp,
+    sayOther,
+    resolvedBugImp,
+    closedBugImp,
+    closedTest,
+    closedOtherNonTest,
+    closedOther,
+    deliveryProgressPlanned,
+    pctResolvedBugImp: pct(resolvedBugImp, sayBugImp),
+    pctClosedBugImp: pct(closedBugImp, sayBugImp),
+    pctClosedOther: pct(closedOther, sayOther),
+    pctDeliveryProgress: pct(deliveryProgressPlanned, planned),
   };
 }
 
@@ -502,5 +535,5 @@ function buildNarrative(model, cfg) {
 
 module.exports = {
   shippedIn, computeSprintPerformance, sprintReportUrl, loadPerformanceConfig, itemWeights, agg, pct, halves,
-  isDevFinished, jiraUrl, sprintInJql, UNASSIGNED, UNMAPPED, MANAGER_LEFT,
+  isDevFinished, statusAtClose, jiraUrl, sprintInJql, UNASSIGNED, UNMAPPED, MANAGER_LEFT,
 };

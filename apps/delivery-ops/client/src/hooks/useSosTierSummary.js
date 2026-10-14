@@ -611,6 +611,7 @@ export function useSosTierSummary() {
   const generateForRelease = useCallback(async ({
     productId,
     release,
+    summaryKey = null, // optional scope key (e.g. "NDB-3.0::anil"); defaults to release
     items,
     gateData,
     breakdownDataMap = {},
@@ -620,19 +621,20 @@ export function useSosTierSummary() {
     p0Keys = [],
     mustFixKeys = [],
   }) => {
+    const key = summaryKey || release;
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
     setGenerating(true);
-    setGeneratingRelease(release);
+    setGeneratingRelease(key);
     setGenerateError(null);
 
     setTierSummaries((prev) => {
-      const releaseState = { ...(prev[release] || {}) };
+      const releaseState = { ...(prev[key] || {}) };
       for (const tier of SOS_TIERS) {
         releaseState[tier] = { state: 'loading', summary: null, error: null, generatedAt: null };
       }
-      return { ...prev, [release]: releaseState };
+      return { ...prev, [key]: releaseState };
     });
 
     try {
@@ -650,13 +652,14 @@ export function useSosTierSummary() {
         mustFixKeys,
       });
 
+      // One tier at a time — each call gets the assembled JIRA context packet.
       for (const tier of SOS_TIERS) {
         try {
           if (isTierEmpty(payloads[tier])) {
             setTierSummaries((prev) => ({
               ...prev,
-              [release]: {
-                ...(prev[release] || {}),
+              [key]: {
+                ...(prev[key] || {}),
                 [tier]: {
                   state: 'done',
                   summary: emptyTierSummary(tier, release),
@@ -676,8 +679,8 @@ export function useSosTierSummary() {
           const summary = resp.data?.summary || '';
           setTierSummaries((prev) => ({
             ...prev,
-            [release]: {
-              ...(prev[release] || {}),
+            [key]: {
+              ...(prev[key] || {}),
               [tier]: {
                 state: 'done',
                 summary,
@@ -689,8 +692,8 @@ export function useSosTierSummary() {
         } catch (err) {
           setTierSummaries((prev) => ({
             ...prev,
-            [release]: {
-              ...(prev[release] || {}),
+            [key]: {
+              ...(prev[key] || {}),
               [tier]: {
                 state: 'error',
                 summary: null,
@@ -711,11 +714,11 @@ export function useSosTierSummary() {
       });
       setGenerateError(msg);
       setTierSummaries((prev) => {
-        const releaseState = { ...(prev[release] || {}) };
+        const releaseState = { ...(prev[key] || {}) };
         for (const tier of SOS_TIERS) {
           releaseState[tier] = { state: 'error', summary: null, error: msg, generatedAt: null };
         }
-        return { ...prev, [release]: releaseState };
+        return { ...prev, [key]: releaseState };
       });
     } finally {
       setGenerating(false);
@@ -726,6 +729,7 @@ export function useSosTierSummary() {
   const retryTier = useCallback(async ({
     productId,
     release,
+    summaryKey = null,
     tier,
     items,
     gateData,
@@ -737,13 +741,14 @@ export function useSosTierSummary() {
     mustFixKeys = [],
   }) => {
     if (!SOS_TIERS.includes(tier)) return;
+    const key = summaryKey || release;
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
     setTierSummaries((prev) => ({
       ...prev,
-      [release]: {
-        ...(prev[release] || {}),
+      [key]: {
+        ...(prev[key] || {}),
         [tier]: { state: 'loading', summary: null, error: null, generatedAt: null },
       },
     }));
@@ -758,8 +763,8 @@ export function useSosTierSummary() {
       if (isTierEmpty(payloads[tier])) {
         setTierSummaries((prev) => ({
           ...prev,
-          [release]: {
-            ...(prev[release] || {}),
+          [key]: {
+            ...(prev[key] || {}),
             [tier]: {
               state: 'done',
               summary: emptyTierSummary(tier, release),
@@ -778,8 +783,8 @@ export function useSosTierSummary() {
       );
       setTierSummaries((prev) => ({
         ...prev,
-        [release]: {
-          ...(prev[release] || {}),
+        [key]: {
+          ...(prev[key] || {}),
           [tier]: {
             state: 'done',
             summary: resp.data?.summary || '',
@@ -791,8 +796,8 @@ export function useSosTierSummary() {
     } catch (err) {
       setTierSummaries((prev) => ({
         ...prev,
-        [release]: {
-          ...(prev[release] || {}),
+        [key]: {
+          ...(prev[key] || {}),
           [tier]: {
             state: 'error',
             summary: null,

@@ -26,7 +26,8 @@ export function useSprintPerformance(teamId = 'ndb') {
   const [iframeKey, setIframeKey] = useState(0);
   const pollRef = useRef(null);
 
-  const loadReport = useCallback(async (file) => {
+  // Always load the newest report — no historical picker in the UI.
+  const loadReport = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -34,7 +35,7 @@ export function useSprintPerformance(teamId = 'ndb') {
       const all = list.data.reports || [];
       setReports(all);
       setJob(list.data.job || { state: 'idle' });
-      const target = file || all[0]?.file;
+      const target = all[0]?.file;
       if (!target) {
         setHtml('');
         setSelected(null);
@@ -77,7 +78,7 @@ export function useSprintPerformance(teamId = 'ndb') {
         const resp = await authenticatedGet('/api/jira/sprint-performance/status', { teamId }, creds());
         const next = resp.data.job;
         setJob(next);
-        if (next.state === 'done') loadReport(next.file);
+        if (next.state === 'done') loadReport();
       } catch (err) {
         setJob({ state: 'error', error: err.message });
       }
@@ -85,7 +86,8 @@ export function useSprintPerformance(teamId = 'ndb') {
     return () => clearInterval(pollRef.current);
   }, [running, teamId, loadReport]);
 
-  return { reports, html, selected, job, loading, error, iframeKey, loadReport, generate };
+  const latest = reports[0] || null;
+  return { reports, latest, html, selected, job, loading, error, iframeKey, loadReport, generate };
 }
 
 export default useSprintPerformance;

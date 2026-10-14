@@ -10,6 +10,26 @@
     "empty": "cf[13260] is EMPTY"
   },
   "kpiFilterTemplate": "filter={teamCode}-System-Test",
+  "stPulse": {
+    "project": "ERA",
+    "issueTypes": ["Bug", "Improvement"],
+    "labels": [
+      "system-test",
+      "system-test-ndb",
+      "longevity",
+      "ndb-scale",
+      "ndb-system-smoke-test",
+      "ndb-systest-found-functional-bug"
+    ],
+    "resolvedNotClosedResolutionExclude": ["Duplicate", "Not a bug", "Config issue"],
+    "sourceFilters": {
+      "all": 188191,
+      "open": 188192,
+      "resolvedNotClosed": 188193,
+      "affectedOpen": 188194,
+      "fixVersionOpen": 188195
+    }
+  },
   "defaultTeamId": "ndb",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",
   "defaultCurrentRelease": "NDB-2.11",

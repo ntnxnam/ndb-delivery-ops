@@ -148,6 +148,62 @@ function buildMetricJql(cfg, rel, key, component) {
   return jql;
 }
 
+/**
+ * Label-based ST pulse (filters 188191–188195).
+ * Release versions match JIRA filter style: NDB-2.12 → ndb-2.12.
+ */
+function releaseVersionToken(rel) {
+  return String(rel || '').toLowerCase();
+}
+
+function formatJqlList(values) {
+  // Quote only when whitespace is present (filters leave hyphenated labels/versions bare).
+  return (values || [])
+    .map((v) => {
+      const s = String(v);
+      return /\s/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s;
+    })
+    .join(', ');
+}
+
+function stPulseBaseJql(cfg) {
+  const st = cfg.stPulse || {};
+  const project = st.project || 'ERA';
+  const labels = formatJqlList(st.labels || []);
+  const types = formatJqlList(st.issueTypes || ['Bug', 'Improvement']);
+  if (!labels || !types) return null;
+  return andParts(
+    `project = ${project}`,
+    `labels in (${labels})`,
+    `issuetype in (${types})`
+  );
+}
+
+function buildStPulseJql(cfg, key, rel) {
+  const base = stPulseBaseJql(cfg);
+  if (!base) return null;
+  const open = 'statusCategory != Done';
+  const st = cfg.stPulse || {};
+  const excl = formatJqlList(st.resolvedNotClosedResolutionExclude || [
+    'Duplicate',
+    'Not a bug',
+    'Config issue',
+  ]);
+  const ver = releaseVersionToken(rel);
+  const map = {
+    all: base,
+    open: andParts(base, open),
+    resolvedNotClosed: andParts(
+      base,
+      'status = Resolved',
+      `resolution not in (${excl})`
+    ),
+    affectedOpen: ver ? andParts(base, open, `affectedVersion in (${ver})`) : null,
+    fixVersionOpen: ver ? andParts(base, open, `fixVersion in (${ver})`) : null,
+  };
+  return map[key] || null;
+}
+
 function carryJql(cfg, prev, curr) {
   return andParts(
     cfg.kpiFilter,
@@ -209,6 +265,18 @@ function buildQueries(cfg) {
       queries[`comp|${rel}|${c}|open`] = buildMetricJql(cfg, rel, 'open', c);
       queries[`comp|${rel}|${c}|any`] = buildMetricJql(cfg, rel, 'any', c);
       queries[`comp|${rel}|${c}|r2rOpen`] = buildMetricJql(cfg, rel, 'r2rOpen', c);
+    }
+  }
+
+  // Label-based ST pulse (global + per-release affected/fixVersion open)
+  const stAll = buildStPulseJql(cfg, 'all');
+  if (stAll) {
+    queries['st|all'] = stAll;
+    queries['st|open'] = buildStPulseJql(cfg, 'open');
+    queries['st|resolvedNotClosed'] = buildStPulseJql(cfg, 'resolvedNotClosed');
+    for (const rel of cfg.releases) {
+      queries[`st|${rel}|affectedOpen`] = buildStPulseJql(cfg, 'affectedOpen', rel);
+      queries[`st|${rel}|fixVersionOpen`] = buildStPulseJql(cfg, 'fixVersionOpen', rel);
     }
   }
 
@@ -434,6 +502,28 @@ async function getDashboard({
     components[rel] = rows;
   }
 
+  const stPulseGlobal = {
+    all: cell(results['st|all'], buildStPulseJql(cfg, 'all')),
+    open: cell(results['st|open'], buildStPulseJql(cfg, 'open')),
+    resolvedNotClosed: cell(
+      results['st|resolvedNotClosed'],
+      buildStPulseJql(cfg, 'resolvedNotClosed')
+    ),
+  };
+  const stPulseByRelease = {};
+  for (const rel of cfg.releases) {
+    stPulseByRelease[rel] = {
+      affectedOpen: cell(
+        results[`st|${rel}|affectedOpen`],
+        buildStPulseJql(cfg, 'affectedOpen', rel)
+      ),
+      fixVersionOpen: cell(
+        results[`st|${rel}|fixVersionOpen`],
+        buildStPulseJql(cfg, 'fixVersionOpen', rel)
+      ),
+    };
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     fetchSeconds: Math.round((Date.now() - t0) / 100) / 10,
@@ -461,6 +551,11 @@ async function getDashboard({
       no: cell(results['kpi|no'], andParts(cfg.kpiFilter, 'issuetype = Bug', cfg.regressionTypes.no)),
       empty: cell(results['kpi|empty'], andParts(cfg.kpiFilter, 'issuetype = Bug', cfg.regressionTypes.empty)),
     },
+    stPulse: {
+      global: stPulseGlobal,
+      byRelease: stPulseByRelease,
+      sourceFilters: (cfg.stPulse && cfg.stPulse.sourceFilters) || null,
+    },
     carry,
     components,
     trends: buildTrends(cfg, byRelease),
@@ -474,5 +569,6 @@ module.exports = {
   resolveTeamCode,
   getDashboard,
   buildMetricJql,
+  buildStPulseJql,
   carryJql,
 };

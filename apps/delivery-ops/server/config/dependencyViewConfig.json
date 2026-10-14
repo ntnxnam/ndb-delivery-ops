@@ -1,12 +1,16 @@
 {
-  "version": "1.0.0",
-  "description": "Dependency View — aligned trains, companion roots, partner catalog stubs (read-only MVP)",
+  "version": "1.1.0",
+  "description": "Dependency View — mode = partnership|companionship; span = EW project type via JIRA labels",
   "defaultTeamId": "ndb",
   "defaultRelease": "NDB-3.0",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",
   "scopeGroups": [
     "Team-BharatKumar-Beedu-Org",
     "Team-Ashish-Kumar-Org"
+  ],
+  "ndbProjects": [
+    "ERA",
+    "FEAT"
   ],
   "nonCommitFixVersions": [
     "master",
@@ -58,20 +62,104 @@
     {
       "rootKey": "ERA-67841",
       "label": "Example companion root (replace in config)",
-      "span": 2,
-      "releases": ["NDB-2.12", "NDB-3.0", "NDB-3.1"]
+      "releases": [
+        "NDB-2.12",
+        "NDB-3.0",
+        "NDB-3.1"
+      ]
     }
   ],
   "partnerCatalog": [
-    { "id": "eng", "label": "ENG + component", "notes": "Stub — Confluence SoT later" },
-    { "id": "ncm", "label": "NCM", "notes": "Stub" },
-    { "id": "ncn", "label": "NCN", "notes": "Stub" },
-    { "id": "era-ndb", "label": "ERA / NDB-* unarchived", "notes": "Stub" }
+    {
+      "id": "eng",
+      "label": "ENG + component",
+      "notes": "Stub — Confluence SoT later"
+    },
+    {
+      "id": "ncm",
+      "label": "NCM",
+      "notes": "Stub"
+    },
+    {
+      "id": "ncn",
+      "label": "NCN",
+      "notes": "Stub"
+    },
+    {
+      "id": "era-ndb",
+      "label": "ERA / NDB-* unarchived",
+      "notes": "Stub"
+    }
   ],
+  "modesOfOperation": {
+    "partnership": "JIRA issue links (blocks / is blocked by) between tickets",
+    "companionship": "Their tickets sit under our epics / companion root hierarchy (Parent Link)"
+  },
   "spans": [
-    { "id": 1, "label": "Span 1 — direct" },
-    { "id": 2, "label": "Span 2 — near" },
-    { "id": 3, "label": "Span 3 — medium" },
-    { "id": 4, "label": "Span 4 — far" }
-  ]
+    {
+      "id": "global_ew",
+      "label": "Global EW",
+      "short": "Global",
+      "jiraLabel": "global-ew",
+      "hint": "Type of project: Global engineering work (label global-ew)."
+    },
+    {
+      "id": "nutanix_ew",
+      "label": "Nutanix EW",
+      "short": "Nutanix",
+      "jiraLabel": "nutanix-ew",
+      "hint": "Type of project: Within Nutanix, outside NDB (label nutanix-ew)."
+    },
+    {
+      "id": "ndb_ew",
+      "label": "NDB EW",
+      "short": "NDB",
+      "jiraLabel": "ndb-ew",
+      "hint": "Type of project: Within NDB (label ndb-ew)."
+    },
+    {
+      "id": "team_internal",
+      "label": "Team internal",
+      "short": "Team",
+      "jiraLabel": null,
+      "hint": "No global-ew / nutanix-ew / ndb-ew label — treated as team-internal."
+    }
+  ],
+  "spanTaxonomy": {
+    "description": "Span = type of project (EW bucket), from JIRA labels — not link hop count.",
+    "rules": [
+      "global-ew → Global EW",
+      "nutanix-ew → Nutanix EW",
+      "ndb-ew → NDB EW",
+      "none of the above → Team internal"
+    ],
+    "priority": [
+      "global-ew",
+      "nutanix-ew",
+      "ndb-ew"
+    ]
+  },
+  "wishlist": {
+    "labelSuffix": "wishlist",
+    "partnerLabelSuffixes": [
+      "dependency"
+    ],
+    "linkTypeFilter": "blocks",
+    "linkTypePresets": [
+      "",
+      "is blocked by",
+      "blocks",
+      "relates to",
+      "has to be done after",
+      "is needed for",
+      "depends on",
+      "is depended by"
+    ],
+    "ignoredLinkTypePatterns": [
+      "clone",
+      "cloner",
+      "duplicat"
+    ],
+    "notes": "Q7 — pre-commit wishlist. linkTypeFilter null/empty = all link types for discovery. ignoredLinkTypePatterns: Clone/Duplicate do not count as dependency relationships."
+  }
 }

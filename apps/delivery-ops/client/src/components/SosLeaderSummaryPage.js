@@ -1,13 +1,13 @@
 /**
- * SoS by Leader (temp) — same SoS release body as SosSummaryPage, regrouped
- * Leader → Release. Reuses ReleaseSection (tables, date history, risk trend,
- * KPIs, Gantt, SosReleaseCharts, tier boxes).
+ * SoS by Leader (temp) — Overall (RAG, KPI, overall summary, category, Gantts)
+ * then Leader → Release → one leader-context summary + SoS details (no tier boxes).
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSosItems } from '../hooks/useSosItems';
 import { useSosHistory } from '../hooks/useSosHistory';
 import { useSosTierSummary } from '../hooks/useSosTierSummary';
+import { useSosLeaderAiSummaries } from '../hooks/useSosLeaderAiSummaries';
 import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
@@ -17,7 +17,9 @@ import {
   useMultiReleaseGateData,
   useReleaseDatesConfig,
 } from './SosSummaryPage';
-import { SosRagHeatmap } from './SosReleaseCharts';
+import { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
+import SosTierSummaryBox from './SosTierSummaryBox';
+import ReleaseVersionGantt from './ReleaseVersionGantt';
 import {
   regroupByLeader,
   sortVersionKeys,
@@ -81,9 +83,39 @@ function Collapsible({ title, count, badge, defaultOpen = true, accent = '#1565c
   );
 }
 
+function CategoryChips({ counts }) {
+  const rows = [
+    { key: 'feat', label: 'FEAT Work', n: counts.feat || 0, color: '#1565c0' },
+    { key: 'standalone', label: 'Standalone Epics', n: counts.standalone || 0, color: '#6a1b9a' },
+    { key: 'direct', label: 'Direct Tickets', n: counts.direct || 0, color: '#e65100' },
+  ];
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {rows.map((r) => (
+        <div
+          key={r.key}
+          style={{
+            border: `1px solid ${r.color}33`,
+            background: '#fff',
+            borderRadius: 6,
+            padding: '8px 14px',
+            minWidth: 120,
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, color: r.color, textTransform: 'uppercase' }}>
+            {r.label}
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', marginTop: 2 }}>{r.n}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LeaderBucket({
   title,
   roleLabel,
+  leaderId,
   itemCount,
   byVersion,
   defaultOpen,
@@ -99,20 +131,18 @@ function LeaderBucket({
     onRefresh,
     checkpointHistory,
     gateDataMap,
-    tierSummaries,
     projectStatusByRelease,
-    handleRetryTier,
-    handleGenerateExecSummary,
-    generating,
-    generatingRelease,
     kpiDataByRelease,
     kpiLoadingByRelease,
     kpiErrorByRelease,
     releaseDatesConfig,
     productId,
+    leaderSummaries,
+    onRetryLeaderSummary,
   } = shared;
 
   const kpiKey = (version) => (scopeKey ? `${version}::${scopeKey}` : version);
+  const summaryKey = (version) => `${version}::${scopeKey}`;
 
   return (
     <div
@@ -141,28 +171,41 @@ function LeaderBucket({
           versions.map((version) => {
             const sectionItems = byVersion[version] || [];
             const key = kpiKey(version);
+            const sk = summaryKey(version);
             return (
-              <ReleaseSection
-                key={`${title}-${version}`}
-                version={version}
-                items={sectionItems}
-                breakdownDataMap={breakdownDataMap}
-                loadingBreakdowns={loadingBreakdowns}
-                jiraBaseUrl={jiraBaseUrl}
-                onRefresh={onRefresh}
-                checkpointHistory={checkpointHistory}
-                gateData={gateDataMap[version] || null}
-                tierSummaries={tierSummaries[version] || null}
-                projectStatus={projectStatusByRelease[version] || null}
-                onRetryTier={(tier) => handleRetryTier(version, tier, sectionItems)}
-                onGenerate={() => handleGenerateExecSummary(version, sectionItems)}
-                generating={generating && generatingRelease === version}
-                kpiData={kpiDataByRelease[key] || null}
-                kpiLoading={kpiLoadingByRelease[key] || false}
-                kpiError={kpiErrorByRelease[key] || null}
-                ganttConfigFromDates={releaseDatesConfig[version] || null}
-                productId={productId}
-              />
+              <div key={`${title}-${version}`} style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 10 }}>
+                  <SosTierSummaryBox
+                    title={`${title} — ${version}`}
+                    tierState={leaderSummaries[sk] || { state: 'loading' }}
+                    onRetry={() => onRetryLeaderSummary({
+                      summaryKey: sk,
+                      leaderId,
+                      leaderName: title,
+                      release: version,
+                      items: sectionItems,
+                      gateData: gateDataMap[version] || null,
+                    })}
+                  />
+                </div>
+                <ReleaseSection
+                  version={version}
+                  items={sectionItems}
+                  breakdownDataMap={breakdownDataMap}
+                  loadingBreakdowns={loadingBreakdowns}
+                  jiraBaseUrl={jiraBaseUrl}
+                  onRefresh={onRefresh}
+                  checkpointHistory={checkpointHistory}
+                  gateData={gateDataMap[version] || null}
+                  projectStatus={projectStatusByRelease[version] || null}
+                  showTierSummary={false}
+                  kpiData={kpiDataByRelease[key] || null}
+                  kpiLoading={kpiLoadingByRelease[key] || false}
+                  kpiError={kpiErrorByRelease[key] || null}
+                  ganttConfigFromDates={releaseDatesConfig[version] || null}
+                  productId={productId}
+                />
+              </div>
             );
           })
         )}
@@ -196,15 +239,18 @@ export default function SosLeaderSummaryPage() {
     load: loadKpiForRelease,
   } = useReleaseKpiBreakdown();
 
+  const { projectStatusByRelease, fetchProjectStatus } = useSosTierSummary();
+
   const {
-    tierSummaries,
-    projectStatusByRelease,
-    generating,
-    generatingRelease,
-    generateForRelease,
-    retryTier,
-    fetchProjectStatus,
-  } = useSosTierSummary();
+    overall,
+    byKey: leaderSummaries,
+    reset: resetAi,
+    generateOverall,
+    retryOverall,
+    runLeaderReleaseQueue,
+    retryLeaderRelease,
+    categoryCountsFromProjectStatus,
+  } = useSosLeaderAiSummaries();
 
   const { releases: releaseDatesConfig } = useReleaseDatesConfig();
 
@@ -228,9 +274,7 @@ export default function SosLeaderSummaryPage() {
       .finally(() => {
         if (!cancelled) setOrgLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -244,7 +288,7 @@ export default function SosLeaderSummaryPage() {
     [sortedVersions]
   );
 
-  const { gateDataMap } = useMultiReleaseGateData(sortedVersions);
+  const { gateDataMap, loadingGates } = useMultiReleaseGateData(sortedVersions);
 
   useEffect(() => {
     if (!productId || activeVersions.length === 0) return;
@@ -258,7 +302,19 @@ export default function SosLeaderSummaryPage() {
     return regroupByLeader(byVersion, orgConfig);
   }, [byVersion, orgConfig]);
 
-  // Per-leader Assignee Manager JQL scopes (counts + click-through must match).
+  // Unscoped overall KPIs (no leader jqlExtra)
+  const lastOverallKpiSigRef = useRef('');
+  useEffect(() => {
+    if (!selectedTeamId || activeVersions.length === 0) return;
+    const sig = `${selectedTeamId}|${activeVersions.join(',')}|overall`;
+    if (lastOverallKpiSigRef.current === sig) return;
+    lastOverallKpiSigRef.current = sig;
+    activeVersions.forEach((v) => {
+      loadKpiForRelease(v, selectedTeamId);
+    });
+  }, [activeVersions, selectedTeamId, loadKpiForRelease]);
+
+  // Leader-scoped KPIs
   const leaderKpiScopes = useMemo(() => {
     if (!orgConfig) return [];
     const scopes = (orgConfig.leaders || []).map((leader) => {
@@ -266,8 +322,6 @@ export default function SosLeaderSummaryPage() {
       const jqlExtra = buildAssigneeManagerJqlClause(names);
       return { scopeKey: leader.id, jqlExtra, leaderId: leader.id };
     });
-
-    // Unmapped: managers present on unmapped items + EMPTY
     if (grouped?.unmapped?.itemCount > 0) {
       const names = new Set();
       let hasEmpty = false;
@@ -284,8 +338,13 @@ export default function SosLeaderSummaryPage() {
     return scopes.filter((s) => s.jqlExtra);
   }, [orgConfig, grouped]);
 
+  const lastKpiSigRef = useRef('');
   useEffect(() => {
     if (!selectedTeamId || activeVersions.length === 0 || leaderKpiScopes.length === 0) return;
+    const scopeSig = leaderKpiScopes.map((s) => `${s.scopeKey}:${s.jqlExtra}`).join('|');
+    const sig = `${selectedTeamId}|${activeVersions.join(',')}|${scopeSig}`;
+    if (lastKpiSigRef.current === sig) return;
+    lastKpiSigRef.current = sig;
     activeVersions.forEach((v) => {
       leaderKpiScopes.forEach(({ scopeKey, jqlExtra }) => {
         loadKpiForRelease(v, selectedTeamId, { jqlExtra, scopeKey });
@@ -332,7 +391,6 @@ export default function SosLeaderSummaryPage() {
   const lastBreakdownRef = useRef('');
   useEffect(() => {
     if (!selectedTeamId) return;
-
     if (enrichKeys.length > 0) {
       const sig = `${selectedTeamId}|${lastSyncIso || ''}|${enrichKeys.length}|${enrichKeys[0]}|${enrichKeys[enrichKeys.length - 1]}`;
       if (lastEnrichRef.current !== sig) {
@@ -340,7 +398,6 @@ export default function SosLeaderSummaryPage() {
         fetchHistory(selectedTeamId, enrichKeys);
       }
     }
-
     if (breakdownKeys.length > 0) {
       const sig = `${selectedTeamId}|${lastSyncIso || ''}|${breakdownKeys.length}|${breakdownKeys[0]}|${breakdownKeys[breakdownKeys.length - 1]}`;
       if (lastBreakdownRef.current !== sig) {
@@ -352,33 +409,103 @@ export default function SosLeaderSummaryPage() {
 
   const handleRefresh = useCallback(() => {
     if (!selectedTeamId) return;
+    resetAi();
     fetchAll(selectedTeamId, { forceLive: true });
-  }, [fetchAll, selectedTeamId]);
+  }, [fetchAll, selectedTeamId, resetAi]);
 
-  const handleGenerateExecSummary = useCallback((version, items) => {
-    if (!productId) return;
-    generateForRelease({
-      productId,
-      release: version,
-      items: items || [],
-      gateData: gateDataMap[version] || null,
-      breakdownDataMap,
-      checkpointHistory,
+  // Overall category rollup across active releases
+  const overallCategoryCounts = useMemo(() => {
+    const tot = { feat: 0, standalone: 0, direct: 0 };
+    activeVersions.forEach((v) => {
+      const c = categoryCountsFromProjectStatus(projectStatusByRelease[v]);
+      tot.feat += c.feat;
+      tot.standalone += c.standalone;
+      tot.direct += c.direct;
     });
-  }, [productId, gateDataMap, breakdownDataMap, checkpointHistory, generateForRelease]);
+    return tot;
+  }, [activeVersions, projectStatusByRelease, categoryCountsFromProjectStatus]);
 
-  const handleRetryTier = useCallback((version, tier, items) => {
-    if (!productId) return;
-    retryTier({
-      productId,
-      release: version,
-      tier,
-      items: items || [],
-      gateData: gateDataMap[version] || null,
-      breakdownDataMap,
-      checkpointHistory,
+  const projectStatusReady = useMemo(
+    () => activeVersions.length > 0 && activeVersions.every((v) => projectStatusByRelease[v]),
+    [activeVersions, projectStatusByRelease]
+  );
+
+  // Reset AI when team changes (Refresh All also calls resetAi).
+  useEffect(() => {
+    resetAi();
+  }, [selectedTeamId, resetAi]);
+
+  // Auto overall summary once JIRA deps ready
+  useEffect(() => {
+    if (loading || loadingBreakdowns || loadingGates || error || !activeVersions.length) return;
+    if (!projectStatusReady) return;
+    generateOverall({
+      activeVersions,
+      byVersion,
+      gateDataMap,
+      projectStatusByRelease,
     });
-  }, [productId, gateDataMap, breakdownDataMap, checkpointHistory, retryTier]);
+  }, [
+    loading,
+    loadingBreakdowns,
+    loadingGates,
+    error,
+    activeVersions,
+    byVersion,
+    gateDataMap,
+    projectStatusByRelease,
+    projectStatusReady,
+    generateOverall,
+    lastSyncIso,
+  ]);
+
+  // Auto leader×release queue
+  const byVersionRef = useRef(byVersion);
+  const gateDataMapRef = useRef(gateDataMap);
+  byVersionRef.current = byVersion;
+  gateDataMapRef.current = gateDataMap;
+
+  useEffect(() => {
+    if (!grouped || !orgConfig) return;
+    if (loading || loadingBreakdowns || loadingGates || error || orgError) return;
+
+    const jobs = [];
+    const pushJobs = (byVer, leaderId, leaderName) => {
+      Object.entries(byVer || {}).forEach(([version, items]) => {
+        if (PLACEHOLDER_VERSIONS.has(String(version).trim().toLowerCase())) return;
+        if (!items || items.length === 0) return;
+        jobs.push({
+          summaryKey: `${version}::${leaderId}`,
+          leaderId,
+          leaderName,
+          release: version,
+          items,
+          gateData: gateDataMapRef.current[version] || null,
+        });
+      });
+    };
+
+    (orgConfig.leaders || []).forEach((leader) => {
+      const bucket = grouped.byLeader[leader.id];
+      if (bucket) pushJobs(bucket.byVersion, leader.id, leader.displayName);
+    });
+    if (grouped.unmapped?.itemCount > 0) {
+      pushJobs(grouped.unmapped.byVersion, 'unmapped', 'Unmapped');
+    }
+
+    if (!jobs.length) return;
+    runLeaderReleaseQueue(jobs);
+  }, [
+    grouped,
+    orgConfig,
+    loading,
+    loadingBreakdowns,
+    loadingGates,
+    error,
+    orgError,
+    runLeaderReleaseQueue,
+    lastSyncIso,
+  ]);
 
   const shared = useMemo(() => ({
     breakdownDataMap,
@@ -387,17 +514,14 @@ export default function SosLeaderSummaryPage() {
     onRefresh: handleRefresh,
     checkpointHistory,
     gateDataMap,
-    tierSummaries,
     projectStatusByRelease,
-    handleRetryTier,
-    handleGenerateExecSummary,
-    generating,
-    generatingRelease,
     kpiDataByRelease,
     kpiLoadingByRelease,
     kpiErrorByRelease,
     releaseDatesConfig,
     productId,
+    leaderSummaries,
+    onRetryLeaderSummary: retryLeaderRelease,
   }), [
     breakdownDataMap,
     loadingBreakdowns,
@@ -405,26 +529,20 @@ export default function SosLeaderSummaryPage() {
     handleRefresh,
     checkpointHistory,
     gateDataMap,
-    tierSummaries,
     projectStatusByRelease,
-    handleRetryTier,
-    handleGenerateExecSummary,
-    generating,
-    generatingRelease,
     kpiDataByRelease,
     kpiLoadingByRelease,
     kpiErrorByRelease,
     releaseDatesConfig,
     productId,
+    leaderSummaries,
+    retryLeaderRelease,
   ]);
 
   const totalItems = useMemo(
     () => Object.values(byVersion || {}).reduce((n, arr) => n + (arr?.length || 0), 0),
     [byVersion]
   );
-
-  // Heatmap uses leader-filtered items when a single leader is expanded? Keep full byVersion for overview.
-  const heatmapByVersion = byVersion;
 
   return (
     <div>
@@ -439,9 +557,8 @@ export default function SosLeaderSummaryPage() {
           color: '#5d4037',
         }}
       >
-        <strong>TEMP — leader SoS layout review.</strong> Same SoS release body (gate Gantt, KPIs,
-        RAG/component charts, date + risk history, tables), regrouped by eng leader. Email / Friday
-        cron not wired yet.
+        <strong>TEMP — leader SoS layout review.</strong> Overall rollup at top; then Leader → Release
+        with one context summary + SoS details. Email / Friday cron not wired yet.
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -497,14 +614,110 @@ export default function SosLeaderSummaryPage() {
         <p style={{ color: '#888', fontSize: 13 }}>Loading SoS items and org map…</p>
       )}
 
+      {/* ── Overall ── */}
       {!loading && !error && activeVersions.length > 0 && (
-        <SosRagHeatmap
-          byVersion={heatmapByVersion}
-          sortedVersions={activeVersions}
-          defaultOpen={false}
-        />
+        <section
+          style={{
+            border: '1px solid #cfd8dc',
+            borderRadius: 10,
+            padding: '14px 16px',
+            marginBottom: 24,
+            background: '#fff',
+          }}
+        >
+          <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#0d47a1', fontWeight: 700 }}>Overall</h3>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+              RAG breakdown
+            </div>
+            <SosRagHeatmap
+              byVersion={byVersion}
+              sortedVersions={activeVersions}
+              defaultOpen
+            />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+              KPI
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {activeVersions.map((v) => (
+                <div key={`kpi-${v}`}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#455a64', marginBottom: 4 }}>{v}</div>
+                  {(kpiDataByRelease[v] || kpiLoadingByRelease[v]) ? (
+                    <KpiBreakdownStrip
+                      kpiData={kpiDataByRelease[v] || null}
+                      loading={kpiLoadingByRelease[v] || false}
+                      error={kpiErrorByRelease[v] || null}
+                      jiraBaseUrl={jiraBaseUrl}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 12, color: '#aaa' }}>Loading KPIs…</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+              Overall summary
+            </div>
+            <SosTierSummaryBox
+              title="Overall SoS"
+              tierState={overall.state === 'idle' ? { state: 'loading' } : overall}
+              onRetry={() => retryOverall({
+                activeVersions,
+                byVersion,
+                gateDataMap,
+                projectStatusByRelease,
+              })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+              Category of work
+            </div>
+            {projectStatusReady ? (
+              <CategoryChips counts={overallCategoryCounts} />
+            ) : (
+              <span style={{ fontSize: 12, color: '#aaa' }}>Loading category counts…</span>
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
+              Release Gantts
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {activeVersions.map((v) => (
+                releaseDatesConfig[v] ? (
+                  <div key={`gantt-${v}`}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#455a64', marginBottom: 4 }}>{v}</div>
+                    <ReleaseVersionGantt
+                      ganttConfig={releaseDatesConfig[v]}
+                      selectedVersion={v}
+                      items={{ commit: [], longTermFunded: [] }}
+                      checkpointHistory={{}}
+                      sortItems={(arr) => arr}
+                      sprintDates={[]}
+                      timelineOnly
+                    />
+                  </div>
+                ) : null
+              ))}
+              {activeVersions.every((v) => !releaseDatesConfig[v]) && (
+                <span style={{ fontSize: 12, color: '#aaa' }}>No release-dates config for active versions.</span>
+              )}
+            </div>
+          </div>
+        </section>
       )}
 
+      {/* ── Leaders ── */}
       {grouped && orgConfig && (
         <>
           {(orgConfig.leaders || []).map((leader, idx) => {
@@ -514,6 +727,7 @@ export default function SosLeaderSummaryPage() {
                 key={leader.id}
                 title={leader.displayName}
                 roleLabel={ROLE_LABELS[leader.role] || leader.role || ''}
+                leaderId={leader.id}
                 itemCount={bucket.itemCount}
                 byVersion={bucket.byVersion}
                 defaultOpen={idx === 0}
@@ -528,6 +742,7 @@ export default function SosLeaderSummaryPage() {
             <LeaderBucket
               title="Unmapped"
               roleLabel="Add Assignee Manager to ndbLeaderOrgConfig.json"
+              leaderId="unmapped"
               itemCount={grouped.unmapped.itemCount}
               byVersion={grouped.unmapped.byVersion}
               defaultOpen

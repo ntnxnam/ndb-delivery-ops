@@ -339,6 +339,84 @@ Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI 
 
 ---
 
+### POST /api/ai/sos-overall-summary
+
+**Purpose**: Cross-release SoS overall brief for the SoS by Leader page from a client-assembled rollup packet. No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-overall-summary`
+- Body:
+  - `releases` `[{ version, itemCount, ragCounts, categoryCounts, gateDates }]`
+  - `validKeys` string[] (optional)
+  - `staleCount`, `notSetCount`, `p0Count`, `mustFixCount` numbers (optional)
+
+**Server flow**
+Route → `generateSosOverallSummary(payload)` → NAI (`SOS_OVERALL_SYSTEM_PROMPT`) → response
+
+**Response shape**
+```json
+{
+  "summary": "## Overall SoS\n🟡 TLDR: …",
+  "generatedAt": "2026-10-08T12:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / upstream failure | Retry |
+| 504 | NAI timeout | Retry |
+
+**Caching**: No — on demand.
+
+---
+
+### POST /api/ai/sos-leader-release-summary
+
+**Purpose**: Leader-scoped SoS brief for one eng leader × one release (Feature/Initiative slice). Client-assembled packet. No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-leader-release-summary`
+- Body:
+  - `release` (string, required)
+  - `leaderId`, `leaderName` (strings)
+  - `itemCount` number
+  - `ragCounts` `{ Red, Yellow, Green, NotSet }`
+  - `gateDates` `{ cgDate, pgDate }`
+  - `staleCount`, `notSetCount` numbers
+  - `items` `[{ key, summary, rag, status }]`
+  - `validKeys` string[] (optional; defaults to item keys)
+
+**Server flow**
+Route → `generateSosLeaderReleaseSummary(payload)` → empty-slice short-circuit OR NAI → response
+
+**Response shape**
+```json
+{
+  "summary": "## Anil — NDB-3.0\n🟡 TLDR: …",
+  "release": "NDB-3.0",
+  "leaderId": "anil",
+  "leaderName": "Anil",
+  "generatedAt": "2026-10-08T12:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `release` missing | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 / 504 | NAI failure / timeout | Retry that leader×release |
+
+**Caching**: No — on demand. Client queues one leader×release at a time.
+
+---
+
 ### POST /api/ai/sprint-leadership-asks
 
 **Purpose**: Generate org-wide **Asks of leadership** for the Sprint Performance report using a **sprint-specific** NAI prompt (`SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT`). This is not the release briefing prompt — inputs are say/do, scope creep, QA Resolved queue, chronic carry-over keys, and sprint hygiene (not gate dates / P0 release blockers / feature buckets).

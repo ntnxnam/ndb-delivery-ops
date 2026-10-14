@@ -25,9 +25,9 @@ Route (system-test-scale.js)
            teamBoardConfig + systemTestScaleConfig.teams[teamId]
            → teamCode → kpiFilter = filter={teamCode}-System-Test
            → releases / components from per-team config (+ featureComponents fallback)
-      → buildQueries() — KPI filter + release All filters + cf[13260] slices + components + carry
+      → buildQueries() — KPI filter + release All filters + cf[13260] slices + components + carry + ST pulse (label-based)
       → jira.searchCount(jql) × N (parallel workers)
-      → assemble byRelease, trends, components, rag
+      → assemble byRelease, trends, components, rag, stPulse
   → JSON response (counts + jql per cell)
 ```
 
@@ -40,6 +40,29 @@ Route (system-test-scale.js)
 ```json
 { "count": 19, "jql": "filter=NDB-System-Test AND filter=NDB-2.11-All AND issuetype = Bug AND status not in (Resolved, Closed)" }
 ```
+
+### ST pulse (label-based — filters 188191–188195)
+
+```json
+{
+  "stPulse": {
+    "global": {
+      "all": { "count": 120, "jql": "project = ERA AND labels in (…) AND issuetype in (Bug, Improvement)" },
+      "open": { "count": 40, "jql": "… AND statusCategory != Done" },
+      "resolvedNotClosed": { "count": 8, "jql": "… AND status = Resolved AND resolution not in (Duplicate, \"Not a bug\", \"Config issue\")" }
+    },
+    "byRelease": {
+      "NDB-2.12": {
+        "affectedOpen": { "count": 5, "jql": "… AND affectedVersion in (ndb-2.12)" },
+        "fixVersionOpen": { "count": 3, "jql": "… AND fixVersion in (ndb-2.12)" }
+      }
+    },
+    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 }
+  }
+}
+```
+
+Client `selectReleaseView` merges `global` + `byRelease[current]` so Current/Compare switches instantly.
 
 ### Trends
 
@@ -66,6 +89,7 @@ Route (system-test-scale.js)
 `server/config/systemTestScaleConfig.json`
 
 - `kpiFilterTemplate` (`filter={teamCode}-System-Test`)
+- `stPulse`: project, labels, issueTypes, resolvedNotClosedResolutionExclude, sourceFilters (188191–188195)
 - `regressionTypes`, `defaultTeamId`
 - `teams.<teamId>`: `teamCode`, `releases`, `carryPairs`, `componentReleases`, optional `components`
 - Components default to flattened `teamBoardConfig.teams[].featureComponents` when not overridden

@@ -5,7 +5,14 @@
 const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
-const { generateExecSummary, generateReleaseSummary, generateSosTierSummary, generateSprintLeadershipAsks } = require('../services/naiService');
+const {
+  generateExecSummary,
+  generateReleaseSummary,
+  generateSosTierSummary,
+  generateSosOverallSummary,
+  generateSosLeaderReleaseSummary,
+  generateSprintLeadershipAsks,
+} = require('../services/naiService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
@@ -321,6 +328,57 @@ router.post('/sos-tier-summary', validateJiraTokenMiddleware, async (req, res) =
       return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS tier summary generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/sos-overall-summary
+ * Cross-release SoS overall brief from a client-assembled rollup packet. No JIRA.
+ */
+router.post('/sos-overall-summary', validateJiraTokenMiddleware, async (req, res) => {
+  const payload = req.body || {};
+  try {
+    logger.info(`[sos-overall-summary] Generating overall brief (${(payload.releases || []).length} releases)`);
+    const summary = await generateSosOverallSummary(payload);
+    return res.json({
+      summary,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error('[sos-overall-summary] Failed', err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'SoS overall summary generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/sos-leader-release-summary
+ * Leader-scoped SoS brief for one eng leader × one release. Client-assembled packet. No JIRA.
+ */
+router.post('/sos-leader-release-summary', validateJiraTokenMiddleware, async (req, res) => {
+  const payload = req.body || {};
+  const { release, leaderName } = payload;
+  if (!release) {
+    return res.status(400).json({ error: 'release is required' });
+  }
+  try {
+    logger.info(`[sos-leader-release-summary] Generating ${leaderName || 'leader'} / ${release}`);
+    const summary = await generateSosLeaderReleaseSummary(payload);
+    return res.json({
+      summary,
+      release,
+      leaderId: payload.leaderId || null,
+      leaderName: leaderName || null,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error(`[sos-leader-release-summary] Failed for ${release}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'SoS leader-release summary generation failed');
   }
 });
 

@@ -74,9 +74,53 @@ export default function SystemTestScalePage() {
     rag,
     carry,
     components: comps,
+    stPulse,
     activeCurrent,
     activeCompare,
   } = view;
+
+  const releaseShort = useMemo(() => {
+    const s = String(activeCurrent || '');
+    if (s.startsWith('NDB-')) return s.slice(4);
+    const dash = s.indexOf('-');
+    return dash >= 0 ? s.slice(dash + 1) : s;
+  }, [activeCurrent]);
+
+  const stPulseHeroes = useMemo(() => {
+    if (!stPulse) return [];
+    return [
+      {
+        k: 'All ST Issues',
+        cell: stPulse.all,
+        sub: 'incl. smoke, scale, longevity…',
+        cls: tone(stPulse.all?.count),
+      },
+      {
+        k: 'All ST Open Issues',
+        cell: stPulse.open,
+        sub: 'statusCategory ≠ Done',
+        cls: tone(stPulse.open?.count),
+      },
+      {
+        k: 'Resolved not closed ST',
+        cell: stPulse.resolvedNotClosed,
+        sub: 'awaiting close (excl. dupe / not-a-bug)',
+        cls: tone(stPulse.resolvedNotClosed?.count),
+      },
+      {
+        k: `${releaseShort || '—'} created & open ST`,
+        cell: stPulse.affectedOpen,
+        sub: `affectedVersion = ${String(activeCurrent || '').toLowerCase()}`,
+        cls: tone(stPulse.affectedOpen?.count),
+      },
+      {
+        k: `Targeted for ${releaseShort || '—'} (still open)`,
+        cell: stPulse.fixVersionOpen,
+        sub: `fixVersion = ${String(activeCurrent || '').toLowerCase()}`,
+        cls: tone(stPulse.fixVersionOpen?.count),
+      },
+    ];
+  }, [stPulse, releaseShort, activeCurrent]);
 
   const jiraBaseUrl = data?.jiraBaseUrl || 'https://jira.nutanix.com';
   const releases = data?.releases?.length ? data.releases : [];
@@ -220,6 +264,30 @@ export default function SystemTestScalePage() {
                 ))}
               </div>
             </div>
+
+            {stPulseHeroes.length > 0 ? (
+              <div className="sts-st-pulse">
+                <div className="sts-card-head">
+                  <h3>ST pulse (label-based)</h3>
+                  <span className="sts-scope-badge filtered">Filters 188191–188195</span>
+                </div>
+                <p className="sts-hint">
+                  Broader than <code>{kpiFilter}</code> — labels include system-test, smoke, scale, longevity.
+                  First three are global; last two follow Current release ({activeCurrent || '—'}).
+                </p>
+                <div className="sts-stats sts-stats-st">
+                  {stPulseHeroes.map((h) => (
+                    <div className="sts-stat sts-card-filtered" key={h.k}>
+                      <div className="k">{h.k}</div>
+                      <div className={`v ${h.cls}`}>
+                        <Num cell={h.cell} jiraBaseUrl={jiraBaseUrl} />
+                      </div>
+                      <div className="s">{h.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="sts-grid2">
               <div className="sts-card sts-card-filtered">

@@ -8,7 +8,7 @@
  * a scopeKey / jqlExtra is provided (leader-scoped SoS).
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { authenticatedPost } from '../utils/api';
 
 function cacheKey(releaseVersion, scopeKey) {
@@ -20,6 +20,11 @@ export function useReleaseKpiBreakdown() {
   const [dataByRelease, setDataByRelease] = useState({});
   const [loadingRelease, setLoadingRelease] = useState({});
   const [errorByRelease, setErrorByRelease] = useState({});
+  // Refs so `load` stays identity-stable (avoids effect re-entry storms).
+  const dataRef = useRef(dataByRelease);
+  const loadingRef = useRef(loadingRelease);
+  dataRef.current = dataByRelease;
+  loadingRef.current = loadingRelease;
 
   const load = useCallback(async (releaseVersion, teamId, opts = {}) => {
     if (!releaseVersion || !teamId) return;
@@ -27,7 +32,7 @@ export function useReleaseKpiBreakdown() {
     const key = cacheKey(releaseVersion, scopeKey);
 
     // Skip if already loaded or in-flight
-    if (dataByRelease[key] || loadingRelease[key]) return;
+    if (dataRef.current[key] || loadingRef.current[key]) return;
 
     const jiraToken = localStorage.getItem('jiraToken') || '';
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
@@ -51,7 +56,7 @@ export function useReleaseKpiBreakdown() {
     } finally {
       setLoadingRelease((prev) => ({ ...prev, [key]: false }));
     }
-  }, [dataByRelease, loadingRelease]);
+  }, []);
 
   return { dataByRelease, loadingRelease, errorByRelease, load };
 }

@@ -54,18 +54,18 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 ## UI Behaviour
 
 1. **Toolbar** (app page):
-   - report picker (shown only when there is more than one report);
+   - always loads the **latest** report (no historical report picker);
    - **Regenerate from JIRA**, which is disabled while a job runs;
    - **Reload**, **Download HTML** and **Open in new tab**;
-   - a status line showing the file name and modified time, job progress, or the last error.
+   - a status line showing “Latest · window · updated …”, job progress, or the last error.
 2. **Report iframe** (`srcDoc`, sandboxed `allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads`) fills the remaining height.
 3. **Inside the report:**
    - **Org-wide (not filtered):** verdict, highlights/lowlights, sprint hygiene, asks of leadership (AI via `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` at regenerate; **AI generated** banner above the table when `asksSource=ai`, else **Rules** banner), appendix.
    - **Filtered (sticky filter bar):**
      - six KPI tiles in a 3×2 grid telling the QA-bandwidth story first: Say/Do (JIRA Completed), Dev finished (Resolved∪Closed), QA bandwidth gap (pts), then QA queue, Scope added, Tickets that slipped;
-     - discipline timeline: auto-detected phases (split where say/do shifts ≥ `phaseMinShiftPts` for ≥ `phaseMinSprints` sprints), narrative per phase, say/do chart with phase bands, one lane per release with gate markers (hollow ◇ = superseded date), and a say/do-around-each-gate table;
-     - delivery-trend chart and three-velocity-streams chart;
-     - scrum-team heatmaps (sortable; cells drill down): (1) JIRA Completed say/do, (2) Dev-finished say/do where Do = Resolved∪Closed at sprint close, same planned denominator;
+     - discipline timeline: auto-detected phases on **closed** sprints only (split where JIRA Completed say/do shifts ≥ `phaseMinShiftPts` for ≥ `phaseMinSprints` sprints; in-flight slots charted as provisional), each phase reports Completed + Dev-finished say/do, narrative, dual-line chart with phase bands, one lane per release with gate markers (hollow ◇ = superseded date), and a say/do-around-each-gate table (closed slots only);
+     - delivery-trend chart + data table: bars/rows = Say / Added / Removed; solid lines/% = Dev→Resolved (Bug/Imp), QA Closed (Bug/Imp), Closed (other); dotted Delivery progress + dashed Avg of the three type-matched rates (legend above the chart); BI = Bug/Improvement; gates as ◆ markers + chip strip + Gate(s) column; three-velocity-streams chart (axis = sprint-end date);
+     - scrum-team heatmaps (sortable; cells drill down): (1) JIRA Completed say/do, (2) Dev-finished say/do where Do = Resolved∪Closed at sprint close, same planned denominator, (3) completion by type — only when a scrum team is selected: three rows for that team (Dev→Resolved / QA Closed BI / Closed other);
      - leader/manager table (sort by items, say/do or decline; sparkline per row);
      - chronic carry-over table: every ticket planned into 3+ sprints (search + tabs for Still open / Resolved — awaiting QA / Closed / All), with live status, resolution, closed date, fix versions and "shipped in"; **paginated 20 rows per page** (Prev/Next) — no endless scroll.
    - **Drill-down:** a side panel that closes with ✕, Esc, or a click on the backdrop.
