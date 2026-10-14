@@ -23,7 +23,7 @@ still embed the same text until wired to `loadAgentPack().prompts`.
 
 | Prompt id | Intent |
 |---|---|
-| `sos-leader-coaching` | Per-leader action items after SoS-by-leader load |
+| `sos-leader-coaching` | Per-leader action items after SoS-by-leader load (`POST /api/ai/sos-leader-coaching`) |
 | `component-report-narrative` | Optional component health prose (context exists; no NAI constant yet) |
 
 ## Sync checklist (when editing a production prompt)

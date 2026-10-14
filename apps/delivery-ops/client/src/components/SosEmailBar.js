@@ -22,6 +22,8 @@ export default function SosEmailBar({
   sortedVersions,
   tierSummaries = {},
   disabled,
+  /** When set, email uses Leader → Release HTML instead of release-outer SoS. */
+  leaderSnapshot = null,
 }) {
   const { hasPermission } = usePermissions();
   const canSend = hasPermission(PERMISSIONS.EMAIL_SEND_GENERIC);
@@ -30,7 +32,19 @@ export default function SosEmailBar({
   const [toInput, setToInput] = useState('');
   const [ccInput, setCcInput] = useState('');
 
-  const snapshot = useMemo(() => ({
+  const snapshot = useMemo(() => {
+    if (leaderSnapshot) return leaderSnapshot;
+    return {
+      byVersion,
+      breakdownDataMap,
+      gateDataMap,
+      checkpointHistory,
+      jiraBaseUrl,
+      sortedVersions,
+      tierSummaries,
+    };
+  }, [
+    leaderSnapshot,
     byVersion,
     breakdownDataMap,
     gateDataMap,
@@ -38,7 +52,9 @@ export default function SosEmailBar({
     jiraBaseUrl,
     sortedVersions,
     tierSummaries,
-  }), [byVersion, breakdownDataMap, gateDataMap, checkpointHistory, jiraBaseUrl, sortedVersions, tierSummaries]);
+  ]);
+
+  const buttonLabel = leaderSnapshot ? 'Email Leader SoS' : 'Email SoS';
 
   const handleOpen = useCallback(async () => {
     try {
@@ -82,7 +98,13 @@ export default function SosEmailBar({
         type="button"
         onClick={handleOpen}
         disabled={busy}
-        title="Email the current SoS view via SMTP (no JIRA refetch)"
+        title={
+          disabled
+            ? 'Wait until enrichment (history, breakdowns, KPIs) finishes'
+            : leaderSnapshot
+              ? 'Email Leader → Release SoS snapshot via SMTP (no JIRA refetch)'
+              : 'Email the current SoS view via SMTP (no JIRA refetch)'
+        }
         style={{
           padding: '6px 14px',
           fontSize: '12px',
@@ -95,7 +117,7 @@ export default function SosEmailBar({
           opacity: busy ? 0.7 : 1,
         }}
       >
-        {previewing ? 'Preparing…' : sending ? 'Sending…' : 'Email SoS'}
+        {previewing ? 'Preparing…' : sending ? 'Sending…' : buttonLabel}
       </button>
       {success && (
         <span style={{ fontSize: '11px', color: '#2e7d32', fontWeight: 600, maxWidth: '360px', textAlign: 'right' }}>

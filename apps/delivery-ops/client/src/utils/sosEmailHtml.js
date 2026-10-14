@@ -414,3 +414,132 @@ export function buildSosSnapshotHtml({
 </body>
 </html>`;
 }
+
+/** Replace ticket keys / "summary" (KEY) cites with linked short summaries for email. */
+function formatCoachingHtml(text, summaryByKey = {}, jiraBaseUrl = '') {
+  const raw = String(text || '');
+  if (!raw) return '';
+  const base = String(jiraBaseUrl || '').replace(/\/+$/, '');
+  const re = /"([^"]{1,120})"\s*\(([A-Z][A-Z0-9]+-\d+)\)|\b([A-Z][A-Z0-9]+-\d+)\b/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    out += escapeHtml(raw.slice(last, m.index));
+    const key = m[2] || m[3];
+    const summary = m[1] || summaryByKey[key] || '';
+    const label = summary || key;
+    const title = escapeHtml(summary ? `${key}: ${summary}` : key);
+    const body = escapeHtml(summary ? `"${label}"` : key);
+    if (base) {
+      out += `<a href="${escapeHtml(`${base}/browse/${key}`)}" style="color:#0d47a1;text-decoration:none;font-weight:700" title="${title}">${body}</a>`;
+    } else {
+      out += `<span title="${title}" style="font-weight:700">${body}</span>`;
+    }
+    last = m.index + m[0].length;
+  }
+  out += escapeHtml(raw.slice(last));
+  return out;
+}
+
+function summaryMapFromByVersion(byVersion) {
+  const map = {};
+  for (const items of Object.values(byVersion || {})) {
+    for (const item of items || []) {
+      if (!item?.key) continue;
+      const s = String(item.summary || '').replace(/\s+/g, ' ').trim();
+      if (s) map[item.key] = s.length > 72 ? `${s.slice(0, 71)}…` : s;
+    }
+  }
+  return map;
+}
+
+function buildAsksBlock(asks, coachingText, summaryByKey = {}, jiraBaseUrl = '') {
+  if (Array.isArray(asks) && asks.length > 0) {
+    const lines = asks.map((a) => {
+      const ask = formatCoachingHtml(a.ask || a.text || '', summaryByKey, jiraBaseUrl);
+      const why = formatCoachingHtml(a.why || '', summaryByKey, jiraBaseUrl);
+      const owner = escapeHtml(a.owner || '');
+      const urgency = escapeHtml(a.urgency || '');
+      return `<li style="margin:0 0 4px"><strong>${ask}</strong>${why ? ` | Why: ${why}` : ''}${owner ? ` | Owner: ${owner}` : ''}${urgency ? ` | Urgency: ${urgency}` : ''}</li>`;
+    }).join('');
+    return `<div style="background:#eef3f8;border:1px solid #c5d0dc;border-radius:5px;padding:8px 10px;margin:0 0 10px">
+  <div style="font-size:11px;font-weight:700;color:#0d47a1;margin:0 0 4px">Leadership Asks</div>
+  <ol style="margin:0;padding-left:18px;font-size:11px;color:#333">${lines}</ol>
+</div>`;
+  }
+  if (coachingText) {
+    return `<div style="background:#eef3f8;border:1px solid #c5d0dc;border-radius:5px;padding:8px 10px;margin:0 0 10px;font-size:11px">${formatCoachingHtml(truncate(coachingText, 1200), summaryByKey, jiraBaseUrl)}</div>`;
+  }
+  return '';
+}
+
+function sortVersionKeysLocal(keys) {
+  return [...keys].sort((a, b) => String(b).localeCompare(String(a), undefined, { numeric: true }));
+}
+
+/**
+ * Leader → Release SoS email snapshot.
+ * @param {object} data
+ * @param {Array<{ id, displayName, role, byVersion, asks?, coachingText? }>} data.leaders
+ */
+export function buildSosLeaderSnapshotHtml({
+  leaders = [],
+  breakdownDataMap = {},
+  gateDataMap = {},
+  checkpointHistory = {},
+  tierSummaries = {},
+  jiraBaseUrl = '',
+}) {
+  const generatedAt = new Date().toISOString().slice(0, 10);
+  const leaderBlocks = (leaders || []).map((leader) => {
+    const byVersion = leader.byVersion || {};
+    const versions = sortVersionKeysLocal(Object.keys(byVersion));
+    const itemCount = versions.reduce((n, v) => n + (byVersion[v]?.length || 0), 0);
+    const releaseSections = versions
+      .map((version) => {
+        const tierKey = `${version}::${leader.id}`;
+        const tiers = tierSummaries[tierKey] || tierSummaries[version] || null;
+        return buildReleaseSection(
+          version,
+          byVersion[version] || [],
+          breakdownDataMap,
+          gateDataMap[version] || null,
+          jiraBaseUrl,
+          checkpointHistory,
+          tiers
+        );
+      })
+      .join('');
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:2px solid #90a4ae;border-radius:8px;margin:0 0 16px;background:#fff">
+  <tr><td style="padding:10px 12px">
+    <div style="font-size:15px;font-weight:700;color:#0d47a1;margin:0 0 8px">${escapeHtml(leader.displayName || leader.id)} <span style="font-size:11px;font-weight:500;color:#78909c">(${itemCount})</span></div>
+    ${buildAsksBlock(leader.asks, leader.coachingText, summaryMapFromByVersion(byVersion), jiraBaseUrl)}
+    ${releaseSections || '<p style="font-size:11px;color:#888">No Feature/Initiative tickets.</p>'}
+  </td></tr>
+</table>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- SoS by Leader | ${generatedAt} | audience: tpm -->
+</head>
+<body style="margin:0;padding:0;background:#fff">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#fff">
+<tr><td align="center" style="padding:8px">
+<table role="presentation" width="${EMAIL_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${EMAIL_MAX_WIDTH}px;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333">
+  <tr><td style="padding:0 0 8px;overflow:hidden">
+    <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin:0 0 2px">SoS by Leader</div>
+    <div style="color:#888;font-size:10px;margin:0 0 10px">Generated ${generatedAt} · Leader → Release snapshot (no live JIRA refetch)</div>
+    ${leaderBlocks || '<p style="font-size:12px;color:#888">No leader sections.</p>'}
+    <div style="color:#888;font-size:10px;margin-top:12px;border-top:1px solid #eee;padding-top:6px">Sent via Delivery Ops</div>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}

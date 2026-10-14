@@ -27,7 +27,7 @@ function keysJql(keys) {
   return `key in (${list.join(', ')})`;
 }
 
-function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
+function RagDonut({ ragCounts, items, release, jiraBaseUrl, compact = false }) {
   const red = ragCounts?.Red || 0;
   const yellow = ragCounts?.Yellow || 0;
   const green = ragCounts?.Green || 0;
@@ -55,7 +55,10 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
     return jiraSearchUrl(jiraBaseUrl, jql);
   };
 
-  const r = 28;
+  const size = compact ? 44 : 72;
+  const r = compact ? 16 : 28;
+  const stroke = compact ? 8 : 12;
+  const half = size / 2;
   const c = 2 * Math.PI * r;
   let offset = 0;
   const slices = [
@@ -66,9 +69,9 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
   ].filter((s) => s.value > 0);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <svg width="72" height="72" viewBox="0 0 72 72" aria-label="RAG split">
-        <g transform="translate(36,36)">
+    <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 8 : 12 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label="RAG split">
+        <g transform={`translate(${half},${half})`}>
           {slices.map((s) => {
             const len = (s.value / total) * c;
             const el = (
@@ -77,7 +80,7 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
                 r={r}
                 fill="none"
                 stroke={s.color}
-                strokeWidth="12"
+                strokeWidth={stroke}
                 strokeDasharray={`${len} ${c - len}`}
                 strokeDashoffset={-offset}
                 transform="rotate(-90)"
@@ -90,12 +93,16 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
             offset += len;
             return el;
           })}
-          <text textAnchor="middle" dy="4" style={{ fontSize: 12, fontWeight: 700, fill: '#333', pointerEvents: 'none' }}>
+          <text
+            textAnchor="middle"
+            dy={compact ? 3 : 4}
+            style={{ fontSize: compact ? 10 : 12, fontWeight: 700, fill: '#333', pointerEvents: 'none' }}
+          >
             {total}
           </text>
         </g>
       </svg>
-      <div style={{ fontSize: 11, color: '#555', lineHeight: 1.6 }}>
+      <div style={{ fontSize: compact ? 10 : 11, color: '#555', lineHeight: compact ? 1.45 : 1.6 }}>
         {[
           ['Red', red],
           ['Yellow', yellow],
@@ -129,7 +136,7 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl }) {
   );
 }
 
-function GateCountdown({ gateData, release, jiraBaseUrl }) {
+function GateCountdown({ gateData, release, jiraBaseUrl, compact = false }) {
   const gates = useMemo(() => {
     if (!gateData?.gates?.length) return [];
     const today = Date.now();
@@ -161,7 +168,16 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
   const href = jiraSearchUrl(jiraBaseUrl, releaseJql);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: compact ? 'row' : 'column',
+        flexWrap: compact ? 'wrap' : undefined,
+        gap: compact ? 8 : 5,
+        minWidth: compact ? 0 : 180,
+        alignItems: compact ? 'center' : undefined,
+      }}
+    >
       {gates.map(({ kind, iso, days }) => {
         const past = days < 0;
         // Green → Yellow (≤30d) → Red (≤14d) → dark red (past)
@@ -183,18 +199,76 @@ function GateCountdown({ gateData, release, jiraBaseUrl }) {
             onClick={() => openJira(href)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openJira(href); }}
             style={{ cursor: href ? 'pointer' : 'default' }}
-            title={href ? `Open ${release} features in JIRA` : undefined}
+            title={href ? `${kind} ${iso} — open ${release} features in JIRA` : `${kind} ${iso}`}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 24 }}>{kind}</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1, letterSpacing: '-0.5px' }}>
+            {compact ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: '#fff',
+                  border: `1px solid ${color}`,
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span style={{ color: '#555' }}>{kind}</span>
                 {label}
               </span>
-              <span style={{ fontSize: 10, color: '#888', whiteSpace: 'nowrap' }}>{iso}</span>
-            </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 24 }}>{kind}</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1, letterSpacing: '-0.5px' }}>
+                  {label}
+                </span>
+                <span style={{ fontSize: 10, color: '#888', whiteSpace: 'nowrap' }}>{iso}</span>
+              </div>
+            )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Compact RAG + gate chips for the release header (leader view).
+ * Sits inline with the stale-update chip — no dedicated chart row.
+ */
+export function SosInlineReleaseCharts({
+  ragCounts,
+  gateData,
+  items = [],
+  release = '',
+  jiraBaseUrl = '',
+}) {
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
+      }}
+    >
+      <RagDonut
+        ragCounts={ragCounts}
+        items={items}
+        release={release}
+        jiraBaseUrl={jiraBaseUrl}
+        compact
+      />
+      <GateCountdown
+        gateData={gateData}
+        release={release}
+        jiraBaseUrl={jiraBaseUrl}
+        compact
+      />
     </div>
   );
 }
@@ -493,10 +567,13 @@ export default function SosReleaseCharts({
   release = '',
   productId = '',
   jiraBaseUrl = '',
+  /** When true, skip release-wide component donuts (leader page — not Assignee-Manager scoped). */
+  suppressComponentCounts = false,
 }) {
   // Live counts once project-status is available (same trigger as before —
   // charts load after Fetch brings projectStatus, not only after Exec Summary).
-  const enabled = Boolean(productId && release && projectStatus);
+  // Leader view uses SosInlineReleaseCharts in the header — no chart row here.
+  const enabled = Boolean(productId && release && projectStatus && !suppressComponentCounts);
   const {
     loading: countsLoading,
     outstanding: outstandingRows,
@@ -508,6 +585,8 @@ export default function SosReleaseCharts({
   const fallbackJql = useMemo(() => buildComponentJqlBases(release), [release]);
   const outstandingJql = liveJql?.outstanding || fallbackJql.outstanding;
   const tbvJql = liveJql?.tbv || fallbackJql.tbv;
+
+  if (suppressComponentCounts) return null;
 
   return (
     <div style={{

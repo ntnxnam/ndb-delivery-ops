@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { authenticatedPost } from '../utils/api';
-import { buildSosSnapshotHtml } from '../utils/sosEmailHtml';
+import { buildSosSnapshotHtml, buildSosLeaderSnapshotHtml } from '../utils/sosEmailHtml';
 
 function authHeaders() {
   return {
@@ -16,10 +16,20 @@ function authHeaders() {
 
 function buildPayload(data, extra = {}) {
   const generatedAt = new Date().toISOString().slice(0, 10);
+  const isLeader = data?.mode === 'leader' || Array.isArray(data?.leaders);
+  const htmlBody = isLeader
+    ? buildSosLeaderSnapshotHtml(data)
+    : buildSosSnapshotHtml(data);
+  const subject = isLeader
+    ? `SoS by Leader — ${generatedAt}`
+    : `SoS Summary — ${generatedAt}`;
+  const releases = isLeader
+    ? (data.sortedVersions || [])
+    : (data.sortedVersions || Object.keys(data.byVersion || {}));
   return {
-    htmlBody: buildSosSnapshotHtml(data),
-    subject: `SoS Summary — ${generatedAt}`,
-    releases: data.sortedVersions || Object.keys(data.byVersion || {}),
+    htmlBody,
+    subject,
+    releases,
     ...extra,
   };
 }

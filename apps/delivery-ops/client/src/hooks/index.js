@@ -17,6 +17,8 @@ export { useGanttConfig, useAllVersionsConfig } from './useGanttConfig';
 export { useSosItems } from './useSosItems';
 export { useSosEmail } from './useSosEmail';
 export { useDependencyView } from './useDependencyView';
+export { useSosLeaderCoaching } from './useSosLeaderCoaching';
+export { useSosLeaderAiSummaries } from './useSosLeaderAiSummaries';
 
 // UI / form state
 export { useEmailForm } from './useEmailForm';
