@@ -23,7 +23,7 @@ import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseVersionGantt from './ReleaseVersionGantt';
 import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
-import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
+import SosReleaseCharts, { SosRagHeatmap, SosInlineReleaseCharts, KpiBreakdownStrip } from './SosReleaseCharts';
 import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
 import ReleaseVersionFilterBar, { applyFilters } from './ReleaseVersionFilterBar';
 
@@ -787,6 +787,10 @@ export function ReleaseSection({
   kpiError = null,
   ganttConfigFromDates = null,  // Per-version config from /api/config/release-dates (drives ReleaseVersionGantt)
   productId = '',
+  suppressComponentCounts = false,
+  suppressTierSummaries = false,
+  /** When true, skip per-section gate timeline (page already shows it once at top). */
+  suppressTimeline = false,
 }) {
   // Convert gate data to ganttConfig format for compatibility with existing components
   const ganttConfig = useMemo(() => {
@@ -900,6 +904,15 @@ export function ReleaseSection({
                 {staleCount} stale update{staleCount === 1 ? '' : 's'}
               </span>
             )}
+            {suppressComponentCounts && (
+              <SosInlineReleaseCharts
+                ragCounts={ragCounts}
+                gateData={gateData}
+                items={items}
+                release={version}
+                jiraBaseUrl={jiraBaseUrl}
+              />
+            )}
           </div>
           <GateDateStrip ganttConfig={ganttConfig} />
           {/* KPI breakdown per release — only mount when loading or data is present; errors are silently suppressed inside KpiBreakdownStrip */}
@@ -913,7 +926,7 @@ export function ReleaseSection({
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {onGenerate && (
+          {!suppressTierSummaries && onGenerate && (
             <button
               type="button"
               onClick={onGenerate}
@@ -943,10 +956,8 @@ export function ReleaseSection({
         </div>
       </div>
 
-      {/* Per-release gate timeline — reuses ReleaseVersionGantt (timelineOnly) so the
-          visual language (binding vs soft gates, Today bubble, proportional spacing)
-          is identical to Project Status. Only shown when release-dates config exists. */}
-      {ganttConfigFromDates && (
+      {/* Per-release gate timeline — omitted when the page hosts a single top-level strip. */}
+      {!suppressTimeline && ganttConfigFromDates && (
         <div style={{ marginBottom: '12px' }}>
           <ReleaseVersionGantt
             ganttConfig={ganttConfigFromDates}
@@ -960,16 +971,18 @@ export function ReleaseSection({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
-        {SOS_TIERS.map((tier) => (
-          <SosTierSummaryBox
-            key={tier}
-            title={TIER_TITLES[tier]}
-            tierState={tierSummaries?.[tier] || { state: 'idle' }}
-            onRetry={onRetryTier ? () => onRetryTier(tier) : null}
-          />
-        ))}
-      </div>
+      {!suppressTierSummaries && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+          {SOS_TIERS.map((tier) => (
+            <SosTierSummaryBox
+              key={tier}
+              title={TIER_TITLES[tier]}
+              tierState={tierSummaries?.[tier] || { state: 'idle' }}
+              onRetry={onRetryTier ? () => onRetryTier(tier) : null}
+            />
+          ))}
+        </div>
+      )}
 
       <SosReleaseCharts
         ragCounts={ragCounts}
@@ -979,6 +992,7 @@ export function ReleaseSection({
         release={version}
         productId={productId}
         jiraBaseUrl={jiraBaseUrl}
+        suppressComponentCounts={suppressComponentCounts}
       />
 
       {/* Features */}

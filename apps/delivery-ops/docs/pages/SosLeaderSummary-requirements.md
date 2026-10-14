@@ -1,15 +1,15 @@
-# SoS by Leader (temp) — Requirements
+# SoS by Leader — Requirements
 
 **Route**: `/sos-leader-summary`  
 **Component**: `SosLeaderSummaryPage`  
-**Permission**: `release_versions_view`  
-**Audience**: `tpm`, `rm` (layout review); eventual weekly digest for eng leadership
+**Permission**: `release_versions_view` (view); `email_send_generic` (send)  
+**Audience**: `tpm`, `rm`; weekly digest for eng leadership
 
 ---
 
 ## Purpose
 
-Temporary review surface that shows the same Feature/Initiative SoS payload as SoS Summary, regrouped as **Leader → Release → Features / Initiatives**. Used to validate the NDB eng-leader org map (Anil / Naveen / Jovan / Ashish) before wiring a Friday 09:30 IST email job.
+Feature/Initiative SoS payload regrouped as **Leader → Release → Features / Initiatives**, with per-leader KPIs, date/risk history, task breakdowns, NAI coaching Asks (release + sprint), and readiness-gated email to `sosEmailConfig` recipients.
 
 ---
 
@@ -17,7 +17,7 @@ Temporary review surface that shows the same Feature/Initiative SoS payload as S
 
 | Audience | Use |
 |----------|-----|
-| Portfolio Manager / TPM | Review leader sections and drain Unmapped managers |
+| Portfolio Manager / TPM | Leader sections, coaching Asks, drain Unmapped, email digest |
 | RM | Confirm release breakdown under each leader matches SoS |
 
 ---
@@ -29,32 +29,37 @@ Temporary review surface that shows the same Feature/Initiative SoS payload as S
 | SLS-01 | As a TPM, I can open SoS by Leader and see four leader sections (Anil, Naveen, Jovan, Ashish) without selecting releases individually. |
 | SLS-02 | As a TPM, under each leader I see the same release breakdown (gate strip + Features + Initiatives) as on SoS Summary for that leader's tickets. |
 | SLS-03 | As a TPM, tickets are attributed by Assignee Manager rolling up through `ndbLeaderOrgConfig.json`. |
-| SLS-04 | As a TPM, Unmapped tickets appear in a bottom section with a list of Assignee Manager names to add to config. |
+| SLS-04 | As a TPM, Unmapped tickets appear in a bottom section. |
 | SLS-05 | As a TPM, I can Refresh All to pull live SoS data (same `/api/jira/sos-items` as SoS Summary). |
+| SLS-06 | As a TPM, each leader section shows scoped KPI chips, struck date/risk history, and task breakdowns. |
+| SLS-07 | As a TPM, Asks auto-generate after enrichment loads (and I can Regen / Generate All); Asks cite release + sprint signals. |
+| SLS-08 | As a TPM, I can Email Leader SoS when enrichment is ready; recipients from `sosEmailConfig.json` + dialog. |
 
 ---
 
 ## UI Behaviour
 
 ```
-TEMP banner (layout review — no email)
-Header + Refresh All
+Header + Generate All Asks + Refresh All + Email Leader SoS
+├── Exec snapshot (data rollup: per-leader RAG / stale / outstanding / ask urgency)
+├── Release timelines (once at page top)
 ├── Anil | Naveen | Jovan | Ashish (collapsible)
+│   ├── Leadership Asks panel (auto after enrichment)
 │   └── per release
-│         ├── RAG chip + gate strip
-│         ├── Features table
-│         └── Initiatives table
-└── Unmapped (if any) — manager name list + same release tables
+│         ├── RAG chip + stale count + gate strip + KPI strip
+│         ├── Inline RAG / gate chips (component donuts suppressed)
+│         └── Features & Initiatives (history + breakdown)
+└── Unmapped (if any)
 ```
-
-- No Email SoS button in this phase.
-- Each release under a leader reuses SoS `ReleaseSection`: gate Gantt (struck superseded dates), KPI strip, AI tier boxes, SosReleaseCharts (RAG / outstanding / component), Features & Initiatives tables with date history + risk-indicator history + AI summary + task breakdown.
+(No per-release “Generate Exec Summary” / three-tier AI boxes — coaching Asks are the AI surface.
+ Exec snapshot is deterministic counts from loaded SoS data, not NAI.)
 
 ---
 
 ## Permissions
 
-- **View**: `release_versions_view` (same as SoS Summary)
+- **View**: `release_versions_view`
+- **Email**: `email_send_generic`
 
 ---
 
@@ -66,15 +71,18 @@ Header + Refresh All
 | Assignee Manager empty / unknown | Item in Unmapped |
 | Leader has zero items | Empty message under that leader |
 | Nested managers (e.g. Balram under Akshay) | Roll up to Naveen |
+| Email before enrichment | Button disabled |
+| NAI unavailable | Rule-based Asks fallback |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Nav entry **SoS by Leader (temp)** visible to users with `release_versions_view`
+- [ ] Nav entry **SoS by Leader** visible to users with `release_versions_view`
 - [ ] Page loads SoS items via existing `useSosItems` / `POST /api/jira/sos-items`
 - [ ] Org map loaded from `GET /api/config/ndb-leader-org`
-- [ ] Four leaders render with release subsections
-- [ ] Unmapped section lists distinct Assignee Manager names
-- [ ] No Friday cron or SMTP send in this phase
+- [ ] Four leaders render with release subsections + KPIs + history + breakdowns
+- [ ] Per-leader coaching via `POST /api/ai/sos-leader-coaching`
+- [ ] Email Leader SoS uses Leader → Release HTML; recipients from config
 - [ ] No hardcoded `localhost` in client/server paths
+- [ ] Friday cron remains follow-on (not required for this phase)

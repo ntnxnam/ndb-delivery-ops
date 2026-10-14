@@ -157,7 +157,7 @@ export const routeConfig = {
       path: '/sos-leader-summary',
       exact: true,
       component: 'SosLeaderSummaryPage',
-      title: 'SoS by Leader (temp)',
+      title: 'SoS by Leader',
       description: 'TEMP — SoS Feature/Initiative status regrouped by NDB eng leader',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,

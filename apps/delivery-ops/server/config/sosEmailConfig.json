@@ -1,4 +1,5 @@
 {
+  "_comment": "SoS / SoS-by-Leader email recipients. Only @nutanix.com addresses. Fill defaultTo/defaultCC before Friday digest. Dialog To/CC merge with these lists.",
   "defaultTo": [],
   "defaultCC": []
 }

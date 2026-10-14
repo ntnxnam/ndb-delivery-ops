@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { generateExecSummary, generateReleaseSummary, generateSosTierSummary, generateSprintLeadershipAsks } = require('../services/naiService');
+const { generateLeaderCoaching } = require('../services/sosLeaderCoachingService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
@@ -357,6 +358,50 @@ router.post('/sprint-leadership-asks', validateJiraTokenMiddleware, async (req, 
       return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'Sprint leadership asks generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/sos-leader-coaching
+ * Per-leader coaching asks from client-supplied SoS items + gates/history/breakdowns.
+ * No new JIRA search — auth only. Packet built server-side (release + sprint).
+ */
+router.post('/sos-leader-coaching', validateJiraTokenMiddleware, async (req, res) => {
+  const body = req.body || {};
+  const { leaderId, leaderName, items } = body;
+  if (!leaderName && !leaderId) {
+    return res.status(400).json({ error: 'leaderId or leaderName is required' });
+  }
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ error: 'items array is required' });
+  }
+  try {
+    logger.info(`[sos-leader-coaching] Generating for ${leaderName || leaderId} (${items.length} items)`);
+    const result = await generateLeaderCoaching({
+      leaderId: body.leaderId || null,
+      leaderName: body.leaderName || body.leaderId,
+      role: body.role || null,
+      items,
+      gateDataByRelease: body.gateDataByRelease || {},
+      breakdownDataMap: body.breakdownDataMap || {},
+      checkpointHistory: body.checkpointHistory || {},
+      expectedManagerNames: body.expectedManagerNames || [],
+    });
+    return res.json({
+      asks: result.asks,
+      text: result.text,
+      packet: result.packet,
+      validKeys: result.validKeys,
+      source: result.source,
+      generatedAt: result.generatedAt,
+      error: result.error || null,
+    });
+  } catch (err) {
+    logger.error(`[sos-leader-coaching] Failed for ${leaderName || leaderId}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'SoS leader coaching generation failed');
   }
 });
 

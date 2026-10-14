@@ -24,7 +24,7 @@ is the primary live tenant today.
 | `/kpis` | KPIs | Configured KPI chips | none | — |
 | `/system-test-scale` | System-Test Scale | System-test bug scale / trends | none (charts) | — |
 | `/sos-summary` | SoS Summary | Cross-release FEAT SoS + tier AI | `feature-exec-summary`, `sos-tier-briefing` | tpm |
-| `/sos-leader-summary` | SoS by Leader | Same SoS regrouped by eng leader | **draft** `sos-leader-coaching` | tpm |
+| `/sos-leader-summary` | SoS by Leader | Same SoS regrouped by eng leader + coaching + email | `sos-leader-coaching` | tpm |
 | `/release/brief` | Release Brief | Release RAG + blockers + 7-day asks | `release-health-briefing` | `release-ai-briefing` |
 | `/release-config` | Release Config | Gate date config | none | rm |
 | `/team-management` | Admin | Teams / RBAC | none | admin |

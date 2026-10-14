@@ -2,13 +2,16 @@
 name: sos-leader-coaching
 area: sos-leader
 audience: tpm, director
-status: draft
-runtime: not wired
+status: superseded
+runtime: moved to prompts/production/sos-leader-coaching.md
 ---
 
-# sos-leader-coaching
+# sos-leader-coaching (draft — superseded)
 
-## Purpose
+**Moved to** `prompts/production/sos-leader-coaching.md` and
+`naiService#SOS_LEADER_COACHING_SYSTEM_PROMPT`.
+
+## Purpose (historical)
 
 After SoS-by-leader data is loaded, generate **specific action items per eng
 leader** (Anil / Naveen / Jovan / Ashish). Coaching for the leader’s org —

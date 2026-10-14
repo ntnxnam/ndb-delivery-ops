@@ -10,8 +10,8 @@ import { TeamSelector } from './TeamSelector';
 
 /**
  * URL for the bin-packing app. The app is static-served by the backend
- * (Express on 6001 in dev, same-origin in prod) under `/bin-packing/`.
- * In dev the React dev server runs on 8888, so we must point absolutely
+* (Express on 8001 in dev, same-origin in prod) under `/bin-packing/`.
+ * In dev the React dev server runs on 8899, so we must point absolutely
  * at the backend's port; otherwise the link would land on the React app
  * and 404. In prod everything is one origin, so a relative path works.
  *
@@ -19,10 +19,10 @@ import { TeamSelector } from './TeamSelector';
  */
 function getBinPackingUrl() {
   if (typeof window === 'undefined') return '/bin-packing/';
-  const isDevReactServer = window.location.port === '8888';
+  const isDevReactServer = window.location.port === '8899';
   if (!isDevReactServer) return '/bin-packing/';
   const backendPort =
-    process.env.REACT_APP_BACKEND_PORT || '6001';
+    process.env.REACT_APP_BACKEND_PORT || '8001';
   return `${window.location.protocol}//${window.location.hostname}:${backendPort}/bin-packing/`;
 }
 
@@ -127,7 +127,7 @@ export const Sidebar = () => {
     },
     {
       path: '/sos-leader-summary',
-      label: 'SoS by Leader (temp)',
+      label: 'SoS by Leader',
       icon: '👥',
       description: 'TEMP — SoS regrouped by NDB eng leader for layout review'
     },

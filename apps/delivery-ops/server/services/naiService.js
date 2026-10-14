@@ -1055,16 +1055,160 @@ async function generateSprintLeadershipAsks(intelligence) {
   return asks;
 }
 
+// ── SoS-by-leader coaching (release + sprint) ────────────────────────────────
+
+const SOS_LEADER_COACHING_SYSTEM_PROMPT = `You are a senior TPM writing per-leader coaching asks for a Scrum-of-Scrums
+digest. Audience: eng leader (Director-level) + Portfolio Manager. Skim time:
+under 30 seconds per leader.
+
+This is NOT a release health briefing. Do not invent gate dates, P0s, or
+features not in the LEADER_PACKET. Work only from the packet.
+
+Use BOTH release signals (gates, RAG, collateral, hygiene, blockers) AND
+sprint signals (active vs closed sprint mix, no-sprint items, TBV / outstanding).
+
+OUTPUT FORMAT (strict — nothing else):
+## Asks for <LEADER_NAME>
+1. Ask: <one concrete action> | Why: <cite counts + short summaries from packet> | Owner: <role from packet> | Urgency: P0|P1|P2
+(up to 5 lines; fewer if healthy)
+
+RULES:
+- Each ask must be actionable this week — never "monitor" or "continue to watch".
+- Prioritise: P0/must-fix → past-gate lagging → collateral gaps on done work → hygiene (NotSet/stale) → KTLO → ad-hoc crowding → QA/TBV lag / sprint discipline → ownership gaps.
+- Cite work by short ticket SUMMARY from VALID TICKET KEYS (leaders skim summaries, not keys). Format: "summary text" (KEY). Never list bare keys alone when a summary is available.
+- Name managers / components only if they appear in the packet.
+- Default Owner to the eng leader name; use FEAT Manager only when the packet cites one.
+- If LEADER_PACKET shows no material gaps: "1. Ask: No leadership asks this cycle for this org — keep current discipline. | Why: clean packet | Owner: TPM | Urgency: P2"
+- Under 200 words per leader.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS (the KEY part only).
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely — you may still cite the summary alone.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.
+`;
+
+function buildSosLeaderCoachingPrompt({ packet, validKeys }) {
+  const p = packet || {};
+  const b = p.buckets || {};
+  const keys = Array.isArray(validKeys) ? validKeys : [];
+  const summaries = p.keySummaries || {};
+  const keyBlock = keys.length
+    ? `VALID TICKET KEYS (copy KEY exactly; cite as "summary" (KEY) — summary is what leaders read):\n${keys.map((k, i) => {
+      const sum = summaries[k] || '';
+      return sum ? `  ${i + 1}. ${k} — ${sum}` : `  ${i + 1}. ${k}`;
+    }).join('\n')}`
+    : 'VALID TICKET KEYS: none provided';
+
+  const fmtBucket = (label, obj) => {
+    if (!obj) return `${label}: none`;
+    if (typeof obj.count === 'number') {
+      const ex = (obj.examples && obj.examples.length)
+        ? obj.examples.join('; ')
+        : (obj.keys || []).join(', ') || '—';
+      return `${label}: count=${obj.count} examples=[${ex}]`;
+    }
+    return `${label}: ${JSON.stringify(obj)}`;
+  };
+
+  const fmtGate = (label, obj) => {
+    const count = obj?.count ?? 0;
+    const ex = (obj?.examples && obj.examples.length)
+      ? obj.examples.join('; ')
+      : (obj?.keys || []).join(', ') || '—';
+    return `${label}: count=${count} examples=[${ex}]`;
+  };
+
+  const sprint = p.sprint || {};
+  const sprintLines = (sprint.byName || [])
+    .map((s) => `  - ${s.name}: ${s.count}`)
+    .join('\n');
+
+  return [
+    `LEADER_ID: ${p.leaderId || '—'}`,
+    `LEADER_NAME: ${p.leaderName || '—'}`,
+    `ROLE: ${p.role || '—'}`,
+    `ITEM_COUNT: ${p.itemCount ?? 0}`,
+    `RELEASES_TOUCHED: ${(p.releasesTouched || []).join(', ') || '—'}`,
+    '',
+    keyBlock,
+    '',
+    'BUCKETS:',
+    `  ${fmtBucket('blockers', b.blockers)}`,
+    `  ${fmtGate('gateRisk.pastGateLagging', b.gateRisk?.pastGateLagging)}`,
+    `  ${fmtGate('gateRisk.redRag', b.gateRisk?.redRag)}`,
+    `  ${fmtGate('gateRisk.datesPastNextGate', b.gateRisk?.datesPastNextGate)}`,
+    `  ${fmtGate('gateRisk.dateMoves7d', b.gateRisk?.dateMoves7d)}`,
+    `  ${fmtBucket('collateralGaps', b.collateralGaps)}`,
+    `  ${fmtGate('hygiene.riskNotSet', b.hygiene?.riskNotSet)}`,
+    `  ${fmtGate('hygiene.staleStatus', b.hygiene?.staleStatus)}`,
+    `  ${fmtGate('hygiene.missingPathToGreen', b.hygiene?.missingPathToGreen)}`,
+    `  ${fmtGate('hygiene.missingCgPg', b.hygiene?.missingCgPg)}`,
+    `  ${fmtBucket('ktlo', b.ktlo)}`,
+    `  ${fmtBucket('adhoc', b.adhoc)}`,
+    `  execution: outstandingDev=${b.execution?.outstandingDev ?? 0} outstandingTest=${b.execution?.outstandingTest ?? 0} tbvCount=${b.execution?.tbvCount ?? 0} examples=[${(b.execution?.examples || b.execution?.keys || []).join('; ') || '—'}]`,
+    `  ${fmtBucket('ownershipGaps', b.ownershipGaps)}`,
+    '',
+    'SPRINT:',
+    `  activeCount=${sprint.activeCount ?? 0} closedCount=${sprint.closedCount ?? 0} noSprintCount=${sprint.noSprintCount ?? 0}`,
+    sprintLines ? `  byName:\n${sprintLines}` : '  byName: none',
+    '',
+    'Write the Asks for this leader now. Cite tickets as "short summary" (KEY). Use ONLY keys listed in VALID TICKET KEYS above.',
+  ].join('\n');
+}
+
+/**
+ * Parse "N. Ask: … | Why: … | Owner: … | Urgency: …" lines.
+ * @returns {{ ask: string, why: string, owner: string, urgency: string }[]}
+ */
+function parseSosLeaderCoachingAsks(text) {
+  const asks = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || /^##/.test(line)) continue;
+    const m = line.match(
+      /^\d+\.\s*(?:Ask:\s*)?(.+?)\s*\|\s*Why:\s*(.+?)\s*\|\s*Owner:\s*(.+?)\s*\|\s*Urgency:\s*(P[012]|P0|P1|P2)\s*$/i
+    );
+    if (!m) continue;
+    asks.push({
+      ask: m[1].replace(/^Ask:\s*/i, '').trim(),
+      why: m[2].trim(),
+      owner: m[3].trim(),
+      urgency: m[4].toUpperCase().replace(/P([012])/, 'P$1'),
+    });
+  }
+  return asks.slice(0, 5);
+}
+
+/**
+ * @param {{ packet: object, validKeys: string[] }} input
+ * @returns {Promise<{ asks: object[], text: string }>}
+ */
+async function generateSosLeaderCoaching(input) {
+  const messages = [
+    { role: 'system', content: SOS_LEADER_COACHING_SYSTEM_PROMPT },
+    { role: 'user', content: buildSosLeaderCoachingPrompt(input) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const asks = parseSosLeaderCoachingAsks(text);
+  if (!asks.length) {
+    throw new Error('NAI returned no parseable sos-leader coaching asks');
+  }
+  return { asks, text };
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
   generateSosTierSummary,
   generateSprintLeadershipAsks,
+  generateSosLeaderCoaching,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   SOS_TIER_SYSTEM_PROMPT,
   SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT,
+  SOS_LEADER_COACHING_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
     buildUserPrompt,
@@ -1076,6 +1220,8 @@ module.exports = {
     buildSosTierPrompt,
     buildSprintLeadershipAsksPrompt,
     parseSprintLeadershipAsks,
+    buildSosLeaderCoachingPrompt,
+    parseSosLeaderCoachingAsks,
     extractKeysFromItems,
     collectCalloutKeys,
     formatCalloutsBlock,

@@ -397,3 +397,57 @@ Also invoked automatically at the end of **Regenerate from JIRA** (`sprintPerfor
 
 **Caching**: No — on demand. Report generation embeds the result into the HTML once per regenerate.
 
+---
+
+### POST /api/ai/sos-leader-coaching
+
+**Purpose**: Per-eng-leader coaching Asks for SoS-by-Leader. Server builds a deterministic LEADER_PACKET (release gates/hygiene/blockers + sprint mix + breakdown outstanding) then calls NAI (`SOS_LEADER_COACHING_SYSTEM_PROMPT`). On NAI failure, returns rule-based Asks (`source: "rules"`). No JIRA search — auth only.
+
+**Auth**: Required (`validateJiraTokenMiddleware`)
+
+**Request**
+- Method + path: `POST /api/ai/sos-leader-coaching`
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `leaderId` | string | one of id/name | Leader id from org config |
+  | `leaderName` | string | one of id/name | Display name for prompt |
+  | `role` | string | no | e.g. `dev_director` |
+  | `items` | array | yes | Feature/Initiative SoS items for this leader |
+  | `gateDataByRelease` | object | no | `{ [version]: gateData }` |
+  | `breakdownDataMap` | object | no | Task breakdown by issue key |
+  | `checkpointHistory` | object | no | Date-move history by key |
+  | `expectedManagerNames` | string[] | no | For ownership-gap detection |
+
+**Server flow**
+Route → `sosLeaderCoachingService.generateLeaderCoaching` → packet builder → `generateSosLeaderCoaching` (or rule fallback) → response
+
+**Response shape**
+```json
+{
+  "asks": [
+    {
+      "ask": "Clear 2 open P0/must-fix item(s)…",
+      "why": "2 keys e.g. ERA-1, ERA-2",
+      "owner": "Anil",
+      "urgency": "P0"
+    }
+  ],
+  "text": "## Asks for Anil\n\n1. Ask: …",
+  "packet": { "leaderId": "anil", "buckets": {}, "sprint": {} },
+  "validKeys": ["ERA-1", "ERA-2"],
+  "source": "ai",
+  "generatedAt": "2026-10-08T10:00:00.000Z",
+  "error": null
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `leaderId`/`leaderName` or `items` missing | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env (rules fallback still attempted inside service when NAI throws after config) |
+| 502 | Unexpected failure outside NAI path | Retry |
+
+**Caching**: No — on demand.
+

@@ -16,6 +16,7 @@ export { useColumnConfig } from './useColumnConfig';
 export { useGanttConfig, useAllVersionsConfig } from './useGanttConfig';
 export { useSosItems } from './useSosItems';
 export { useSosEmail } from './useSosEmail';
+export { useSosLeaderCoaching } from './useSosLeaderCoaching';
 
 // UI / form state
 export { useEmailForm } from './useEmailForm';

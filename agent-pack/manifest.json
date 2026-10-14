@@ -376,8 +376,8 @@
     },
     {
       "name": "sos-leader-coaching",
-      "path": "prompts/draft/sos-leader-coaching.md",
-      "status": "draft",
+      "path": "prompts/production/sos-leader-coaching.md",
+      "status": "production",
       "area": "sos-leader"
     },
     {
