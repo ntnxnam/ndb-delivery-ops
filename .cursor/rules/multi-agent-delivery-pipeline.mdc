@@ -1,0 +1,97 @@
+---
+description: Primary delivery-ops pipeline — spin specialised agents (Dev → Code Review → QA → UX → JIRA query check → fix → security) before returning to the user; Code Review may use /multi-model-review
+alwaysApply: true
+---
+
+# Multi-Agent Delivery Pipeline (Primary)
+
+For every non-trivial user request in this repo, the orchestrating agent **must**
+classify the work and run the stage pipeline below — spinning specialised
+sub-agents (Task / Bugbot / Security Review / multi-model reviewers) rather
+than doing every stage alone.
+
+Trivial one-liners (typo, single-line config, pure Q&A with no code change) may
+skip the pipeline. When in doubt, run it.
+
+## Stage order (do not reorder)
+
+```
+1. Developer  →  2. Code Review  →  3. QA  →  4. UX sign-off  →  5. Exec sign-off
+       →  6. JIRA Query Checker  →  7. Fix issues  →  8. Final security checks  →  9. Back to user
+```
+
+Multi-model review (**`/multi-model-review`**, skill
+`~/.cursor/skills/multi-model-review`) **strengthens stage 2** — it does **not**
+replace this stage order. Taking in its goodness means: parallel independent
+model reviewers, model-selection neutrality, consensus vs lone-model synthesis,
+and no auto-fix. Stages 3–8 still run when they apply.
+
+| Stage | Who | Mandate |
+|---|---|---|
+| **1. Developer** | Implementer (main agent or `generalPurpose` / `explore`) | Design + implement. Match `minimal-architecture`, `page-docs-required`, `api-docs-required`. No JQL edits without explicit user approval (`jql-edit-approval`). |
+| **2. Code Review** | See **Code Review modes** below | Adversarial review of the diff — correctness, regressions, architecture layering (`minimal-architecture`), file-size limits, duplication, React `useEffect` / infinite-loop risks, dead code, missing error handling. Return a ranked punch list (Blocking / High / Medium / Nit). **Do not** rewrite the feature; do not rubber-stamp. Required whenever code ships. |
+| **3. QA** | QA specialist sub-agent | Verify behaviour, edge cases, regressions, tests, acceptance criteria. Return a punch list — not a rewrite. |
+| **4. UX sign-off** | UX specialist sub-agent | Only when UI / copy / charts change. Check `ui-density`, `visual-storyteller-ui`, `persona-aware-output`. Be adversarial — fail on crushed layouts, uncapped flex growth, sticky/scroll conflicts, undocumented density exceptions. Skip for pure server/JQL/docs. |
+| **5. Exec sign-off** | Follow **`/exec-perspective`** (`~/.cursor/skills/exec-perspective`) via a readonly `generalPurpose` Task (`team-exec` or `director` audience) | When user-facing dashboards, metrics, or narrative ship: review as a Portfolio / Team Exec reader — **high-level first, then drill-down**; detail-oriented under the story, never dump-first. Enforce `persona-aware-output`, `citation-first-output`, `visual-storyteller-ui`. Fail on raw data dumps, metrics without a plain-English story, unverifiable counts, or IC-density noise in an exec surface. Skip for pure server/infra/docs with no product UI. |
+| **6. JIRA Query Checker** | Query specialist sub-agent | When any metric, count, JQL, or JIRA link is touched: every number must have a verifiable JIRA link (`jira-authenticity-links`, `comprehensive-jql-and-metrics`). Flag drift; **do not** silently change JQL — propose and wait for approval. Prefer click-throughs that land on the **linked / downstream** tickets the metric claims to measure (not seed OnCalls unless the metric is explicitly a seed gap). OnCalls linked-downstream must be exactly `issueFunction in linkedIssuesOf("<OnCalls KPI baseQuery>")` from kpiConfig — do not invent alternate wrappers. |
+| **7. Fix issues** | Developer (same thread) | Resolve blocking findings from stages 2–6. Re-run the failing stage after material fixes. |
+| **8. Final security checks** | `security-review` sub-agent | Auth, secrets, injection, localhost leakage, unsafe HTML/email, data exposure. Required before declaring done on code that ships. |
+| **9. Back to user** | Orchestrator only | Short status: what changed, which stages passed/failed, open asks. No stage dump. |
+
+## Code Review modes (stage 2)
+
+Pick one mode (or combine bugbot + multi-model for high-risk diffs). Never skip
+stage 2 when code ships.
+
+| Mode | When | How |
+|---|---|---|
+| **A. Bugbot** (default) | Typical code changes | `bugbot` with `Diff: uncommitted changes` or `branch changes` + short change description |
+| **B. Multi-model** | User asks `/multi-model-review`, or high-risk / cross-cutting diffs (auth, JQL/metrics, email HTML, large refactors) | Follow `~/.cursor/skills/multi-model-review/SKILL.md`: ask for models → parallel readonly `generalPurpose` Tasks (one per model) → parent synthesizes consensus / lone-model / disagreements → act on / consider / noted / dismissed. **No auto-fix.** |
+| **C. Single Task review** | Bugbot unavailable and multi-model not requested | One `generalPurpose` Task whose only job is code review — same mandate as the table row for stage 2 |
+
+### Multi-model goodness absorbed into stage 2
+
+When mode B runs (or the user invokes `/multi-model-review` mid-pipeline):
+
+1. **Model pick first** — neutral multi-select from Task/Subagent slugs; wait if needed.
+2. **Parallel only** — all reviewer Tasks in one batch; same prompt; diversity = models.
+3. **Shared adversarial prompt** — intent + diff + hard rules below; severity Blocking / High / Medium / Nit.
+4. **Parent synthesizes** — consensus (2+), lone-model, dedupe, disagreements; categorize act on / consider / noted / dismissed.
+5. **Pipeline gating** — Blocking/High "act on" items stop the pipeline until stage 7; nits may proceed with a one-line note.
+6. **Does not replace stages 3–8** — after synthesis, continue QA / UX / Exec / JIRA / Fix / Security as applicable.
+
+### Code Reviewer prompt essentials (all modes)
+
+When spawning Code Review (Bugbot, multi-model, or Task), always include:
+
+1. Full repo path and whether the diff is uncommitted or branch-scoped
+2. Short change description (files + intent)
+3. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost`, `jql-edit-approval` (flag only — no silent JQL edits)
+4. Instruction: **FAIL** unless findings are listed or the reviewer rigorously proves the diff is clean; no rubber stamps
+
+## How to spin agents
+
+- Use Cursor `Task` (or named review subagents) with a **single stage role** per spawn.
+- Pass: request summary, files touched, prior stage punch list, and hard constraints (no unapproved JQL edits).
+- Prefer parallel spawns for independent checks after Dev lands (e.g. Code Review + QA + UX + Exec together); keep Fix → Security sequential.
+- **Multi-model Code Review**: spawn N readonly Tasks in **one** assistant turn (mandatory parallelism); synthesize before Fix.
+- **Exec**: spawn a readonly Task that follows `/exec-perspective` — L1 skim → L2 risks → L3 detail; cite `persona-aware-output.mdc`; refuse rubber-stamp "looks fine."
+- **Code Review (Bugbot)**: prefer `bugbot` with `Diff: uncommitted changes` (or `branch changes`) and a short change description.
+- **Security**: use `security-review` with `Diff: uncommitted changes` or `branch changes`.
+
+## Stage gating
+
+- A stage that returns **blocking** findings stops the pipeline until stage 7 clears them.
+- Non-blocking nits may be listed for the user without blocking stage 8–9.
+- If a stage is skipped, say so in one line in the final handoff (e.g. "UX skipped — no UI change"; "Exec skipped — no product UI"; "Multi-model Code Review used — consensus 3 Blocking").
+- Skipping Code Review is **not** allowed when code ships (same bar as QA + security).
+
+## Never do
+
+- Ship code changes to the user as "done" without Code Review + QA + security when code shipped
+- Replace the full pipeline with multi-model review alone
+- Change JQL in stage 6 without user approval
+- Collapse all stages into one undifferentiated agent turn for non-trivial work
+- Auto-apply multi-model or Bugbot findings without an explicit user ask to fix
+- Return a long multi-agent transcript — return the product outcome + punch-list residue only
+- Treat a shallow "LGTM" from Code Review, UX, Exec, or any single model as a pass — adversarial findings required or an explicit clean proof

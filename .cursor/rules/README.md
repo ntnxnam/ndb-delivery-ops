@@ -2,8 +2,10 @@
 
 Constitutional product-agent rules live in `agent-pack/rules/` and are
 symlinked here (D38). Builder-only rules for this repo stay as real files
-in this folder (`minimal-architecture`, `api-docs-required`,
-`page-docs-required`, `documentation-consistency`, `gerrit-push-for-review`).
+in this folder (`multi-agent-delivery-pipeline` — **primary**, alwaysApply;
+stage 2 may use `/multi-model-review` without replacing the pipeline;
+`minimal-architecture`, `api-docs-required`, `page-docs-required`,
+`documentation-consistency`, `gerrit-push-for-review`, `concise-comms`).
 
 Most other rules live at the **user level** so they apply across every
 NDB-Ops repo:
