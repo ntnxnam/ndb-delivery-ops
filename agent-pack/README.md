@@ -19,7 +19,7 @@ Do not fork skills per surface.
 | `prompts/` | LLM system prompts | Production + draft prompts; canonical copy for every generative surface |
 | `memory/` | `memory.md` schema | Session / user / org memory contract (store is runtime) |
 | `manifest.json` | registry | Capability type, tool class, owner, paths, context, prompts |
-| `adapters/` | host notes | How Cursor / web / a future host consume this pack |
+| `adapters/` | host notes | How Cursor / Claude Code / Codex / web consume this pack |
 
 Start on a new host: `context/INDEX.md` → `prompts/INDEX.md` → identity.
 

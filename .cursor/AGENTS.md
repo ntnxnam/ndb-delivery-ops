@@ -50,6 +50,11 @@ Registry: `agent-pack/manifest.json`. Paths below are pack-relative.
 | `skills/move-gate-date/` | `rm-specialist` | Gate date move with mandatory reason + audit (D30) |
 | `skills/confluence-width-cleanup/` | `confluence-publisher-specialist` | Cleaning Confluence storage XML |
 | `skills/release-ai-briefing/` | `tpm-specialist` | Release-level RAG + top blockers + 7-day action list |
+| `skills/multi-model-review/` | `ops-assistant` (builder) | Pipeline stage 2 — parallel multi-model Code Review |
+| `skills/exec-perspective/` | `ops-assistant` (builder) | Pipeline stage 5 — Exec sign-off (high-level → drill-down) |
+
+**Invoke from the pack:** read `agent-pack/skills/<name>/SKILL.md` or
+`pack.skills.get('<name>')`. Do not open a Cursor-only / Claude-only copy.
 
 ## Workflows
 

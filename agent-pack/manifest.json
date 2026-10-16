@@ -14,6 +14,7 @@
     "rules/confluence-cleanup-clarification.mdc",
     "rules/jira-date-hierarchy.mdc",
     "rules/ndb-gate-status-semantics.mdc",
+    "rules/no-defensive-statements.mdc",
     "rules/no-localhost.mdc",
     "rules/persona-aware-output.mdc",
     "rules/product-agnostic.mdc",
@@ -116,6 +117,13 @@
       "path": "skills/issue-type-breakdown/SKILL.md"
     },
     {
+      "name": "kpi-pulse-analytics",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/kpi-pulse-analytics/SKILL.md"
+    },
+    {
       "name": "sprint-gantt-chart",
       "capabilityType": "deterministic",
       "toolClass": "read",
@@ -184,6 +192,22 @@
       "toolClass": "read",
       "owner": "rm-specialist",
       "path": "skills/release-dataset-sync/SKILL.md"
+    },
+    {
+      "name": "multi-model-review",
+      "capabilityType": "agentic",
+      "toolClass": "read",
+      "owner": "ops-assistant",
+      "path": "skills/multi-model-review/SKILL.md",
+      "notes": "Builder pipeline stage 2 enhancer; host-agnostic SoT"
+    },
+    {
+      "name": "exec-perspective",
+      "capabilityType": "agent",
+      "toolClass": "read",
+      "owner": "ops-assistant",
+      "path": "skills/exec-perspective/SKILL.md",
+      "notes": "Builder pipeline stage 5 Exec sign-off; high-level then drill-down"
     }
   ],
   "workflows": [

@@ -74,7 +74,10 @@ Host-agnostic domain briefs and canonical LLM system prompts. Start at
 ## Skills (`agent-pack/skills/`)
 
 Reusable capabilities the agent reads on demand. Each one is task-specific
-and references the specialist that owns it.
+and references the specialist that owns it. Hosts discover the same pack via
+`.cursor/skills`, `.claude/skills`, `.codex/skills`, `.agents/skills`
+(symlinks — D38). Builder pipeline skills: `multi-model-review`,
+`exec-perspective`.
 
 - `team-exec-status-answer/` — D15 protocol
 - `weekly-status-email/` — D17 3-tier structure

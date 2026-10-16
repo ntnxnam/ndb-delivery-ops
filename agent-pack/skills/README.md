@@ -21,11 +21,11 @@ specialist owns. Canonical home is this directory (D38), not `.cursor/`.
 | `team-exec-release-report/` | `team-exec-specialist` | Team Executive-Executive release report with risk escalation rules | D9 |
 | `predictive-team-exec-analytics/` | `team-exec-specialist` | Monte Carlo + completion-probability forecasts | D8, D9 |
 | `sprint-gantt-chart/` | `tpm-specialist` / `rm-specialist` | Date-hierarchy-aware Gantt for sprint-tier tickets | — |
+| `multi-model-review/` | `ops-assistant` (builder) | Parallel multi-model Code Review (pipeline stage 2) | — |
+| `exec-perspective/` | `ops-assistant` (builder) | Exec sign-off: high-level first, then drill-down (stage 5) | — |
 
-The last five are project-level references whose canonical content
-lives at `~/.cursor/skills/`. Read the project copy for usage in this
-codebase; read the user-level copy for the full procedure / scripts /
-templates.
+Host discovery: `.cursor/skills`, `.claude/skills`, `.codex/skills`, and
+`.agents/skills` all symlink here. Do not fork skills under a host folder.
 
 ## Anthropic-pattern mapping
 

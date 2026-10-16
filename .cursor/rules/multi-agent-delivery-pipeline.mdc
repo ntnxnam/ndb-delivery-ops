@@ -13,6 +13,21 @@ than doing every stage alone.
 Trivial one-liners (typo, single-line config, pure Q&A with no code change) may
 skip the pipeline. When in doubt, run it.
 
+## How to invoke pipeline skills (D38)
+
+Always load skills from the **agent pack**, not a host-private path:
+
+| Stage | Invoke |
+|---|---|
+| 2 Multi-model Code Review | Read `agent-pack/skills/multi-model-review/SKILL.md` (or `pack.skills.get('multi-model-review')`), then follow it |
+| 5 Exec sign-off | Read `agent-pack/skills/exec-perspective/SKILL.md` (or `pack.skills.get('exec-perspective')`), then follow it |
+
+Host folders (`.cursor/skills`, `.claude/skills`, `.codex/skills`,
+`.agents/skills`) are **symlinks into the pack** for discovery. Slash
+commands (`/multi-model-review`, `/exec-perspective`) resolve to those
+symlinks — the file you execute must still be the pack SoT. Never fork
+or invent a parallel copy under `~/.cursor/skills/` as authoritative.
+
 ## Stage order (do not reorder)
 
 ```
@@ -20,11 +35,12 @@ skip the pipeline. When in doubt, run it.
        →  6. JIRA Query Checker  →  7. Fix issues  →  8. Final security checks  →  9. Back to user
 ```
 
-Multi-model review (**`/multi-model-review`**, skill
-`~/.cursor/skills/multi-model-review`) **strengthens stage 2** — it does **not**
+Multi-model review (**`/multi-model-review`**, pack skill
+`agent-pack/skills/multi-model-review/`) **strengthens stage 2** — it does **not**
 replace this stage order. Taking in its goodness means: parallel independent
 model reviewers, model-selection neutrality, consensus vs lone-model synthesis,
-and no auto-fix. Stages 3–8 still run when they apply.
+and no auto-fix. Stages 3–8 still run when they apply. SoT is the pack (D38);
+Cursor / Claude Code / Codex discover it via host skill symlinks.
 
 | Stage | Who | Mandate |
 |---|---|---|
@@ -32,7 +48,7 @@ and no auto-fix. Stages 3–8 still run when they apply.
 | **2. Code Review** | See **Code Review modes** below | Adversarial review of the diff — correctness, regressions, architecture layering (`minimal-architecture`), file-size limits, duplication, React `useEffect` / infinite-loop risks, dead code, missing error handling. Return a ranked punch list (Blocking / High / Medium / Nit). **Do not** rewrite the feature; do not rubber-stamp. Required whenever code ships. |
 | **3. QA** | QA specialist sub-agent | Verify behaviour, edge cases, regressions, tests, acceptance criteria. Return a punch list — not a rewrite. |
 | **4. UX sign-off** | UX specialist sub-agent | Only when UI / copy / charts change. Check `ui-density`, `visual-storyteller-ui`, `persona-aware-output`. Be adversarial — fail on crushed layouts, uncapped flex growth, sticky/scroll conflicts, undocumented density exceptions. Skip for pure server/JQL/docs. |
-| **5. Exec sign-off** | Follow **`/exec-perspective`** (`~/.cursor/skills/exec-perspective`) via a readonly `generalPurpose` Task (`team-exec` or `director` audience) | When user-facing dashboards, metrics, or narrative ship: review as a Portfolio / Team Exec reader — **high-level first, then drill-down**; detail-oriented under the story, never dump-first. Enforce `persona-aware-output`, `citation-first-output`, `visual-storyteller-ui`. Fail on raw data dumps, metrics without a plain-English story, unverifiable counts, or IC-density noise in an exec surface. Skip for pure server/infra/docs with no product UI. |
+| **5. Exec sign-off** | Follow **`/exec-perspective`** (`agent-pack/skills/exec-perspective/`) via a readonly general-purpose subagent (`team-exec` or `director` audience) | When user-facing dashboards, metrics, or narrative ship: review as a Portfolio / Team Exec reader — **high-level first, then drill-down**; detail-oriented under the story, never dump-first. Enforce `persona-aware-output`, `citation-first-output`, `visual-storyteller-ui`. Fail on raw data dumps, metrics without a plain-English story, unverifiable counts, or IC-density noise in an exec surface. Skip for pure server/infra/docs with no product UI. |
 | **6. JIRA Query Checker** | Query specialist sub-agent | When any metric, count, JQL, or JIRA link is touched: every number must have a verifiable JIRA link (`jira-authenticity-links`, `comprehensive-jql-and-metrics`). Flag drift; **do not** silently change JQL — propose and wait for approval. Prefer click-throughs that land on the **linked / downstream** tickets the metric claims to measure (not seed OnCalls unless the metric is explicitly a seed gap). OnCalls linked-downstream must be exactly `issueFunction in linkedIssuesOf("<OnCalls KPI baseQuery>")` from kpiConfig — do not invent alternate wrappers. |
 | **7. Fix issues** | Developer (same thread) | Resolve blocking findings from stages 2–6. Re-run the failing stage after material fixes. |
 | **8. Final security checks** | `security-review` sub-agent | Auth, secrets, injection, localhost leakage, unsafe HTML/email, data exposure. Required before declaring done on code that ships. |
@@ -46,7 +62,7 @@ stage 2 when code ships.
 | Mode | When | How |
 |---|---|---|
 | **A. Bugbot** (default) | Typical code changes | `bugbot` with `Diff: uncommitted changes` or `branch changes` + short change description |
-| **B. Multi-model** | User asks `/multi-model-review`, or high-risk / cross-cutting diffs (auth, JQL/metrics, email HTML, large refactors) | Follow `~/.cursor/skills/multi-model-review/SKILL.md`: ask for models → parallel readonly `generalPurpose` Tasks (one per model) → parent synthesizes consensus / lone-model / disagreements → act on / consider / noted / dismissed. **No auto-fix.** |
+| **B. Multi-model** | User asks `/multi-model-review`, or high-risk / cross-cutting diffs (auth, JQL/metrics, email HTML, large refactors) | Follow `agent-pack/skills/multi-model-review/SKILL.md`: ask for models → parallel readonly subagents (one per model) → parent synthesizes consensus / lone-model / disagreements → act on / consider / noted / dismissed. **No auto-fix.** |
 | **C. Single Task review** | Bugbot unavailable and multi-model not requested | One `generalPurpose` Task whose only job is code review — same mandate as the table row for stage 2 |
 
 ### Multi-model goodness absorbed into stage 2

@@ -1,6 +1,7 @@
 # Adapter — future host (lift-and-shift checklist)
 
-To run this product on Slack, another IDE, or a vendor agent platform:
+To run this product on Slack, Claude Code, Codex, another IDE, or a vendor
+agent platform:
 
 1. Point the host at this `agent-pack/` directory (or set `AGENT_PACK_ROOT`).
 2. Call `loadAgentPack()` — do not re-parse ad hoc.

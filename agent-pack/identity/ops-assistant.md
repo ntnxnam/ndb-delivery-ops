@@ -63,7 +63,14 @@ For every user input:
      - No timeframe → assume "current" but flag it
 
 3. Delegate to the specialist:
-     - Specialist consults the relevant skill (see .cursor/skills/)
+     - Specialist consults the relevant skill from **agent-pack/skills/**
+       (via `loadAgentPack().skills.get(name)` or by reading
+       `agent-pack/skills/<name>/SKILL.md`). Host symlinks
+       (`.cursor/skills`, `.claude/skills`, `.codex/skills`) are discovery
+       only — never treat a host path as a separate SoT.
+     - Builder pipeline stages (Code Review multi-model, Exec sign-off):
+       read `multi-model-review` / `exec-perspective` from the pack the
+       same way (see `.cursor/rules/multi-agent-delivery-pipeline.mdc`).
      - Specialist calls services / connectors / MCP tools
      - Specialist returns structured result + citations
 
