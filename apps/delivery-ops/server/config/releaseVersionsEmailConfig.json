@@ -176,7 +176,13 @@
         "date": "2026-07-28",
         "color": "#28a745",
         "style": "solid"
-      }
+      },
+      "devDRIs": [
+        "jovan.cukalovic"
+      ],
+      "qaDRIs": [
+        "srikanth.cg"
+      ]
     },
     "NDB-2.11.1": {
       "codeFreeze": {
@@ -284,7 +290,13 @@
         "color": "#28a745",
         "style": "solid",
         "reason": "2.11 delay ate out of QA time"
-      }
+      },
+      "devDRIs": [
+        "akshay.chandak"
+      ],
+      "qaDRIs": [
+        "saurabh.srvastava"
+      ]
     },
     "NDB-2.12.0.1": {
       "ga1": {
@@ -409,7 +421,13 @@
         "color": "#28a745",
         "style": "solid",
         "reason": "Kronos.1 moved futher"
-      }
+      },
+      "devDRIs": [
+        "nkumar"
+      ],
+      "qaDRIs": [
+        "srikanth.cg"
+      ]
     },
     "NDB-3.1": {
       "conceptCommit1": {
@@ -455,7 +473,13 @@
         "date": "2027-10-15",
         "color": "#28a745",
         "style": "solid"
-      }
+      },
+      "devDRIs": [
+        "pranay.ega"
+      ],
+      "qaDRIs": [
+        "saurabh.srvastava"
+      ]
     },
     "NDB-3.0-EA": {
       "ecDate": "2026-05-15",
