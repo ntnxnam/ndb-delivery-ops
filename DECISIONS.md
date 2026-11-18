@@ -857,6 +857,13 @@ be liftable to another agent host without rewriting SOPs.
 still edit markdown in the IDE. The IDE is not allowed to be the only
 place those files can run.
 
+**Addendum (2026-11-18) — pack flattening plan.** `agent-pack/` currently
+mirrors `.cursor/` depth (e.g. `agent-pack/identity/ops-assistant.md`).
+Planned flatten: move sub-agent files out of nested `specialists/` into
+`agent-pack/identity/` and normalize skill directory naming so `loadAgentPack()`
+does not need depth-aware traversal. No behavior change; purely structural.
+Tracked as `fix/pack-flatten` — do not mix with domain normalization.
+
 ---
 
 ### D39 — Web chat is an agent runtime, not a mailbox

@@ -1,6 +1,7 @@
 /**
  * Sprint health rates — shared SoT (Wave 3 / D41).
- * Pure. No JIRA I/O. CJS so Express sprintService can require() it.
+ * Pure. No JIRA I/O. CJS for dual Node/CRA import without pulling Node connectors — see D41.
+ * Typed ESM mirror: shared/src/services/sprintMetrics.ts (same logic, added types).
  */
 
 function getSprintMetrics({

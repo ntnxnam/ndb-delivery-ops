@@ -51,7 +51,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 ┌──────────────────────────────────────────────────────────────────────┐
 │ Layer 4: API + MCP tools                                             │
 │  ┌────────────────────────────┐    ┌─────────────────────────────┐   │
-│  │ delivery-ops server/       │    │ mcp-server/src/tools/       │   │
+│  │ delivery-ops server/       │    │ mcp/*/src/tools/       │   │
 │  │ (Express routes, thin)     │    │ (one tool per feature)      │   │
 │  └────────────────────────────┘    └─────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
@@ -162,7 +162,7 @@ Two parallel surfaces over the services:
 - One file per domain (`routes/status.js`, `routes/capacity.js`, etc.)
 - Max 150 lines per file (per existing `minimal-architecture` rule)
 
-**MCP tools** (`mcp-server/src/tools/`) — for the AI agent
+**MCP tools** (`mcp/*/src/tools/`) — for the AI agent
 - One tool per feature
 - Each tool calls the same shared connector/service the Express route does (D40)
 - JIRA auth is Data Center PAT `Authorization: Bearer` only
@@ -256,7 +256,7 @@ blanket project filter on the fetch.
 │
 ├── apps/
 │   └── delivery-ops/                    THE single user runtime
-│       ├── client/                      React (port 8888)
+│       ├── client/                      React (port 8899; Express 8001)
 │       │   └── src/
 │       │       ├── domains/             pages grouped by feature domain
 │       │       │   ├── status/          ReleaseVersions, OutstandingWork, ReleaseBrief
@@ -271,19 +271,20 @@ blanket project filter on the fetch.
 │       │       ├── auth/                JIRA PAT auth, role detection
 │       │       └── shared/              common components, hooks
 │       │
-│       └── server/                      Express (port 6001)
+│       └── server/                      Express (port 8001)
 │           ├── routes/                  thin route handlers per domain
 │           ├── services/                business logic per domain
 │           └── middleware/              auth, rate-limit, error, timeout
 │
-├── mcp-server/                          AI tool surface (stdio)
-│   └── src/
-│       ├── connectors/                  → moves to shared/ in Phase 1
-│       └── tools/                       one per feature
+├── mcp/                                 AI tool surfaces (stdio)
+│   ├── shared/                          deduplicated tools + env + glossary (single source)
+│   ├── loom/                              builder tools only (bin: loom-mcp)
+│   └── lighthouse/                        product tools only (bin: lighthouse-mcp)
 │
-├── shared/                              NEW — cross-runtime code
-│   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector
-│   ├── domain/                          CJS/browser derives (D41): signals, analytics, bundle
+├── shared/                              cross-runtime code
+│   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector, emailConnector
+│   ├── domain/                          derives (D41): execSummarySignals.cjs, execSummaryAnalytics.cjs, sprintMetrics.cjs (CJS for Node), bundleDerive.js (ESM browser-safe) — see shared/src/domain/README.md
+│   ├── services/                        business logic (releaseIntelligence, sprintMetrics typed wrapper, etc.)
 │   ├── agentPack/                       loadAgentPack (D38)
 │   ├── agentRuntime/                    runAgentTurn (D39) + memory/HITL (D42)
 │   ├── types/                           Release, Ticket, Persona, RAG, …

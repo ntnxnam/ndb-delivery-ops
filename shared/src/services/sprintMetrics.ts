@@ -1,6 +1,6 @@
 /**
- * Sprint health rates — typed ESM surface for getSprintMetrics.
- * Implementation matches shared/src/domain/sprintMetrics.cjs (CJS SoT for Express).
+ * Sprint health rates — typed ESM wrapper for getSprintMetrics.
+ * CJS SoT: shared/src/domain/sprintMetrics.cjs — keep logic in sync (see domain/README.md).
  */
 
 export interface SprintMetricsInput {
