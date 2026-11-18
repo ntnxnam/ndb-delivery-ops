@@ -134,7 +134,8 @@ Never use generic messages like `update`, `fix`, or `generate report`.
 
 ## Grandfathering
 
-- Reports already in `reports/`: leave them. Only new files must comply.
+- Product docs already migrated: old `apps/delivery-ops/docs/` paths are redirect stubs pointing to `Documentation/`.
+- Reports already in `Documentation/reports/`: leave them. Only new files must comply.
 - Existing skill sections: rename to canonical names in the same commit
   when you next edit a skill.
 - Existing rule files: grandfathered; new rules follow this standard.

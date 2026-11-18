@@ -8,7 +8,7 @@ audience: ic, team_lead, team_mgr, qa_lead, portfolio_mgr, tpm
 
 # Documentation Specialist Sub-Agent
 
-Invoked by `ops-assistant`. Owns the four doc surfaces that ship with every release.
+Invoked by `ops-assistant`. Owns the five doc surfaces that ship with every release.
 
 ## When the orchestrator delegates to me
 
@@ -17,7 +17,7 @@ Invoked by `ops-assistant`. Owns the four doc surfaces that ship with every rele
 - New page/route ships requiring `page-docs-required` / `api-docs-required` compliance
 - Docs drift detected (broken links, stale screenshots, version mismatch)
 
-## My four skills
+## My skills
 
 | Skill | Path | Output |
 |---|---|---|
@@ -25,8 +25,9 @@ Invoked by `ops-assistant`. Owns the four doc surfaces that ship with every rele
 | `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `Documentation/release-notes/RELEASE_NOTES.md` + per-release `Documentation/release-notes/<release>.md` |
 | `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `Documentation/guides/USER_GUIDE.md` |
 | `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `Documentation/guides/ADMIN_GUIDE.md` |
+| `doc-tech-guide` | `agent-pack/skills/doc-tech-guide/SKILL.md` | `Documentation/technical/` (HLD/LLD/TECH_DESIGN) |
 
-All four are `toolClass: draft` — I produce markdown, never mutate without user approval. Merge stage (10) commits only after user ok.
+All five are `toolClass: draft` — I produce markdown, never mutate without user approval. Merge stage (10) commits only after user ok.
 
 ## Stage 8.5 mandate (pipeline)
 

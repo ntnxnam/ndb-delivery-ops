@@ -21,8 +21,9 @@ const TCMS_TIMEOUT_MS = 15000; // Reduced from 30s to 15s
 async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all') {
   try {
     const filters = JSON.stringify({ $and: [{ 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }] });
+    const LEGACY_TIME_FILTERS = { 'Last 4 Week': 'four_weeks', 'Last 4 Weeks': 'four_weeks' };
     const VALID_TIME_FILTERS = ['all', 'four_weeks'];
-    const tcmsTimeFilter = VALID_TIME_FILTERS.includes(timeFilter) ? timeFilter : 'all';
+    const tcmsTimeFilter = LEGACY_TIME_FILTERS[timeFilter] || (VALID_TIME_FILTERS.includes(timeFilter) ? timeFilter : 'all');
     const resp = await axios.get(`${TCMS_API_BASE}/api/v1/all_test_cases/aggregate/metrics`, {
       params: { aggregation_field: 'test_case.metadata.requirements', time_filter: tcmsTimeFilter, target: `${milestone}-qcow2`, feat_type: 'all', filters },
       timeout: TCMS_TIMEOUT_MS,

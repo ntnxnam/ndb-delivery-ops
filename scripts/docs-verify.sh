@@ -3,9 +3,9 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FAIL=0
 echo "== docs-verify: stale path check =="
-if grep -r "apps/delivery-ops/docs" "$ROOT/agent-pack/skills" "$ROOT/agent-pack/rules" "$ROOT/agent-pack/context" 2>/dev/null | grep -v "redirect stub" | grep -q .; then
+if grep -r "apps/delivery-ops/docs" "$ROOT/agent-pack/skills" "$ROOT/agent-pack/rules" "$ROOT/agent-pack/context" 2>/dev/null | grep -v "redirect stub" | grep -v "Product docs already migrated" | grep -q .; then
   echo "FAIL: stale apps/delivery-ops/docs refs found:"
-  grep -rn "apps/delivery-ops/docs" "$ROOT/agent-pack/skills" "$ROOT/agent-pack/rules" "$ROOT/agent-pack/context" | grep -v "redirect stub"
+  grep -rn "apps/delivery-ops/docs" "$ROOT/agent-pack/skills" "$ROOT/agent-pack/rules" "$ROOT/agent-pack/context" | grep -v "redirect stub" | grep -v "Product docs already migrated"
   FAIL=1
 else echo "PASS: no stale writers"
 fi

@@ -60,5 +60,5 @@ See `../prompts/INDEX.md`.
 
 - Page requirements / data layer: `Documentation/pages/`
 - API contracts: `Documentation/api/`
-- AI LLD: `apps/delivery-ops/docs/LLD-ai-layer.md`
+- AI LLD: `Documentation/technical/LLD-ai-layer.md`
 - Architecture: repo root `ARCHITECTURE.md`, `DECISIONS.md`, `FEATURE_CATALOG.md`
