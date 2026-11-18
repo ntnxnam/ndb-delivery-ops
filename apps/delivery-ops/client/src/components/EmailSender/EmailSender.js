@@ -11,7 +11,7 @@ import {
   validateHighlightsLowlightsSections,
 } from './emailSenderHelpers';
 import EmailSenderPulledPanel from './EmailSenderPulledPanel';
-import { useEmailSender } from './useEmailSender';
+import { useEmailSender } from '../../hooks/useEmailSender';
 import './EmailSender.css';
 
 function EmailSender({ onLogout: _onLogout }) {
