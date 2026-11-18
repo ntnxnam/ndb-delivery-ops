@@ -162,7 +162,8 @@ useEffect(() => {
 }, [jiraKey]);
 
 
-  const { validateJiraKey, fetchJiraData, fetchEpics, fetchSprintGanttData } = createEmailSenderJiraActions({
+  // Wrap fetchJiraData to also clear AI draft on every fetch (not just key change) — prevents stale brief being sent for new data
+  const rawActions = createEmailSenderJiraActions({
     jiraKey, jiraToken, username, selectedTeamId,
     jiraData, jiraValidationStatus, epics,
     setValidatingJira, setJiraValidationStatus, setError, setSuccess,
@@ -170,6 +171,11 @@ useEffect(() => {
     setFeatureDashExtras, setPayloadJql, setSprintGanttData, setPulledTicketDataOpen,
     setFetchingEpics, setFetchingBreakdown, setFetchingSprintGantt, setEmailSubject,
   });
+  const fetchJiraData = async () => {
+    setAiSummaryDraft('');
+    return rawActions.fetchJiraData();
+  };
+  const { validateJiraKey, fetchEpics, fetchSprintGanttData } = rawActions;
 
 const quillModules = {
   toolbar: [

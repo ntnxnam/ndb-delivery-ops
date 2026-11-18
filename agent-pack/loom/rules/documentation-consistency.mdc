@@ -10,7 +10,7 @@ is instantly recognisable and machine-parseable.
 
 ## Report File Naming
 
-Every product doc lives under `Documentation/` at repo root. No product doc may be written outside `Documentation/` (CI gate: `scripts/docs-verify.sh` stale-path check). Guides are Markdown source + generated HTML (`node scripts/docs-build.js`); `technical/`, `product/`, `api/`, `pages/`, `release-notes/`, `known-issues/` are Markdown only; `reports/` and `exec-pitch/` are HTML already.
+Every product doc lives under `docs/` at repo root. No product doc may be written outside `docs/` (CI gate: `scripts/lighthouse/docs/docs-verify.sh` stale-path check). Guides are Markdown source + generated HTML (`node scripts/lighthouse/docs/docs-build.js`); `technical/`, `product/`, `api/`, `pages/`, `release-notes/`, `known-issues/` are Markdown only; `reports/` and `exec-pitch/` are HTML already.
 
 Every file saved to `Documentation/reports/` must follow:
 

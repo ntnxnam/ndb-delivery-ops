@@ -3,5 +3,5 @@
   "defaultModel": "beam-1-501b",
   "maxTokens": 8192,
   "requestTimeoutMs": 120000,
-  "description": "Nutanix Enterprise AI (NuTokens) endpoint. API key is NOT stored here — set AI_API_KEY in server/.env (NuToken from tokens.corp / LastPass)."
+  "description": "Nutanix Enterprise AI (NuTokens) endpoint. API key is NOT stored here — set NAI_API_KEY in server/.env (NuToken from tokens.corp / LastPass)."
 }

@@ -14,15 +14,15 @@
  * - server/config/*, shared/config/*, apps/delivery-ops/server/config/*
  * - __tests__/, scripts/, reports/, docs/, .md files (examples)
  *
- * Run: node scripts/check-product-agnostic.js (from apps/delivery-ops)
+ * Run: node scripts/lighthouse/checks/check-product-agnostic.js (from project root)
  * Exit: 0 if clean, 1 if forbidden pattern found.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..'); // apps/delivery-ops
 const REPO_ROOT = path.resolve(__dirname, '../../..');
+const ROOT = path.join(REPO_ROOT, 'apps/delivery-ops');
 
 // Patterns that indicate hardcoding (tested against code stripped of comments)
 const FORBIDDEN = [

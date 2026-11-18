@@ -118,7 +118,7 @@ export const Layout = ({ children, wide = false, fluid = false }) => {
         .app-layout {
           min-height: 100vh;
           display: flex;
-          background: #f8f9fa;
+          background: var(--ds-bg, #0f1419);
         }
 
         .main-content {
@@ -128,7 +128,11 @@ export const Layout = ({ children, wide = false, fluid = false }) => {
           transition: margin-left 0.3s ease;
           min-height: 100vh;
           box-sizing: border-box;
+          background: var(--ds-bg, #0f1419);
         }
+
+        /* Legacy pages bring their own light cards (#fff/#f8f9fa) — no global
+           color override needed; they float cleanly on the dark shell. */
 
         /* Container for content with max-width */
         .main-content > * {

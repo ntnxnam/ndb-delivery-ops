@@ -1,21 +1,22 @@
 /**
  * Script to fetch field history for JIRA issues
  * 
- * Usage: node scripts/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ... [JIRA_KEY_N]
- * 
- * Or set JIRA_KEYS environment variable: JIRA_KEYS="FEAT-1,FEAT-2" node scripts/fetch-field-history.js
+ * Usage: node scripts/lighthouse/jira/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ... [JIRA_KEY_N]
+ *
+ * Or set JIRA_KEYS environment variable: JIRA_KEYS="FEAT-1,FEAT-2" node scripts/lighthouse/jira/fetch-field-history.js
  */
 
 const fs = require('fs');
 const path = require('path');
-const { fetchFieldHistory, fetchFieldHistoryForMultiple } = require('../server/utils/fieldHistoryUtils');
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+const { fetchFieldHistory, fetchFieldHistoryForMultiple } = require(path.join(REPO_ROOT, 'apps/delivery-ops/server/utils/fieldHistoryUtils'));
 
 // Get JIRA token from environment variable
 const JIRA_TOKEN = process.env.JIRA_TOKEN;
 
 if (!JIRA_TOKEN) {
   console.error('Error: JIRA_TOKEN environment variable is required');
-  console.error('Usage: JIRA_TOKEN=your_token node scripts/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ...');
+  console.error('Usage: JIRA_TOKEN=your_token node scripts/lighthouse/jira/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ...');
   process.exit(1);
 }
 
@@ -34,8 +35,8 @@ const jiraKeys = jiraKeysFromArgs.length > 0 ? jiraKeysFromArgs : jiraKeysFromEn
 
 if (jiraKeys.length === 0) {
   console.error('Error: No JIRA keys provided');
-  console.error('Usage: node scripts/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ...');
-  console.error('Or: JIRA_KEYS="FEAT-1,FEAT-2" node scripts/fetch-field-history.js');
+  console.error('Usage: node scripts/lighthouse/jira/fetch-field-history.js <JIRA_KEY_1> [JIRA_KEY_2] ...');
+  console.error('Or: JIRA_KEYS="FEAT-1,FEAT-2" node scripts/lighthouse/jira/fetch-field-history.js');
   process.exit(1);
 }
 
@@ -44,9 +45,9 @@ async function main() {
   console.log('JIRA Keys:', jiraKeys.join(', '));
   console.log('---\n');
   
-  // Output file paths
-  const outputPath = path.join(__dirname, '..', 'JIRA-fields-history-for-project-dates.json');
-  const rawResponsePath = path.join(__dirname, '..', 'JIRA-raw-api-responses.json');
+  // Output file paths — server/... is the live SoT read by releaseHistoryService.js:36
+  const outputPath = path.join(REPO_ROOT, 'apps/delivery-ops/server/JIRA-fields-history-for-project-dates.json');
+  const rawResponsePath = path.join(REPO_ROOT, 'apps/delivery-ops/server/JIRA-raw-api-responses.json');
   
   // Clear existing output files to avoid reading stale data
   try {

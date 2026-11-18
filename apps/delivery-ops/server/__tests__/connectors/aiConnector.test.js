@@ -149,12 +149,12 @@ describe('aiConnector — no-fallback contract (error message assertions)', () =
     jest.clearAllMocks();
   });
 
-  test('UT-AICNX-AI_API_KEY: error message names the missing variable', async () => {
+  test('UT-AICNX-NAI_API_KEY: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_API_KEY is not set. Retrieve the key from LastPass and set it in server/.env.')
+      new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.')
     );
-    await expect(chatCompletion([], {})).rejects.toThrow('AI_API_KEY is not set');
+    await expect(chatCompletion([], {})).rejects.toThrow('NAI_API_KEY is not set');
   });
 
   test('UT-AICNX-AI_API_BASE_URL: error message names the missing variable', async () => {

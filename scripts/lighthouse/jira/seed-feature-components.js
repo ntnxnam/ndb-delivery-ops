@@ -3,9 +3,9 @@
  * Run base-filter Detect for configured teams and seed `featureComponents`
  * (plus boardId / sprintCalendar when a team has none) in teamBoardConfig.json.
  *
- * Usage (from apps/delivery-ops):
- *   node scripts/seed-feature-components.js [teamId[=CompA,CompB] ...]           # dry run
- *   node scripts/seed-feature-components.js [teamId[=CompA,CompB] ...] --write   # save
+ * Usage (from repo root):
+ *   node scripts/lighthouse/jira/seed-feature-components.js [teamId[=CompA,CompB] ...]           # dry run
+ *   node scripts/lighthouse/jira/seed-feature-components.js [teamId[=CompA,CompB] ...] --write   # save
  * Without an explicit list, the suggested components (≥3 tickets or ≥5%) are used.
  *
  * Token: JIRA_PAT (or RELEASE_DATASET_SYNC_PAT) from the environment or from
@@ -13,7 +13,8 @@
  */
 const path = require('path');
 
-const serverDir = path.join(__dirname, '..', 'server');
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+const serverDir = path.join(REPO_ROOT, 'apps/delivery-ops/server');
 require(require.resolve('dotenv', { paths: [serverDir] })).config({
   path: process.env.ENV_FILE || path.join(serverDir, '.env'),
 });

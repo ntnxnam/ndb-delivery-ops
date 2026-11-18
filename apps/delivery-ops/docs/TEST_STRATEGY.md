@@ -127,7 +127,7 @@ This document defines the overarching testing philosophy, coverage model, toolin
 | Integration tests | All pass |
 | Statement coverage on modified modules | ≥ 80% |
 | ESLint | Zero errors; `react-hooks/exhaustive-deps` enabled |
-| No `localhost` in production code | `scripts/check-no-localhost.js` passes |
+| No `localhost` in production code | `scripts/lighthouse/checks/check-no-localhost.js` passes |
 | API doc | New endpoints documented in `docs/api/{resource}.md` |
 | No new inline `customfield_NNNNN` | grep check passes |
 | No JQL string modified without approval | `jql-edit-approval` rule |
@@ -177,7 +177,7 @@ This document defines the overarching testing philosophy, coverage model, toolin
 | SMTP mocking | nodemailer-mock |
 | Coverage reporting | Jest `--coverage` → lcov |
 | Linter | ESLint (`react-hooks/exhaustive-deps` enforced) |
-| Pre-commit check | `scripts/check-no-localhost.js` |
+| Pre-commit check | `scripts/lighthouse/checks/check-no-localhost.js` |
 
 ---
 

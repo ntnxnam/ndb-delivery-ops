@@ -253,6 +253,7 @@ function EmailSender({ onLogout: _onLogout }) {
                 release={jiraData.fixVersions && jiraData.fixVersions !== 'N/A' ? jiraData.fixVersions.split(',')[0].trim() : null}
                 draft={aiSummaryDraft}
                 onDraftChange={setAiSummaryDraft}
+                loadingBreakdown={fetchingEpics || fetchingBreakdown}
               />
             </details>
 

@@ -1,4 +1,4 @@
-# NDB Status Update Sender – Developer Guide
+# Portfolio Delivery Ops — Developer Guide
 
 This guide helps new developers assimilate the codebase quickly. For end-user usage, see [README.md](../README.md).
 
@@ -6,7 +6,7 @@ This guide helps new developers assimilate the codebase quickly. For end-user us
 
 ## 1. Project Overview
 
-**NDB Status Update Sender** is a full-stack web application for the NDB team at Nutanix. It:
+**Portfolio Delivery Ops** is a full-stack web application for portfolio delivery operations across products (NDB is one tenant; DataLens and others are equally valid). It:
 
 1. **Sends status update emails** – Confluence content, JIRA ticket data, and release info
 2. **Tracks JIRA release versions** – Issues by fix version, checkpoint dates, Gantt charts
@@ -24,13 +24,13 @@ It integrates with **Confluence**, **JIRA**, and **SMTP** (Nutanix mail relay). 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     React Client (port 6100)                      │
+│                     React Client (port 8899)                      │
 │  Email Sender | Release Versions | Generic Emailer | KPIs | etc.  │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ proxy → localhost:6001
+                             │ proxy → localhost:8001
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  Express Server (port 6001)                       │
+│                  Express Server (port 8001)                       │
 │  /api/config | /api/auth | /api/jira | /api/email | /api/status   │
 └──────┬──────────────┬──────────────┬──────────────┬─────────────┘
        │              │              │              │
@@ -43,7 +43,7 @@ It integrates with **Confluence**, **JIRA**, and **SMTP** (Nutanix mail relay). 
 
 ```mermaid
 flowchart TB
-    subgraph client [React Client :6100]
+    subgraph client [React Client :8899]
         EmailSender
         ReleaseVersionTab
         GenericEmailer
@@ -51,7 +51,7 @@ flowchart TB
         KPIPage
     end
     
-    subgraph server [Express Server :6001]
+    subgraph server [Express Server :8001]
         subgraph routes [Routes]
             AuthRoutes["/api/auth"]
             JiraRoutes["/api/jira"]
@@ -79,54 +79,53 @@ flowchart TB
 ### Directory Structure
 
 ```
-ndb-status-update-sender/
-├── client/                        # React 18 frontend
-│   ├── src/
-│   │   ├── App.js                 # Main app, routing, auth
-│   │   ├── components/            # UI components — render only, no direct fetch calls
-│   │   ├── constants/             # Shared UI constants (never inline in components)
-│   │   │   └── releaseStatus.js   # JIRA_COLOR_MAP, RISK_COLOR_MAP, status sets
-│   │   ├── hooks/                 # Custom hooks — all data fetching lives here
-│   │   │   ├── index.js           # Barrel export for all hooks
-│   │   │   ├── useTeams.js        # GET /api/config/teams (shared across 4 pages)
-│   │   │   ├── useGenericEmailerConfig.js
-│   │   │   ├── useReleaseItems.js
-│   │   │   ├── useTcmsData.js
-│   │   │   └── ...
-│   │   ├── services/              # API call wrappers — one function per endpoint group
-│   │   │   ├── confluenceService.js   # populate, extract Confluence pages
-│   │   │   ├── jiraQueryService.js    # ad-hoc JQL execution
-│   │   │   └── taskBreakdownService.js
-│   │   └── utils/
-│   │       ├── api.js             # authenticatedPost/Get helpers (use these, not axios)
-│   │       ├── jiraFields.js      # ALL customfield_NNNNN constants — import, never inline
-│   │       └── jiraConfig.js
+portfolio-delivery-ops/
+├── apps/delivery-ops/
+│   ├── client/                        # React 18 frontend (PORT=8899, proxy → localhost:8001)
+│   │   ├── src/
+│   │   │   ├── components/            # UI components — render only, no direct fetch calls
+│   │   │   ├── constants/             # Shared UI constants (never inline in components)
+│   │   │   │   └── releaseStatus.js   # JIRA_COLOR_MAP, RISK_COLOR_MAP, status sets
+│   │   │   ├── hooks/                 # Custom hooks — all data fetching lives here
+│   │   │   │   ├── index.js           # Barrel export for all hooks
+│   │   │   │   ├── useTeams.js        # GET /api/config/teams (shared across 4 pages)
+│   │   │   │   ├── useGenericEmailerConfig.js
+│   │   │   │   ├── useReleaseItems.js
+│   │   │   │   ├── useTcmsData.js
+│   │   │   │   └── ...
+│   │   │   ├── services/              # API call wrappers — one function per endpoint group
+│   │   │   │   ├── confluenceService.js   # populate, extract Confluence pages
+│   │   │   │   ├── jiraQueryService.js    # ad-hoc JQL execution
+│   │   │   │   └── taskBreakdownService.js
+│   │   │   ├── utils/
+│   │   │   │   ├── api.js             # authenticatedPost/Get helpers (use these, not axios)
+│   │   │   │   ├── jiraFields.js      # ALL customfield_NNNNN constants — import, never inline
+│   │   │   │   └── jiraConfig.js
+│   │   │   ├── auth/                  # Auth module (LoginForm, AuthContext, permissions)
+│   │   │   └── layout/                # Chrome (Sidebar, Layout)
+│   │   └── package.json               # PORT=8899
+│   ├── server/                        # Node.js/Express backend (PORT=8001)
+│   │   ├── index.js                   # Entry point, middleware, route mounting (default 8001)
+│   │   ├── config/                    # JSON configs (allowedUsers, jiraFieldsConfig, etc.)
+│   │   │   └── jiraFieldsConfig.json  # Server-side JIRA field registry (source of truth)
+│   │   ├── routes/                    # Thin route handlers — validate → call service → respond
+│   │   ├── services/                  # Business logic, orchestration
+│   │   ├── middleware/                # security, validation, auth/jira
+│   │   ├── utils/                     # Pure utilities — jiraQueryUtils, ganttChartEmailGenerator, etc.
+│   │   └── data/                      # emailHistory.json (JSON file DB)
 │   └── package.json
-├── server/                        # Node.js/Express backend
-│   ├── index.js                   # Entry point, middleware, route mounting
-│   ├── config/                    # JSON configs (email, JIRA, Confluence, allowedUsers, etc.)
-│   │   └── jiraFieldsConfig.json  # Server-side JIRA field registry (source of truth)
-│   ├── routes/                    # Thin route handlers — validate → call service → respond
-│   ├── services/                  # Business logic, orchestration
-│   ├── middleware/                # security, validation, auth/jira
-│   ├── utils/                     # Pure utilities — jiraQueryUtils, ganttChartEmailGenerator, etc.
-│   └── data/                      # emailHistory.json (JSON file DB)
-├── .cursor/
-│   ├── rules/                     # AI coding rules (always applied)
-│   │   ├── minimal-architecture.mdc          # Layer boundaries, file size limits, field ID constants
-│   │   ├── documentation-consistency.mdc     # Report naming, skill section standards
-│   │   ├── no-localhost.mdc                  # No hardcoded localhost in app code
-│   │   ├── nutanix-jira-date-hierarchy.mdc   # JIRA date field logic by issue type
-│   │   └── react-useeffect-infinite-loop-prevention.md
-│   └── skills/                    # AI task skills
-│       ├── team-exec-release-report/
-│       ├── ticket-insights/  # merged: fetch-project-tickets + issue-type-breakdown
-│       ├── sprint-gantt-chart/
-│       ├── predictive-team-exec-analytics/
-│       └── confluence-width-cleanup/
-├── reports/                       # Generated Team Executive/Sprint/Prediction reports (with frontmatter)
-├── docs/                          # REQUIREMENTS.md, TECH_DESIGN.md, TEST_PLAN.md
-└── package.json                   # Root: concurrently runs server + client
+├── shared/                            # Connectors + domain models + services (shared across workspaces)
+│   ├── connectors/                    # jiraConnector, confluenceConnector, githubConnector, slackConnector, emailConnector
+│   └── src/                           # Domain models, services
+├── agent-pack/                        # Portable agent pack (loaded by every host)
+│   ├── lighthouse/                    # Delivery-ops skills, rules, context, prompts, workflows
+│   └── loom/                          # Builder / automation skills
+├── mcp-server/                        # MCP server — every capability exposed as a tool (mcp/ on disk)
+├── scripts/
+│   ├── lighthouse/                    # Checks (no-localhost, product-agnostic), JIRA helpers, reports, docs-build
+│   └── loom/                          # Archive, dev, JIRA scripts
+├── docs/                              # Guides, architecture, product docs
+└── package.json                       # Root workspaces
 ```
 
 ---
@@ -189,33 +188,33 @@ ndb-status-update-sender/
 
 | File | Purpose |
 |------|---------|
-| `server/index.js` | Express app, middleware, route mounting |
-| `server/routes/email/` | Email sending: sendEmail, sendReleaseVersions, sendGenericReminder, preview, schedules, history |
-| `server/routes/jira/index.js` | JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs |
-| `server/services/emailService.js` | SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients |
-| `server/utils/jiraClient.js` | CJS adapter onto shared `JiraConnector` (`getJira`, `searchPages`) |
-| `server/utils/confluenceClient.js` | CJS adapter onto shared `ConfluenceConnector` |
-| `server/utils/emailClient.js` | CJS adapter onto shared `EmailConnector` |
-| `server/services/jiraService.js` | Risk-indicator presentation helpers only |
-| `server/services/userService.js` | Username/email normalization, JIRA user extraction, auth checks |
-| `server/config/jiraFieldsConfig.json` | **Single source of truth** for all JIRA custom field IDs (server side) |
-| `server/utils/jiraQueryUtils.js` | JQL query builders — import here, don't inline JQL in route handlers |
+| `apps/delivery-ops/server/index.js` | Express app, middleware, route mounting |
+| `apps/delivery-ops/server/routes/email/` | Email sending: sendEmail, sendReleaseVersions, sendGenericReminder, preview, schedules, history |
+| `apps/delivery-ops/server/routes/jira/index.js` | JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs |
+| `apps/delivery-ops/server/services/emailService.js` | SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients |
+| `apps/delivery-ops/server/utils/jiraClient.js` | CJS adapter onto shared `JiraConnector` (`getJira`, `searchPages`) |
+| `apps/delivery-ops/server/utils/confluenceClient.js` | CJS adapter onto shared `ConfluenceConnector` |
+| `apps/delivery-ops/server/utils/emailClient.js` | CJS adapter onto shared `EmailConnector` |
+| `apps/delivery-ops/server/services/jiraService.js` | Risk-indicator presentation helpers only |
+| `apps/delivery-ops/server/services/userService.js` | Username/email normalization, JIRA user extraction, auth checks |
+| `apps/delivery-ops/server/config/jiraFieldsConfig.json` | **Single source of truth** for all JIRA custom field IDs (server side) |
+| `apps/delivery-ops/server/utils/jiraQueryUtils.js` | JQL query builders — import here, don't inline JQL in route handlers |
 
 ### Client
 
 | File | Purpose |
 |------|---------|
-| `client/src/App.js` | Routes, auth state, layout |
-| `client/src/components/EmailSender/` | Main email form — JIRA key, highlights/lowlights, send |
-| `client/src/components/ReleaseVersionTab.js` | Release versions UI (render only — fetching via hooks) |
-| `client/src/components/GenericEmailer.js` | JQL-based emailer UI |
-| `client/src/utils/api.js` | `authenticatedPost`, `authenticatedGet` — **use these, not raw axios** |
-| `client/src/utils/jiraFields.js` | **Single source of truth** for all `customfield_NNNNN` constants (client side) |
-| `client/src/constants/releaseStatus.js` | JIRA colour maps, risk colour map, status keyword sets |
-| `client/src/hooks/useTeams.js` | Shared hook: fetches `/api/config/teams` — used by KPI, Sprint, Trends, Emailer pages |
-| `client/src/hooks/useGenericEmailerConfig.js` | Fetches `/api/config/generic-emailer` |
-| `client/src/services/confluenceService.js` | `extractConfluencePage`, `populateJiraData`, `populateConfluencePage` |
-| `client/src/services/jiraQueryService.js` | `runJqlQuery` — ad-hoc JQL via backend proxy |
+| `apps/delivery-ops/client/src/App.js` | Routes, auth state, layout |
+| `apps/delivery-ops/client/src/components/EmailSender/` | Main email form — JIRA key, highlights/lowlights, send |
+| `apps/delivery-ops/client/src/components/ReleaseVersionTab.js` | Release versions UI (render only — fetching via hooks) |
+| `apps/delivery-ops/client/src/components/GenericEmailer.js` | JQL-based emailer UI |
+| `apps/delivery-ops/client/src/utils/api.js` | `authenticatedPost`, `authenticatedGet` — **use these, not raw axios** |
+| `apps/delivery-ops/client/src/utils/jiraFields.js` | **Single source of truth** for all `customfield_NNNNN` constants (client side) |
+| `apps/delivery-ops/client/src/constants/releaseStatus.js` | JIRA colour maps, risk colour map, status keyword sets |
+| `apps/delivery-ops/client/src/hooks/useTeams.js` | Shared hook: fetches `/api/config/teams` — used by KPI, Sprint, Trends, Emailer pages |
+| `apps/delivery-ops/client/src/hooks/useGenericEmailerConfig.js` | Fetches `/api/config/generic-emailer` |
+| `apps/delivery-ops/client/src/services/confluenceService.js` | `extractConfluencePage`, `populateJiraData`, `populateConfluencePage` |
+| `apps/delivery-ops/client/src/services/jiraQueryService.js` | `runJqlQuery` — ad-hoc JQL via backend proxy |
 
 ---
 
@@ -223,17 +222,17 @@ ndb-status-update-sender/
 
 | Config | Purpose |
 |--------|---------|
-| `server/config/allowedUsers.json` | allowedUsers, releaseVersionsEmailSenders, emailHistoryAllowedUsers, kpiTabAllowedUsers, kpiAdminUsers, sprintReportAllowedUsers |
-| `server/config/emailConfig.json` | SMTP host/port; optional smtp.from |
-| `server/config/emailSenderCCConfig.json` | defaultCC for Email Sender |
-| `server/config/releaseVersionsCCConfig.json` | defaultCC, versionDRIs for Release Versions email |
-| `server/config/genericEmailerCCConfig.json` | defaultCC, optionalCCRecipients, projectTeamFields |
-| `server/config/jiraFieldsConfig.json` | JIRA field IDs and display names |
-| `server/config/releaseVersionsColumnsConfig.json` | Release table columns, checkpoint fields, releaseBaseFilters |
-| `server/config/releaseVersionsEmailConfig.json` | Email notes order/labels for release email |
-| `server/config/confluenceConfig.json` | Confluence base URL |
-| `server/config/kpiConfig.json` | KPIs per team |
-| `server/config/teamBoardConfig.json` | Teams, board IDs, sprint field |
+| `apps/delivery-ops/server/config/allowedUsers.json` | allowedUsers, releaseVersionsEmailSenders, emailHistoryAllowedUsers, kpiTabAllowedUsers, kpiAdminUsers, sprintReportAllowedUsers |
+| `apps/delivery-ops/server/config/emailConfig.json` | SMTP host/port; optional smtp.from |
+| `apps/delivery-ops/server/config/emailSenderCCConfig.json` | defaultCC for Email Sender |
+| `apps/delivery-ops/server/config/releaseVersionsCCConfig.json` | defaultCC, versionDRIs for Release Versions email |
+| `apps/delivery-ops/server/config/genericEmailerCCConfig.json` | defaultCC, optionalCCRecipients, projectTeamFields |
+| `apps/delivery-ops/server/config/jiraFieldsConfig.json` | JIRA field IDs and display names |
+| `apps/delivery-ops/server/config/releaseVersionsColumnsConfig.json` | Release table columns, checkpoint fields, releaseBaseFilters |
+| `apps/delivery-ops/server/config/releaseVersionsEmailConfig.json` | Email notes order/labels for release email |
+| `apps/delivery-ops/server/config/confluenceConfig.json` | Confluence base URL |
+| `apps/delivery-ops/server/config/kpiConfig.json` | KPIs per team |
+| `apps/delivery-ops/server/config/teamBoardConfig.json` | Teams, board IDs, sprint field |
 
 ---
 
@@ -241,7 +240,7 @@ ndb-status-update-sender/
 
 | Variable | Purpose |
 |----------|---------|
-| `PORT` | Server port (default 6001) |
+| `PORT` | Server port (default 8001) |
 | `NODE_ENV` | development / production |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | SMTP relay (Nutanix) |
 | `SMTP_FROM` | Optional; From address (must be service account for relay). Default from emailConfig.smtp.from. |
@@ -286,8 +285,8 @@ npm run install-all
 npm run dev
 ```
 
-- Backend: http://localhost:6001  
-- Frontend: http://localhost:6100 (proxies API to 6001)
+- Backend: http://localhost:8001  
+- Frontend: http://localhost:8899 (proxies API to 8001)
 
 See [README.md](../README.md) and [HOW_TO_RUN.md](HOW_TO_RUN.md) for setup and running.
 
@@ -304,8 +303,8 @@ See [README.md](../README.md) and [HOW_TO_RUN.md](HOW_TO_RUN.md) for setup and r
 
 ## 11. Logging & Audit
 
-- **Logger**: `server/utils/logger.js` – `logger.email.attempt/sent/failed`, `logger.audit.action`
-- **Email history**: `server/utils/emailHistoryDB.js` → `server/data/emailHistory.json`
+- **Logger**: `apps/delivery-ops/server/utils/logger.js` – `logger.email.attempt/sent/failed`, `logger.audit.action`
+- **Email history**: `apps/delivery-ops/server/utils/emailHistoryDB.js` → `apps/delivery-ops/server/data/emailHistory.json`
 - **Logging guide**: [LOGGING_GUIDE.md](LOGGING_GUIDE.md)
 
 ---
@@ -314,16 +313,16 @@ See [README.md](../README.md) and [HOW_TO_RUN.md](HOW_TO_RUN.md) for setup and r
 
 After the refactor from the improvement plan:
 
-- **Email routes**: `server/routes/email/` (index, sendEmail, sendReleaseVersions, sendGenericReminder, schedules, history, middleware)
-- **JIRA routes**: `server/routes/jira/` (index, auth, fetch, releaseVersions, search, kpi, helpers)
-- **EmailSender UI**: `client/src/components/EmailSender/` (index, JiraTicketForm, JiraDataDisplay, EpicsSection, IssueBreakdown, HighlightsLowlightsEditor, EmailActions, hooks, utils)
-- **Shared**: `client/src/components/shared/OutlookFallback.js` for "Open in Outlook" (mailto + OWA)
+- **Email routes**: `apps/delivery-ops/server/routes/email/` (index, sendEmail, sendReleaseVersions, sendGenericReminder, schedules, history, middleware)
+- **JIRA routes**: `apps/delivery-ops/server/routes/jira/` (index, auth, fetch, releaseVersions, search, kpi, helpers)
+- **EmailSender UI**: `apps/delivery-ops/client/src/components/EmailSender/` (index, JiraTicketForm, JiraDataDisplay, EpicsSection, IssueBreakdown, HighlightsLowlightsEditor, EmailActions, hooks, utils)
+- **Shared**: `apps/delivery-ops/client/src/components/shared/OutlookFallback.js` for "Open in Outlook" (mailto + OWA)
 
 ---
 
 ## 13. Architecture Rules (AI + Human)
 
-The cross-project rules live at the user level under `~/.cursor/rules/` and apply to every NDB-Ops repo. Project-specific deltas live in this repo's `.cursor/rules/`. Both layers are enforced by the AI coding agent and code review. See also `~/.cursor/AGENTS.md` for the layered loading order.
+The cross-project rules live at the user level under `~/.cursor/rules/` and apply to every portfolio repo. Project-specific deltas live in `agent-pack/lighthouse/rules/` (with legacy `.cursor/rules/` shims). Both layers are enforced by the AI coding agent and code review. See also `~/.cursor/AGENTS.md` for the layered loading order.
 
 ### Layer boundaries — `minimal-architecture.mdc`
 
@@ -345,8 +344,8 @@ The cross-project rules live at the user level under `~/.cursor/rules/` and appl
 | Service / util | 200 lines | 500 lines |
 
 **JIRA custom field IDs:**
-- Client: always import from `client/src/utils/jiraFields.js` — never write `customfield_NNNNN` inline
-- Server: always use `server/utils/jiraFieldsConfig.js` or `server/config/jiraFieldsConfig.json`
+- Client: always import from `apps/delivery-ops/client/src/utils/jiraFields.js` — never write `customfield_NNNNN` inline
+- Server: always use `apps/delivery-ops/server/utils/jiraFieldsConfig.js` or `apps/delivery-ops/server/config/jiraFieldsConfig.json`
 
 **API calls in components:**
 - Wrong: `import axios from 'axios'` inside `components/`

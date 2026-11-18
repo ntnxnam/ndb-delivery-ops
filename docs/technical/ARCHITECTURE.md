@@ -271,7 +271,7 @@ blanket project filter on the fetch.
 │       │       ├── auth/                JIRA PAT auth, role detection
 │       │       └── shared/              common components, hooks
 │       │
-│       └── server/                      Express (port 6001)
+│       └── server/                      Express (port 8001)
 │           ├── routes/                  thin route handlers per domain
 │           ├── services/                business logic per domain
 │           └── middleware/              auth, rate-limit, error, timeout

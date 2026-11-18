@@ -2,8 +2,8 @@
 # fetch-jch-tickets.sh
 #
 # Usage:
-#   ./scripts/fetch-jch-tickets.sh <JIRA_PAT>   ← saves token to ~/.jira-pat and runs
-#   ./scripts/fetch-jch-tickets.sh               ← uses existing ~/.jira-pat
+#   ./scripts/loom/jira/fetch-jch-tickets.sh <JIRA_PAT>   ← saves token to ~/.jira-pat and runs
+#   ./scripts/loom/jira/fetch-jch-tickets.sh               ← uses existing ~/.jira-pat
 #
 # Output:
 #   /tmp/jch-tickets.json       raw JIRA response
@@ -26,7 +26,7 @@ fi
 if [ ! -f "$PAT_FILE" ]; then
   echo ""
   echo "ERROR: No PAT found."
-  echo "Usage: ./scripts/fetch-jch-tickets.sh <YOUR_JIRA_PAT>"
+  echo "Usage: ./scripts/loom/jira/fetch-jch-tickets.sh <YOUR_JIRA_PAT>"
   echo "  or:  echo 'token' > ~/.jira-pat && chmod 600 ~/.jira-pat"
   echo ""
   echo "Get your PAT: JIRA → Avatar → Profile → Personal Access Tokens"

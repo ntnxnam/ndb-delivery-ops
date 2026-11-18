@@ -152,10 +152,10 @@ const fetchJiraData = async () => {
       setSuccess('JIRA ticket data fetched successfully');
       setError('');
       
-      // Automatically fetch epics (which now includes issue breakdown) after JIRA data is fetched
+      // Pass fresh data directly — do not rely on closure over jiraData which is still null this render
       if (jiraToken) {
-        fetchEpics();
-        fetchSprintGanttData();
+        fetchEpics({ jiraKey: jiraKey.trim(), jiraData: response.data.data });
+        fetchSprintGanttData({ jiraKey: jiraKey.trim(), jiraData: response.data.data });
       }
     } else {
       throw new Error('Invalid response format from server');
@@ -177,8 +177,10 @@ const fetchJiraData = async () => {
   }
 };
 
-const fetchEpics = async () => {
-  if (!jiraKey.trim() || !jiraToken) {
+const fetchEpics = async (opts = {}) => {
+  const freshKey = (opts.jiraKey || jiraKey || '').trim();
+  const freshJiraData = opts.jiraData !== undefined ? opts.jiraData : jiraData;
+  if (!freshKey || !jiraToken) {
     return;
   }
 
@@ -186,11 +188,9 @@ const fetchEpics = async () => {
   setEpics(null);
 
   try {
-    // OPTIMIZATION: Pass already-fetched jiraData to avoid redundant API call
-    // Using the renamed endpoint: fetch-all-jira-tickets (formerly fetch-epics)
     const response = await authenticatedPost('/api/jira/fetch-all-jira-tickets', {
-      jiraKey: jiraKey.trim(),
-      jiraData: jiraData || undefined  // Pass cached data if available
+      jiraKey: freshKey,
+      jiraData: freshJiraData || undefined
     }, { jiraToken, username });
 
     if (response.data.success) {
@@ -201,14 +201,14 @@ const fetchEpics = async () => {
       setFetchingBreakdown(false);
 
       // Feature Dashboard: epic set + KPI extras (same canonical payload as Feature Dashboard page).
-      const releaseHint = (jiraData?.fixVersions || '')
+      const releaseHint = (freshJiraData?.fixVersions || '')
         .split(',')
         .map((s) => s.trim())
         .find((s) => s && s !== 'N/A');
-      if (releaseHint && jiraKey.trim()) {
+      if (releaseHint && freshKey) {
         fetchFeatureDashboard({
           release: releaseHint,
-          featureKey: jiraKey.trim(),
+          featureKey: freshKey,
           teamId: selectedTeamId || 'ndb',
           jiraToken,
           username,
@@ -222,8 +222,8 @@ const fetchEpics = async () => {
             });
             const fdEpics = buildEpicsFromFeatureDashboard(
               data?.payload?.canonical,
-              jiraKey.trim(),
-              { rootIssueType: jiraData?.issueType }
+              freshKey,
+              { rootIssueType: freshJiraData?.issueType }
             );
             if (fdEpics && fdEpics.length > 0) {
               setEpics(fdEpics);
@@ -274,8 +274,11 @@ const _fetchIssueBreakdown = async () => {
   }
 };
 
-const fetchSprintGanttData = async () => {
-  if (!jiraKey.trim() || !jiraToken) {
+const fetchSprintGanttData = async (opts = {}) => {
+  const freshKey = (opts.jiraKey || jiraKey || '').trim();
+  const freshJiraData = opts.jiraData !== undefined ? opts.jiraData : jiraData;
+  const freshEpics = opts.epics !== undefined ? opts.epics : epics;
+  if (!freshKey || !jiraToken) {
     return;
   }
 
@@ -284,9 +287,9 @@ const fetchSprintGanttData = async () => {
 
   try {
     const response = await authenticatedPost('/api/jira/sprint-gantt-data', {
-      jiraKey: jiraKey.trim(),
-      jiraData: jiraData || undefined,
-      epics: epics || undefined
+      jiraKey: freshKey,
+      jiraData: freshJiraData || undefined,
+      epics: freshEpics || undefined
     }, { jiraToken, username });
 
     if (response.data.success) {

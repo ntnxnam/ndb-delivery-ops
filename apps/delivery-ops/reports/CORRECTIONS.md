@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-13T02:48:00Z → corrected 2026-11-13T12:40:00Z
 **Report:** NDB-2.10 / NDB-2.11 / NDB-2.12 — Feature/Initiative/KPI/Gantt slide-deck
-**Generator:** `scripts/generate-past-release-report.mjs`
+**Generator:** `scripts/lighthouse/reports/generate-past-release-report.mjs` (moved from `scripts/` in Nov 2026 reorg)
 **Evidence:** `apps/delivery-ops/reports/_verify-2026-11-13-jql-totals.json` (updated)
 
 ## Correction #1 — Missing `fixVersion` in KPI JQL (CRITICAL)
@@ -35,7 +35,7 @@
 
 ## Correction #3 — Stat-card ternary bug
 
-**File:** `scripts/generate-past-release-report.mjs:144` — `Via filter: ${i.viaFilter===f.viaFilter?f.viaFilter:f.viaFilter}` always returned `f.viaFilter`.
+**File:** `scripts/lighthouse/reports/generate-past-release-report.mjs:144` — `Via filter: ${i.viaFilter===f.viaFilter?f.viaFilter:f.viaFilter}` always returned `f.viaFilter`.
 **Fix:** Direct `f.viaFilter` / `i.viaFilter` separately; removed dead ternary.
 
 ## Correction #4 — Integrated Version field 11360 (customfield_11360)
@@ -83,7 +83,7 @@
 
 **Reported:** EC is "Execute Commit" (user clarification 2026-11-13; clarified before).
 
-**Mistake:** Generator `scripts/generate-past-release-report.mjs:103` and `shared/src/services/gateTimelineService.ts:11,97,140` labeled EC as "Early Commitment" / "Early Commit".
+**Mistake:** Generator `scripts/lighthouse/reports/generate-past-release-report.mjs:103` and `shared/src/services/gateTimelineService.ts:11,97,140` labeled EC as "Early Commitment" / "Early Commit".
 
 **Impact:** Gantt gate label and gate table showed wrong gate name; senior exec would see incorrect gate (Early Commitment vs Execute Commit) for EC date (e.g., NDB-2.10 ecDate 2025-03-31, NDB-2.11 2025-12-09, NDB-2.12 2026-05-14).
 

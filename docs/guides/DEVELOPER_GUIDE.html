@@ -1,8 +1,8 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEVELOPER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEVELOPER_GUIDE</span></nav><div class="container"><article class="prose"><h1>NDB Status Update Sender – Developer Guide</h1>
-<p>This guide helps new developers assimilate the codebase quickly. For end-user usage, see <a href="README.md">README.md</a>.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEVELOPER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEVELOPER_GUIDE</span></nav><div class="container"><article class="prose"><h1>Portfolio Delivery Ops — Developer Guide</h1>
+<p>This guide helps new developers assimilate the codebase quickly. For end-user usage, see <a href="../README.md">README.md</a>.</p>
 <hr>
 <h2>1. Project Overview</h2>
-<p><strong>NDB Status Update Sender</strong> is a full-stack web application for the NDB team at Nutanix. It:</p>
+<p><strong>Portfolio Delivery Ops</strong> is a full-stack web application for portfolio delivery operations across products (NDB is one tenant; DataLens and others are equally valid). It:</p>
 <ol>
 <li><strong>Sends status update emails</strong> – Confluence content, JIRA ticket data, and release info</li>
 <li><strong>Tracks JIRA release versions</strong> – Issues by fix version, checkpoint dates, Gantt charts</li>
@@ -15,13 +15,13 @@
 <h2>2. Architecture</h2>
 <h3>High-Level Flow</h3>
 <pre><code>┌─────────────────────────────────────────────────────────────────┐
-│                     React Client (port 6100)                      │
+│                     React Client (port 8899)                      │
 │  Email Sender | Release Versions | Generic Emailer | KPIs | etc.  │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ proxy → localhost:6001
+                             │ proxy → localhost:8001
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  Express Server (port 6001)                       │
+│                  Express Server (port 8001)                       │
 │  /api/config | /api/auth | /api/jira | /api/email | /api/status   │
 └──────┬──────────────┬──────────────┬──────────────┬─────────────┘
        │              │              │              │
@@ -31,7 +31,7 @@
 </code></pre>
 <h3>Mermaid Diagram</h3>
 <pre><code class="language-mermaid">flowchart TB
-    subgraph client [React Client :6100]
+    subgraph client [React Client :8899]
         EmailSender
         ReleaseVersionTab
         GenericEmailer
@@ -39,7 +39,7 @@
         KPIPage
     end
     
-    subgraph server [Express Server :6001]
+    subgraph server [Express Server :8001]
         subgraph routes [Routes]
             AuthRoutes[&quot;/api/auth&quot;]
             JiraRoutes[&quot;/api/jira&quot;]
@@ -64,54 +64,53 @@
     server --&gt;|file| JSONStorage[JSON Config/Data]
 </code></pre>
 <h3>Directory Structure</h3>
-<pre><code>ndb-status-update-sender/
-├── client/                        # React 18 frontend
-│   ├── src/
-│   │   ├── App.js                 # Main app, routing, auth
-│   │   ├── components/            # UI components — render only, no direct fetch calls
-│   │   ├── constants/             # Shared UI constants (never inline in components)
-│   │   │   └── releaseStatus.js   # JIRA_COLOR_MAP, RISK_COLOR_MAP, status sets
-│   │   ├── hooks/                 # Custom hooks — all data fetching lives here
-│   │   │   ├── index.js           # Barrel export for all hooks
-│   │   │   ├── useTeams.js        # GET /api/config/teams (shared across 4 pages)
-│   │   │   ├── useGenericEmailerConfig.js
-│   │   │   ├── useReleaseItems.js
-│   │   │   ├── useTcmsData.js
-│   │   │   └── ...
-│   │   ├── services/              # API call wrappers — one function per endpoint group
-│   │   │   ├── confluenceService.js   # populate, extract Confluence pages
-│   │   │   ├── jiraQueryService.js    # ad-hoc JQL execution
-│   │   │   └── taskBreakdownService.js
-│   │   └── utils/
-│   │       ├── api.js             # authenticatedPost/Get helpers (use these, not axios)
-│   │       ├── jiraFields.js      # ALL customfield_NNNNN constants — import, never inline
-│   │       └── jiraConfig.js
+<pre><code>portfolio-delivery-ops/
+├── apps/delivery-ops/
+│   ├── client/                        # React 18 frontend (PORT=8899, proxy → localhost:8001)
+│   │   ├── src/
+│   │   │   ├── components/            # UI components — render only, no direct fetch calls
+│   │   │   ├── constants/             # Shared UI constants (never inline in components)
+│   │   │   │   └── releaseStatus.js   # JIRA_COLOR_MAP, RISK_COLOR_MAP, status sets
+│   │   │   ├── hooks/                 # Custom hooks — all data fetching lives here
+│   │   │   │   ├── index.js           # Barrel export for all hooks
+│   │   │   │   ├── useTeams.js        # GET /api/config/teams (shared across 4 pages)
+│   │   │   │   ├── useGenericEmailerConfig.js
+│   │   │   │   ├── useReleaseItems.js
+│   │   │   │   ├── useTcmsData.js
+│   │   │   │   └── ...
+│   │   │   ├── services/              # API call wrappers — one function per endpoint group
+│   │   │   │   ├── confluenceService.js   # populate, extract Confluence pages
+│   │   │   │   ├── jiraQueryService.js    # ad-hoc JQL execution
+│   │   │   │   └── taskBreakdownService.js
+│   │   │   ├── utils/
+│   │   │   │   ├── api.js             # authenticatedPost/Get helpers (use these, not axios)
+│   │   │   │   ├── jiraFields.js      # ALL customfield_NNNNN constants — import, never inline
+│   │   │   │   └── jiraConfig.js
+│   │   │   ├── auth/                  # Auth module (LoginForm, AuthContext, permissions)
+│   │   │   └── layout/                # Chrome (Sidebar, Layout)
+│   │   └── package.json               # PORT=8899
+│   ├── server/                        # Node.js/Express backend (PORT=8001)
+│   │   ├── index.js                   # Entry point, middleware, route mounting (default 8001)
+│   │   ├── config/                    # JSON configs (allowedUsers, jiraFieldsConfig, etc.)
+│   │   │   └── jiraFieldsConfig.json  # Server-side JIRA field registry (source of truth)
+│   │   ├── routes/                    # Thin route handlers — validate → call service → respond
+│   │   ├── services/                  # Business logic, orchestration
+│   │   ├── middleware/                # security, validation, auth/jira
+│   │   ├── utils/                     # Pure utilities — jiraQueryUtils, ganttChartEmailGenerator, etc.
+│   │   └── data/                      # emailHistory.json (JSON file DB)
 │   └── package.json
-├── server/                        # Node.js/Express backend
-│   ├── index.js                   # Entry point, middleware, route mounting
-│   ├── config/                    # JSON configs (email, JIRA, Confluence, allowedUsers, etc.)
-│   │   └── jiraFieldsConfig.json  # Server-side JIRA field registry (source of truth)
-│   ├── routes/                    # Thin route handlers — validate → call service → respond
-│   ├── services/                  # Business logic, orchestration
-│   ├── middleware/                # security, validation, auth/jira
-│   ├── utils/                     # Pure utilities — jiraQueryUtils, ganttChartEmailGenerator, etc.
-│   └── data/                      # emailHistory.json (JSON file DB)
-├── .cursor/
-│   ├── rules/                     # AI coding rules (always applied)
-│   │   ├── minimal-architecture.mdc          # Layer boundaries, file size limits, field ID constants
-│   │   ├── documentation-consistency.mdc     # Report naming, skill section standards
-│   │   ├── no-localhost.mdc                  # No hardcoded localhost in app code
-│   │   ├── nutanix-jira-date-hierarchy.mdc   # JIRA date field logic by issue type
-│   │   └── react-useeffect-infinite-loop-prevention.md
-│   └── skills/                    # AI task skills
-│       ├── team-exec-release-report/
-│       ├── ticket-insights/  # merged: fetch-project-tickets + issue-type-breakdown
-│       ├── sprint-gantt-chart/
-│       ├── predictive-team-exec-analytics/
-│       └── confluence-width-cleanup/
-├── reports/                       # Generated Team Executive/Sprint/Prediction reports (with frontmatter)
-├── docs/                          # REQUIREMENTS.md, TECH_DESIGN.md, TEST_PLAN.md
-└── package.json                   # Root: concurrently runs server + client
+├── shared/                            # Connectors + domain models + services (shared across workspaces)
+│   ├── connectors/                    # jiraConnector, confluenceConnector, githubConnector, slackConnector, emailConnector
+│   └── src/                           # Domain models, services
+├── agent-pack/                        # Portable agent pack (loaded by every host)
+│   ├── lighthouse/                    # Delivery-ops skills, rules, context, prompts, workflows
+│   └── loom/                          # Builder / automation skills
+├── mcp-server/                        # MCP server — every capability exposed as a tool (mcp/ on disk)
+├── scripts/
+│   ├── lighthouse/                    # Checks (no-localhost, product-agnostic), JIRA helpers, reports, docs-build
+│   └── loom/                          # Archive, dev, JIRA scripts
+├── docs/                              # Guides, architecture, product docs
+└── package.json                       # Root workspaces
 </code></pre>
 <hr>
 <h2>3. Main Features</h2>
@@ -174,47 +173,47 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>server/index.js</code></td>
+<td><code>apps/delivery-ops/server/index.js</code></td>
 <td>Express app, middleware, route mounting</td>
 </tr>
 <tr>
-<td><code>server/routes/email/</code></td>
+<td><code>apps/delivery-ops/server/routes/email/</code></td>
 <td>Email sending: sendEmail, sendReleaseVersions, sendGenericReminder, preview, schedules, history</td>
 </tr>
 <tr>
-<td><code>server/routes/jira/index.js</code></td>
+<td><code>apps/delivery-ops/server/routes/jira/index.js</code></td>
 <td>JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs</td>
 </tr>
 <tr>
-<td><code>server/services/emailService.js</code></td>
+<td><code>apps/delivery-ops/server/services/emailService.js</code></td>
 <td>SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients</td>
 </tr>
 <tr>
-<td><code>server/utils/jiraClient.js</code></td>
+<td><code>apps/delivery-ops/server/utils/jiraClient.js</code></td>
 <td>CJS adapter onto shared <code>JiraConnector</code> (<code>getJira</code>, <code>searchPages</code>)</td>
 </tr>
 <tr>
-<td><code>server/utils/confluenceClient.js</code></td>
+<td><code>apps/delivery-ops/server/utils/confluenceClient.js</code></td>
 <td>CJS adapter onto shared <code>ConfluenceConnector</code></td>
 </tr>
 <tr>
-<td><code>server/utils/emailClient.js</code></td>
+<td><code>apps/delivery-ops/server/utils/emailClient.js</code></td>
 <td>CJS adapter onto shared <code>EmailConnector</code></td>
 </tr>
 <tr>
-<td><code>server/services/jiraService.js</code></td>
+<td><code>apps/delivery-ops/server/services/jiraService.js</code></td>
 <td>Risk-indicator presentation helpers only</td>
 </tr>
 <tr>
-<td><code>server/services/userService.js</code></td>
+<td><code>apps/delivery-ops/server/services/userService.js</code></td>
 <td>Username/email normalization, JIRA user extraction, auth checks</td>
 </tr>
 <tr>
-<td><code>server/config/jiraFieldsConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/jiraFieldsConfig.json</code></td>
 <td><strong>Single source of truth</strong> for all JIRA custom field IDs (server side)</td>
 </tr>
 <tr>
-<td><code>server/utils/jiraQueryUtils.js</code></td>
+<td><code>apps/delivery-ops/server/utils/jiraQueryUtils.js</code></td>
 <td>JQL query builders — import here, don&#39;t inline JQL in route handlers</td>
 </tr>
 </tbody></table>
@@ -227,47 +226,47 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>client/src/App.js</code></td>
+<td><code>apps/delivery-ops/client/src/App.js</code></td>
 <td>Routes, auth state, layout</td>
 </tr>
 <tr>
-<td><code>client/src/components/EmailSender/</code></td>
+<td><code>apps/delivery-ops/client/src/components/EmailSender/</code></td>
 <td>Main email form — JIRA key, highlights/lowlights, send</td>
 </tr>
 <tr>
-<td><code>client/src/components/ReleaseVersionTab.js</code></td>
+<td><code>apps/delivery-ops/client/src/components/ReleaseVersionTab.js</code></td>
 <td>Release versions UI (render only — fetching via hooks)</td>
 </tr>
 <tr>
-<td><code>client/src/components/GenericEmailer.js</code></td>
+<td><code>apps/delivery-ops/client/src/components/GenericEmailer.js</code></td>
 <td>JQL-based emailer UI</td>
 </tr>
 <tr>
-<td><code>client/src/utils/api.js</code></td>
+<td><code>apps/delivery-ops/client/src/utils/api.js</code></td>
 <td><code>authenticatedPost</code>, <code>authenticatedGet</code> — <strong>use these, not raw axios</strong></td>
 </tr>
 <tr>
-<td><code>client/src/utils/jiraFields.js</code></td>
+<td><code>apps/delivery-ops/client/src/utils/jiraFields.js</code></td>
 <td><strong>Single source of truth</strong> for all <code>customfield_NNNNN</code> constants (client side)</td>
 </tr>
 <tr>
-<td><code>client/src/constants/releaseStatus.js</code></td>
+<td><code>apps/delivery-ops/client/src/constants/releaseStatus.js</code></td>
 <td>JIRA colour maps, risk colour map, status keyword sets</td>
 </tr>
 <tr>
-<td><code>client/src/hooks/useTeams.js</code></td>
+<td><code>apps/delivery-ops/client/src/hooks/useTeams.js</code></td>
 <td>Shared hook: fetches <code>/api/config/teams</code> — used by KPI, Sprint, Trends, Emailer pages</td>
 </tr>
 <tr>
-<td><code>client/src/hooks/useGenericEmailerConfig.js</code></td>
+<td><code>apps/delivery-ops/client/src/hooks/useGenericEmailerConfig.js</code></td>
 <td>Fetches <code>/api/config/generic-emailer</code></td>
 </tr>
 <tr>
-<td><code>client/src/services/confluenceService.js</code></td>
+<td><code>apps/delivery-ops/client/src/services/confluenceService.js</code></td>
 <td><code>extractConfluencePage</code>, <code>populateJiraData</code>, <code>populateConfluencePage</code></td>
 </tr>
 <tr>
-<td><code>client/src/services/jiraQueryService.js</code></td>
+<td><code>apps/delivery-ops/client/src/services/jiraQueryService.js</code></td>
 <td><code>runJqlQuery</code> — ad-hoc JQL via backend proxy</td>
 </tr>
 </tbody></table>
@@ -281,47 +280,47 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>server/config/allowedUsers.json</code></td>
+<td><code>apps/delivery-ops/server/config/allowedUsers.json</code></td>
 <td>allowedUsers, releaseVersionsEmailSenders, emailHistoryAllowedUsers, kpiTabAllowedUsers, kpiAdminUsers, sprintReportAllowedUsers</td>
 </tr>
 <tr>
-<td><code>server/config/emailConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/emailConfig.json</code></td>
 <td>SMTP host/port; optional smtp.from</td>
 </tr>
 <tr>
-<td><code>server/config/emailSenderCCConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/emailSenderCCConfig.json</code></td>
 <td>defaultCC for Email Sender</td>
 </tr>
 <tr>
-<td><code>server/config/releaseVersionsCCConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/releaseVersionsCCConfig.json</code></td>
 <td>defaultCC, versionDRIs for Release Versions email</td>
 </tr>
 <tr>
-<td><code>server/config/genericEmailerCCConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/genericEmailerCCConfig.json</code></td>
 <td>defaultCC, optionalCCRecipients, projectTeamFields</td>
 </tr>
 <tr>
-<td><code>server/config/jiraFieldsConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/jiraFieldsConfig.json</code></td>
 <td>JIRA field IDs and display names</td>
 </tr>
 <tr>
-<td><code>server/config/releaseVersionsColumnsConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/releaseVersionsColumnsConfig.json</code></td>
 <td>Release table columns, checkpoint fields, releaseBaseFilters</td>
 </tr>
 <tr>
-<td><code>server/config/releaseVersionsEmailConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/releaseVersionsEmailConfig.json</code></td>
 <td>Email notes order/labels for release email</td>
 </tr>
 <tr>
-<td><code>server/config/confluenceConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/confluenceConfig.json</code></td>
 <td>Confluence base URL</td>
 </tr>
 <tr>
-<td><code>server/config/kpiConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/kpiConfig.json</code></td>
 <td>KPIs per team</td>
 </tr>
 <tr>
-<td><code>server/config/teamBoardConfig.json</code></td>
+<td><code>apps/delivery-ops/server/config/teamBoardConfig.json</code></td>
 <td>Teams, board IDs, sprint field</td>
 </tr>
 </tbody></table>
@@ -336,7 +335,7 @@
 </thead>
 <tbody><tr>
 <td><code>PORT</code></td>
-<td>Server port (default 6001)</td>
+<td>Server port (default 8001)</td>
 </tr>
 <tr>
 <td><code>NODE_ENV</code></td>
@@ -406,10 +405,10 @@
 npm run dev
 </code></pre>
 <ul>
-<li>Backend: <a href="http://localhost:6001">http://localhost:6001</a>  </li>
-<li>Frontend: <a href="http://localhost:6100">http://localhost:6100</a> (proxies API to 6001)</li>
+<li>Backend: <a href="http://localhost:8001">http://localhost:8001</a>  </li>
+<li>Frontend: <a href="http://localhost:8899">http://localhost:8899</a> (proxies API to 8001)</li>
 </ul>
-<p>See <a href="README.md">README.md</a> and <a href="HOW_TO_RUN.md">HOW_TO_RUN.md</a> for setup and running.</p>
+<p>See <a href="../README.md">README.md</a> and <a href="HOW_TO_RUN.md">HOW_TO_RUN.md</a> for setup and running.</p>
 <hr>
 <h2>10. Testing</h2>
 <ul>
@@ -421,22 +420,22 @@ npm run dev
 <hr>
 <h2>11. Logging &amp; Audit</h2>
 <ul>
-<li><strong>Logger</strong>: <code>server/utils/logger.js</code> – <code>logger.email.attempt/sent/failed</code>, <code>logger.audit.action</code></li>
-<li><strong>Email history</strong>: <code>server/utils/emailHistoryDB.js</code> → <code>server/data/emailHistory.json</code></li>
+<li><strong>Logger</strong>: <code>apps/delivery-ops/server/utils/logger.js</code> – <code>logger.email.attempt/sent/failed</code>, <code>logger.audit.action</code></li>
+<li><strong>Email history</strong>: <code>apps/delivery-ops/server/utils/emailHistoryDB.js</code> → <code>apps/delivery-ops/server/data/emailHistory.json</code></li>
 <li><strong>Logging guide</strong>: <a href="LOGGING_GUIDE.md">LOGGING_GUIDE.md</a></li>
 </ul>
 <hr>
 <h2>12. Refactored Structure (Post-Plan)</h2>
 <p>After the refactor from the improvement plan:</p>
 <ul>
-<li><strong>Email routes</strong>: <code>server/routes/email/</code> (index, sendEmail, sendReleaseVersions, sendGenericReminder, schedules, history, middleware)</li>
-<li><strong>JIRA routes</strong>: <code>server/routes/jira/</code> (index, auth, fetch, releaseVersions, search, kpi, helpers)</li>
-<li><strong>EmailSender UI</strong>: <code>client/src/components/EmailSender/</code> (index, JiraTicketForm, JiraDataDisplay, EpicsSection, IssueBreakdown, HighlightsLowlightsEditor, EmailActions, hooks, utils)</li>
-<li><strong>Shared</strong>: <code>client/src/components/shared/OutlookFallback.js</code> for &quot;Open in Outlook&quot; (mailto + OWA)</li>
+<li><strong>Email routes</strong>: <code>apps/delivery-ops/server/routes/email/</code> (index, sendEmail, sendReleaseVersions, sendGenericReminder, schedules, history, middleware)</li>
+<li><strong>JIRA routes</strong>: <code>apps/delivery-ops/server/routes/jira/</code> (index, auth, fetch, releaseVersions, search, kpi, helpers)</li>
+<li><strong>EmailSender UI</strong>: <code>apps/delivery-ops/client/src/components/EmailSender/</code> (index, JiraTicketForm, JiraDataDisplay, EpicsSection, IssueBreakdown, HighlightsLowlightsEditor, EmailActions, hooks, utils)</li>
+<li><strong>Shared</strong>: <code>apps/delivery-ops/client/src/components/shared/OutlookFallback.js</code> for &quot;Open in Outlook&quot; (mailto + OWA)</li>
 </ul>
 <hr>
 <h2>13. Architecture Rules (AI + Human)</h2>
-<p>The cross-project rules live at the user level under <code>~/.cursor/rules/</code> and apply to every NDB-Ops repo. Project-specific deltas live in this repo&#39;s <code>.cursor/rules/</code>. Both layers are enforced by the AI coding agent and code review. See also <code>~/.cursor/AGENTS.md</code> for the layered loading order.</p>
+<p>The cross-project rules live at the user level under <code>~/.cursor/rules/</code> and apply to every portfolio repo. Project-specific deltas live in <code>agent-pack/lighthouse/rules/</code> (with legacy <code>.cursor/rules/</code> shims). Both layers are enforced by the AI coding agent and code review. See also <code>~/.cursor/AGENTS.md</code> for the layered loading order.</p>
 <h3>Layer boundaries — <code>minimal-architecture.mdc</code></h3>
 <table>
 <thead>
@@ -504,8 +503,8 @@ npm run dev
 </tbody></table>
 <p><strong>JIRA custom field IDs:</strong></p>
 <ul>
-<li>Client: always import from <code>client/src/utils/jiraFields.js</code> — never write <code>customfield_NNNNN</code> inline</li>
-<li>Server: always use <code>server/utils/jiraFieldsConfig.js</code> or <code>server/config/jiraFieldsConfig.json</code></li>
+<li>Client: always import from <code>apps/delivery-ops/client/src/utils/jiraFields.js</code> — never write <code>customfield_NNNNN</code> inline</li>
+<li>Server: always use <code>apps/delivery-ops/server/utils/jiraFieldsConfig.js</code> or <code>apps/delivery-ops/server/config/jiraFieldsConfig.json</code></li>
 </ul>
 <p><strong>API calls in components:</strong></p>
 <ul>

@@ -50,5 +50,5 @@ source: doc-specialist @ 2026-05-19
 
 - Functional and System rows currently share the same source metrics
   (clone) until TCMS exposes a `test_category` filter. See
-  [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) and
+  [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md) and
   [tcms-rows-followup.md](../tcms-rows-followup.md).

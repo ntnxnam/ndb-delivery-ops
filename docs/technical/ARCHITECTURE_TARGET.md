@@ -20,13 +20,13 @@ status email, executive snapshot — and nothing else.**
 This monorepo is the **fusion** of two predecessor apps, not a port of one
 into the other:
 
-- **React `ndb-status-sender`** brought: Gantt (loved), Release Versions table,
+- **React `ndb-status-sender`** (predecessor — now `apps/delivery-ops`) brought: Gantt (loved), Release Versions table,
   date-mover with audit, email sender, auth + permissions, multi-team context.
 - **Streamlit chatbot app** brought: 3-stream velocity with gate chips,
   landing forecast, burn trajectory, insights engine, NAI chatbot.
 
 For every analytics surface, check the per-surface fusion map in
-[`STREAMLIT_PARITY.md`](./STREAMLIT_PARITY.md) — it lists what each side
+[`STREAMLIT_PARITY.md`](../../generated/handover/STREAMLIT_PARITY.md) — it lists what each side
 contributes and what the fused result should be. Surfaces aren't "done" until
 the fused result is in place. If something is intentionally dropped from
 either side, log it in the doc's "What we deliberately drop" table — never

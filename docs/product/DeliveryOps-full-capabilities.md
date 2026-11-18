@@ -1,12 +1,12 @@
 # NDB Delivery Ops — Full Capability Brief (Exec-Slide Source)
 
 **Document purpose**: Dense source material to convert into executive slides (“what was built”).  
-**Surface**: Delivery Ops web app (React UI typically `:8899` in local; Express API typically `:8001` / `:6001`)  
+**Surface**: Delivery Ops web app (React UI typically `:8899` in local; Express API typically `:8001`)  
 **Scope**: Every navigable page + shared platform chrome  
 **Depth**: Capabilities, audiences, outcomes, UI surface, trust model, and suggested slide talking points  
 
 > Dependency rules SoT:  
-> [`agent-pack/context/domain/dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md)
+> [`agent-pack/lighthouse/context/domain/dependency_rule.md`](../../agent-pack/lighthouse/context/domain/dependency_rule.md)
 
 ---
 
@@ -641,7 +641,7 @@ Read-only NDB-first **3-axis** map for a release: project type × Mode (Dependen
 | Hygiene | NDB: Dependency without wishlist · Them: Commit/Stretch↔fixVersion gaps · Missing labels on they-wait |
 | Safety | **No JIRA link/parent writes** in MVP |
 
-**Rules SoT**: [`dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md) · page docs: requirements + data-layer (rebuild in progress)
+**Rules SoT**: [`dependency_rule.md`](../../agent-pack/lighthouse/context/domain/dependency_rule.md) · page docs: requirements + data-layer (rebuild in progress)
 
 **Talking points**:
 - “Who waits on whom — and whose hygiene is broken — before the next gate.”

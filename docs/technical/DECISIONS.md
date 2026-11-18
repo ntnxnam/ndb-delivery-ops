@@ -797,11 +797,11 @@ deployment.
   delivery-ops has another. The sidebar entry **opens the app in a new
   browser tab** (target=_blank) so the two UIs never have to share a
   viewport. Tried in-place navigation first; user-tested poorly because
-  in dev the React server (8888) and backend (6001) are different ports
+  in dev the React server (8888 at the time; now 8899) and backend (6001 at the time; now 8001) are different ports
   and CRA's string-proxy doesn't forward HTML requests. New tab sidesteps
   the dev/prod port asymmetry entirely.
-- The sidebar link's URL is computed dynamically: in dev (port 8888 React
-  server) it points at `${hostname}:${REACT_APP_BACKEND_PORT || 6001}/bin-packing/`;
+- The sidebar link's URL is computed dynamically: in dev (port 8888 at the time; now 8899 React
+  server) it points at `${hostname}:${REACT_APP_BACKEND_PORT || 6001}/bin-packing/` (now `|| 8001`);
   in prod (same origin) it's a relative `/bin-packing/`. Helper
   `getBinPackingUrl()` in `Sidebar.js`. No hardcoded localhost per
   `no-localhost.mdc` — hostname read from `window.location`.
