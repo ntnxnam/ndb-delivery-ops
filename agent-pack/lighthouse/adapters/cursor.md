@@ -23,4 +23,4 @@ pointer expose it to every host. Never create a Cursor-only long-form copy.
 `.cursor/context/` holds short stubs pointing at `agent-pack/context/`.
 
 MCP registration (`.cursor/mcp.json`) is host config, not cookbook. A
-lifted host registers the same `mcp-server` with its own config.
+lifted host registers the same MCP servers (`mcp/lighthouse` + `mcp/loom`) with its own config.

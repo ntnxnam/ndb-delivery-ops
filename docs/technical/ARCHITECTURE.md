@@ -83,7 +83,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 
 ### Layer 1 — Connectors
 
-Lives in `shared/connectors/` (new). One TypeScript module per external system.
+Lives in `shared/src/connectors/` (one module per external system, re-exported via `@portfolio-delivery-ops/shared`).
 Each connector:
 - Owns auth (PAT, OAuth, API key)
 - Owns retries, timeouts, error wrapping
@@ -92,11 +92,11 @@ Each connector:
 
 | Connector | Purpose | Replaces |
 |---|---|---|
-| `jiraConnector` | All JIRA Data Center REST + Agile API calls. Auth: PAT as `Authorization: Bearer` only (D40). | `shared/connectors/jiraConnector.ts`. MCP's private copy is deleted. |
-| `confluenceConnector` | All Confluence REST calls | `shared/connectors/confluenceConnector.ts`. Express auth via `confluenceClient.js`. Python `tpm-confluence-tools` remains until Phase E. |
-| `githubConnector` | GitHub commits / PRs / repos / CI signals | `shared/connectors/githubConnector.ts`. MCP `leadership_commit_report` is a thin adapter. |
-| `slackConnector` *(new)* | Read channels, post messages, DM agent (D3) | Deferred — no caller yet. Do not add a unused client. |
-| `emailConnector` | Send digests; SMTP transport only | `shared/connectors/emailConnector.ts`. Express `emailService` keeps templates. |
+| `jiraConnector` | All JIRA Data Center REST + Agile API calls. Auth: PAT as `Authorization: Bearer` only (D40). | `shared/src/connectors/jiraConnector.ts`. MCP private copies deleted (D40, D44). |
+| `confluenceConnector` | All Confluence REST calls | `shared/src/connectors/confluenceConnector.ts`. Express via `confluenceClient.js`. Python `tpm-confluence-tools` remains until Phase F. |
+| `githubConnector` | GitHub commits / PRs / repos / CI signals | `shared/src/connectors/githubConnector.ts`. `leadership_commit_report` is a thin adapter. |
+| `slackConnector` *(new)* | Read channels, post messages, DM agent (D3) | Deferred — no caller yet. Do not add an unused client. |
+| `emailConnector` | Send digests; SMTP transport only | `shared/src/connectors/emailConnector.ts`. Express `emailService` keeps templates. |
 | `aiConnector` | LLM transport only (`chatCompletion`) — no domain prompts | `naiService.chatCompletion` internals (now delegates here) |
 
 ### Layer 2 — Domain models
@@ -114,7 +114,7 @@ Both server-side services and React components import from here.
 
 ### Layer 3 — Services
 
-Lives in `server/services/` (in `apps/delivery-ops/`). Each service owns
+Lives in `shared/src/services/` (consumed by `apps/delivery-ops/server` and `mcp/*`). Each service owns
 one domain's business logic. A service:
 - Calls connectors (Layer 1)
 - Uses domain models (Layer 2)
@@ -281,13 +281,16 @@ blanket project filter on the fetch.
 │   ├── loom/ (builder MCP, 8 shared)
 │   └── shared/ (8 shared tools source)
 │
-├── shared/                              NEW — cross-runtime code
-│   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector
-│   ├── domain/                          CJS/browser derives (D41): signals, analytics, bundle
-│   ├── agentPack/                       loadAgentPack (D38)
-│   ├── agentRuntime/                    runAgentTurn (D39) + memory/HITL (D42)
-│   ├── types/                           Release, Ticket, Persona, RAG, …
-│   └── utils/                           date logic, JQL builders, ID maps
+├── shared/                              cross-runtime code (`@portfolio-delivery-ops/shared`)
+│   ├── src/
+│   │   ├── connectors/                  jiraConnector, confluenceConnector, githubConnector, aiConnector, emailConnector
+│   │   ├── domain/                      CJS/browser derives (D41): signals, analytics, bundle
+│   │   ├── agentPack/                   loadAgentPack (D38)
+│   │   ├── agentRuntime/                runAgentTurn (D39) + memory/HITL (D42)
+│   │   ├── services/                    productService, payloadJqlService, releaseDatasetService, …
+│   │   ├── types/                       Release, Ticket, Persona, RAG, …
+│   │   └── utils/                       date logic, JQL builders, ID maps
+│   └── .cache/                          (gitignored) per-release bundles
 │
 ├── crystalball-i/                       AI prediction engine (used by predictabilityService)
 │
@@ -315,7 +318,7 @@ Two things go away vs. today:
 - `apps/tpm-confluence-tools/` (Streamlit) — its features move into
   `apps/delivery-ops/client/src/domains/confluence/`
 - The duplicated JIRA / Confluence code in route files, components, and the
-  Streamlit app — consolidated into `shared/connectors/`
+  Streamlit app — consolidated into `shared/src/connectors/`
 
 ---
 
@@ -351,8 +354,8 @@ per-capability ports is `CONSOLIDATION.md`.
 | Phase | What | Status (as of Session 2026-05-20) |
 |---|---|---|
 | **A. AI layer rebuild** | Orchestrator agent + 6 specialists + 13 skills + 9 rules + 3 workflows + persona-aware sidebar foundations | ✅ done — commit `54bb48a` |
-| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express reaches it via `server/utils/jiraClient.js`; MCP constructs `JiraConnector` directly. Data Center Bearer PAT only |
-| **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
+| **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/src/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copies deleted (D40, D44). Express reaches it via `server/utils/jiraClient.js`; `mcp/*` construct `JiraConnector` from `@portfolio-delivery-ops/shared`. Data Center Bearer PAT only |
+| **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/src/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
 | **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 GitHub + Email + AI landed. Slack deferred until a real caller exists. Python Confluence client stays until Phase E. |
 | **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~7 of 20 capabilities done: #1a payload JQL, #1b dataset trunk, **#2 velocity (trunk + cache-first route)**, #3 insights first slice, **#4 landing forecast (trunk + cache-first route)**, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |
 | **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | 🟡 SyncHubPage simplified (one Sync Now button). Insights + Sprint Analysis still pending. |
