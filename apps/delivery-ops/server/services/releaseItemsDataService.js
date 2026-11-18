@@ -7,7 +7,7 @@ const {
 const { searchPages, wrapJiraError } = require('../utils/jiraClient');
 const { extractUserName, extractAssigneeName } = require('./userService');
 const { getCached, setCached } = require('../utils/simpleCache');
-const { extractTextFieldValue } = require('../utils/adfText');
+const { extractTextFieldValue, extractPlainTextFieldValue } = require('../utils/adfText');
 const { getSprintsForBoard, resolveSprintState } = require('../utils/sprintCache');
 const { resolveRequestedTeam } = require('../utils/jiraRouteHelpers');
 const { getTeamBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
@@ -21,6 +21,16 @@ function asStoredField(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'object') {
     if (value.type === 'doc') return extractTextFieldValue(value);
+    return value.value || value.url || value.name || null;
+  }
+  return String(value);
+}
+
+function asStoredPlainText(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value.type === 'doc') return extractPlainTextFieldValue(value);
     return value.value || value.url || value.name || null;
   }
   return String(value);
@@ -122,8 +132,8 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       customfield_23073: issue.fields.customfield_23073,
       customfield_45660: issue.fields.customfield_45660,
       customfield_23560: riskIndicator,
-      customfield_47780: asStoredField(issue.fields.customfield_47780),
-      customfield_55664: asStoredField(issue.fields.customfield_55664),
+      customfield_47780: asStoredPlainText(issue.fields.customfield_47780),
+      customfield_55664: asStoredPlainText(issue.fields.customfield_55664),
       customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
       // Expose as { parent, child } so the UI can filter on either level.
       primaryComponent: parsePrimaryComponent(issue.fields[PRIMARY_COMPONENT_FIELD]),

@@ -27,9 +27,31 @@ function isJiraStatusWithTick(statusStr, statusesWithTick) {
   return statusesWithTick.some(s => String(s).trim().toLowerCase() === normalized);
 }
 
+function stripHtmlTags(html) {
+  return String(html)
+    .replace(/<\/(p|div|h[1-6]|li|tr|ul|ol|blockquote|pre)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
 function plainFieldText(value) {
   if (value == null || value === '') return '';
-  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'string') {
+    const t = value.trim();
+    // Defensive: cached payloads may still carry HTML from before the server fix
+    if (t.startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(t)) return stripHtmlTags(t);
+    return t;
+  }
   if (typeof value === 'object') {
     return String(value.value || value.url || value.name || '').trim();
   }
