@@ -35,6 +35,7 @@ import SosSummaryPage from './components/SosSummaryPage';
 import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
 import DependencyViewPage from './components/DependencyViewPage';
 import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
+import TeamOverallReportPage from './components/TeamOverallReportPage';
 
 import './App.css';
 
@@ -283,6 +284,18 @@ const AuthenticatedApp = () => {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/team-overall-report"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout wide>
+                        <TeamOverallReportPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/overall-team-report" element={<Navigate to="/team-overall-report" replace />} />
+                <Route path="/team-overall" element={<Navigate to="/team-overall-report" replace />} />
                 <Route
                   path="/deferral-workbench"
                   element={<Navigate to="/release-outstanding-work" replace />}

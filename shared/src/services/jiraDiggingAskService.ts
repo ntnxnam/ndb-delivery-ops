@@ -225,7 +225,19 @@ export async function answerDiggingAsk(opts: AnswerDiggingAskOptions): Promise<A
     { role: 'user', content: user },
   ];
   const turn = await completeChat(messages, { temperature: 0.2, maxTokens: 1200 });
-  const reply = String(turn.content || '').trim();
+  let reply = String(turn.content || '').trim();
   if (!reply) throw new Error('LLM returned empty reply');
+  // Citation post-validate: strip hallucinated [KEY-...] not in validKeys
+  const cited = [...reply.matchAll(/\[([A-Z][A-Z0-9]+-\d+)\]/g)].map(m => m[1].toUpperCase());
+  const invalid = cited.filter(k => !validKeys.includes(k));
+  if (invalid.length) {
+    // Remove invalid citations to avoid hallucination; keep text
+    for (const bad of invalid) reply = reply.split(`[${bad}]`).join(`[${bad} ?]`);
+    reply += `\n\n_Note: ${invalid.length} cited key(s) outside dataset were flagged: ${invalid.join(', ')}_`;
+  }
+  // Truncation disclosure
+  if (tickets.length > MAX_TICKETS) {
+    reply = `Showing ${MAX_TICKETS} of ${tickets.length} — narrow JQL for full coverage.\n\n${reply}`;
+  }
   return { reply, manifest, compacted, validKeys, providerMeta: turn.usage };
 }

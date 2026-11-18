@@ -1,24 +1,24 @@
 {
-  "datasetId": "dig_2bbd6735d79a_1794537475909",
+  "datasetId": "dig_2bbd6735d79a_1795006737483",
   "jql": "project = JCH and status != Closed",
   "productId": "ndb",
   "jqlHash": "2bbd6735d79a",
-  "ticketCount": 112,
-  "fetchedAt": "2026-11-13T02:37:55.909Z",
+  "ticketCount": 106,
+  "fetchedAt": "2026-11-18T12:58:57.483Z",
   "fields": "key,summary,issuetype,status,priority,assignee,reporter,fixVersions,created,updated,resolution,resolutiondate,duedate,labels,components,parent,customfield_10002,customfield_10360,customfield_10361,customfield_10860,customfield_11065,customfield_11067,customfield_11068,customfield_11861,customfield_13860,customfield_13861,customfield_14463,customfield_15160,customfield_20363,customfield_23073,customfield_23560,customfield_27764,customfield_31460,customfield_35863,customfield_35864,customfield_38460,customfield_45660,customfield_47780,customfield_51460,customfield_55662,customfield_55663,customfield_55664",
   "mode": "cached-full",
-  "includeHistory": false,
+  "includeHistory": true,
   "includeComments": false,
   "sampleKeys": [
-    "JCH-12596",
-    "JCH-12595",
-    "JCH-12594",
-    "JCH-12593",
-    "JCH-12592",
-    "JCH-12591",
-    "JCH-12590",
-    "JCH-12589",
-    "JCH-12588",
-    "JCH-12587"
+    "JCH-12632",
+    "JCH-12627",
+    "JCH-12626",
+    "JCH-12625",
+    "JCH-12630",
+    "JCH-12631",
+    "JCH-12629",
+    "JCH-12628",
+    "JCH-12624",
+    "JCH-12623"
   ]
 }

@@ -39,6 +39,8 @@ export default function ChatbotPage() {
   const [diggingLoading, setDiggingLoading] = useState(false);
   const jqlRef = useRef(null);
   const promptRef = useRef(null);
+  const [drillOpen, setDrillOpen] = useState(false);
+  const [drillTickets, setDrillTickets] = useState(null);
   // D1: labelPrefix defaults to productId (productService.getLabelPrefix fallback);
   // release drives versioned label suggestions like `${labelPrefix}-${release}-deferred`.
   const jqlAuto = useJqlAutocomplete({ labelPrefix: productId || undefined, release: selectedRelease || undefined });
@@ -267,7 +269,7 @@ export default function ChatbotPage() {
           {diggingError && <div className="chatbot-error">{diggingError}</div>}
           {diggingDataset && (
             <div className="chatbot-digging-card">
-              <strong>{diggingDataset.status === 'cached' ? 'Cached dataset' : diggingDataset.status === 'live' ? 'Live dataset' : 'Mock dataset'}</strong> · <span onClick={() => promptRef.current?.focus()} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Ask about this set">{diggingDataset.ticketCount} tickets</span> · fetched {new Date(diggingDataset.fetchedAt).toLocaleTimeString()} · <a href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(diggingDataset.jql)}`} target="_blank" rel="noreferrer">Open in JIRA ({diggingDataset.ticketCount})</a>
+              <strong>{diggingDataset.status === 'cached' ? 'Cached dataset' : diggingDataset.status === 'live' ? 'Live dataset' : 'Mock dataset'}</strong> · <span onClick={async () => { setDrillOpen(v => !v); if (!drillTickets && diggingDataset?.jqlHash) { try { const r = await authenticatedPost('/api/jira-digging/dataset', { productId: diggingDataset.productId, jqlHash: diggingDataset.jqlHash }); setDrillTickets((r.data?.tickets || []).slice(0,20)); } catch {} } }} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="In-app drill: preview tickets">{diggingDataset.ticketCount} tickets</span> · fetched {new Date(diggingDataset.fetchedAt).toLocaleTimeString()} · <a href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(diggingDataset.jql)}`} target="_blank" rel="noreferrer">Open in JIRA ({diggingDataset.ticketCount})</a>
               <div className="chatbot-digging-jql">{diggingDataset.jql}</div>
               {diggingDataset.sampleKeys?.length > 0 && (
                 <div className="chatbot-digging-sample">Sample: {diggingDataset.sampleKeys.map((k, i) => <span key={k}>{i > 0 ? ', ' : ''}<a href={`https://jira.nutanix.com/browse/${k}`} target="_blank" rel="noreferrer">{k}</a></span>)}{diggingDataset.truncated ? '…' : ''}</div>
@@ -275,6 +277,12 @@ export default function ChatbotPage() {
               <span className="chatbot-digging-badge">
                 Ready · {diggingDataset.ticketCount} tickets · History: {diggingDataset.includeHistory ? 'on' : 'off'} · Comments: {diggingDataset.includeComments ? 'on' : 'off'}
               </span>
+              {drillOpen && (
+                <div className="chatbot-drill-panel">
+                  <strong>Preview — {drillTickets ? drillTickets.length : 0} of {diggingDataset.ticketCount}</strong>
+                  {drillTickets ? <ul>{drillTickets.map(t => <li key={t.key}><a href={`https://jira.nutanix.com/browse/${t.key}`} target="_blank" rel="noreferrer">{t.key}</a> — {String(t.fields?.summary || t.summary || '').slice(0,80)}</li>)}</ul> : <div>Loading…</div>}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -200,6 +200,13 @@
       "toolClass": "draft",
       "owner": "doc-specialist",
       "path": "skills/doc-tech-guide/SKILL.md"
+    },
+    {
+      "name": "past-releases-report",
+      "capabilityType": "generative",
+      "toolClass": "read",
+      "owner": "team-exec-specialist",
+      "path": "skills/past-releases-report/SKILL.md"
     }
   ],
   "workflows": [

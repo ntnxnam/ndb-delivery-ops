@@ -125,6 +125,9 @@ router.post('/prepare', validateJiraTokenMiddleware, async (req, res) => {
     if (total > MAX_ISSUES) {
       return res.status(400).json({ error: `Result too large: ${total} > ${MAX_ISSUES} cap. Narrow JQL.`, total });
     }
+    if (total > 500 && (includeHistory || includeComments)) {
+      return res.status(400).json({ error: `Enrichment (history/comments) not allowed for ${total} >500 tickets. Narrow JQL or uncheck history/comments.`, total, cap: 500, hint: 'Uncheck history/comments or add filters to reduce to ≤500' });
+    }
     if (total === 0) {
       const datasetId = `dig_${jqlHash}_${Date.now()}`;
       const manifest = { datasetId, jql, productId, jqlHash, ticketCount: 0, fetchedAt: new Date().toISOString(), fields: DIGGING_FIELDS, mode: 'cached-full', includeHistory, includeComments };
@@ -153,6 +156,20 @@ router.post('/prepare', validateJiraTokenMiddleware, async (req, res) => {
     logger.error('[jira-digging] prepare 2b failed', err, { jql, status, msg });
     return res.status(status >= 400 && status < 600 ? status : 500).json({ error: msg, details: err.details || err.response?.data });
   }
+});
+
+// Preview tickets for drill panel (first 20)
+router.post('/dataset', validateJiraTokenMiddleware, async (req, res) => {
+  let productId; try { productId = sanitizeProductId(req.body?.productId || req.query.productId || 'ndb'); } catch (e) { return res.status(400).json({ error: e.message }); }
+  const jqlHash = String(req.body?.jqlHash || req.query.jqlHash || '').trim().toLowerCase();
+  if (!/^[a-f0-9]{6,32}$/.test(jqlHash)) return res.status(400).json({ error: 'jqlHash required' });
+  const dir = cacheDirFor(productId, jqlHash);
+  try {
+    const gz = await fs.promises.readFile(path.join(dir, 'tickets.json.gz'));
+    const json = await new Promise((resolve, reject) => zlib.gunzip(gz, (e, b) => e ? reject(e) : resolve(b.toString('utf8'))));
+    const tickets = JSON.parse(json);
+    return res.json({ productId, jqlHash, tickets: tickets.slice(0, 20), total: tickets.length });
+  } catch (err) { return res.status(404).json({ error: 'dataset not found', details: err.message }); }
 });
 
 // List cached datasets for a product
