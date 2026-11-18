@@ -1,0 +1,17 @@
+{
+  "name": "@portfolio-delivery-ops/platform",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Shared infra: SMTP + NAI (only cross-product shared per D44)",
+  "type": "module",
+  "exports": {
+    "./email": "./src/email/emailConnector.ts",
+    "./ai": "./src/ai/aiConnector.ts"
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "https-proxy-agent": "^7.0.4",
+    "nodemailer": "^10.3.1",
+    "zod": "^4.6.7"
+  }
+}

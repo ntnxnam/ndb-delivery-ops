@@ -5,21 +5,24 @@
   "description": "Consolidated NDB-Ops delivery tooling: web app, Streamlit TPM tools, and a custom MCP server. Workspace root.",
   "workspaces": [
     "apps/*",
-    "apps/delivery-ops/server",
-    "apps/delivery-ops/client",
+    "lighthouse/app/server",
+    "lighthouse/app/client",
+    "lighthouse/mcp",
+    "loom/mcp",
     "shared",
-    "mcp/*"
+    "platform"
   ],
   "scripts": {
-    "check:no-localhost": "node apps/delivery-ops/scripts/check-no-localhost.js",
-    "check:product-agnostic": "node apps/delivery-ops/scripts/check-product-agnostic.js",
+    "check:no-localhost": "node lighthouse/app/scripts/check-no-localhost.js",
+    "check:product-agnostic": "node lighthouse/app/scripts/check-product-agnostic.js",
     "check:mcp": "node scripts/check-mcp-bins-unique.js",
     "check:ownership": "node scripts/check-ownership.js",
     "check": "npm run check:no-localhost && npm run check:product-agnostic && npm run check:mcp && npm run check:ownership",
     "mcp:build": "npm --workspace @portfolio-delivery-ops/mcp-lighthouse run build && npm --workspace @portfolio-delivery-ops/mcp-loom run build",
-    "mcp:start": "echo 'use mcp/lighthouse or mcp/loom'",
-    "delivery-ops:dev": "npm --workspace apps/delivery-ops run dev",
-    "delivery-ops:restart": "cd apps/delivery-ops && ./restart"
+    "mcp:start": "echo 'use lighthouse/mcp or loom/mcp'",
+    "delivery-ops:dev": "npm --workspace ndb-status-sender run dev",
+    "lighthouse:dev": "npm --workspace ndb-status-sender run dev",
+    "lighthouse:restart": "cd lighthouse/app && ./restart"
   },
   "engines": {
     "node": ">=20"
