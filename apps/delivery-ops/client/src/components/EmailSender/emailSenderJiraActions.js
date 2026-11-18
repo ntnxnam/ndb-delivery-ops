@@ -187,60 +187,81 @@ const fetchEpics = async (opts = {}) => {
   setFetchingEpics(true);
   setEpics(null);
 
-  try {
-    const response = await authenticatedPost('/api/jira/fetch-all-jira-tickets', {
-      jiraKey: freshKey,
-      jiraData: freshJiraData || undefined
-    }, { jiraToken, username });
+  const releaseHint = (freshJiraData?.fixVersions || '')
+    .split(',')
+    .map((s) => s.trim())
+    .find((s) => s && s !== 'N/A');
 
-    if (response.data.success) {
-      setEpics(response.data.epics);
-      setIssueBreakdown(response.data.issueBreakdown || null);
-      setWorkItems(Array.isArray(response.data.workItems) ? response.data.workItems : null);
-      setPayloadJql(response.data.payloadJql || '');
-      setFetchingBreakdown(false);
-
-      // Feature Dashboard: epic set + KPI extras (same canonical payload as Feature Dashboard page).
-      const releaseHint = (freshJiraData?.fixVersions || '')
-        .split(',')
-        .map((s) => s.trim())
-        .find((s) => s && s !== 'N/A');
-      if (releaseHint && freshKey) {
-        fetchFeatureDashboard({
-          release: releaseHint,
-          featureKey: freshKey,
-          teamId: selectedTeamId || 'ndb',
-          jiraToken,
-          username,
-        })
-          .then((data) => {
-            setFeatureDashExtras({
-              teamKpiBoxes: data.teamKpiBoxes || [],
-              inference: data.inference || null,
-              kickoff: data.kickoff || null,
-              timing: data.timing || null,
-            });
-            const fdEpics = buildEpicsFromFeatureDashboard(
-              data?.payload?.canonical,
-              freshKey,
-              { rootIssueType: freshJiraData?.issueType }
-            );
-            if (fdEpics && fdEpics.length > 0) {
-              setEpics(fdEpics);
-            }
-          })
-          .catch(() => setFeatureDashExtras(null));
+  // Canonical-first: try Feature Dashboard payload when release is known; fall back to legacy otherwise.
+  const tryLegacyFetch = async () => {
+    try {
+      const response = await authenticatedPost('/api/jira/fetch-all-jira-tickets', {
+        jiraKey: freshKey,
+        jiraData: freshJiraData || undefined
+      }, { jiraToken, username });
+      if (response.data.success) {
+        setEpics(response.data.epics);
+        setIssueBreakdown(response.data.issueBreakdown || null);
+        setWorkItems(Array.isArray(response.data.workItems) ? response.data.workItems : null);
+        setPayloadJql(response.data.payloadJql || '');
+        setFetchingBreakdown(false);
+        return true;
       }
-    } else {
       console.warn('Failed to fetch epics:', response.data.error);
       setWorkItems([]);
       setFetchingBreakdown(false);
+      return false;
+    } catch (err) {
+      console.warn('Error fetching epics:', err.message);
+      setWorkItems([]);
+      setFetchingBreakdown(false);
+      return false;
     }
-  } catch (err) {
-    console.warn('Error fetching epics:', err.message);
-    setWorkItems([]);
-    // Don't show error to user - this is supplementary data
-    setFetchingBreakdown(false);
+  };
+
+  if (releaseHint && freshKey) {
+    try {
+      const data = await fetchFeatureDashboard({
+        release: releaseHint,
+        featureKey: freshKey,
+        teamId: selectedTeamId || 'ndb',
+        jiraToken,
+        username,
+      });
+      setFeatureDashExtras({
+        teamKpiBoxes: data.teamKpiBoxes || [],
+        inference: data.inference || null,
+        kickoff: data.kickoff || null,
+        timing: data.timing || null,
+      });
+      const fdEpics = buildEpicsFromFeatureDashboard(
+        data?.payload?.canonical,
+        freshKey,
+        { rootIssueType: freshJiraData?.issueType }
+      );
+      if (fdEpics && fdEpics.length > 0) {
+        setEpics(fdEpics);
+        setIssueBreakdown(null);
+        setWorkItems(Array.isArray(data?.payload?.canonical) ? data.payload.canonical : null);
+        setPayloadJql(data?.jql?.canonical || '');
+        setFetchingBreakdown(false);
+        setFetchingEpics(false);
+        return;
+      }
+      // Canonical returned no usable epics — fall back to legacy
+      await tryLegacyFetch();
+    } catch {
+      setFeatureDashExtras(null);
+      await tryLegacyFetch();
+    } finally {
+      setFetchingEpics(false);
+    }
+    return;
+  }
+
+  // No release hint — legacy path only
+  try {
+    await tryLegacyFetch();
   } finally {
     setFetchingEpics(false);
   }
