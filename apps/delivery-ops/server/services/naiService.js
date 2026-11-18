@@ -1160,12 +1160,6 @@ RULES:
 - If unsure of a key, omit that entry entirely.
 - Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.`;
 
-function formatValidKeysBlock(keys) {
-  const list = (keys || []).filter(Boolean);
-  if (!list.length) return 'VALID TICKET KEYS: none provided';
-  return `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${list.map((k, i) => `  ${i + 1}. ${k}`).join('\n')}`;
-}
-
 function buildSosOverallPrompt(payload) {
   const releases = Array.isArray(payload?.releases) ? payload.releases : [];
   const keys = Array.isArray(payload?.validKeys) ? payload.validKeys : [];
