@@ -7,7 +7,7 @@ alwaysApply: true
 
 Every artifact this project produces — a report, a chat answer, an email,
 a Confluence page — must declare an **audience** and be rendered using
-the corresponding presenter from `.cursor/context/audience.md`.
+the corresponding presenter from `agent-pack/lighthouse/context/audience.md`.
 
 Per **D6 (revised)**, audience drives **density, link policy, citation
 density, chart-vs-prose ratio, and RAG-first vs detail-first ordering** —
@@ -31,7 +31,7 @@ this rule.
 
 ## The Seven Audiences
 
-Audiences are defined canonically in `.cursor/context/audience.md`:
+Audiences are defined canonically in `agent-pack/lighthouse/context/audience.md`:
 
 | Audience | When to use |
 |---|---|
@@ -78,7 +78,8 @@ If no audience is set explicitly:
 
 ## Cross-references
 
-- **`.cursor/context/audience.md`** — canonical presenter definitions
+- **`agent-pack/lighthouse/context/audience.md`** — canonical presenter definitions
 - **D6** in `DECISIONS.md` — Role lens is a presenter, not a filter
 - **D15** in `DECISIONS.md` — VP answer protocol (specific case)
 - **D17** in `DECISIONS.md` — TPM weekly status structure (specific case)
+- **`agent-pack/harness/`** — host-specific symlinks (harness handles adapter wiring)

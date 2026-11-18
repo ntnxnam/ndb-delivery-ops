@@ -1,6 +1,7 @@
 ---
 name: release-dataset-sync
 description: Manage the JIRA release dataset sync pipeline — 3-group/6-bucket fetch model, field validation, bundle rebuild, and SyncHubPage UI. Use when the user asks to sync data, refetch releases, add Group 2 (moved-out) or Group 3 (long-term funded) data, fix missing fields, update the field list, simplify the sync UI, or verify that hierarchy link fields (Portfolio Parent Key, Epic Link) are being returned by JIRA.
+audience: rm, tpm, portfolio_mgr
 ---
 
 # Release Dataset Sync
@@ -15,6 +16,20 @@ description: Manage the JIRA release dataset sync pipeline — 3-group/6-bucket 
 - User asks what fields are being fetched
 - User wants to verify or update `RELEASE_DATASET_FIELDS` in `releaseDatasetService.ts`
 - User reports hierarchy reconstruction not working (epics not linking to features, tasks not linking to epics)
+
+
+## Quick Start
+
+```text
+Input: { productId, forceReleases?: string[], skipChangelog?: boolean, includeLongTermFunded?: boolean }
+Output: { syncedReleases: string[], totals: { bucket, count }[], bundlePath: "shared/.cache/release-dataset/<product>/bundle.json" }
+
+1. Resolve productId via productService -> projectKey, futureReleases via getProjectVersions
+2. Sequential fetch: Wave 1 (top_level, standalone, direct, moved_out, long_term, sidecars) -> Wave 2 (Parent/Epic Link IN parentKeys chunked 75) -> Wave 3 (Epic Link IN epicKeys)
+3. In-memory dedup + hierarchy rebuild + changelog enrichment
+4. Write per-release .json + bundle.json via releaseDatasetService
+5. Return verification: Portfolio Parent Key / Epic Link Key non-null spot-check
+```
 
 ## Core Rules
 
@@ -249,3 +264,7 @@ const cleanupJql = `"Epic Link" in (${epicKeys}) AND fixVersion = "${release}"`;
 - [ ] Sync always clears forced per-release caches before writing fresh data
 - [ ] Group 3 failure (versions API down) does not abort Group 1 + 2 sync
 - [ ] No `project = ERA` or any project filter in any bucket JQL — all cross-project
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

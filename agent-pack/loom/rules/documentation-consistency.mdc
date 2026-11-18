@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Documentation Consistency
 
+> **See also:** `no-broken-links.mdc` for link resolution; this rule covers file naming and section structure. `ARCHITECTURE.md` for layer model. `api-docs-required.mdc` / `page-docs-required.mdc` for API/page doc obligations.
+
 Reports, skills, and rules must be consistently structured so every artifact
 is instantly recognisable and machine-parseable.
 
@@ -12,7 +14,7 @@ is instantly recognisable and machine-parseable.
 
 Every product doc lives under `docs/` at repo root. No product doc may be written outside `docs/` (CI gate: `scripts/lighthouse/docs/docs-verify.sh` stale-path check). Guides are Markdown source + generated HTML (`node scripts/lighthouse/docs/docs-build.js`); `technical/`, `product/`, `api/`, `pages/`, `release-notes/`, `known-issues/` are Markdown only; `reports/` and `exec-pitch/` are HTML already.
 
-Every file saved to `Documentation/reports/` must follow:
+Every file saved to `docs/reports/` must follow:
 
 ```
 {ReportType}-{Product}-{Release}-{YYYY-MM-DD}{-Variant}.{ext}
@@ -80,7 +82,7 @@ In this order; omit only if genuinely no data:
 - No `localhost` or internal addresses in `src` / `href`
 - Plain-text fallback `<div>` for HTML-stripping clients
 
-## Skill File Standards (`.cursor/skills/*/SKILL.md`)
+## Skill File Standards (`agent-pack/{lighthouse,loom}/skills/*/SKILL.md`)
 
 Required sections in this order. Extra sections are fine; missing required
 ones are not.
@@ -134,8 +136,8 @@ Never use generic messages like `update`, `fix`, or `generate report`.
 
 ## Grandfathering
 
-- Product docs already migrated: old `apps/delivery-ops/docs/` paths are redirect stubs pointing to `Documentation/`.
-- Reports already in `Documentation/reports/`: leave them. Only new files must comply.
+- Product docs already migrated: old `apps/delivery-ops/docs/` paths are redirect stubs pointing to `docs/`.
+- Reports already in `docs/reports/`: leave them. Only new files must comply.
 - Existing skill sections: rename to canonical names in the same commit
   when you next edit a skill.
 - Existing rule files: grandfathered; new rules follow this standard.

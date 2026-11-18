@@ -1,9 +1,6 @@
 import React from 'react';
 import { FeatureAnalyticsRow } from '../../feature/FeatureAnalyticsWidgets';
-import {
-  buildTotalEpicsJql,
-  jiraIssuesSearchUrl,
-} from './buildEpicsFromFeatureDashboard';
+import { ProjectPlanView } from '../../shared/components/ProjectPlanView';
 import IssueTypeBreakdownCompact from './IssueTypeBreakdownCompact';
 
 export default function EmailSenderPulledExtras({
@@ -29,114 +26,43 @@ export default function EmailSenderPulledExtras({
       )}
 
       {epics && epics.length > 0 && (() => {
-        const totalEpicsCount = epics.reduce((total, feature) => total + (feature.childEpics?.length || 0), 0);
-        const totalEpicsJql = buildTotalEpicsJql(epics);
-        const totalEpicsUrl = jiraIssuesSearchUrl(jiraBaseUrl, totalEpicsJql);
+        // Map Status Sender epics (Feature → childEpics) to ProjectPlanView groups shape
+        const groups = epics.map((feature) => ({
+          key: feature.key,
+          summary: feature.summary,
+          status: feature.status,
+          issueType: feature.issueType,
+          duedate: feature.duedate,
+          fixVersions: feature.fixVersions,
+          assignee: feature.assignee,
+          qaContact: feature.customfield_10860?.value || null,
+          // ProjectPlanView accepts either childItems or childEpics
+          childItems: (feature.childEpics || []).map((epic) => ({
+            key: epic.key,
+            summary: epic.summary,
+            status: epic.status,
+            issueType: epic.issueType,
+            resolution: epic.resolution,
+            assignee: epic.assignee,
+            qaContact: epic.customfield_10860?.value || null,
+            customfield_10860: epic.customfield_10860,
+            duedate: epic.duedate,
+            fixVersions: epic.fixVersions,
+            priority: epic.priority || null,
+          })),
+        }));
         return (
-        <div className="form-group" style={{
-          marginTop: '20px',
-          padding: '12px',
-          backgroundColor: '#ffffff',
-          border: '1px solid #1a1a1a'
-        }}>
-          <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '16px', fontWeight: 600, color: '#1a1a1a' }}>
-            Epics
-          </h3>
-          <p style={{ marginBottom: '12px', fontSize: '13px', color: '#666666' }}>
-            Total Epics:{' '}
-            {totalEpicsUrl ? (
-              <a
-                href={totalEpicsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={totalEpicsJql}
-                aria-label={`Open ${totalEpicsCount} epics in JIRA`}
-                style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
-              >
-                {totalEpicsCount}
-              </a>
-            ) : (
-              <span style={{ fontWeight: 600 }}>{totalEpicsCount}</span>
-            )}
-          </p>
-
-          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-          <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f5f5f5' }}>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Key</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Issue Type</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Summary</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Status</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Resolution</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Assignee</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>QA Contact</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Due Date</th>
-                <th style={{ padding: '8px', border: '1px solid #1a1a1a', textAlign: 'left', fontWeight: 600, color: '#1a1a1a' }}>Fix Version</th>
-              </tr>
-            </thead>
-            <tbody>
-              {epics.map((feature, featureIndex) => {
-                const bgColor = featureIndex % 2 === 0 ? '#ffffff' : '#fafafa';
-                return (
-                  <React.Fragment key={feature.key}>
-                    {/* Feature/Initiative row with single dash */}
-                    <tr style={{ backgroundColor: bgColor }}>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>
-                        <span style={{ marginRight: '8px' }}>-</span>
-                        <a 
-                          href={`${jiraBaseUrl}/browse/${feature.key}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: '#1a1a1a', textDecoration: 'underline' }}
-                        >
-                          {feature.key}
-                        </a>
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.issueType || 'Feature'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.summary}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.status}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.resolution || 'N/A'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.assignee || 'N/A'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>
-                        {feature.customfield_10860?.value || 'Not Set'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.duedate || 'Not Set'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{feature.fixVersions || 'N/A'}</td>
-                    </tr>
-                    {/* Child Epics with double dash and indentation */}
-                    {feature.childEpics && feature.childEpics.length > 0 && feature.childEpics.map((epic, _epicIndex) => (
-                      <tr key={epic.key} style={{ backgroundColor: bgColor }}>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a', paddingLeft: '32px' }}>
-                          <span style={{ marginRight: '8px' }}>--</span>
-                          <a 
-                            href={`${jiraBaseUrl}/browse/${epic.key}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#1a1a1a', textDecoration: 'underline' }}
-                          >
-                            {epic.key}
-                          </a>
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.issueType || 'Epic'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.summary}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.status}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.resolution || 'N/A'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.assignee || 'N/A'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>
-                          {epic.customfield_10860?.value || 'Not Set'}
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.duedate || 'Not Set'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #1a1a1a', color: '#1a1a1a' }}>{epic.fixVersions || 'N/A'}</td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="form-group" style={{ marginTop: '20px' }}>
+            <div className="fd-section">
+              <ProjectPlanView
+                groups={groups}
+                jiraBaseUrl={jiraBaseUrl}
+                canonicalJql={payloadJql || `key = ${String(jiraKey || '').trim()}`}
+                columns={['key', 'type', 'summary', 'status', 'resolution', 'assignee', 'qaContact', 'dueDate', 'fixVersions']}
+                title="Epics"
+              />
+            </div>
           </div>
-        </div>
         );
       })()}
 

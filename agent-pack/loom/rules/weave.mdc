@@ -68,7 +68,7 @@ Map the user's ask to stage KPIs. Examples of how the same stage shifts:
 | "Fix the sticky header on OnCalls" | Layout fixed on 1280px; no new flex-growth bugs; `ui-density` respected | Reproduce old bug → confirm gone; no scroll/sticky regressions | PM: sticky bug gone for TPM persona; no scope creep; UX: sticky + scroll coexistence |
 | "Add clickable count for open P0s" | Count → in-app drill when sample exists; separate Open in JIRA ↗; no silent JQL edit | Count matches linked JQL; panel list vs JIRA proof distinct; empty/error states | PM: count answers the question; AC testable; JIRA: proof lands on claimed set; UX: dual-click not double-external; Exec: plain-English story |
 | "Harden email send path" | No secrets in logs; auth on route; HTML sanitised | Send / fail / retry paths covered | PM: send path meets stated risk goal; Security: injection / localhost / exposure = 0 Blocking |
-| "Docs only for new API" | `Documentation/api/{resource}.md` complete per `api-docs-required` | Doc matches live route params | PM: contract answers consumer questions; Code Review checks doc completeness |
+| "Docs only for new API" | `docs/api/{resource}.md` complete per `api-docs-required` | Doc matches live route params | PM: contract answers consumer questions; Code Review checks doc completeness |
 
 **PM KPI derivation (always when product behaviour or docs ship)**
 
@@ -183,6 +183,14 @@ Stage **1.5. Impact Scout** runs immediately after Developer lands and **before*
 
 ## How to invoke pipeline skills (D38)
 
+## Tenancy + architecture context (D44, ARCHITECTURE.md)
+
+Loom is the **builder** tenancy (`mcp/loom`, bin `loom-mcp`, 8 shared tools only). Lighthouse is the **product** tenancy (`mcp/lighthouse`, bin `lighthouse-mcp`, 8 shared + 2 product-only `build_jql`/`team_overall_report`). Shared tools, env, and glossary live once in `mcp/shared/` (D44, D45). The five-layer architecture is Connectors → Domain Models → Services → API+MCP → UI & AI Surfaces — one feature, one place (see `ARCHITECTURE.md`). See `mcp-tenancy.mdc` and `port-and-env-contracts.mdc` for the tenancy and port/env gates that also apply in this pipeline.
+
+Product skills live in `agent-pack/lighthouse/skills/`; builder skills live in `agent-pack/loom/skills/` (D44). Prefer relative `agent-pack/` paths over `~/NDB-Ops-Tools/ndb-delivery-ops/` absolute paths. Phases: A AI layer rebuild (done `54bb48a`), B connectors (`shared/connectors/` 5 connectors D3), C service extraction, D–E Streamlit retirement, F MCP-backed UI pages, G/H gap features — see `ARCHITECTURE.md` § Migration strategy summary.
+
+## How to invoke pipeline skills (D38)
+
 Always load skills from the **agent pack**, not a host-private path:
 
 | Stage | Invoke |
@@ -258,7 +266,7 @@ When spawning Code Review (Bugbot, multi-model, or Task), always include:
 1. Full repo path and whether the diff is uncommitted or branch-scoped
 2. Short change description (files + intent)
 3. The **Goal KPI Card** for this ask (Code Review KPIs + DONE WHEN)
-4. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost` (grep `localhost|127\.0\.0\.1` in `client/src` → Blocking; use relative `/Documentation/` + dev proxy `client/src/setupProxy.js`, never `http://localhost:8001` in JSX), `jql-edit-approval` (flag only — no silent JQL edits)
+4. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost` (grep `localhost|127\.0\.0\.1` in `client/src` → Blocking; use relative `/docs/` + dev proxy `client/src/setupProxy.js`, never `http://localhost:8001` in JSX), `jql-edit-approval` (flag only — no silent JQL edits)
 5. Instruction: **FAIL** unless findings are listed **and** KPI VERDICT is returned; no rubber stamps; prove clean only with MET KPIs + empty Blocking/High
 
 ## Agent/model selection (mandatory)

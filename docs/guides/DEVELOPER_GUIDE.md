@@ -317,7 +317,7 @@ Two parallel surfaces over the same services. **Routes are thin: validate → ca
 
 Each MCP tool calls the same `shared/connectors` + `shared/services` the Express route does. JIRA auth is Data Center PAT `Authorization: Bearer` only ([D40](../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only)). Legacy MCP private JIRA client is deleted.
 
-**Registering:** `.cursor/mcp.json` registers the servers for Cursor automatically. For Claude Desktop, see [README.md](../../README.md#wiring-the-mcp-server-into-cursor).
+**Registering:** `.cursor/mcp.json` registers the servers for Cursor automatically. For Claude Desktop and other hosts, see [README.md](../../README.md#wiring-mcp-into-hosts).
 
 ---
 

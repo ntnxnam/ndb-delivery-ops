@@ -29,6 +29,14 @@ jest.mock('../../utils/jiraFieldsConfig', () => ({
 jest.mock('../../services/execSummaryService', () => ({
   fetchP0BugsCount: jest.fn(() => Promise.resolve(2))
 }));
+jest.mock('../../utils/jiraClient', () => ({
+  getJira: jest.fn().mockResolvedValue({ get: jest.fn().mockResolvedValue({ data: { issues: [] } }) }),
+  getShared: jest.fn().mockResolvedValue({
+    loadEnv: jest.fn(() => ({})),
+    JiraConnector: jest.fn(),
+    completeChat: jest.fn().mockResolvedValue({ content: 'report' }),
+  }),
+}));
 
 const axios = require('axios');
 const {
@@ -87,10 +95,6 @@ describe('aiReportService', () => {
   });
 
   test('UT-AI-004: generateAiVpReport returns generated report payload', async () => {
-    axios.get.mockResolvedValueOnce({
-      data: { issues: [{ key: 'ERA-1', fields: { summary: 's', status: { name: 'Open' }, priority: { name: 'P1' }, customfield_23560: { value: 'Red' } } }] }
-    });
-    axios.post.mockResolvedValueOnce({ data: { choices: [{ message: { content: 'report' } }] } });
     const out = await generateAiVpReport({ version: 'NDB-2.11', naiApiKey: 'k', jiraToken: 'jt' });
     expect(out.teamExecReport).toBe('report');
     expect(out.version).toBe('NDB-2.11');

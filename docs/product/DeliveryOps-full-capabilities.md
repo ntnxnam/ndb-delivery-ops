@@ -662,7 +662,7 @@ Reusable exec pulse for any KPI-scoped page: last **2 Nutanix fiscal quarters** 
 | UI | `client/src/components/KpiPulse/` |
 | Quarters | `nutanixQuarters.lastNQuartersWindow(2)` |
 | Skill | `kpi-pulse-analytics` |
-| Rule | `.cursor/rules/kpi-pulse-analytics.mdc` |
+| Rule | `agent-pack/lighthouse/rules/kpi-pulse-analytics.mdc` |
 | Trust | Dual-click on open heroes; JQL composed onto page KPI filter |
 
 **Talking points**:

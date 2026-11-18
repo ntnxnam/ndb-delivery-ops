@@ -1,4 +1,11 @@
-# NDB Release Gate — Bug Status Semantics
+---
+description: Release gate bug-status semantics — gate-ready vs QA verification lifecycle (D1 product-agnostic, D34)
+alwaysApply: true
+---
+
+# Release Gate — Bug Status Semantics
+
+Per **D1** — product-agnostic, config-driven via `teamBoardConfig.json` / `productService`. No hardcoded product strings (e.g. `NDB`). See also `product-agnostic.mdc` and **`jira-date-hierarchy.mdc`** for issue-type-aware date field mapping (D34).
 
 ## Status Meanings (from `teamBoardConfig.json`)
 
@@ -9,8 +16,7 @@
 
 ## Verification is POST-PG
 
-QA verification (moving a bug from `Resolved` → `Closed`) happens **after** the
-Promotion Gate (PG). It is **not** a gate blocker for PG.
+QA verification (moving a bug from `Resolved` → `Closed`) happens **after** the Promotion Gate (PG). It is **not** a gate blocker for PG.
 
 ## What "gate-ready" means per issue type
 
@@ -42,7 +48,14 @@ Promotion Gate (PG). It is **not** a gate blocker for PG.
 
 ## Never Do
 
-- Use `statusCategory === 'done'` alone to check if a Bug is gate-ready —
-  this misses `Resolved` bugs and falsely shows them as still open.
+- Use `statusCategory === 'done'` alone to check if a Bug is gate-ready — this misses `Resolved` bugs and falsely shows them as still open.
 - Require `Closed` for bug gate checks — verification is a post-PG activity.
 - Conflate QA verification completion with dev fix completion.
+- Hard-code product strings (e.g. `NDB`) — resolve via `productService` / `teamBoardConfig.json` per D1.
+
+## Cross-references
+
+- **D1, D34** in `DECISIONS.md` — product-agnostic config, gate semantics
+- **`product-agnostic.mdc`** — no hardcoded product strings
+- **`jira-date-hierarchy.mdc`** — issue-type-aware date mapping
+- **`agent-pack/harness/`** — host-specific symlinks (harness handles adapter wiring)

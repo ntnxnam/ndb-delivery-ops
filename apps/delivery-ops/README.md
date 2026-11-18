@@ -88,7 +88,7 @@ A web application for Confluence-based status update emails and JIRA release ver
 
 ## Repository
 - **GitHub Organization**: ntnxnam
-- **Repository Name**: ndb-status-sender
+- **Repository Name**: `ndb-delivery-ops` (legacy package name `ndb-status-sender` per D45; repo renames to `portfolio-delivery-ops` per D2)
 
 ## Requirements
 
@@ -208,8 +208,8 @@ npm start
 
 1. **Clone the repository** (after creating it on GitHub):
    ```bash
-   git clone https://github.com/ntnxnam/ndb-status-sender.git
-   cd ndb-status-sender
+   git clone https://github.com/ntnxnam/ndb-delivery-ops.git
+   cd ndb-delivery-ops
    ```
 
 2. **Install dependencies**:

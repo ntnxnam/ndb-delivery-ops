@@ -40,7 +40,7 @@ name the actual KPIs / window / query result — not what you refused to do.
 - Dashboard labels, helper text, empty states, tooltips
 - AI briefing intros and section headers
 - Agent answers to the user (chat / reports / email)
-- Page docs under `Documentation/` and `agent-pack/context/`
+- Page docs under `docs/` and `agent-pack/lighthouse/context/`
 - Every new rule, skill, doc, or guide an agent creates — no exceptions for scaffolding
 - Code comments that will be paraphrased into UI copy
 

@@ -9,10 +9,12 @@ import { fileURLToPath } from 'node:url';
 import { GATE_DATE_FIELD_ALIASES, GATE_DATE_FIELDS } from '../dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const banned = join(repoRoot, 'mcp-server', 'src', 'connectors', 'jiraConnector.ts');
-if (existsSync(banned)) {
-  console.error('tool-bus failed: mcp-server/src/connectors/jiraConnector.ts must not exist');
-  process.exit(1);
+for (const rel of ['mcp-server/src/connectors/jiraConnector.ts', 'mcp/lighthouse/src/connectors/jiraConnector.ts', 'mcp/loom/src/connectors/jiraConnector.ts']) {
+  const banned = join(repoRoot, rel);
+  if (existsSync(banned)) {
+    console.error(`tool-bus failed: ${rel} must not exist — use shared/src/connectors/jiraConnector.ts (D40, D44)`);
+    process.exit(1);
+  }
 }
 
 for (const [alias, fieldId] of Object.entries(GATE_DATE_FIELD_ALIASES)) {
@@ -79,7 +81,7 @@ for (const rel of [
   }
 }
 
-const mcpGithub = join(repoRoot, 'mcp-server/src/tools/leadershipCommitReport.ts');
+const mcpGithub = join(repoRoot, 'mcp/shared/tools/leadershipCommitReport.ts');
 const mcpGithubSrc = readFileSync(mcpGithub, 'utf8');
 if (mcpGithubSrc.includes("from 'axios'") || mcpGithubSrc.includes('from "axios"')) {
   console.error('tool-bus failed: leadershipCommitReport.ts must not import axios');

@@ -29,13 +29,17 @@ export interface FeatureDashboardIssue {
   summary: string;
   issueType: string;
   status: string;
+  resolution?: string | null;
   assignee: string | null;
   created: string | null;
   resolved: string | null;
   updated: string | null;
+  duedate: string | null;
   priority: string | null;
   labels: string[];
   epicLink: string | null;
+  parentLink?: string | null;
+  qaContact?: string | null;
   /** Fix versions on the ticket (names). Used for soft hygiene vs selected release. */
   fixVersions?: string[];
   /**
@@ -72,10 +76,13 @@ export const FEATURE_PORTFOLIO_TYPES = new Set([
 // Canonical list of JIRA fields to fetch for every feature dashboard issue.
 // Add new fields here when adding new widgets — one place, not scattered.
 export const FEATURE_DASHBOARD_FIELDS = [
-  'summary', 'issuetype', 'status', 'assignee', 'priority',
-  'created', 'updated', 'resolutiondate',
+  'summary', 'issuetype', 'status', 'resolution', 'assignee', 'priority',
+  'created', 'updated', 'resolutiondate', 'duedate',
   'labels',            // bug-by-phase analytics
-  'customfield_20363', // Parent Link — hierarchy grouping (Bug/Task/Story → Epic)
+  'fixVersions',
+  'customfield_20363', // Parent Link — Epic → FEAT/Initiative (grouping)
+  'customfield_10361', // Epic Link — Task/Bug/Test → Epic (grouping)
+  'customfield_10860', // QA Contact — Status Sender table
   'issuelinks',
 ] as const;
 
@@ -167,18 +174,25 @@ export function issueFromJira(issue: JiraIssue): FeatureDashboardIssue {
   const status = ((fields.status as { name?: string } | undefined)?.name || '').trim();
   const assignee =
     ((fields.assignee as { displayName?: string } | null | undefined)?.displayName || null);
+  const qaVal = fields.customfield_10860 as { displayName?: string; name?: string } | string | null | undefined;
+  const qaContact = qaVal == null ? null : typeof qaVal === 'string' ? qaVal : (qaVal.displayName || qaVal.name || null);
   return {
     key: issue.key,
     summary: String(fields.summary || ''),
     issueType,
     status,
+    resolution: (fields.resolution as { name?: string } | undefined)?.name || null,
     assignee,
     created: asIsoDay(fields.created),
     resolved: asIsoDay(fields.resolutiondate),
     updated: asIsoDay(fields.updated),
+    duedate: asIsoDay(fields.duedate),
     priority: ((fields.priority as { name?: string } | undefined)?.name || null),
     labels: Array.isArray(fields.labels) ? (fields.labels as string[]) : [],
-    epicLink: typeof fields.customfield_20363 === 'string' ? fields.customfield_20363 : null,
+    fixVersions: Array.isArray(fields.fixVersions) ? (fields.fixVersions as Array<{ name?: string } | string>).map((v) => typeof v === 'string' ? v : (v?.name || '')).filter(Boolean) : [],
+    epicLink: typeof fields.customfield_10361 === 'string' ? (fields.customfield_10361 as string) : null,
+    parentLink: typeof fields.customfield_20363 === 'string' ? (fields.customfield_20363 as string) : null,
+    qaContact,
   };
 }
 

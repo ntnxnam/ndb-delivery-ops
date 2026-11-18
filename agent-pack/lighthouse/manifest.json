@@ -10,6 +10,7 @@
   },
   "constitutionalRules": [
     "rules/ai-ticket-key-integrity.mdc",
+    "rules/ai-config-sync.mdc",
     "rules/citation-first-output.mdc",
     "rules/confluence-cleanup-clarification.mdc",
     "rules/jira-date-hierarchy.mdc",
@@ -23,7 +24,6 @@
     "rules/program-management-pov.mdc",
     "rules/release-gate-aware-reasoning.mdc",
     "rules/concise-comms.mdc",
-    "rules/deferral-workbench-order.mdc",
     "rules/kpi-config-driven.mdc",
     "rules/kpi-pulse-analytics.mdc",
     "rules/release-outstanding-work-order.mdc"

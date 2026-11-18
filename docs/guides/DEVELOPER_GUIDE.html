@@ -563,7 +563,7 @@ npm run mcp:build
 </tr>
 </tbody></table>
 <p>Each MCP tool calls the same <code>shared/connectors</code> + <code>shared/services</code> the Express route does. JIRA auth is Data Center PAT <code>Authorization: Bearer</code> only (<a href="../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only">D40</a>). Legacy MCP private JIRA client is deleted.</p>
-<p><strong>Registering:</strong> <code>.cursor/mcp.json</code> registers the servers for Cursor automatically. For Claude Desktop, see <a href="../../README.md#wiring-the-mcp-server-into-cursor">README.md</a>.</p>
+<p><strong>Registering:</strong> <code>.cursor/mcp.json</code> registers the servers for Cursor automatically. For Claude Desktop and other hosts, see <a href="../../README.md#wiring-mcp-into-hosts">README.md</a>.</p>
 <hr>
 <h2>7 — Layer 5: UI &amp; Pack</h2>
 <h3>React app — <code>apps/delivery-ops/client/src/</code> (port <strong>8899</strong>)</h3>

@@ -5,6 +5,8 @@ alwaysApply: true
 
 # No Broken Links
 
+> **See also:** `documentation-consistency.mdc` for file naming; this rule covers link resolution.
+
 Every hyperlink in `docs/`, `agent-pack/`, and `apps/*/client/src` must resolve
 to a file that exists in the repo. Broken links erode trust and block onboarding.
 
@@ -22,7 +24,7 @@ to a file that exists in the repo. Broken links erode trust and block onboarding
    - a path that `docs-verify.sh` can validate via `find $ROOT -name <basename>`.
 4. **Verify before merge** — run before every docs change:
    ```bash
-   node scripts/docs-build.js && bash scripts/docs-verify.sh
+   node scripts/lighthouse/docs/docs-build.js && bash scripts/lighthouse/docs/docs-verify.sh
    ```
    `WARN: possible broken link` on a link you added is a **Blocking MISS** for QA.
 
@@ -44,6 +46,6 @@ to a file that exists in the repo. Broken links erode trust and block onboarding
 
 ## Enforcement
 
-- `scripts/docs-verify.sh` — broken `*.md` basenames under `docs/` (WARN → fail if introduced by this change).
+- `scripts/lighthouse/docs/docs-verify.sh` — broken `*.md` basenames under `docs/` (WARN → fail if introduced by this change).
 - Code Review must flag any new `[label](*.md)` where `path` doesn't resolve.
 - QA link-integrity gate in `weave.mdc` — broken/DOA links block merge.

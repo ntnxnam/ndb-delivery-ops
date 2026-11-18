@@ -10,6 +10,7 @@
   },
   "constitutionalRules": [
     "lighthouse/rules/ai-ticket-key-integrity.mdc",
+    "lighthouse/rules/ai-config-sync.mdc",
     "lighthouse/rules/citation-first-output.mdc",
     "lighthouse/rules/confluence-cleanup-clarification.mdc",
     "lighthouse/rules/jira-date-hierarchy.mdc",
@@ -17,12 +18,12 @@
     "lighthouse/rules/ndb-gate-status-semantics.mdc",
     "lighthouse/rules/no-defensive-statements.mdc",
     "lighthouse/rules/no-localhost.mdc",
+    "lighthouse/rules/no-hardcoding.mdc",
     "lighthouse/rules/persona-aware-output.mdc",
     "lighthouse/rules/product-agnostic.mdc",
     "lighthouse/rules/program-management-pov.mdc",
     "lighthouse/rules/release-gate-aware-reasoning.mdc",
     "lighthouse/rules/concise-comms.mdc",
-    "lighthouse/rules/deferral-workbench-order.mdc",
     "lighthouse/rules/kpi-config-driven.mdc",
     "lighthouse/rules/kpi-pulse-analytics.mdc",
     "lighthouse/rules/release-outstanding-work-order.mdc"

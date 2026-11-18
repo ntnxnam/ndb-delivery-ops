@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageLoading } from '../shared/components/PageLoading';
+import { ProjectPlanView } from '../shared/components/ProjectPlanView';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 import { useTeam } from '../contexts/TeamContext';
@@ -14,8 +15,6 @@ import FeatureFlowCharts from './FeatureFlowCharts';
 import './FeatureDashboardPage.css';
 
 const DONE_STATUSES = new Set(['done', 'resolved', 'closed', 'complete', 'fixed']);
-const EPIC_TYPES = new Set(['epic']);
-const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
 
 function renderHeaderValue(value) {
   if (!value) return null;
@@ -150,14 +149,6 @@ function FeatureTimingStrip({ timing, hygiene, jiraBaseUrl }) {
 
 function isDone(issue) {
   return DONE_STATUSES.has((issue.status || '').toLowerCase());
-}
-
-function isEpic(issue) {
-  return EPIC_TYPES.has((issue.issueType || '').toLowerCase());
-}
-
-function isPortfolio(issue) {
-  return PORTFOLIO_TYPES.has((issue.issueType || '').toLowerCase());
 }
 
 function InferencePanel({ inference, jiraBaseUrl }) {
@@ -596,120 +587,6 @@ export default function FeatureDashboardPage() {
   );
 }
 
-// ─── Project Plan View ───────────────────────────────────────────────────────
-
-function ProjectPlanView({ issues, canonicalJql, jiraBaseUrl }) {
-  const epics = useMemo(() => issues.filter(isEpic), [issues]);
-  const children = useMemo(() => issues.filter((i) => !isEpic(i) && !isPortfolio(i)), [issues]);
-
-  const childrenByEpic = useMemo(() => {
-    const map = {};
-    for (const c of children) {
-      const key = c.epicLink || '__isolated__';
-      if (!map[key]) map[key] = [];
-      map[key].push(c);
-    }
-    return map;
-  }, [children]);
-
-  const openJql = `(${canonicalJql}) AND statusCategory != Done`;
-  const totalOpen = useMemo(() => issues.filter((i) => !isDone(i)).length, [issues]);
-
-  return (
-    <div>
-      <div className="fd-plan-header">
-        <span className="fd-plan-title">Open Work</span>
-        <span className="fd-plan-counts">{totalOpen} open · {issues.length} total</span>
-        <a href={jiraSearchUrl(jiraBaseUrl, openJql)} target="_blank" rel="noreferrer" className="fd-plan-jira-link">
-          Open in JIRA
-        </a>
-      </div>
-
-      {epics
-        .filter((epic) => (childrenByEpic[epic.key] || []).length > 0)
-        .map((epic) => (
-          <EpicSection
-            key={epic.key}
-            epic={epic}
-            children={childrenByEpic[epic.key]}
-            jiraBaseUrl={jiraBaseUrl}
-          />
-        ))}
-
-      {(childrenByEpic['__isolated__'] || []).length > 0 && (
-        <EpicSection
-          epic={{ key: '__isolated__', summary: 'Isolated (no epic link)', issueType: '', status: '' }}
-          children={childrenByEpic['__isolated__']}
-          jiraBaseUrl={jiraBaseUrl}
-          isolated
-        />
-      )}
-    </div>
-  );
-}
-
-function EpicSection({ epic, children, jiraBaseUrl, isolated = false }) {
-  const openChildren = useMemo(() => children.filter((c) => !isDone(c)), [children]);
-  const allDone = openChildren.length === 0 && children.length > 0;
-  const pct = children.length > 0 ? Math.round(((children.length - openChildren.length) / children.length) * 100) : 0;
-  const [expanded, setExpanded] = useState(!allDone);
-
-  const toggle = useCallback(() => setExpanded((v) => !v), []);
-
-  return (
-    <div className="fd-epic-section">
-      <button type="button" className="fd-epic-row" onClick={toggle}>
-        <span className="fd-epic-toggle">{expanded ? '▼' : '▶'}</span>
-        {!isolated && <span className="fd-epic-key">{epic.key}</span>}
-        <span className="fd-epic-summary">{epic.summary}</span>
-        {!isolated && <span className={`fd-epic-status fd-status-chip`}>{epic.status}</span>}
-        <span className="fd-epic-counts">
-          {allDone
-            ? <span className="fd-all-done">✓ all done</span>
-            : <>{openChildren.length} open / {children.length} total</>}
-        </span>
-        {children.length > 0 && (
-          <span className="fd-progress-bar">
-            <span className="fd-progress-fill" style={{ width: `${pct}%` }} />
-          </span>
-        )}
-        <span className="fd-progress-pct">{pct}%</span>
-      </button>
-
-      {expanded && openChildren.length > 0 && (
-        <table className="fd-plan-table">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Type</th>
-              <th>Summary</th>
-              <th>Status</th>
-              <th>Assignee</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
-          <tbody>
-            {openChildren.map((row) => (
-              <tr key={row.key}>
-                <td>
-                  <a href={`https://jira.nutanix.com/browse/${row.key}`} target="_blank" rel="noreferrer">
-                    {row.key}
-                  </a>
-                </td>
-                <td>{row.issueType}</td>
-                <td>{row.summary}</td>
-                <td><span className={`fd-status-chip fd-priority-${(row.status || '').toLowerCase().replace(/\s+/g, '-')}`}>{row.status}</span></td>
-                <td>{row.assignee || '—'}</td>
-                <td className={`fd-pri-${(row.priority || 'none').toLowerCase()}`}>{row.priority || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
 // ─── Existing helpers ─────────────────────────────────────────────────────────
 
 function fmtShort(iso) {
@@ -806,7 +683,7 @@ function PayloadTable({ title, rows = [], jql, jiraBaseUrl, action }) {
             {rows.map((row) => (
               <tr key={row.key}>
                 <td>
-                  <a href={`https://jira.nutanix.com/browse/${row.key}`} target="_blank" rel="noreferrer">
+                  <a href={`${jiraBaseUrl}/browse/${row.key}`} target="_blank" rel="noreferrer">
                     {row.key}
                   </a>
                 </td>

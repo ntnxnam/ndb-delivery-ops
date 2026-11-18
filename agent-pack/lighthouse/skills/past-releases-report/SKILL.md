@@ -8,7 +8,7 @@ audience: team-exec, director, portfolio_mgr, rm, tpm
 
 Reusable skill distilled from the Nov 2026 delivery that produced 4 HTML files per release + evidence + corrections for NDB-2.10/2.11/2.12. Every future past-release deck for any product reuses this path — no net-new JQL, no bundle-only counts, no hardcoded product strings.
 
-Base directory for this skill: `agent-pack/skills/past-releases-report`
+Base directory for this skill: `agent-pack/lighthouse/skills/past-releases-report`
 
 ## When to Use This Skill
 
@@ -27,7 +27,7 @@ Input: {
   productId: "ndb",                // per D5, from productService
   releases: ["NDB-2.10","NDB-2.11","NDB-2.12"],  // any length, ordered old→new
   jiraToken: "Bearer <PAT>",       // from Authorization header or server/.env JIRA_PAT
-  outputDir: "Documentation/reports",      // slide-deck files per release
+  outputDir: "docs/reports",      // slide-deck files per release
   useIntegratedVersion: true,       // D4b correction: KPIs use "Integrated Version" cf11360
   includeGantt: true,
   includeNaiSummary: true,         // NAI beam-1-501b grouped capabilities
@@ -147,3 +147,7 @@ NAI:
 - [ ] Exhaustive tests pass: tests/past-release-report.test.js 18/18 — headers, id, rows, Integrated Version OR fixVersion, issuetype, target blank, totals match verify
 - [ ] No secrets/PAT in HTML (footer says "JIRA PAT-verified" not raw token), no localhost, file sizes <30K per detail, no type= JQL
 
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

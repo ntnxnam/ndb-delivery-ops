@@ -5,8 +5,10 @@ alwaysApply: true
 
 # New Page Documentation Gate
 
+> **See also:** `documentation-consistency.mdc` for report naming; `api-docs-required.mdc` for API docs; `ARCHITECTURE.md` § Layer 5 for page layer.
+
 Before a new page (route entry in `routeConfig.js`) ships, two docs **must** exist
-under `Documentation/pages/`:
+under `docs/pages/`:
 
 | Doc | Filename pattern | Required sections |
 |---|---|---|
@@ -15,7 +17,7 @@ under `Documentation/pages/`:
 
 ## Hard rule
 
-Do **not** add a route to `routeConfig.js` or wire up a new `<Page />` in `App.js`
+Do **not** add a route to `routeConfig.js` or `apps/delivery-ops/client/src/` page wiring
 without first creating both docs. If asked to add a page without them, create the
 docs as part of the same task before touching the route config.
 
@@ -28,7 +30,7 @@ session. Do not leave the gap wider than you found it.
 ## Doc location
 
 ```
-Documentation/pages/
+docs/pages/
   EmailSender-requirements.md
   EmailSender-data-layer.md
   ProjectStatus-requirements.md

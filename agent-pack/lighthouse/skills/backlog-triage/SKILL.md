@@ -150,3 +150,7 @@ Audit: reports/audit/triage-all-2026-11-12T14-30Z.json
 - [ ] Audit log written after apply with who/what/when
 - [ ] No ticket updated/closed/chased without explicit approval
 - [ ] Mode=all produces 3-section report with summary counts
+
+## Delegation
+
+Owner: `triage-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

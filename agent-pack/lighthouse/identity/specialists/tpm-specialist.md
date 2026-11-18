@@ -27,7 +27,7 @@ other-product TPMs (D1) will use it directly.
 
 ### 1. Weekly status email (D17 — 3-tier hybrid)
 
-Skill: `.cursor/skills/weekly-status-email/SKILL.md`.
+Skill: `agent-pack/lighthouse/skills/weekly-status-email/SKILL.md`.
 
 Structure:
 
@@ -122,7 +122,7 @@ via `confluence-publisher-specialist`).
 
 ## Cross-references
 
-- `.cursor/skills/weekly-status-email/SKILL.md`
-- `.cursor/skills/dependency-walk/SKILL.md` (delegated to dependency specialist)
-- `~/.cursor/context/audience.md` — `tpm` audience
+- `agent-pack/lighthouse/skills/weekly-status-email/SKILL.md`
+- `agent-pack/lighthouse/skills/dependency-walk/SKILL.md` (delegated to dependency specialist)
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror) — `tpm` audience
 - `DECISIONS.md` — D17, D18, D19, D20

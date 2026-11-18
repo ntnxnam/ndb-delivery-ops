@@ -91,4 +91,6 @@ Example risk register entry:
 
 - **D10** in `DECISIONS.md` — Dual trust model
 - **D15** in `DECISIONS.md` — VP risk-register format requires citations on every line
+- **D44** in `DECISIONS.md` — Lighthouse (product) vs Loom (builder) tenancy — this rule ships in `agent-pack/lighthouse/rules/` and governs product agent output
 - **persona-aware-output.mdc** — citation density varies by audience but presence does not
+- **`agent-pack/harness/`** — host-specific symlinks (harness handles adapter wiring)

@@ -9,7 +9,7 @@ audience: tpm, rm, portfolio_mgr
 This skill is canonically defined at:
 
 ```
-~/.cursor/skills/sprint-gantt-chart/SKILL.md
+agent-pack/lighthouse/skills/sprint-gantt-chart/SKILL.md
 ```
 
 ## When to Use This Skill
@@ -22,6 +22,18 @@ This skill is canonically defined at:
   `[chart:<id>]` token mechanism (after chart catalog, capability #5,
   is ported)
 
+
+## Quick Start
+
+```text
+Input: { release, tickets: JiraIssue[], zoom: "daily" | "weekly" | "monthly" }
+Output: { reactGantt: "<SprintGantt tickets={...} />", htmlGantt: "<table>...</table>", chartToken?: "[chart:gantt-<id>]" }
+
+1. Classify tickets: FEAT-tier -> gate dates, Epic -> duedate, else -> sprint-end (fetch sprint via Agile API, cache by sprintId)
+2. Compute bar: start = ticket start || release EC date, end = hierarchy date above
+3. Render: React interactive Gantt (in-app) + static HTML table (email)
+4. Handle: no-sprint tickets -> blank bar (never hide), today marker, zoom toggle
+```
 ## Why It Matters Here
 
 This is **capability #18** in `CONSOLIDATION.md`. Once ported,
@@ -31,7 +43,7 @@ This is **capability #18** in `CONSOLIDATION.md`. Once ported,
 2. A static HTML Gantt for email reports
 
 Both obey the Nutanix JIRA date hierarchy rule
-(`.cursor/rules/jira-date-hierarchy.mdc`).
+(`agent-pack/lighthouse/rules/jira-date-hierarchy.mdc`).
 
 ## Core Rules (memorise — these come from the date-hierarchy rule)
 
@@ -68,3 +80,7 @@ start → end, blank row for unassigned tickets.
 - [ ] Daily/weekly/monthly zoom works
 - [ ] Email HTML is self-contained
 - [ ] Sprint data cached (no duplicate Sprint API calls)
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

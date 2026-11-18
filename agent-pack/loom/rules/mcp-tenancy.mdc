@@ -1,0 +1,37 @@
+---
+description: MCP server tenancy — lighthouse vs loom vs shared deduplication (D44/D45)
+alwaysApply: true
+---
+
+# MCP Tenancy — Lighthouse vs Loom vs Shared (D44/D45)
+
+Two tenancies + shared. One repo, distinct responsibilities.
+
+| Tenancy | Code | MCP server | Bin | Tools |
+|---|---|---|---|---|
+| **Lighthouse** (product) | `apps/delivery-ops/`, `agent-pack/lighthouse/`, `scripts/lighthouse/` | `mcp/lighthouse/` | `lighthouse-mcp` | 8 shared + 2 product-only (`build_jql`, `team_overall_report`) |
+| **Loom** (builder) | `agent-pack/loom/`, `scripts/loom/` | `mcp/loom/` | `loom-mcp` | 8 shared only |
+| **Shared** | `shared/`, `mcp/shared/`, `apps/bin-packing/` | `mcp/shared/` + `shared/` | — | 8 shared tools + env + glossary (single source) |
+
+## Rules
+
+1. **One feature, one place** — shared tools live in `mcp/shared/`, not duplicated per tenancy. Both tenancies import from the single source (D44).
+2. **Product-only tools live in `mcp/lighthouse/`** — today: `build_jql` and `team_overall_report` (D45). Do not add them to Loom.
+3. **New tool placement:**
+   - Product feature (JIRA, KPI, status, dataset, sprint, triage, Confluence) → `agent-pack/lighthouse/` + `mcp/lighthouse/` or `mcp/shared/` if builder-relevant too.
+   - Builder feature (pipeline, review, deploy, CSV import, scaffold) → `agent-pack/loom/` + `mcp/loom/` or `scripts/loom/`.
+4. **Bins are distinct** — `lighthouse-mcp` ≠ `loom-mcp` (enforced by `scripts/loom/checks/check-mcp-bins-unique.js`). Never reuse a bin name.
+5. **`agent-pack/harness/mcp.json` is the registry** — both servers registered there. Update it when adding a server.
+6. **`shared/` is tenancy-agnostic** — no tenancy prefix. Both tenancies may depend on it; it must not depend on either.
+
+## Cross-reference
+
+- `DECISIONS.md` D44/D45/D46 — tenancy, package scope, script tenancy.
+- `ARCHITECTURE.md` § Directory structure + Migration strategy — where tenancies sit.
+- `port-and-env-contracts.mdc` — companion rule for ports/env.
+
+## Never do
+
+- Duplicate a shared MCP tool into both `mcp/lighthouse/` and `mcp/loom/` — keep one copy in `mcp/shared/`.
+- Put product skills under `agent-pack/loom/` or builder skills under `agent-pack/lighthouse/`.
+- Forget to update `mcp.json` when adding a server or tool.
