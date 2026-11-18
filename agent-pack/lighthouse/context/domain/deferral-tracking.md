@@ -13,7 +13,7 @@ Release Outstanding Work tab order (fixed):
 | 3. Deferral Label | QA DRI | Add `{release}-deferred` |
 | 4. Must-fix | Dev DRI, QA DRI, or QA | When mustfix label is added; status chase @12h |
 
-**Move `fixVersion` before deferred / mustfix labels.** Adding `{release}-mustfix` clears that release’s `{release}-deferred` only (not other releases). Full rule: `.cursor/rules/release-outstanding-work-order.mdc`.
+**Move `fixVersion` before deferred / mustfix labels.** Adding `{release}-mustfix` clears that release’s `{release}-deferred` only (not other releases). Full rule: `agent-pack/lighthouse/rules/release-outstanding-work-order.mdc`.
 
 ## Core Concepts
 

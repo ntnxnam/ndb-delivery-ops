@@ -33,6 +33,7 @@
     "rules/one-shot.mdc",
     "rules/minimal-architecture.mdc",
     "rules/gerrit-push-for-review.mdc",
+    "rules/confluence-cleanup-clarification.mdc",
     "rules/mcp-tenancy.mdc",
     "rules/port-and-env-contracts.mdc",
     "rules/documentation-consistency.mdc",
