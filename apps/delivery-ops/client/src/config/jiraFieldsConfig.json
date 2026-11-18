@@ -1,0 +1,643 @@
+{
+  "version": "1.1.0",
+  "description": "JIRA Custom Field Configuration - Single source of truth for all JIRA field mappings and labels taxonomy (fields + labels for JQL construction)",
+  "fields": {
+    "checkpointDates": {
+      "requirementsDone": {
+        "id": "customfield_13860",
+        "label": "Rqmnts Done Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when requirements were done",
+        "usedIn": [
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "Rqmnts Done Date",
+        "jql": "customfield_13860",
+        "standard": false
+      },
+      "codeComplete": {
+        "id": "customfield_11067",
+        "label": "Code Complete Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when code is marked as complete",
+        "usedIn": [
+          "gantt",
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "Code Complete Date",
+        "jql": "customfield_11067",
+        "standard": false
+      },
+      "testPlan": {
+        "id": "customfield_11068",
+        "label": "Test Plan Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when test plan is ready",
+        "usedIn": [
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "Test Plan Date",
+        "jql": "customfield_11068",
+        "standard": false
+      },
+      "fsdsDone": {
+        "id": "customfield_13861",
+        "label": "FS/DS Done Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when FS/DS is done",
+        "usedIn": [
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "FS/DS Done Date",
+        "jql": "customfield_13861",
+        "standard": false
+      },
+      "commitGate": {
+        "id": "customfield_35863",
+        "label": "Commit Gate Ready Estimation Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Estimated date for commit gate",
+        "usedIn": [
+          "gantt",
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "Commit Gate Ready Estimation Date",
+        "jql": "customfield_35863",
+        "standard": false
+      },
+      "promotionGate": {
+        "id": "customfield_35864",
+        "label": "Promotion Gate Ready Estimation Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Estimated date for promotion gate",
+        "usedIn": [
+          "gantt",
+          "table",
+          "history",
+          "email"
+        ],
+        "jiraName": "Promotion Gate Ready Estimation Date",
+        "jql": "customfield_35864",
+        "standard": false
+      },
+      "statusUpdateDate": {
+        "id": "customfield_45660",
+        "label": "Status Update Last Updated Date",
+        "type": "date",
+        "category": "checkpoint",
+        "description": "Date when status update was last updated",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Status Update Last Updated Date",
+        "jql": "customfield_45660",
+        "standard": false
+      }
+    },
+    "people": {
+      "uxOwner": {
+        "id": "customfield_15968",
+        "label": "UX Owner",
+        "type": "user",
+        "category": "people",
+        "description": "UX Owner for the ticket",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "UX Owner",
+        "jql": "customfield_15968",
+        "standard": false
+      },
+      "qaContact": {
+        "id": "customfield_10860",
+        "label": "QA Contact",
+        "type": "user",
+        "category": "people",
+        "description": "QA Contact for the ticket",
+        "usedIn": [
+          "table",
+          "email",
+          "release-outstanding-work"
+        ],
+        "jiraName": "QA Contact",
+        "jql": "customfield_10860",
+        "standard": false
+      },
+      "testLead": {
+        "id": "customfield_11065",
+        "label": "Test Lead",
+        "type": "user",
+        "category": "people",
+        "description": "Test Lead for the ticket",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Test Lead",
+        "jql": "customfield_11065",
+        "standard": false
+      },
+      "guiLead": {
+        "id": "customfield_11861",
+        "label": "GUI Lead",
+        "type": "user",
+        "category": "people",
+        "description": "GUI Lead for the ticket",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "GUI Lead",
+        "jql": "customfield_11861",
+        "standard": false
+      },
+      "tpmOwner": {
+        "id": "customfield_27764",
+        "label": "TPM Owner",
+        "type": "user",
+        "category": "people",
+        "description": "Technical Program Manager owner",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "TPM Owner",
+        "jql": "customfield_27764",
+        "standard": false
+      },
+      "teamMembers": {
+        "id": "customfield_51460",
+        "label": "Team Members",
+        "type": "user",
+        "category": "people",
+        "description": "List of team members",
+        "isArray": true,
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Team Members",
+        "jql": "customfield_51460",
+        "standard": false
+      },
+      "pmOwner": {
+        "id": "customfield_11260",
+        "label": "PM Owner",
+        "type": "user",
+        "category": "people",
+        "description": "Product Manager owner",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "PM Owner",
+        "jql": "customfield_11260",
+        "standard": false
+      },
+      "participants": {
+        "id": "customfield_11960",
+        "label": "Participants",
+        "type": "user",
+        "category": "people",
+        "description": "Additional participants",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "Participants",
+        "jql": "customfield_11960",
+        "standard": false
+      },
+      "assigneeManager": {
+        "id": "customfield_19262",
+        "label": "Assignee Manager",
+        "type": "user",
+        "category": "people",
+        "description": "Manager of the ticket assignee",
+        "usedIn": [
+          "table",
+          "email",
+          "release-outstanding-work"
+        ],
+        "jiraName": "Assignee Manager",
+        "jql": "customfield_19262",
+        "standard": false
+      }
+    },
+    "content": {
+      "statusUpdate": {
+        "id": "customfield_23073",
+        "label": "Status Update",
+        "type": "text",
+        "category": "content",
+        "description": "Status update text field",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Status Update",
+        "jql": "customfield_23073",
+        "standard": false
+      },
+      "executiveStatusUpdate": {
+        "id": "customfield_38460",
+        "label": "Executive Status Update",
+        "type": "text",
+        "category": "content",
+        "description": "Executive-level status update",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Executive Status Update",
+        "jql": "customfield_38460",
+        "standard": false
+      },
+      "deferralJustification": {
+        "id": "customfield_42660",
+        "label": "Deferral Justification",
+        "type": "text",
+        "category": "content",
+        "description": "Why a Bug/Improvement is being deferred from a release",
+        "usedIn": [
+          "release-outstanding-work",
+          "fetch"
+        ],
+        "jiraName": "Deferral Justification",
+        "jql": "customfield_42660",
+        "standard": false
+      }
+    },
+    "links": {
+      "requirementsLink": {
+        "id": "customfield_14463",
+        "label": "Link to Requirements",
+        "type": "link",
+        "category": "links",
+        "description": "Link to requirements document",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "Link to Requirements",
+        "jql": "customfield_14463",
+        "standard": false
+      },
+      "tcmsLink": {
+        "id": "customfield_31460",
+        "label": "TCMS Link",
+        "type": "link",
+        "category": "links",
+        "description": "Link to TCMS",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "TCMS Link",
+        "jql": "customfield_31460",
+        "standard": false
+      },
+      "designDocLink": {
+        "id": "customfield_14464",
+        "label": "Link to Design Doc",
+        "type": "link",
+        "category": "links",
+        "description": "Link to design document",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "Link to Design Doc",
+        "jql": "customfield_14464",
+        "standard": false
+      },
+      "testPlanLink": {
+        "id": "customfield_14465",
+        "label": "Link to Test Plan",
+        "type": "link",
+        "category": "links",
+        "description": "Link to test plan document",
+        "usedIn": [
+          "email"
+        ],
+        "jiraName": "Link to Test Plan",
+        "jql": "customfield_14465",
+        "standard": false
+      },
+      "cgChecklistLink": {
+        "id": "customfield_55662",
+        "label": "Link to CG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Commit Gate checklist",
+        "usedIn": [
+          "table",
+          "email",
+          "fetch"
+        ],
+        "jiraName": "Link to CG checklist",
+        "jql": "customfield_55662",
+        "standard": false
+      },
+      "pgChecklistLink": {
+        "id": "customfield_55663",
+        "label": "Link to PG checklist",
+        "type": "link",
+        "category": "links",
+        "description": "Link to the Promotion Gate checklist",
+        "usedIn": [
+          "table",
+          "email",
+          "fetch"
+        ],
+        "jiraName": "Link to PG checklist",
+        "jql": "customfield_55663",
+        "standard": false
+      }
+    },
+    "indicators": {
+      "releaseCommit": {
+        "id": "customfield_11061",
+        "label": "Release Commit",
+        "type": "select",
+        "category": "indicators",
+        "description": "Release Commit state (e.g. Commit) — used by Dependency View ask vs committed",
+        "usedIn": [
+          "dependency-view",
+          "fetch"
+        ],
+        "jiraName": "Release Commit",
+        "jql": "customfield_11061",
+        "standard": false
+      },
+      "riskIndicator": {
+        "id": "customfield_23560",
+        "label": "Risk Indicator",
+        "type": "select",
+        "category": "indicators",
+        "description": "Risk level indicator (e.g., Green - On Track)",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "hasColor": true,
+        "jiraName": "Risk Indicator",
+        "jql": "customfield_23560",
+        "standard": false
+      },
+      "riskAssessment": {
+        "id": "customfield_47780",
+        "label": "Risk Assessment",
+        "type": "text",
+        "category": "indicators",
+        "description": "Free-text risk assessment",
+        "usedIn": [
+          "table",
+          "email",
+          "fetch"
+        ],
+        "jiraName": "Risk Assessment",
+        "jql": "customfield_47780",
+        "standard": false
+      },
+      "pathToGreen": {
+        "id": "customfield_55664",
+        "label": "Path to Green",
+        "type": "text",
+        "category": "indicators",
+        "description": "What it takes to return the item to green",
+        "usedIn": [
+          "table",
+          "email",
+          "fetch"
+        ],
+        "jiraName": "Path to Green",
+        "jql": "customfield_55664",
+        "standard": false
+      }
+    },
+    "classification": {
+      "primaryComponent": {
+        "id": "customfield_15160",
+        "label": "Primary Component",
+        "type": "cascadingSelect",
+        "category": "classification",
+        "description": "Cascading select: parent is the JIRA component, child is the sub-component",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Primary Component",
+        "jql": "customfield_15160",
+        "standard": false
+      }
+    },
+    "relationships": {
+      "epicLink": {
+        "id": "customfield_10361",
+        "label": "Epic Link",
+        "type": "link",
+        "category": "relationships",
+        "description": "Links Task/Bug/Test/UnitTest to their parent Epic (Nutanix JIRA field ID)",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Epic Link",
+        "jql": "customfield_10361",
+        "standard": false
+      },
+      "parentLink": {
+        "id": "customfield_20363",
+        "label": "Parent Link",
+        "type": "link",
+        "category": "relationships",
+        "description": "Links Epics to their parent FEAT/Initiative (JPO portfolio hierarchy)",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Parent Link",
+        "jql": "customfield_20363",
+        "standard": false
+      }
+    },
+    "agile": {
+      "sprint": {
+        "id": "customfield_10020",
+        "label": "Sprint",
+        "type": "sprint",
+        "category": "agile",
+        "description": "Jira Software board sprint",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Sprint",
+        "jql": "customfield_10020",
+        "standard": false
+      },
+      "sprints": {
+        "id": "customfield_10021",
+        "label": "Sprints",
+        "type": "array",
+        "category": "agile",
+        "description": "All sprints (multi-sprint boards)",
+        "usedIn": [
+          "table",
+          "email"
+        ],
+        "jiraName": "Sprints",
+        "jql": "customfield_10021",
+        "standard": false
+      }
+    }
+  },
+  "labels": {
+    "porExclude": {
+      "pattern": "{prefix}-not-por",
+      "jql": "labels not in (\"{prefix}-not-por\")",
+      "template": "labels not in (\"{label}\")",
+      "description": "POR exclusion label — ticket is not part of Plan-of-Record scope; filtered out of commit counts",
+      "usedIn": [
+        "fetch",
+        "commit-jql",
+        "reports"
+      ],
+      "variants": [
+        "{prefix}-non-por"
+      ]
+    },
+    "lifecycle": {
+      "deferred": {
+        "pattern": "{prefix}-{version}-deferred",
+        "jql": "labels = \"{prefix}-{version}-deferred\"",
+        "template": "labels = \"{label}\"",
+        "description": "Deferred from release — ticket moved out of fixVersion but retains label for audit",
+        "usedIn": [
+          "fetch",
+          "release-outstanding-work",
+          "retro"
+        ]
+      },
+      "mustfix": {
+        "pattern": "{prefix}-{version}-mustfix",
+        "jql": "labels = \"{prefix}-{version}-mustfix\"",
+        "template": "labels = \"{label}\"",
+        "description": "Must-fix for release — must ship even if deferred; overrides deferred label for same version",
+        "usedIn": [
+          "fetch",
+          "release-outstanding-work",
+          "briefing"
+        ]
+      },
+      "wishlist": {
+        "pattern": "{prefix}-{version}-wishlist",
+        "jql": "labels = \"{prefix}-{version}-wishlist\"",
+        "template": "labels = \"{label}\"",
+        "description": "Wishlist / candidate pool for release — not committed, used for dependency sidecar",
+        "usedIn": [
+          "fetch",
+          "payload-sidecar",
+          "dependency-view"
+        ]
+      },
+      "longTermFunded": {
+        "pattern": "{prefix}-{version}-long-term-funded",
+        "jql": "labels = \"{prefix}-{version}-long-term-funded\"",
+        "template": "labels = \"{label}\"",
+        "description": "Long-term funded work — funded across multiple releases, shown alongside fixVersion scope",
+        "usedIn": [
+          "fetch",
+          "gantt",
+          "release-items"
+        ]
+      },
+      "extension": {
+        "pattern": "{prefix}-{version}-code-complete-extension-recieved",
+        "jql": "labels in (\"{prefix}-{version}-code-complete-extension-recieved\", \"{prefix}-{version}-code-complete-extention-recieved\")",
+        "template": "labels = \"{label}\"",
+        "description": "Code-complete extension received — FEAT granted extra time beyond gate",
+        "usedIn": [
+          "fetch",
+          "release-items"
+        ],
+        "variants": [
+          "{prefix}-{version}-code-complete-extention-recieved"
+        ]
+      }
+    },
+    "dependency": {
+      "trainAsk": {
+        "pattern": "{prefix}-{train}-dependency",
+        "jql": "labels in (\"{prefix}-{train}-dependency\")",
+        "template": "labels = \"{label}\"",
+        "description": "Train dependency ask — partner team dependency requested for a release train",
+        "usedIn": [
+          "dependency-view",
+          "fetch"
+        ]
+      }
+    },
+    "testType": {
+      "systemTest": {
+        "pattern": "longevity",
+        "jql": "labels = longevity",
+        "template": "labels = \"{label}\"",
+        "description": "System-test / longevity marker — used to slice ST scale and KPI pulse",
+        "usedIn": [
+          "kpi",
+          "system-test-scale"
+        ],
+        "variants": [
+          "system-test",
+          "system_test"
+        ]
+      }
+    }
+  },
+  "fieldNameMappings": {
+    "rqmnts done date": "requirementsDone",
+    "requirements done date": "requirementsDone",
+    "requirements done": "requirementsDone",
+    "code complete date": "codeComplete",
+    "code complete": "codeComplete",
+    "test plan date": "testPlan",
+    "test plan": "testPlan",
+    "fs/ds done date": "fsdsDone",
+    "fs/ds done": "fsdsDone",
+    "fsds done date": "fsdsDone",
+    "fsds done": "fsdsDone",
+    "commit gate ready estimation date": "commitGate",
+    "commit gate": "commitGate",
+    "promotion gate ready estimation date": "promotionGate",
+    "promotion gate": "promotionGate",
+    "status update date": "statusUpdateDate",
+    "status update last updated date": "statusUpdateDate",
+    "link to cg checklist": "cgChecklistLink",
+    "link to pg checklist": "pgChecklistLink",
+    "risk assessment": "riskAssessment",
+    "path to green": "pathToGreen",
+    "deferral justification": "deferralJustification"
+  },
+  "fieldCategories": {
+    "checkpoint": "Checkpoint dates for tracking project milestones",
+    "people": "User/people fields for contacts and owners",
+    "content": "Text content fields for status updates",
+    "links": "Link fields to external documents",
+    "indicators": "Status and risk indicator fields",
+    "classification": "Component classification fields",
+    "relationships": "Fields that link tickets together",
+    "agile": "Sprint and board fields (Jira Software)"
+  }
+}

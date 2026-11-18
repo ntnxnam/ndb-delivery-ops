@@ -38,7 +38,7 @@ function getShared() {
   }
   return _sharedPromise;
 }
-const { getAllFields } = require('../../utils/jiraFieldsConfig');
+const { getAllFields, getFieldId, getFieldValue, buildFieldIdsString, getFieldIdsForContext } = require('../../utils/jiraFieldsConfig');
 const { processAllMilestones } = require('../../utils/milestoneProcessor');
 const jiraFieldsConfig = require('../../config/jiraFieldsConfig.json');
 const { runSearchByJql } = require('../../utils/jiraSearchByJql');
@@ -342,7 +342,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         timeout: 60000, // Increased timeout for comprehensive query
         params: {
           jql: jqlQuery,
-          fields: 'key,summary,status,resolution,resolutiondate,created,updated,assignee,priority,labels,duedate,fixVersions,customfield_10860,issuetype,customfield_20363',
+          fields: `key,summary,status,resolution,resolutiondate,created,updated,assignee,priority,labels,duedate,fixVersions,${getFieldId('qaContact')},issuetype,${getFieldId('parentLink')}`,
           expand: 'names',
           maxResults: 1000
         }
@@ -359,7 +359,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
           const mainTicketResponse = await jira.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
             timeout: 6000, // Reduced from 30s to 6s
             params: {
-              fields: 'key,summary,status,issuetype,resolution,assignee,duedate,fixVersions,customfield_10860,customfield_20363,labels,priority,resolutiondate,created,updated',
+              fields: `key,summary,status,issuetype,resolution,assignee,duedate,fixVersions,${getFieldId('qaContact')},${getFieldId('parentLink')},labels,priority,resolutiondate,created,updated`,
               expand: 'names'
             }
           });
@@ -848,7 +848,8 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
       const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
-          fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13860,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_47780,customfield_55664,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_55662,customfield_55663,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
+          fields: ['key','summary','status','issuetype','fixVersions','labels','reporter','assignee','watchers', buildFieldIdsString(['codeComplete','testPlan','requirementsDone','fsdsDone','statusUpdate','commitGate','promotionGate','statusUpdateDate','riskIndicator','riskAssessment','pathToGreen','requirementsLink','tcmsLink','designDocLink','testPlanLink','cgChecklistLink','pgChecklistLink','pmOwner','qaContact','participants','tpmOwner','executiveStatusUpdate'])].join(','),
+
           expand: 'names'
         }
       });

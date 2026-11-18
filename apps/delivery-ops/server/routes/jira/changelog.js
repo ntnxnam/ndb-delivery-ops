@@ -38,7 +38,7 @@ function getShared() {
   }
   return _sharedPromise;
 }
-const { getAllFields } = require('../../utils/jiraFieldsConfig');
+const { getAllFields, getFieldId, buildFieldIdsString } = require('../../utils/jiraFieldsConfig');
 const { processAllMilestones } = require('../../utils/milestoneProcessor');
 const jiraFieldsConfig = require('../../config/jiraFieldsConfig.json');
 const { runSearchByJql } = require('../../utils/jiraSearchByJql');
@@ -102,11 +102,11 @@ router.post('/checkpoint-history', checkpointHistoryLimiter, validateJiraTokenMi
     const baseUrl = JIRA_API_V2.BASE_URL;
     const cleanToken = req.jiraToken;
 
-    // Checkpoint field IDs
+    // Checkpoint field IDs — via central config (D3/D41)
     const checkpointFields = {
-      codeComplete: 'customfield_11067',
-      commitGate: 'customfield_35863',
-      promotionGate: 'customfield_35864'
+      codeComplete: getFieldId('codeComplete'),
+      commitGate: getFieldId('commitGate'),
+      promotionGate: getFieldId('promotionGate'),
     };
 
     // Fetch issue with changelog using pagination utility
@@ -296,11 +296,11 @@ router.get('/test-changelog/:key', validateJiraTokenMiddleware, async (req, res)
     
     // Test 1: WITH fields parameter (current approach)
     const checkpointFields = {
-      codeComplete: 'customfield_11067',
-      fsdsDone: 'customfield_13861',
-      testPlan: 'customfield_11068',
-      commitGate: 'customfield_35863',
-      promotionGate: 'customfield_35864'
+      codeComplete: getFieldId('codeComplete'),
+      fsdsDone: getFieldId('fsdsDone'),
+      testPlan: getFieldId('testPlan'),
+      commitGate: getFieldId('commitGate'),
+      promotionGate: getFieldId('promotionGate'),
     };
     
     console.log(`[Test] Testing changelog fetch for ${key}...`);
