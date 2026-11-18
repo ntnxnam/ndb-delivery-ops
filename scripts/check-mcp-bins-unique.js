@@ -29,8 +29,7 @@ for (const dir of MCP_DIRS) {
   }
 }
 
-// 2. No byte-identical tool files across both dirs, unless the file is the shared
-// single-source in mcp/shared/tools (intentionally imported by both).
+// 2. No byte-identical tool files across MCP dirs (shared single-source lives in mcp/shared/tools and is imported, not copied).
 const sharedHashes = new Set();
 const sharedToolsDir = path.join(ROOT, 'mcp/shared/tools');
 if (fs.existsSync(sharedToolsDir)) {

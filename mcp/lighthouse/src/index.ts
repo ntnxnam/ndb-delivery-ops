@@ -1,17 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { loadEnv } from './config/env.js';
-import { registerGetReleaseStatus } from './tools/getReleaseStatus.js';
+import { loadEnv } from '../../shared/config/env.js';
+import { registerGetReleaseStatus } from '../../shared/tools/getReleaseStatus.js';
 import { registerBuildJql } from './tools/buildJql.js';
 import { registerTeamOverallReport } from './tools/teamOverallReport.js';
-import { registerMoveJiraDates } from './tools/moveJiraDates.js';
-import { registerCalculateStoryPoints } from './tools/calculateStoryPoints.js';
-import { registerSayVsDo } from './tools/sayVsDo.js';
-import { registerBinPackProjects } from './tools/binPackProjects.js';
-import { registerGanttReleaseTimeline } from './tools/ganttReleaseTimeline.js';
-import { registerPlanCapacity } from './tools/planCapacity.js';
-import { registerLeadershipCommitReport } from './tools/leadershipCommitReport.js';
-import { registerNdbGlossary } from './resources/ndbGlossary.js';
+import { registerMoveJiraDates } from '../../shared/tools/moveJiraDates.js';
+import { registerCalculateStoryPoints } from '../../shared/tools/calculateStoryPoints.js';
+import { registerSayVsDo } from '../../shared/tools/sayVsDo.js';
+import { registerBinPackProjects } from '../../shared/tools/binPackProjects.js';
+import { registerGanttReleaseTimeline } from '../../shared/tools/ganttReleaseTimeline.js';
+import { registerPlanCapacity } from '../../shared/tools/planCapacity.js';
+import { registerLeadershipCommitReport } from '../../shared/tools/leadershipCommitReport.js';
+import { registerNdbGlossary } from '../../shared/resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
   'You are connected to the Lighthouse MCP server. It exposes portfolio delivery ops capabilities (JIRA queries, release reports, sprint analytics) as tools.',
