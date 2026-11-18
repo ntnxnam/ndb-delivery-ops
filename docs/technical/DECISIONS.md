@@ -1024,6 +1024,144 @@ change.
 
 ---
 
+## Round 9 — Lighthouse / Loom tenancy + package scope (2026-11-18)
+
+The late-2026 codebase split into **Lighthouse** (product) and **Loom** (builder)
+landed in code first (`ce2cbad`, `e2d1441`, `ab01097`, `b86b241`, …) without a
+decision entry. `ARCHITECTURE.md` was updated to describe the split; this round
+catches `DECISIONS.md` up. No new architecture is invented — these entries
+describe what exists on `weave/delivery-ops-all-phases-20261118`.
+
+### D44 — Lighthouse vs Loom tenancy — product and builder split
+
+**Statement.** The repo has two tenancies — **Lighthouse** (product: delivery-ops)
+and **Loom** (builder: dev tooling) — plus **shared** code they both consume.
+
+* **Lighthouse** owns the product surface:
+  `apps/delivery-ops/` (React on `:8899` + Express on `:8001`),
+  `mcp/lighthouse/` (product MCP server, bin `lighthouse-mcp`, 2
+  lighthouse-only tools — `build_jql`, `team_overall_report` — plus 8 shared
+  tools from `mcp/shared/`), `agent-pack/lighthouse/` (orchestrator
+  `ops-assistant`, 7 specialists, 19 skills, domain `context/`, production
+  `prompts/`, product `rules/`, `workflows/`, `memory/schema.json`),
+  and `scripts/lighthouse/` (see D46).
+* **Loom** owns the builder surface:
+  `mcp/loom/` (builder MCP server, bin `loom-mcp`, 8 shared tools only),
+  `agent-pack/loom/` (orchestrator `loom`, 3 builder specialists —
+  `frontend-dev`, `backend-dev`, `connector-dev` — 5 skills incl. `weave`,
+  builder `rules/` incl. `weave.mdc`/`one-shot.mdc`, `memory/schema.json`
+  independent of Lighthouse), `scripts/loom/` (see D46),
+  and the harness adapters in `agent-pack/harness/` (`mcp.json` now
+  registers both `mcp-lighthouse` and `mcp-loom` on distinct bins).
+* **Shared** (no tenancy prefix):
+  `shared/` (`@portfolio-delivery-ops/shared` — connectors, services,
+  `agentPack`, `agentRuntime`, domain derives), `mcp/shared/`
+  (`@portfolio-delivery-ops/mcp-shared` — 8 deduped tools + `config/env`
+  + `resources/ndbGlossary` — imported by both MCP servers, not copied),
+  `apps/bin-packing/` (static-mounted, `@portfolio-delivery-ops/bin-packing`),
+  `crystalball-i/`, `_archive/`, `docs/`, and `scripts/open-pr.sh`.
+
+**Implications.**
+- `mcp-server/` is gone. `ARCHITECTURE.md:279,165` and
+  `AGENTS.md:22` references to a single `mcp-server/` are stale — read as
+  `mcp/lighthouse|loom|shared` and `mcp/*/src/tools/` respectively.
+- A new MCP tool that is product-facing (JQL, status, forecast, capacity,
+  triage, publishing) is registered in `mcp/shared/tools/` and wired into
+  **both** servers from `mcp/{lighthouse,loom}/src/index.ts` when
+  appropriate; a lighthouse-only product tool lives in
+  `mcp/lighthouse/src/tools/` (`buildJql`, `teamOverallReport` today).
+- A new skill/rule/prompt/specialist that shapes product answers or
+  product pages lives in `agent-pack/lighthouse/`; a skill/rule that
+  shapes how we *build* the product (weave, review, exec, deploy,
+  csv-import) lives in `agent-pack/loom/`. Do not cross-mount.
+- `shared/` never imports from `mcp/` or `agent-pack/`; it is the
+  dependency sink (D41, D40).
+- `mcp/shared/tools/` is the single source for deduped tools — do not
+  re-fork a tool into a tenancy-local copy to "customise" it.
+
+**What this is NOT.**
+- A micro-repo split. One git repo, one `workspaces: [apps/*, shared, mcp/*]`
+  graph. Lighthouse and Loom share the same commit history and CI.
+- A runtime isolation boundary. Both MCP servers can run in the same host
+  today; the split is organisational, not a deployment requirement.
+
+### D45 — npm scope is `@portfolio-delivery-ops`; app package still `ndb-status-sender`
+
+**Statement.** The monorepo's published scope is
+`@portfolio-delivery-ops`. Packages that have been renamed already use it;
+the delivery-ops app package has not.
+
+**What's done.**
+
+| Package | Scope status |
+|---|---|
+| `shared/` | `@portfolio-delivery-ops/shared` |
+| `mcp/shared/` | `@portfolio-delivery-ops/mcp-shared` |
+| `mcp/lighthouse/` | `@portfolio-delivery-ops/mcp-lighthouse` (bin `lighthouse-mcp`) |
+| `mcp/loom/` | `@portfolio-delivery-ops/mcp-loom` (bin `loom-mcp`) |
+| `apps/bin-packing/` | `@portfolio-delivery-ops/bin-packing` |
+| `apps/delivery-ops/server/` | `@portfolio-delivery-ops/shared` consumer (`*` dep) |
+| `package.json:workspaces` | `mcp/*` (was `mcp-server`) |
+
+**What's still `ndb-*` (intentionally deferred with D2).**
+
+| Location | Current name | Why not renamed yet |
+|---|---|---|
+| `package.json:1` (root) | `ndb-delivery-ops` | Tracks D2 filesystem rename `~/NDB-Ops-Tools/ndb-delivery-ops/` → `portfolio-delivery-ops` |
+| `apps/delivery-ops/package.json:2` | `ndb-status-sender` | App package + `client/package.json` `ndb-status-sender-client` + `server/package.json` `ndb-status-sender-server` |
+| Git remote + GH repo name | `ndb-delivery-ops` | Same D2 deferral |
+
+**Implications.**
+- New workspaces MUST use `@portfolio-delivery-ops/<name>` (enforced by
+  `scripts/lighthouse/checks/check-product-agnostic.js` + convention). Do
+  not create a new `ndb-*` package.
+- `mcp:build` (`package.json:18`) builds `@portfolio-delivery-ops/shared`
+  then both MCP servers — the old `mcp-server` build target is gone.
+- Do not bulk-rename `ndb-status-sender` to `@portfolio-delivery-ops/delivery-ops`
+  outside the D2 rename session — it touches `client/package.json:proxy`,
+  deploy scripts, and the GH repo simultaneously.
+
+**What this is NOT.** A decision to keep `ndb-status-sender` forever. It is
+a waypoint: the scope migration is mid-flight and intentionally pauses at
+the D2 boundary.
+
+**Deferred to.** Dedicated D2 rename session (filesystem + root `package.json`
++ app `package.json` + GH repo) — same session that retires
+`~/NDB-Ops-Tools/ndb-delivery-ops` on disk.
+
+### D46 — Script tenancy follows the tenancy it serves
+
+**Statement.** `scripts/` split in `ce2cbad` to mirror the Lighthouse/Loom
+tenancy. A script lives where its consumer lives; top-level `scripts/`
+no longer exists (except `open-pr.sh`, which is repo-wide).
+
+| Tenancy | Scripts | Purpose |
+|---|---|---|
+| `scripts/lighthouse/checks/` | `check-no-localhost.js`, `check-product-agnostic.js` | Product guardrails; `npm run check` runs both |
+| `scripts/lighthouse/docs/` | `docs-build.js`, `docs-verify.sh` | Product docs hub + stale-path gate |
+| `scripts/lighthouse/jira/` | `fetch-field-history.js`, `seed-feature-components.js` | Product JIRA data maintenance |
+| `scripts/lighthouse/reports/` | `generate-past-release-report.mjs`, `nai-capability-summary.mjs` | Product report generation |
+| `scripts/loom/checks/` | `check-mcp-bins-unique.js` | Builder guardrail: `lighthouse-mcp` ≠ `loom-mcp` |
+| `scripts/loom/archive/` | `archive-decommissioned-projects.sh` | Builder archive hygiene |
+| `scripts/loom/jira/` | `fetch-jch-tickets.sh` | Builder JIRA sweep |
+| `scripts/` (root) | `open-pr.sh` | Repo-wide; stays put |
+
+**Implications.**
+- `npm run check` runs `check:no-localhost` + `check:product-agnostic`
+  (Lighthouse) + `check:mcp` (Loom) — see `package.json:14-17`.
+- A new product check/doc/jira/report script goes in
+  `scripts/lighthouse/<area>/`; a new builder/archive/check script goes
+  in `scripts/loom/<area>/`. Do not recreate a top-level `scripts/`
+  folder for tenanted code.
+- `docs-verify.sh` path is now `scripts/lighthouse/docs/docs-verify.sh`
+  — the only verified path; `scripts/docs-verify.sh` and
+  `scripts/lighthouse/docs-verify.sh` are stale per `ce2cbad`.
+
+**What this is NOT.** A ban on repo-wide scripts. `open-pr.sh` remains at
+`scripts/open-pr.sh` because it serves both tenancies equally.
+
+---
+
 ## Round 7 — Pending decisions (open)
 
 | ID | Decision needed | Blocked on |
@@ -1056,3 +1194,8 @@ These are non-negotiables baked into all future design:
    user; only re-frame the output (D6).
 8. **Agent pack is portable** — cookbook lives in `agent-pack/`; every host
    is an adapter (D38). Do not lock SOPs to Cursor.
+9. **Tenancy is organisational, not a repo split** — Lighthouse (product) and
+   Loom (builder) share one repo and one `workspaces` graph; `mcp/shared`
+   and `shared/` are the only cross-tenancy code (D44). Scope
+   `@portfolio-delivery-ops/*` is the tenanted scope — new packages use it,
+   legacy `ndb-status-sender` remains only until the D2 rename (D45, D46).
