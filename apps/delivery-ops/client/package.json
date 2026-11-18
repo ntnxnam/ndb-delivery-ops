@@ -66,7 +66,13 @@
   "jest": {
     "moduleNameMapper": {
       "^axios$": "<rootDir>/node_modules/axios/dist/node/axios.cjs",
-      "^axios/(.*)$": "<rootDir>/node_modules/axios/dist/node/axios.cjs"
+      "^axios/(.*)$": "<rootDir>/node_modules/axios/dist/node/axios.cjs",
+      "^react$": "<rootDir>/../../../node_modules/react",
+      "^react-dom$": "<rootDir>/../../../node_modules/react-dom",
+      "^react-dom/(.*)$": "<rootDir>/../../../node_modules/react-dom/$1",
+      "^@testing-library/react$": "<rootDir>/../../../node_modules/@testing-library/react",
+      "^@testing-library/jest-dom$": "<rootDir>/../../../node_modules/@testing-library/jest-dom",
+      "^@testing-library/dom$": "<rootDir>/../../../node_modules/@testing-library/dom"
     }
   },
   "devDependencies": {

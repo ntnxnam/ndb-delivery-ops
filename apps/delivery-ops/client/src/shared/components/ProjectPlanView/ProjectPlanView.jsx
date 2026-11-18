@@ -193,7 +193,7 @@ function IssuesPlanView({ issues, canonicalJql, jiraBaseUrl, columns, title, gro
 
 /** Pre-grouped mode — Email Sender: Feature → Epics grouping */
 function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
-  const safeGroups = Array.isArray(groups) ? groups : [];
+  const safeGroups = useMemo(() => (Array.isArray(groups) ? groups : []), [groups]);
   const totalCount = useMemo(
     () => safeGroups.reduce((sum, g) => sum + (g.childItems?.length || g.childEpics?.length || 0), 0),
     [safeGroups]

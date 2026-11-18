@@ -58,10 +58,9 @@ describe('ProjectPlanView — issues mode (Feature Dashboard)', () => {
       { key: 'EPIC-5', summary: 'Epic under feature', issueType: 'Epic', status: 'Open', parentLink: 'FEAT-1' },
     ];
     // In issues mode, isPortfolio filters Feature/Epic out of children, so only non-portfolio tasks would be grouped.
-    // Custom groupBy is exercised by verifying isolated handling doesn't break.
+    // Custom groupBy is exercised by verifying isolated handling doesn't break. Header still counts all non-Done.
     render(<ProjectPlanView issues={customIssues} jiraBaseUrl={jiraBaseUrl} groupBy="parentLink" />);
-    // EPIC is portfolio type, so not rendered as child — but component should not crash
-    expect(screen.getByText(/0 open/)).toBeTruthy();
+    expect(screen.getByText(/2 open/)).toBeTruthy();
   });
 
   it('toggle button has aria-expanded and aria-hidden glyph', () => {
