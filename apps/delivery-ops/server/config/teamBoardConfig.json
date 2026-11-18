@@ -1,5 +1,5 @@
 {
-  "_schema_version": "4.0-multi-team",
+  "_schema_version": "2.0-team-agnostic",
   "_description": "Multi-team registry. Each Admin-onboarded team is one entry (NDB, Prism-Infra, …). NDB remains the default tenant. ProductService reads this file. D43 — the 2026-05-20 NDB-only freeze is lifted.",
   "sprintFieldId": "customfield_10360",
   "storyPointsFieldId": "customfield_10002",
@@ -14,7 +14,7 @@
       "featureProjectKey": "FEAT",
       "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
       "sosBaseFilter": "filter=ndb-all-sos",
-      "labelPrefix": "ndb",
+      "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",
       "activeVersionNames": [
         "master",
@@ -82,7 +82,43 @@
           "Era-MSSQL",
           "Era-Platform"
         ]
-      }
+      },
+      "homeProjects": [
+        "NDB",
+        "ERA",
+        "FEAT"
+      ],
+      "releasePrefixes": [
+        "NDB-"
+      ],
+      "releaseRegexes": [
+        "NDB-\\d+"
+      ],
+      "labels": {
+        "notPor": "ndb-not-por",
+        "ew": "ndb-ew",
+        "train": "ndb-{trainSlug}-*"
+      },
+      "notificationEmails": {
+        "exec": "ndb-exec-updates@nutanix.com",
+        "techLeads": "ndb-tech-leads@nutanix.com",
+        "managers": "ndb-managers@nutanix.com"
+      },
+      "tcms": {
+        "projectSegment": "NDB",
+        "baseUrl": "https://tcms.eng.nutanix.com"
+      },
+      "qaEnv": {
+        "devUrl": "https://qa-ndb.dev.nutanix.com:8899",
+        "qaUrl": "https://qa-ndb.qa.nutanix.com",
+        "prodUrl": "https://ndb.nutanix.com"
+      },
+      "branding": {
+        "displayName": "NDB",
+        "shortName": "NDB"
+      },
+      "defaultRelease": "NDB-3.0",
+      "storyPointsField": "customfield_10002"
     },
     {
       "id": "prism-infra",
@@ -132,7 +168,43 @@
       "sprintCalendar": {
         "s1StartIso": "2023-09-05",
         "sprintDays": 14
-      }
+      },
+      "homeProjects": [
+        "ENG",
+        "ERA",
+        "FEAT"
+      ],
+      "releasePrefixes": [
+        "AOS "
+      ],
+      "releaseRegexes": [
+        "AOS \\d+\\.\\d+"
+      ],
+      "labelPrefix": "prisminfra-",
+      "labels": {
+        "notPor": "prisminfra-not-por"
+      },
+      "notificationEmails": {
+        "exec": "prisminfra-exec@nutanix.com",
+        "techLeads": "prisminfra-tech-leads@nutanix.com",
+        "managers": "prisminfra-managers@nutanix.com"
+      },
+      "tcms": {
+        "projectSegment": "AOS",
+        "baseUrl": "https://tcms.eng.nutanix.com"
+      },
+      "qaEnv": {
+        "devUrl": "https://qa-prisminfra.dev.nutanix.com",
+        "qaUrl": "https://qa-prisminfra.qa.nutanix.com",
+        "prodUrl": "https://prisminfra.nutanix.com"
+      },
+      "branding": {
+        "displayName": "Prism Infra",
+        "shortName": "Prism"
+      },
+      "defaultRelease": "AOS 5.11",
+      "storyPointsField": "customfield_10002",
+      "companionDisciplines": []
     },
     {
       "id": "ncn",
@@ -159,7 +231,45 @@
           "NDK-QA"
         ],
         "CSI": []
-      }
+      },
+      "homeProjects": [
+        "NCN"
+      ],
+      "releasePrefixes": [
+        "NCN-Konvoy-",
+        "NCN-NDK-",
+        "CSI-"
+      ],
+      "releaseRegexes": [
+        "NCN-Konvoy-\\d+",
+        "NCN-NDK-\\d+",
+        "CSI-\\d+"
+      ],
+      "labelPrefix": "ncn-",
+      "labels": {
+        "notPor": "ncn-not-por"
+      },
+      "notificationEmails": {
+        "exec": "ncn-exec@nutanix.com",
+        "techLeads": "ncn-tech-leads@nutanix.com",
+        "managers": "ncn-managers@nutanix.com"
+      },
+      "tcms": {
+        "projectSegment": "NCN",
+        "baseUrl": "https://tcms.eng.nutanix.com"
+      },
+      "qaEnv": {
+        "devUrl": "https://qa-ncn.dev.nutanix.com",
+        "qaUrl": "https://qa-ncn.qa.nutanix.com",
+        "prodUrl": "https://ncn.nutanix.com"
+      },
+      "branding": {
+        "displayName": "Nutanix Cloud Native",
+        "shortName": "NCN"
+      },
+      "defaultRelease": "NCN-2025.1",
+      "storyPointsField": "customfield_10002",
+      "companionDisciplines": []
     },
     {
       "id": "cerebro-dr",
@@ -177,7 +287,41 @@
         "DR-Backup": [],
         "Cerebro": []
       },
-      "defaultReleaseVersion": "AOS 5.11"
+      "defaultReleaseVersion": "AOS 5.11",
+      "homeProjects": [
+        "ENG"
+      ],
+      "releasePrefixes": [
+        "AOS "
+      ],
+      "releaseRegexes": [
+        "AOS \\d+\\.\\d+"
+      ],
+      "labelPrefix": "cerebro-",
+      "labels": {
+        "notPor": "cerebro-not-por"
+      },
+      "notificationEmails": {
+        "exec": "cerebro-exec@nutanix.com",
+        "techLeads": "cerebro-tech-leads@nutanix.com",
+        "managers": "cerebro-managers@nutanix.com"
+      },
+      "tcms": {
+        "projectSegment": "AOS",
+        "baseUrl": "https://tcms.eng.nutanix.com"
+      },
+      "qaEnv": {
+        "devUrl": "https://qa-cerebro.dev.nutanix.com",
+        "qaUrl": "https://qa-cerebro.qa.nutanix.com",
+        "prodUrl": "https://cerebro.nutanix.com"
+      },
+      "branding": {
+        "displayName": "Cerebro / DR",
+        "shortName": "Cerebro"
+      },
+      "defaultRelease": "AOS 5.11",
+      "storyPointsField": "customfield_10002",
+      "companionDisciplines": []
     }
   ],
   "defaultTeamId": "ndb"

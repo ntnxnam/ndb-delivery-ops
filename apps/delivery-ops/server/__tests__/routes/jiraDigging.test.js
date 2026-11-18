@@ -35,7 +35,9 @@ describe('POST /api/jira-digging/prepare', () => {
     expect(res.body.ticketCount).toBe(2);
     expect(res.body.sampleKeys).toEqual(['ERA-1', 'ERA-2']);
     expect(res.body.datasetId).toMatch(/^dig_/);
-    expect(res.body.mode).toBe('live-sample');
+    expect(res.body.mode).toBe('cached-full');
+    expect(res.body.cachedDir).toBeTruthy();
+    expect(res.body.jqlHash).toMatch(/^[a-f0-9]{12}$/);
   });
 
   test('400 when jql missing', async () => {

@@ -38,6 +38,7 @@ export default function ChatbotPage() {
   const [diggingDataset, setDiggingDataset] = useState(null);
   const [diggingLoading, setDiggingLoading] = useState(false);
   const jqlRef = useRef(null);
+  const promptRef = useRef(null);
   // D1: labelPrefix defaults to productId (productService.getLabelPrefix fallback);
   // release drives versioned label suggestions like `${labelPrefix}-${release}-deferred`.
   const jqlAuto = useJqlAutocomplete({ labelPrefix: productId || undefined, release: selectedRelease || undefined });

@@ -70,6 +70,13 @@ async function writeCache(productId, jqlHash, manifest, tickets) {
 
 async function enrichHistoryComments(jira, issues, { includeHistory, includeComments, concurrency = 5 }) {
   if (!includeHistory && !includeComments) return issues;
+  if (issues.length > 500 && (includeHistory || includeComments)) {
+    logger.warn(`[jira-digging] enrichment capped: ${issues.length} >500, enriching first 500 only`);
+    const head = issues.slice(0, 500);
+    const tail = issues.slice(500).map((i) => ({ ...i, _enrichCapped: true }));
+    const enrichedHead = await enrichHistoryComments(jira, head, { includeHistory, includeComments, concurrency });
+    return [...enrichedHead, ...tail];
+  }
   const queue = [...issues];
   const out = [];
   const workers = Array.from({ length: concurrency }, async () => {
