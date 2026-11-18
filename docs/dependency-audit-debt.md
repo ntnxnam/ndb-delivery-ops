@@ -8,7 +8,7 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 | Workspace | Critical | High | Notes |
 |-----------|---------:|-----:|-------|
 | Server (`apps/delivery-ops/server`) | 0 | **0** | Remaining = Jest/nodemon moderate/low (dev) |
-| MCP (`@ndb-delivery-ops/mcp-server`) | 0 | **0** | Clean |
+| MCP (`@portfolio-delivery-ops/mcp-lighthouse` + `@portfolio-delivery-ops/mcp-loom` + `@portfolio-delivery-ops/mcp-shared`) | 0 | **0** | Clean |
 | Client (CRA) | 0 | 4 | Dev-toolchain only — see below |
 | Monorepo root | 0 | 4 | Same 4 CRA findings |
 
@@ -53,7 +53,9 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 ```bash
 cd ndb-delivery-ops
 npm audit --workspace apps/delivery-ops/server
-npm audit --workspace @ndb-delivery-ops/mcp-server
+npm audit --workspace @portfolio-delivery-ops/mcp-lighthouse
+npm audit --workspace @portfolio-delivery-ops/mcp-loom
+npm audit --workspace @portfolio-delivery-ops/mcp-shared
 npm audit --workspace apps/delivery-ops/client
 npm ls body-parser follow-redirects undici zod --workspace apps/delivery-ops/server
 ```

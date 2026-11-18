@@ -51,7 +51,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 ┌──────────────────────────────────────────────────────────────────────┐
 │ Layer 4: API + MCP tools                                             │
 │  ┌────────────────────────────┐    ┌─────────────────────────────┐   │
-│  │ delivery-ops server/       │    │ mcp-server/src/tools/       │   │
+│  │ delivery-ops server/       │    │ mcp/*/tools/                │   │
 │  │ (Express routes, thin)     │    │ (one tool per feature)      │   │
 │  └────────────────────────────┘    └─────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
@@ -162,7 +162,7 @@ Two parallel surfaces over the services:
 - One file per domain (`routes/status.js`, `routes/capacity.js`, etc.)
 - Max 150 lines per file (per existing `minimal-architecture` rule)
 
-**MCP tools** (`mcp-server/src/tools/`) — for the AI agent
+**MCP tools** (`mcp/shared/tools/` + `mcp/lighthouse/src/tools/`) — one tool per feature (shared vs product tenancy per D44) — for the AI agent
 - One tool per feature
 - Each tool calls the same shared connector/service the Express route does (D40)
 - JIRA auth is Data Center PAT `Authorization: Bearer` only
@@ -276,10 +276,10 @@ blanket project filter on the fetch.
 │           ├── services/                business logic per domain
 │           └── middleware/              auth, rate-limit, error, timeout
 │
-├── mcp-server/                          AI tool surface (stdio)
-│   └── src/
-│       ├── connectors/                  → moves to shared/ in Phase 1
-│       └── tools/                       one per feature
+├── mcp/                                 AI tool surfaces (stdio)
+│   ├── lighthouse/ (product MCP, 2 tools)
+│   ├── loom/ (builder MCP, 8 shared)
+│   └── shared/ (8 shared tools source)
 │
 ├── shared/                              NEW — cross-runtime code
 │   ├── connectors/                      jiraConnector, confluenceConnector, githubConnector, aiConnector

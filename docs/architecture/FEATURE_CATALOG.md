@@ -42,7 +42,7 @@ that needs it.
 | **Predictive Landing** (`landingForecastService` #4) | • Release Brief `LandingForecastPanel`  • `GET /api/release-dataset/forecast`  • CrystalBall page still mock |
 | **Outstanding Work computation** (`statusService.outstanding`) | • standalone Outstanding Work page  • count in Release Versions  • section in Release Brief  • section in Team-Executive Report |
 | **Confluence Connector** (`confluenceConnector`) | • Bulk Page Creator  • Template Editor  • Confluence Extractor  • future Status Page Auto-Publisher  • any skill that publishes to Confluence |
-| **Confluence Width Cleanup** (`.cursor/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
+| **Confluence Width Cleanup** (`agent-pack/lighthouse/skills/confluence-width-cleanup`) | invoked by all four Confluence-publishing features above |
 | **Sprint Classification** (`sprintService.classify`) | • used inside Sprint Health  • used inside Story Point Roll-up (only counts committed work)  • used inside Capacity calc (uses delivered velocity) |
 | **JIRA Connector** (`jiraConnector`, D40 — Data Center PAT Bearer) | every feature in every domain |
 | **Chart rendering** (`chartService` — D4) | • inline in agent chat replies  • Team-Executive Report  • KPI Dashboard  • Status email HTML |
@@ -87,10 +87,10 @@ The "how do I plan a release / sprint / commit" job.
 
 | Feature             | Job                                                                                  | Persona      | State       | Source                                         | Decision                   |
 | ------------------- | ------------------------------------------------------------------------------------ | ------------ | ----------- | ---------------------------------------------- | -------------------------- |
-| Capacity Planner    | Estimate team capacity (engineer-days) for a release window, factor in PTO, holidays | RM, EM       | mcp-only    | `mcp-server/src/tools/planCapacity.ts`         | **build UI page**          |
-| Project Bin-Packing | Given N projects + team capacity, suggest what fits                                  | RM           | mcp-only    | `mcp-server/src/tools/binPackProjects.ts`      | **build UI page**          |
-| Story Point Roll-up | Sum story points for a Feature/Initiative across all descendants                     | FEAT Mgr, RM | mcp-only    | `mcp-server/src/tools/calculateStoryPoints.ts` | **build UI page**          |
-| Date Mover          | Bulk-cascade JIRA date changes across many tickets safely                            | RM           | mcp-only    | `mcp-server/src/tools/moveJiraDates.ts`        | **build UI page**          |
+| Capacity Planner    | Estimate team capacity (engineer-days) for a release window, factor in PTO, holidays | RM, EM       | mcp-only    | `mcp/shared/tools/planCapacity.ts`         | **build UI page**          |
+| Project Bin-Packing | Given N projects + team capacity, suggest what fits                                  | RM           | mcp-only    | `mcp/shared/tools/binPackProjects.ts`      | **build UI page**          |
+| Story Point Roll-up | Sum story points for a Feature/Initiative across all descendants                     | FEAT Mgr, RM | mcp-only    | `mcp/shared/tools/calculateStoryPoints.ts` | **build UI page**          |
+| Date Mover          | Bulk-cascade JIRA date changes across many tickets safely                            | RM           | mcp-only    | `mcp/shared/tools/moveJiraDates.ts`        | **build UI page**          |
 | Release Setup       | Create + configure a new release version                                             | RM           | live        | `apps/delivery-ops` ReleaseSetup               | **keep**                   |
 | Release Config      | Edit release dates, milestones, gate dates                                           | RM           | live        | `apps/delivery-ops` ReleaseConfig              | **keep**                   |
 | Sprint Planner      | Recommend sprint commit list based on velocity + available work                      | EM, FEAT Mgr | never-built | —                                              | **build** (high-value gap) |
@@ -105,9 +105,9 @@ The "when will it land, and is our schedule realistic?" job.
 
 | Feature                            | Job                                                             | Persona | State                   | Source                                                                                   | Decision                                      |
 | ---------------------------------- | --------------------------------------------------------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `mcp-server/src/tools/ganttReleaseTimeline.ts` + `apps/delivery-ops` ReleaseVersionGantt | **merge into one UI page**                    |
+| Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `mcp/shared/tools/ganttReleaseTimeline.ts` + `apps/delivery-ops` ReleaseVersionGantt | **merge into one UI page**                    |
 | Sprint Gantt                       | Sprint-by-sprint timeline of tickets                            | EM      | live                    | `apps/delivery-ops` (sprint-gantt-chart skill)                                           | **keep**                                      |
-| Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | Team Executive, RM  | mcp-only                | `mcp-server/src/tools/sayVsDo.ts`                                                        | **build UI page**                             |
+| Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | Team Executive, RM  | mcp-only                | `mcp/shared/tools/sayVsDo.ts`                                                        | **build UI page**                             |
 | Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | Team Executive, RM  | live (brief) / mock (CrystalBall page) | `landingForecastService` + Release Brief; CrystalBall page still mock | **keep brief wired; CrystalBall page still mock** |
 | Sprint Analysis                    | Per-sprint deep-dive: scope creep, carry-over, blockers         | EM, TPM | live                    | `apps/delivery-ops` SprintReportPage                                                     | **keep, merge with archived Sprint_Analysis** |
 | Release Analysis                   | Per-release deep-dive                                           | RM      | live                    | `apps/delivery-ops` ReleaseAnalysisPage                                                  | **keep**                                      |
@@ -141,7 +141,7 @@ The "publish status / release-page / spec to Confluence" job.
 | Template Editor               | Customise the base template (sections, placeholders, macros)                    | TPM     | live (Streamlit) | `apps/tpm-confluence-tools/pages/2_Template_Editor.py` | **rewrite in React**                                |
 | Confluence Extractor          | Pull a Confluence page back as structured data                                  | All     | live (partial)   | `apps/delivery-ops` ConfluenceExtractor                | **keep, unify with the Confluence Connector below** |
 | Status Page Auto-Publisher    | Push the weekly status email content as a Confluence page (one-click)           | TPM, RM | never-built      | —                                                      | **build** (high-value gap, ties Domain 1 + 5)       |
-| Confluence Width Cleanup      | Sanitise width styles on emitted Confluence storage XML                         | TPM     | live (skill)     | `.cursor/skills/confluence-width-cleanup/`             | **keep as skill, invoked by all 4 features above**  |
+| Confluence Width Cleanup      | Sanitise width styles on emitted Confluence storage XML                         | TPM     | live (skill)     | `agent-pack/lighthouse/skills/confluence-width-cleanup/`             | **keep as skill, invoked by all 4 features above**  |
 
 
 ---
@@ -172,8 +172,8 @@ The "track the metrics that matter to leadership" job.
 | ------------------------ | ------------------------------------------------------------------------ | ------- | ------------ | ------------------------------------------------ | ---------------------------- |
 | KPI Dashboard            | Track defined KPIs (bug count, velocity, predictability) over time       | Team Executive, RM  | live         | `apps/delivery-ops` KPIPage                      | **keep**                     |
 | KPI Editor               | Define + modify which KPIs are tracked and their thresholds              | Ops PM  | live         | `apps/delivery-ops` (KPI admin)                  | **keep**                     |
-| Leadership Commit Report | GitHub commit activity for leadership/managers (signal of hands-on time) | Team Executive      | mcp-only     | `mcp-server/src/tools/leadershipCommitReport.ts` | **keep as MCP-only (niche)** |
-| Predictive Team Executive Analytics  | Forecast quality, completion, risk for a release                         | Team Executive      | live (skill) | `.cursor/skills/predictive-team-exec-analytics/`        | **keep**                     |
+| Leadership Commit Report | GitHub commit activity for leadership/managers (signal of hands-on time) | Team Executive      | mcp-only     | `mcp/shared/tools/leadershipCommitReport.ts` | **keep as MCP-only (niche)** |
+| Predictive Team Executive Analytics  | Forecast quality, completion, risk for a release                         | Team Executive      | live (skill) | `agent-pack/lighthouse/skills/predictive-team-exec-analytics/`        | **keep**                     |
 
 
 ---
