@@ -153,6 +153,11 @@ app.use('/api/release-outstanding-work', releaseOutstandingWorkRoutes);
 // Legacy alias — same router (old clients / bookmarks)
 app.use('/api/deferral-workbench', releaseOutstandingWorkRoutes);
 
+// Docs hub (product docs). Served at /docs per reorg (4fed099); keep /Documentation alias for old bookmarks.
+const docsRoot = path.join(__dirname, '..', '..', '..', 'docs');
+app.use('/docs', express.static(docsRoot, { extensions: ['html'] }));
+app.use('/Documentation', express.static(docsRoot, { extensions: ['html'] }));
+
 // Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
 // /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,
 // ESM modules + data/projects.json fetch work out of the box. Future React

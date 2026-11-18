@@ -6,45 +6,94 @@
 const fs = require('fs');
 const path = require('path');
 const { getJira } = require('../utils/jiraClient');
-const { getTeamBaseFilter } = require('../utils/teamConfig');
-const { stripDoneFromBaseFilter } = require('../utils/jiraRouteHelpers');
+const { getTeamById } = require('../utils/teamConfig');
 
-let _sharedPromise = null;
-function getShared() {
-  if (!_sharedPromise) {
-    _sharedPromise = import('@portfolio-delivery-ops/shared');
+function fallbackStripDone(baseFilter) {
+  let out = String(baseFilter || '').replace(/\\s*AND\\s+statusCategory\\s*!=\\s*Done\\b/gi, '');
+  out = out.replace(/\\s*AND\\s+statusCategory\\s+not\\s+in\\s*\\(\\s*Done\\s*\\)/gi, '');
+  out = out.replace(/\\s{2,}/g, ' ').trim();
+  return out;
+}
+function fallbackBuildTimeWindowJql(params, mode) {
+  const base = params.baseFilter || '';
+  const start = params.startDate;
+  const end = params.endDate;
+  const subtaskClause = params.includeSubtasks ? '' : ' AND issuetype not in (Sub-task)';
+  let jql = '';
+  if (mode === 'closed') {
+    jql = `(${base}) AND statusCategory = Done AND resolved >= "${start}" AND resolved <= "${end}"${subtaskClause} ORDER BY resolved DESC`;
+  } else if (mode === 'touched') {
+    jql = `(${base}) AND ((updated >= "${start}" AND updated <= "${end}") OR (statusCategory = Done AND resolved >= "${start}" AND resolved <= "${end}"))${subtaskClause} ORDER BY updated DESC`;
+  } else if (mode === 'worklogged') {
+    jql = `(${base}) AND worklogDate >= "${start}" AND worklogDate <= "${end}"${subtaskClause} ORDER BY updated DESC`;
+  } else {
+    jql = `(${base}) AND statusCategory = Done AND resolved >= "${start}" AND resolved <= "${end}"${subtaskClause} ORDER BY resolved DESC`;
   }
-  return _sharedPromise;
+  return { name: mode || 'closed', jql, params, warnings: [] };
+}
+async function getJqlBuilder() {
+  try {
+    const shared = require('@portfolio-delivery-ops/shared');
+    if (shared && shared.jqlBuilder && typeof shared.jqlBuilder.stripDoneFromBaseFilter === 'function') {
+      return {
+        stripDoneFromBaseFilter: shared.jqlBuilder.stripDoneFromBaseFilter,
+        buildTimeWindowJql: shared.jqlBuilder.buildTimeWindowJql || fallbackBuildTimeWindowJql,
+      };
+    }
+    if (shared && typeof shared.stripDoneFromBaseFilter === 'function') {
+      return {
+        stripDoneFromBaseFilter: shared.stripDoneFromBaseFilter,
+        buildTimeWindowJql: fallbackBuildTimeWindowJql,
+      };
+    }
+  } catch (e) {
+    // shared not available (Jest CJS) — use fallback
+  }
+  return {
+    stripDoneFromBaseFilter: fallbackStripDone,
+    buildTimeWindowJql: fallbackBuildTimeWindowJql,
+  };
 }
 
-const TEAM_CONFIG_PATH = path.join(__dirname, '../config/teamBoardConfig.json');
-
 function getTeamConfig(teamId) {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(TEAM_CONFIG_PATH, 'utf8'));
-    const teams = Array.isArray(cfg.teams) ? cfg.teams : [];
-    return teams.find(t => String(t.id).toLowerCase() === String(teamId).toLowerCase()) || null;
-  } catch (e) {
-    return null;
-  }
+  const t = getTeamById(teamId);
+  if (!t) return null;
+  const baseFilter = t.baseFilter || '';
+  if (!baseFilter) return null;
+  return {
+    id: t.id || teamId,
+    displayName: t.displayName || t.name || t.id || teamId,
+    baseFilter,
+    companionDisciplines: Array.isArray(t.companionDisciplines) ? t.companionDisciplines : [],
+    homeProjects: Array.isArray(t.homeProjects) ? t.homeProjects : [],
+  };
 }
 
 function resolveDateRange(params) {
   const { periodType, quarter, year, startDate, endDate } = params;
-  if (periodType === 'quarter') {
+  if (periodType === 'quarter' && quarter) {
     const [y, q] = String(quarter).split('-Q');
     const yy = parseInt(y, 10);
     const qq = parseInt(q, 10);
+    if (isNaN(yy) || isNaN(qq) || qq < 1 || qq > 4) {
+      const err = new Error('Invalid time value'); err.statusCode = 400; throw err;
+    }
     const startMonth = (qq - 1) * 3;
-    const start = new Date(yy, startMonth, 1);
-    const end = new Date(yy, startMonth + 3, 0);
+    const start = new Date(Date.UTC(yy, startMonth, 1));
+    const end = new Date(Date.UTC(yy, startMonth + 3, 0));
     return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
   }
-  if (periodType === 'year') {
+  if (periodType === 'year' && year) {
     const yy = parseInt(year, 10);
+    if (isNaN(yy)) {
+      const err = new Error('Invalid time value'); err.statusCode = 400; throw err;
+    }
     return { start: `${yy}-01-01`, end: `${yy}-12-31` };
   }
-  return { start: startDate, end: endDate };
+  if (periodType === 'custom' && startDate && endDate) {
+    return { start: startDate, end: endDate };
+  }
+  const err = new Error('Invalid time value'); err.statusCode = 400; throw err;
 }
 
 async function fetchIssues(jql, token, maxTotal = 2000) {
@@ -57,12 +106,37 @@ async function fetchIssues(jql, token, maxTotal = 2000) {
       params: { jql, fields: 'key,summary,issuetype,status,priority,assignee,created,updated,resolved,storyPoints,fixVersions,components,labels,project', startAt, maxResults: pageSize },
       timeout: 30000,
     });
-    const batch = res.data.issues || [];
+    const batch = (res && res.data && res.data.issues) || [];
     issues.push(...batch);
     if (batch.length < pageSize) break;
     startAt += pageSize;
+    if (res && res.data && res.data.total && issues.length >= res.data.total) break;
   }
   return issues.slice(0, maxTotal);
+}
+
+async function fetchCompanionIssues(companions, dateRange, token, mode, includeSubtasks, maxTotal = 2000) {
+  if (!Array.isArray(companions) || companions.length === 0) return [];
+  const keys = companions.map(c => c.projectKey || c).filter(Boolean);
+  if (keys.length === 0) return [];
+  const projectClause = keys.length === 1 ? `project = ${keys[0]}` : `project in (${keys.join(', ')})`;
+  const subtaskClause = includeSubtasks ? '' : ' AND issuetype not in (Sub-task)';
+  let jql = '';
+  if (mode === 'closed') {
+    jql = `${projectClause} AND statusCategory = Done AND resolved >= "${dateRange.start}" AND resolved <= "${dateRange.end}"${subtaskClause} ORDER BY resolved DESC`;
+  } else if (mode === 'touched') {
+    jql = `${projectClause} AND ((updated >= "${dateRange.start}" AND updated <= "${dateRange.end}") OR (statusCategory = Done AND resolved >= "${dateRange.start}" AND resolved <= "${dateRange.end}"))${subtaskClause} ORDER BY updated DESC`;
+  } else if (mode === 'worklogged') {
+    jql = `${projectClause} AND worklogDate >= "${dateRange.start}" AND worklogDate <= "${dateRange.end}"${subtaskClause} ORDER BY updated DESC`;
+  } else {
+    jql = `${projectClause} AND statusCategory = Done AND resolved >= "${dateRange.start}" AND resolved <= "${dateRange.end}"${subtaskClause} ORDER BY resolved DESC`;
+  }
+  const issues = await fetchIssues(jql, token, maxTotal);
+  for (const issue of issues) {
+    const pk = issue.fields && issue.fields.project && issue.fields.project.key;
+    issue._sourceProject = pk || 'unknown';
+  }
+  return issues;
 }
 
 function aggregate(issues, groupBy) {
@@ -74,7 +148,7 @@ function aggregate(issues, groupBy) {
   for (const issue of issues) {
     const f = issue.fields || {};
     const key = f[groupBy] || (f.issuetype && f.issuetype.name) || 'Unknown';
-    const groupKey = typeof key === 'object' ? key.name || key.value || 'Unknown' : String(key);
+    const groupKey = typeof key === 'object' ? (key.name || key.displayName || key.value || 'Unknown') : String(key);
     if (!groups[groupKey]) {
       groups[groupKey] = { key: groupKey, label: groupKey, count: 0, storyPoints: 0, cycleDays: 0, cycleCount: 0 };
     }

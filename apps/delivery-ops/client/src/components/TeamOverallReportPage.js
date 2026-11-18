@@ -54,6 +54,7 @@ export default function TeamOverallReportPage() {
   const [inclusionMode, setInclusionMode] = useState('closed');
   const [groupBy, setGroupBy] = useState('issuetype');
   const [includeCompanions, setIncludeCompanions] = useState(true);
+  const [drillOpen, setDrillOpen] = useState(false);
 
   // Data
   const [report, setReport] = useState(null);
@@ -251,7 +252,9 @@ export default function TeamOverallReportPage() {
         <>
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-            <KpiCard label="Total Issues" value={report?.kpis?.totalIssues ?? 0} />
+            <button type="button" onClick={() => setDrillOpen(true)} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }} aria-label="Drill into issues (opens in-app panel, not JIRA)">
+              <KpiCard label="Total Issues (click to drill)" value={report?.kpis?.totalIssues ?? 0} />
+            </button>
             <KpiCard label="Story Points" value={report?.kpis?.totalStoryPoints ?? 0} />
             <KpiCard label="Avg Cycle Time (days)" value={report?.kpis?.avgCycleTimeDays ?? '—'} />
             <KpiCard label="Throughput / Week" value={report?.kpis?.throughputPerWeek ?? 0} />
@@ -348,6 +351,30 @@ export default function TeamOverallReportPage() {
             </table>
           </div>
 
+
+
+          {/* In-app drill panel (metric dual-action: count -> panel) */}
+          {drillOpen && (
+            <div role="dialog" aria-label="Issues drill-down" style={{ position: 'fixed', top: '10%', left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: '900px', maxHeight: '70vh', overflow: 'auto', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 1000 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ margin: 0, fontSize: '14px' }}>Issues Drill-Down ({report.issuesSample.length} of {report.kpis.totalIssues})</h4>
+                <a href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(report.meta?.jqlExecuted || '')}`} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#4F46E5' }}>Open in JIRA ↗</a>
+                <button aria-label="Close drill-down" onClick={() => setDrillOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px', marginLeft: '8px' }}>×</button>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {report.issuesSample.map(issue => (
+                  <li key={issue.key} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: '13px' }}>
+                    <a href={issue.url} target="_blank" rel="noreferrer" style={{ color: '#4F46E5', fontWeight: 600, marginRight: '8px' }}>{issue.key}</a>
+                    <span>{issue.summary}</span>
+                    <span style={{ color: '#6b7280', marginLeft: '8px', fontSize: '11px' }}>({issue.issuetype} · {issue.status})</span>
+                  </li>
+                ))}
+              </ul>
+              <div style={{ marginTop: '8px', fontSize: '11px', color: '#6b7280' }}>
+                Showing {report.issuesSample.length} of {report.kpis.totalIssues} issues. Open in JIRA for full set.
+              </div>
+            </div>
+          )}
 
           {/* Open in JIRA link */}
           {report.meta?.jqlExecuted && (

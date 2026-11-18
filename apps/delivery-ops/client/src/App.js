@@ -36,7 +36,6 @@ import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
 import DependencyViewPage from './components/DependencyViewPage';
 import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
 import TeamOverallReportPage from './components/TeamOverallReportPage';
-import HelloLoom from './features/hello-loom';
 
 import './App.css';
 
@@ -348,11 +347,9 @@ const AuthenticatedApp = () => {
                 />
 
                 <Route
-                  path="/hello-loom"
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout>
-                        <HelloLoom />
                       </Layout>
                     </ProtectedRoute>
                   }
