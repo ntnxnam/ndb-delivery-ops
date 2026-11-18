@@ -1,6 +1,6 @@
 # NDB Status Update Sender – Developer Guide
 
-This guide helps new developers assimilate the codebase quickly. For end-user usage, see [README.md](README.md).
+This guide helps new developers assimilate the codebase quickly. For end-user usage, see [README.md](../README.md).
 
 ---
 
@@ -289,7 +289,7 @@ npm run dev
 - Backend: http://localhost:6001  
 - Frontend: http://localhost:6100 (proxies API to 6001)
 
-See [README.md](README.md) and [HOW_TO_RUN.md](HOW_TO_RUN.md) for setup and running.
+See [README.md](../README.md) and [HOW_TO_RUN.md](HOW_TO_RUN.md) for setup and running.
 
 ---
 

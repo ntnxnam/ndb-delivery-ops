@@ -1,5 +1,5 @@
 /**
- * Client feature flags — build-time via REACT_APP_* (see DEPLOYMENT_FEATURE_FLAGS.md).
+ * Client feature flags — build-time via REACT_APP_* (see ../../../../docs/guides/DEPLOYMENT_FEATURE_FLAGS.md).
  * All digging flags default ON so Slice 1 still testable; set to 'false' to kill-switch.
  */
 

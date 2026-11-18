@@ -54,7 +54,7 @@ Defaults (override with flags or env):
 3. SCP to server → extract → rsync into `SERVER_PATH`
 4. Run `apps/delivery-ops/scripts/server-deploy.sh` (Node/Nginx/PM2, client build, restart)
 
-Docs: `apps/delivery-ops/DEPLOYMENT_GUIDE.md`, `apps/delivery-ops/HOW_TO_RUN.md`.
+Docs: `docs/guides/DEPLOYMENT_GUIDE.md`, `docs/guides/HOW_TO_RUN.md`.
 
 ## Output Format
 
