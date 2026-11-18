@@ -1,1 +1,1 @@
-../lighthouse/docs/tcms-rows-followup.md
+../lighthouse/docs/product/tcms-rows-followup.md
