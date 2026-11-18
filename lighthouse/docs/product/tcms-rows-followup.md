@@ -97,10 +97,10 @@ metrics (it remains in use only for the count fallback
 
 ## References
 
-- `apps/delivery-ops/server/services/tcmsService.js` (`enrichItemWithQuality`, `toTable`)
-- `apps/delivery-ops/client/src/components/ReleaseVersionTableCell.js` (`renderQualityCell`, `renderQualityTable`)
-- `apps/delivery-ops/client/src/utils/emailTableGenerator.js` (quality branch)
-- `apps/delivery-ops/server/config/releaseVersionsColumnsConfig.json` (quality column description)
-- `apps/delivery-ops/client/src/__tests__/components/ReleaseVersionTableCell.quality.test.js`
-- `apps/delivery-ops/server/__tests__/services/tcmsService.test.js`
-- `apps/delivery-ops/docs/KNOWN_ISSUES.md`
+- `lighthouse/app/server/services/tcmsService.js` (`enrichItemWithQuality`, `toTable`)
+- `lighthouse/app/client/src/components/ReleaseVersionTableCell.js` (`renderQualityCell`, `renderQualityTable`)
+- `lighthouse/app/client/src/utils/emailTableGenerator.js` (quality branch)
+- `lighthouse/app/server/config/releaseVersionsColumnsConfig.json` (quality column description)
+- `lighthouse/app/client/src/__tests__/components/ReleaseVersionTableCell.quality.test.js`
+- `lighthouse/app/server/__tests__/services/tcmsService.test.js`
+- `lighthouse/docs/KNOWN_ISSUES.md`

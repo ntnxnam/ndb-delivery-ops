@@ -972,7 +972,7 @@ Maintenance / patch releases: typically **CC + GA only**; interim gates should s
 
 ### 12.6 Custom fields we rely on (canonical table)
 
-SoT: `apps/delivery-ops/server/config/jiraFieldsConfig.json` (client mirrors via `jiraFields.js`). Do not scatter new hard-coded IDs.
+SoT: `lighthouse/app/server/config/jiraFieldsConfig.json` (client mirrors via `jiraFields.js`). Do not scatter new hard-coded IDs.
 
 #### Gates & checkpoints
 

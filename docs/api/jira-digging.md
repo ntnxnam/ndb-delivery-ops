@@ -1,6 +1,6 @@
 # JIRA Data Digging — `/api/jira-digging`
 
-Route file: `apps/delivery-ops/server/routes/jiraDigging.js` (Slice 2b — full download + cache + optional enrichment)
+Route file: `lighthouse/app/server/routes/jiraDigging.js` (Slice 2b — full download + cache + optional enrichment)
 Domain service: direct via `shared/src/connectors/jiraConnector.ts` (`searchCount` + `searchAll` + `getIssue({expand:changelog})` + `getComments`)
 
 ---

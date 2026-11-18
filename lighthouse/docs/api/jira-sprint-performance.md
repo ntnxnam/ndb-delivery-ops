@@ -18,7 +18,7 @@ Required headers: `Authorization: Bearer <JIRA PAT>` and `X-Username`.
 - Query: `teamId` (string, optional, default `ndb`). Team id from `teamBoardConfig.json`.
 
 **Server flow**
-Route → `listReports(teamId)` + `getJob(teamId)` → disk (`apps/delivery-ops/reports/`)
+Route → `listReports(teamId)` + `getJob(teamId)` → disk (`lighthouse/app/reports/`)
 
 **Response shape**
 ```json

@@ -45,8 +45,8 @@ route (sprint-performance.js)
          (fallback: keep rule-based asks; sets model.asksSource = ai|rules)
     → sprintPerformanceHtml.renderSprintPerformanceHtml   shell + embedded blob + inline app
          (exec summary placeholders empty; browser `renderExecutive` fills them from the blob)
-  → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.json   ← JIRA model (source of truth)
-  → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.html  ← cache for download
+  → fs  lighthouse/app/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.json   ← JIRA model (source of truth)
+  → fs  lighthouse/app/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.html  ← cache for download
 ```
 
 **Executive summary (live):** Verdict, Highlights, and Lowlights are **not** baked into the HTML. On every paint / filter change, `sprintPerformanceApp` → `renderExecutive` recomputes them from the embedded blob via `buildNarrative(..., { scopeLabel })`. A JIRA **Regenerate** writes a new blob; the next iframe load recomputes org-wide summary from that snapshot. Server `model.highlights` / `lowlights` exist only as the AI asks seed (and are ignored by the visible UI).

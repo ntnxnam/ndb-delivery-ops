@@ -596,13 +596,13 @@ Executive"). No backward-compatible aliases; the old term is dropped.
 **Scope of the rename.**
 
 - All active files in the monorepo: `.cursor/`, `shared/`, `mcp-server/`,
-  `apps/delivery-ops/` (source + docs).
+  `lighthouse/app/` (source + docs).
 - User-level skills at `~/.cursor/skills/` are renamed too — they are
   read by the project agent and must match.
 - **NOT** renamed: historical reports in `reports/CrystalBall-Enhanced-Team Executive-Report-*.md`
   and similar (per `documentation-consistency.mdc`: "files already in
   `reports/`: leave them"). New reports use the `TeamExec-` prefix.
-- **NOT** renamed: legacy code in `apps/delivery-ops/crystalball-i/` and
+- **NOT** renamed: legacy code in `lighthouse/app/crystalball-i/` and
   similar archived sub-trees — that code is on the retirement list and
   doesn't shape the consolidated platform's surface.
 
@@ -818,13 +818,13 @@ deployment.
    `js/resource-groups.js` (~1,500 LOC) into
    `shared/services/binPackingService.ts` with full types and tests.
 2. Rewrite the MCP tool to call the real service.
-3. Build a React surface in `apps/delivery-ops/client/src/components/BinPacking/`.
+3. Build a React surface in `lighthouse/app/client/src/components/BinPacking/`.
 4. Keep the static mount available behind a feature flag during
    migration; cut over when the React surface reaches parity.
 5. Decommission `apps/bin-packing/` once the React surface is the only
    consumer.
 
-**Verified by:** server route mount at `apps/delivery-ops/server/index.js`
+**Verified by:** server route mount at `lighthouse/app/server/index.js`
 serving from `path.join(__dirname, '..', '..', 'bin-packing')`; sidebar
 entry in `Sidebar.js` rendering a native `<a>` (not react-router `<Link>`)
 because the target is outside the React app boundary.

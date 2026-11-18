@@ -23,7 +23,7 @@ npm install
 ### 2. Configure the backend environment
 
 ```bash
-cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+cp lighthouse/app/server/.env.example lighthouse/app/server/.env
 # Then edit server/.env — SMTP_*, AI_*, JIRA_TOKEN are the key fields.
 # PORT is already set to 8001; do not change it without also updating client/package.json proxy.
 ```
@@ -35,7 +35,7 @@ cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
 ./scripts/start.sh
 ```
 
-Or start them separately (from `apps/delivery-ops/`):
+Or start them separately (from `lighthouse/app/`):
 
 ```bash
 # Terminal 1 — backend
@@ -48,7 +48,7 @@ npm run client          # React dev server on http://localhost:8899
 Or use the `dev` script (both in one terminal via concurrently):
 
 ```bash
-cd apps/delivery-ops && npm run dev
+cd lighthouse/app && npm run dev
 ```
 
 ### 4. Open the app
@@ -75,7 +75,7 @@ cd apps/delivery-ops && npm run dev
 Before shipping to production, verify no hardcoded `localhost` or `127.0.0.1` has crept into app code:
 
 ```bash
-cd apps/delivery-ops && npm run check:no-localhost
+cd lighthouse/app && npm run check:no-localhost
 ```
 
 This is also run automatically by `deploy-to-production.sh` before packaging.
@@ -88,14 +88,14 @@ Production runs on a Rocky Linux 9 server behind Nginx + PM2. Two scripts handle
 
 | Script | Where it runs | Purpose |
 |---|---|---|
-| `apps/delivery-ops/scripts/deploy-to-production.sh` | Your Mac | Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script |
-| `apps/delivery-ops/scripts/server-deploy.sh` | Production server | Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend |
+| `lighthouse/app/scripts/deploy-to-production.sh` | Your Mac | Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script |
+| `lighthouse/app/scripts/server-deploy.sh` | Production server | Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend |
 
 ### Quick deploy
 
 ```bash
 # From anywhere in the repo
-./apps/delivery-ops/scripts/deploy-to-production.sh
+./lighthouse/app/scripts/deploy-to-production.sh
 ```
 
 Both scripts are idempotent — the same command works for the first deploy and every subsequent redeploy.
@@ -138,13 +138,13 @@ npm install
 
 1. Check `server/.env` has `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
 2. Check `server/config/emailConfig.json` has `smtp.from` set.
-3. From the server, run: `cd apps/delivery-ops/server && node test-smtp.js`
+3. From the server, run: `cd lighthouse/app/server && node test-smtp.js`
 
 ---
 
 ## Production build only (no server)
 
 ```bash
-cd apps/delivery-ops/client && npm run build
-# Output: apps/delivery-ops/client/build/
+cd lighthouse/app/client && npm run build
+# Output: lighthouse/app/client/build/
 ```

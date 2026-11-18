@@ -92,8 +92,8 @@ No new JQL. No JIRA write.
 
 ## Config source of truth
 
-- Org map: `apps/delivery-ops/server/config/ndbLeaderOrgConfig.json`
-- Email recipients: `apps/delivery-ops/server/config/sosEmailConfig.json`
+- Org map: `lighthouse/app/server/config/ndbLeaderOrgConfig.json`
+- Email recipients: `lighthouse/app/server/config/sosEmailConfig.json`
 
 ---
 

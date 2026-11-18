@@ -8,7 +8,7 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 
 - `pending` — source identified, not yet ported
 - `porting` — actively being ported in current branch
-- `ported` — TS implementation exists in `shared/services/` or `apps/delivery-ops/server/services/`, callable
+- `ported` — TS implementation exists in `shared/services/` or `lighthouse/app/server/services/`, callable
 - `wired` — exposed through an API route AND consumed by at least one UI page
 - `skip` — archive contained no usable code
 
@@ -32,7 +32,7 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 | 8 | Predictive Team Executive analytics (Monte Carlo, completion prob, QI forecast) | `~/.cursor/skills/predictive-team-exec-analytics/` | `shared/services/predictiveAnalyticsService.ts` | pending |
 | 10 | Date mover — gate-date move with **mandatory reason + Confluence audit** (D30) | `ndb-date-mover/` + new Confluence audit writer | `shared/services/dateMoverService.ts` + `shared/connectors/confluenceConnector.ts` | **ported (route-wired)**: `dateMoverService` requires reason, updates JIRA via `jiraConnector`, audits to Confluence via `confluenceConnector.appendStructuredRow`. JIRA rollback on Confluence audit failure (best-effort transactional). Express route at `/api/date-mover/{gate-date-fields,move-gate-date}`, RM+TPM authorized via `authService.dateMover` feature gate. Skill `release-gate-ops` (merged from `move-gate-date`+`update-release-date`) dispatches from `rm-specialist` (Route J: JIRA+Confluence, Route C: config slip). **Not yet UI-wired** — no React form; client_form_optional deferred. |
 | 11 | Outstanding-work pulse (realistic timeline) | `NDB-Outstanding-Work-Realistic-Timelines/shipwatch + jira-fetcher` | `shared/services/outstandingWorkService.ts` | pending |
-| 13 | Release timeline visualizer (date overrides, holiday cal) | `Release-Timelines-Visualizer/` | `apps/delivery-ops/client/src/components/ReleaseTimelineVisualizer/` | pending |
+| 13 | Release timeline visualizer (date overrides, holiday cal) | `Release-Timelines-Visualizer/` | `lighthouse/app/client/src/components/ReleaseTimelineVisualizer/` | pending |
 | 14 | Bin packing / resource Gantt | `ndb-projects-bin-packing/` | `apps/bin-packing/` (static mount) + future `shared/services/binPackingService.ts` | **wired (static, D37)**: 7,000-LOC vanilla-JS app copied as-is to `apps/bin-packing/`; served by delivery-ops Express at `/bin-packing/*` (same-origin, single runtime, no auth — matches legacy). Sidebar entry **opens in a new tab** because the bin-packing UI has its own chrome/nav and embedding it inside delivery-ops created port-asymmetry pain in dev (React `:8888` vs Express `:6001`). URL helper in `Sidebar.js` reads `window.location` to pick the right backend port (`REACT_APP_BACKEND_PORT || 6001`) in dev and a relative `/bin-packing/` in prod — no hardcoded localhost. **Algorithm extraction deferred**: current MCP tool `bin_pack_projects` is a simplified FFD that doesn't yet match the real 800-LOC algorithm (resource pools, dev-blocker deps, gap-fill, 3-tier display). Future: port algorithm core to `shared/services/binPackingService.ts`, keep CSV parser flow. |
 | 15 | Say-vs-do tracking | `ndb-say-vs-do/` | `shared/services/sayVsDoService.ts` | pending |
 | 16 | Story point calculator (JIRA + Confluence) | `ndb-story-point-calculator/` | `shared/services/storyPointService.ts` | pending |
@@ -43,10 +43,10 @@ Single source of truth for what's being merged from 17 archived apps + 5 skills 
 |---|---|---|---|---|
 | 9 | Capacity planner (t-shirt, bandwidth, rollup) | `ndb-capacity-planner/` (103 Py files) | `shared/services/capacityService.ts` | pending |
 | 12 | Confluence template engine + page mgmt | `Confluence-Page-Creator/` | `apps/tpm-confluence-tools/` | already in repo (Python) — needs port |
-| 17 | Ticket insights (fetch + breakdown) | `agent-pack/skills/ticket-insights/` (merged from `fetch-project-tickets` + `issue-type-breakdown`) | `shared/services/ticketFetchService.ts` | **ported + wired**: 28/28 base + 11/11 D1-optional/linkedIssues parity tests; comprehensive + work-items views; URL builders; `includeLinkedIssues` opt-in for legacy 9-clause behaviour; `projectKey` now optional (production callers don't scope). Live in `apps/delivery-ops/server/routes/jira/index.js#/issue-breakdown` — replaces inline `buildOptimizedProjectTicketsJQL` + `buildTaskBreakdownJQL` calls and removes the hardcoded `jira.nutanix.com` host (no-localhost.mdc / D1). |
-| 18 | Sprint Gantt chart (date-hierarchy-aware) | `~/.cursor/skills/sprint-gantt-chart/` | `apps/delivery-ops/client/src/components/SprintGantt/` | pending |
+| 17 | Ticket insights (fetch + breakdown) | `agent-pack/skills/ticket-insights/` (merged from `fetch-project-tickets` + `issue-type-breakdown`) | `shared/services/ticketFetchService.ts` | **ported + wired**: 28/28 base + 11/11 D1-optional/linkedIssues parity tests; comprehensive + work-items views; URL builders; `includeLinkedIssues` opt-in for legacy 9-clause behaviour; `projectKey` now optional (production callers don't scope). Live in `lighthouse/app/server/routes/jira/index.js#/issue-breakdown` — replaces inline `buildOptimizedProjectTicketsJQL` + `buildTaskBreakdownJQL` calls and removes the hardcoded `jira.nutanix.com` host (no-localhost.mdc / D1). |
+| 18 | Sprint Gantt chart (date-hierarchy-aware) | `~/.cursor/skills/sprint-gantt-chart/` | `lighthouse/app/client/src/components/SprintGantt/` | pending |
 | 19 | Confluence width cleanup | `~/.cursor/skills/confluence-width-cleanup/` | retain as skill (no code port) | retained as skill |
-| 20 | Status sender (current app) | `apps/delivery-ops/` | — | already in repo |
+| 20 | Status sender (current app) | `lighthouse/app/` | — | already in repo |
 
 ## New cross-cutting need surfaced during inventory
 
@@ -116,7 +116,7 @@ Each capability port lands in a single PR-shaped commit with:
 
 1. The TS module in `shared/services/` (pure logic, no Express, no React)
 2. Unit tests in `shared/tests/<service>.test.ts` covering the same behaviour the Python tests covered
-3. An API route in `apps/delivery-ops/server/routes/` that calls the service
-4. A UI surface in `apps/delivery-ops/client/src/` that calls the route (when applicable)
+3. An API route in `lighthouse/app/server/routes/` that calls the service
+4. A UI surface in `lighthouse/app/client/src/` that calls the route (when applicable)
 5. Update this table: status `pending` → `porting` → `ported` → `wired`
 6. Update `DECISIONS.md` only when a design choice is forced (not for routine ports)

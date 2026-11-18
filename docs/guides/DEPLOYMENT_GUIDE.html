@@ -25,7 +25,7 @@
 </tbody></table>
 <hr>
 <h2>Quick deploy (from your Mac)</h2>
-<pre><code class="language-bash">./apps/delivery-ops/scripts/deploy-to-production.sh
+<pre><code class="language-bash">./lighthouse/app/scripts/deploy-to-production.sh
 </code></pre>
 <p>That&#39;s it. The script:</p>
 <ol>
@@ -130,7 +130,7 @@ pm2 restart delivery-ops
 sudo systemctl restart nginx
 
 # Rebuild frontend only (after client code change)
-cd /var/www/html/ndb-delivery-ops/apps/delivery-ops/client
+cd /var/www/html/ndb-delivery-ops/lighthouse/app/client
 npm run build
 sudo systemctl reload nginx
 

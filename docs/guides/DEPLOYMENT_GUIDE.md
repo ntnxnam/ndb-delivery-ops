@@ -18,7 +18,7 @@ Browser ──:8899──> Nginx ──┬─ /       → React build (static fi
 ## Quick deploy (from your Mac)
 
 ```bash
-./apps/delivery-ops/scripts/deploy-to-production.sh
+./lighthouse/app/scripts/deploy-to-production.sh
 ```
 
 That's it. The script:
@@ -109,7 +109,7 @@ pm2 restart delivery-ops
 sudo systemctl restart nginx
 
 # Rebuild frontend only (after client code change)
-cd /var/www/html/ndb-delivery-ops/apps/delivery-ops/client
+cd /var/www/html/ndb-delivery-ops/lighthouse/app/client
 npm run build
 sudo systemctl reload nginx
 

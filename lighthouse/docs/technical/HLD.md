@@ -258,7 +258,7 @@ User clicks "Generate Briefing" on ReleaseSummaryPanel
 │                                                             │
 │  ┌────────────────┐     ┌───────────────────────────────┐   │
 │  │   Nginx :8899  │────▶│    PM2 → Node.js :8001       │   │
-│  │  static build  │     │    apps/delivery-ops/server   │   │
+│  │  static build  │     │    lighthouse/app/server   │   │
 │  │  + reverse     │     │                               │   │
 │  │    proxy /api  │     │  shared/.cache/ (disk bundles)│   │
 │  └────────────────┘     └───────────────────────────────┘   │
@@ -270,7 +270,7 @@ User clicks "Generate Briefing" on ReleaseSummaryPanel
 └─────────────────────────────────────────────────────────────┘
 
 Developer deploy:
-  ./apps/delivery-ops/scripts/deploy-to-production.sh
+  ./lighthouse/app/scripts/deploy-to-production.sh
   (Mac → SCP → server-side idempotent restart script)
 ```
 

@@ -69,12 +69,12 @@ The "what's the status of release X?" job, in five different audiences.
 
 | Feature                       | Job                                                                          | Persona           | State    | Source                                                                       | Decision                                    |
 | ----------------------------- | ---------------------------------------------------------------------------- | ----------------- | -------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
-| Release Versions Table        | Show every FEAT/Initiative for a release with risk indicators, dates, owners | TPM, RM, FEAT Mgr | live     | `apps/delivery-ops` ReleaseVersionTab                                        | **keep**                                    |
-| Team-Executive Report           | Single-page exec summary for a release, RAG + top risks                      | Team Executive                | live     | `apps/delivery-ops` + team-exec-briefing skill (mode=report)                                | **keep, polish**                            |
-| Status Email Sender           | Compose + send a status email built from a JIRA query                        | TPM, FEAT Mgr     | live     | `apps/delivery-ops` GenericEmailer                                           | **keep**                                    |
+| Release Versions Table        | Show every FEAT/Initiative for a release with risk indicators, dates, owners | TPM, RM, FEAT Mgr | live     | `lighthouse/app` ReleaseVersionTab                                        | **keep**                                    |
+| Team-Executive Report           | Single-page exec summary for a release, RAG + top risks                      | Team Executive                | live     | `lighthouse/app` + team-exec-briefing skill (mode=report)                                | **keep, polish**                            |
+| Status Email Sender           | Compose + send a status email built from a JIRA query                        | TPM, FEAT Mgr     | live     | `lighthouse/app` GenericEmailer                                           | **keep**                                    |
 | Release Brief / One-Pager     | Compact, publishable release status doc                                      | RM, TPM           | archived | `_archive/ndb-release-sprint-analysis-with-chatbot/pages/7_Release_Brief.py` | **rebuild as React page**                   |
 | Outstanding Work Tracker      | List of work-not-done with realistic ETAs and blockers                       | RM, TPM           | archived | `_archive/NDB-Outstanding-Work-Realistic-Timelines.tar.gz`                   | **rebuild as React page**                   |
-| Email History                 | Audit log of sent emails with re-send                                        | All               | live     | `apps/delivery-ops`                                                          | **keep**                                    |
+| Email History                 | Audit log of sent emails with re-send                                        | All               | live     | `lighthouse/app`                                                          | **keep**                                    |
 | Status Update Sender (legacy) | Old standalone status-update app                                             | TPM               | archived | `_archive/ndb-status-update-app.tar.gz`                                      | **cut — superseded by Status Email Sender** |
 
 
@@ -87,12 +87,12 @@ The "how do I plan a release / sprint / commit" job.
 
 | Feature             | Job                                                                                  | Persona      | State       | Source                                         | Decision                   |
 | ------------------- | ------------------------------------------------------------------------------------ | ------------ | ----------- | ---------------------------------------------- | -------------------------- |
-| Capacity Planner    | Estimate team capacity (engineer-days) for a release window, factor in PTO, holidays | RM, EM       | mcp-only    | `mcp-server/src/tools/planCapacity.ts`         | **build UI page**          |
-| Project Bin-Packing | Given N projects + team capacity, suggest what fits                                  | RM           | mcp-only    | `mcp-server/src/tools/binPackProjects.ts`      | **build UI page**          |
-| Story Point Roll-up | Sum story points for a Feature/Initiative across all descendants                     | FEAT Mgr, RM | mcp-only    | `mcp-server/src/tools/calculateStoryPoints.ts` | **build UI page**          |
-| Date Mover          | Bulk-cascade JIRA date changes across many tickets safely                            | RM           | mcp-only    | `mcp-server/src/tools/moveJiraDates.ts`        | **build UI page**          |
-| Release Setup       | Create + configure a new release version                                             | RM           | live        | `apps/delivery-ops` ReleaseSetup               | **keep**                   |
-| Release Config      | Edit release dates, milestones, gate dates                                           | RM           | live        | `apps/delivery-ops` ReleaseConfig              | **keep**                   |
+| Capacity Planner    | Estimate team capacity (engineer-days) for a release window, factor in PTO, holidays | RM, EM       | mcp-only    | `lighthouse/mcp/src/tools/planCapacity.ts`         | **build UI page**          |
+| Project Bin-Packing | Given N projects + team capacity, suggest what fits                                  | RM           | mcp-only    | `lighthouse/mcp/src/tools/binPackProjects.ts`      | **build UI page**          |
+| Story Point Roll-up | Sum story points for a Feature/Initiative across all descendants                     | FEAT Mgr, RM | mcp-only    | `lighthouse/mcp/src/tools/calculateStoryPoints.ts` | **build UI page**          |
+| Date Mover          | Bulk-cascade JIRA date changes across many tickets safely                            | RM           | mcp-only    | `lighthouse/mcp/src/tools/moveJiraDates.ts`        | **build UI page**          |
+| Release Setup       | Create + configure a new release version                                             | RM           | live        | `lighthouse/app` ReleaseSetup               | **keep**                   |
+| Release Config      | Edit release dates, milestones, gate dates                                           | RM           | live        | `lighthouse/app` ReleaseConfig              | **keep**                   |
 | Sprint Planner      | Recommend sprint commit list based on velocity + available work                      | EM, FEAT Mgr | never-built | —                                              | **build** (high-value gap) |
 
 
@@ -105,12 +105,12 @@ The "when will it land, and is our schedule realistic?" job.
 
 | Feature                            | Job                                                             | Persona | State                   | Source                                                                                   | Decision                                      |
 | ---------------------------------- | --------------------------------------------------------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `mcp-server/src/tools/ganttReleaseTimeline.ts` + `apps/delivery-ops` ReleaseVersionGantt | **merge into one UI page**                    |
-| Sprint Gantt                       | Sprint-by-sprint timeline of tickets                            | EM      | live                    | `apps/delivery-ops` (sprint-gantt-chart skill)                                           | **keep**                                      |
+| Release Timeline Gantt             | Visual Gantt of features across a release                       | All     | mcp-only + live partial | `lighthouse/mcp/src/tools/ganttReleaseTimeline.ts` + `lighthouse/app` ReleaseVersionGantt | **merge into one UI page**                    |
+| Sprint Gantt                       | Sprint-by-sprint timeline of tickets                            | EM      | live                    | `lighthouse/app` (sprint-gantt-chart skill)                                           | **keep**                                      |
 | Say vs Do (Predictability)         | Plot what was committed at start-of-sprint vs delivered at end  | Team Executive, RM  | mcp-only                | `mcp-server/src/tools/sayVsDo.ts`                                                        | **build UI page**                             |
 | Predictive Landing (CrystalBall-I) | AI prediction of release landing date with confidence intervals | Team Executive, RM  | live (brief) / mock (CrystalBall page) | `landingForecastService` + Release Brief; CrystalBall page still mock | **keep brief wired; CrystalBall page still mock** |
-| Sprint Analysis                    | Per-sprint deep-dive: scope creep, carry-over, blockers         | EM, TPM | live                    | `apps/delivery-ops` SprintReportPage                                                     | **keep, merge with archived Sprint_Analysis** |
-| Release Analysis                   | Per-release deep-dive                                           | RM      | live                    | `apps/delivery-ops` ReleaseAnalysisPage                                                  | **keep**                                      |
+| Sprint Analysis                    | Per-sprint deep-dive: scope creep, carry-over, blockers         | EM, TPM | live                    | `lighthouse/app` SprintReportPage                                                     | **keep, merge with archived Sprint_Analysis** |
+| Release Analysis                   | Per-release deep-dive                                           | RM      | live                    | `lighthouse/app` ReleaseAnalysisPage                                                  | **keep**                                      |
 
 
 ---
@@ -125,7 +125,7 @@ The "what came in, what should we work on, who owns it" job.
 | Ticket Triage      | Categorise incoming bugs/stories, propose owners, flag duplicates | TPM, EM      | never-built | (planned by `tpm-assistant` agent)                                      | **build as agent workflow + light UI** |
 | Spec-to-Backlog    | Read a Confluence spec, generate Epic + child tickets in JIRA     | TPM          | never-built | (Atlassian plugin skill exists)                                         | **build as workflow**                  |
 | Bug Trend Analysis | Track defect rates per team / component over time                 | EM, FEAT Mgr | archived    | `_archive/ndb-release-sprint-analysis-with-chatbot/pages/2_Insights.py` | **rebuild as React page**              |
-| JIRA Query Runner  | Free-form JQL → table viewer                                      | All          | live        | `apps/delivery-ops` JiraQuery                                           | **keep**                               |
+| JIRA Query Runner  | Free-form JQL → table viewer                                      | All          | live        | `lighthouse/app` JiraQuery                                           | **keep**                               |
 
 
 ---
@@ -139,7 +139,7 @@ The "publish status / release-page / spec to Confluence" job.
 | ----------------------------- | ------------------------------------------------------------------------------- | ------- | ---------------- | ------------------------------------------------------ | --------------------------------------------------- |
 | Bulk Page Creator (templated) | Create N standardised Confluence pages from a JIRA query, using a base template | TPM     | live (Streamlit) | `apps/tpm-confluence-tools/`                           | **rewrite in React, port to delivery-ops**          |
 | Template Editor               | Customise the base template (sections, placeholders, macros)                    | TPM     | live (Streamlit) | `apps/tpm-confluence-tools/pages/2_Template_Editor.py` | **rewrite in React**                                |
-| Confluence Extractor          | Pull a Confluence page back as structured data                                  | All     | live (partial)   | `apps/delivery-ops` ConfluenceExtractor                | **keep, unify with the Confluence Connector below** |
+| Confluence Extractor          | Pull a Confluence page back as structured data                                  | All     | live (partial)   | `lighthouse/app` ConfluenceExtractor                | **keep, unify with the Confluence Connector below** |
 | Status Page Auto-Publisher    | Push the weekly status email content as a Confluence page (one-click)           | TPM, RM | never-built      | —                                                      | **build** (high-value gap, ties Domain 1 + 5)       |
 | Confluence Width Cleanup      | Sanitise width styles on emitted Confluence storage XML                         | TPM     | live (skill)     | `.cursor/skills/confluence-width-cleanup/`             | **keep as skill, invoked by all 4 features above**  |
 
@@ -153,12 +153,12 @@ The "how is my team / a team doing" job.
 
 | Feature                          | Job                                                                    | Persona | State    | Source                                           | Decision                                    |
 | -------------------------------- | ---------------------------------------------------------------------- | ------- | -------- | ------------------------------------------------ | ------------------------------------------- |
-| Sprint Health Scoreboard         | Committed vs delivered, carry-over %, scope creep % per sprint         | EM, TPM | live     | `apps/delivery-ops` SprintReportPage             | **keep**                                    |
-| Sprint Trends                    | Multi-sprint trend lines for the same team                             | EM      | live     | `apps/delivery-ops` SprintReportPage (mode=Past) | **keep**                                    |
+| Sprint Health Scoreboard         | Committed vs delivered, carry-over %, scope creep % per sprint         | EM, TPM | live     | `lighthouse/app` SprintReportPage             | **keep**                                    |
+| Sprint Trends                    | Multi-sprint trend lines for the same team                             | EM      | live     | `lighthouse/app` SprintReportPage (mode=Past) | **keep**                                    |
 | Sprint Insights                  | Patterns, anomalies, AI commentary on a sprint                         | EM      | archived | `_archive/.../pages/2_Insights.py`               | **rebuild as React page (small)**           |
 | Team Profile                     | One page per team: velocity history, members, components, current load | EM, RM  | archived | `_archive/.../pages/6_Team_Profiles.py`          | **rebuild as React page**                   |
 | Sync Hub (data refresh)          | Background pull of release/sprint data with progress UI                | RM, EM  | archived | `_archive/.../pages/1_Sync_Hub.py`               | **cut — pages fetch live JIRA; React Sync Hub removed** |
-| Carry-over / Scope Creep Metrics | Standalone view of work that slipped sprint-to-sprint                  | EM, RM  | partial  | `apps/delivery-ops` SprintReportPage             | **promote to its own page**                 |
+| Carry-over / Scope Creep Metrics | Standalone view of work that slipped sprint-to-sprint                  | EM, RM  | partial  | `lighthouse/app` SprintReportPage             | **promote to its own page**                 |
 
 
 ---
@@ -170,8 +170,8 @@ The "track the metrics that matter to leadership" job.
 
 | Feature                  | Job                                                                      | Persona | State        | Source                                           | Decision                     |
 | ------------------------ | ------------------------------------------------------------------------ | ------- | ------------ | ------------------------------------------------ | ---------------------------- |
-| KPI Dashboard            | Track defined KPIs (bug count, velocity, predictability) over time       | Team Executive, RM  | live         | `apps/delivery-ops` KPIPage                      | **keep**                     |
-| KPI Editor               | Define + modify which KPIs are tracked and their thresholds              | Ops PM  | live         | `apps/delivery-ops` (KPI admin)                  | **keep**                     |
+| KPI Dashboard            | Track defined KPIs (bug count, velocity, predictability) over time       | Team Executive, RM  | live         | `lighthouse/app` KPIPage                      | **keep**                     |
+| KPI Editor               | Define + modify which KPIs are tracked and their thresholds              | Ops PM  | live         | `lighthouse/app` (KPI admin)                  | **keep**                     |
 | Leadership Commit Report | GitHub commit activity for leadership/managers (signal of hands-on time) | Team Executive      | mcp-only     | `mcp-server/src/tools/leadershipCommitReport.ts` | **keep as MCP-only (niche)** |
 | Predictive Team Executive Analytics  | Forecast quality, completion, risk for a release                         | Team Executive      | live (skill) | `.cursor/skills/predictive-team-exec-analytics/`        | **keep**                     |
 
@@ -185,11 +185,11 @@ Foundational features every other domain depends on.
 
 | Feature                | Job                                                                 | Persona | State               | Source                                  | Decision                              |
 | ---------------------- | ------------------------------------------------------------------- | ------- | ------------------- | --------------------------------------- | ------------------------------------- |
-| User Management        | Add / remove users, set roles                                       | Admin   | live                | `apps/delivery-ops` AdminPanel          | **keep**                              |
-| Team Management        | Define teams, project keys, board IDs, base filters                 | Admin   | live                | `apps/delivery-ops` TeamList            | **keep**                              |
-| Role-Based Permissions | Map users to personas (Team Executive / TPM / RM / FEAT / EM / IC) and to pages | Admin   | live (lightly used) | `apps/delivery-ops` auth/permissions    | **extend to drive persona-aware nav** |
-| Auth (JIRA PAT)        | Authenticate users via JIRA Personal Access Token                   | All     | live                | `apps/delivery-ops` auth/               | **keep**                              |
-| Notifications          | In-app toasts, error banners                                        | All     | live                | `apps/delivery-ops` notificationService | **keep**                              |
+| User Management        | Add / remove users, set roles                                       | Admin   | live                | `lighthouse/app` AdminPanel          | **keep**                              |
+| Team Management        | Define teams, project keys, board IDs, base filters                 | Admin   | live                | `lighthouse/app` TeamList            | **keep**                              |
+| Role-Based Permissions | Map users to personas (Team Executive / TPM / RM / FEAT / EM / IC) and to pages | Admin   | live (lightly used) | `lighthouse/app` auth/permissions    | **extend to drive persona-aware nav** |
+| Auth (JIRA PAT)        | Authenticate users via JIRA Personal Access Token                   | All     | live                | `lighthouse/app` auth/               | **keep**                              |
+| Notifications          | In-app toasts, error banners                                        | All     | live                | `lighthouse/app` notificationService | **keep**                              |
 
 
 ---
@@ -202,7 +202,7 @@ Today these are duplicated across apps; one of them per system is the goal.
 
 | Connector              | Currently in                                                                                                                                                           | Decision                                                                                  |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| JIRA                   | `shared/connectors/jiraConnector.ts` (Data Center PAT Bearer, D40). Express HTTP goes through `server/utils/jiraClient.js`. Web login still validates PAT in `apps/delivery-ops/server/middleware/auth/jira.js`. | **one TS connector; MCP private copy removed** |
+| JIRA                   | `shared/connectors/jiraConnector.ts` (Data Center PAT Bearer, D40). Express HTTP goes through `server/utils/jiraClient.js`. Web login still validates PAT in `lighthouse/app/server/middleware/auth/jira.js`. | **one TS connector; MCP private copy removed** |
 | Confluence             | `shared/connectors/confluenceConnector.ts`. Express auth uses `server/utils/confluenceClient.js`. Date mover uses `getPage` / `appendStructuredRow`. Python `tpm-confluence-tools` remains until Phase E. | **one TS connector for Node hosts** |
 | GitHub                 | `shared/connectors/githubConnector.ts`. MCP `leadership_commit_report` is a thin adapter. | **one TS connector** |
 | Email                  | `shared/connectors/emailConnector.ts` (SMTP send). Express `emailService` keeps templates + recipient parsing. | **one TS connector** |

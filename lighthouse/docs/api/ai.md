@@ -1,6 +1,6 @@
 # AI Endpoints — `/api/ai`
 
-Route file: `apps/delivery-ops/server/routes/ai.js`
+Route file: `lighthouse/app/server/routes/ai.js`
 
 ---
 

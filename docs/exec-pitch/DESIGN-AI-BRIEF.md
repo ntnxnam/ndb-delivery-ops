@@ -2,7 +2,7 @@
 
 **Purpose:** Paste this into a design AI to restyle / redesign the exec pitch.  
 **Content SoT:** `STORY.md` · `SAVINGS.md` · `SPEAKER_NOTES.md` · `index.html`  
-**Product depth (optional):** `apps/delivery-ops/docs/DeliveryOps-full-capabilities.md`  
+**Product depth (optional):** `lighthouse/docs/product/DeliveryOps-full-capabilities.md`  
 **Date context:** 2026-10-14 / 2026-10-15  
 **Branch:** `docs/project-lighthouse-story-content` (ndb-delivery-ops)
 
@@ -181,7 +181,7 @@ Accountability on who can change the outcome:
 | `docs/exec-pitch/STORY.md` | Narrative SoT |
 | `docs/exec-pitch/SAVINGS.md` | Hours + CTC + $ SoT |
 | `docs/exec-pitch/SPEAKER_NOTES.md` | ~10–12 min talk track |
-| `apps/delivery-ops/docs/DeliveryOps-full-capabilities.md` | Full product capability encyclopedia (~19 pages) |
+| `lighthouse/docs/product/DeliveryOps-full-capabilities.md` | Full product capability encyclopedia (~19 pages) |
 
 ---
 

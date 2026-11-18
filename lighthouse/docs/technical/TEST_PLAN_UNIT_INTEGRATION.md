@@ -223,7 +223,7 @@ All test cases drive `computeReleaseHealthVerdict` in `shared/src/services/riskI
 
 ```bash
 # Unit tests (watch mode)
-cd apps/delivery-ops
+cd lighthouse/app
 npm test
 
 # Coverage report

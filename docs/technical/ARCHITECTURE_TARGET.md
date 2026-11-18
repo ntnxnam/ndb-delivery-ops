@@ -83,7 +83,7 @@ Subtotal: **1,252 LOC + 2 service files + 2 config entries** gone, zero risk.
 
 | Item | LOC / size | Why kill | If kept |
 |---|---|---|---|
-| `apps/delivery-ops/crystalball-i/` (npm pkg with own node_modules) | ~2k LOC + deps | "Self-learning AI release prediction" — aspirational; the only live touchpoint is the React `CrystalBallIChat`, which can talk to any chat backend | Fold the prediction logic into `shared/services/releaseInsightsService.ts` over time; nuke the separate package now |
+| `lighthouse/app/crystalball-i/` (npm pkg with own node_modules) | ~2k LOC + deps | "Self-learning AI release prediction" — aspirational; the only live touchpoint is the React `CrystalBallIChat`, which can talk to any chat backend | Fold the prediction logic into `shared/services/releaseInsightsService.ts` over time; nuke the separate package now |
 | `apps/tpm-confluence-tools/` (Python/Streamlit) | separate runtime | Different language, used ≤1× per release for bulk Confluence page creation | Keep but unlink from sidebar; document as standalone tool |
 | Bin-packing sidebar tile (the static app itself stays mounted at `/bin-packing/`) | nav item | Quarterly capacity-planning tool; doesn't belong in daily nav | Move into `/admin` as a link, not a top-level tile |
 | `ReleaseTrendsPage.js` (1,609 LOC) | huge | Trends become a tab on `/release/:name/trends` rebuilt from scratch; this file is mostly chart bloat + the chat shell | Migrate the 2–3 useful charts, delete the rest |

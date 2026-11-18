@@ -31,7 +31,7 @@
 <pre><code class="language-bash">npm install
 </code></pre>
 <h3>2. Configure the backend environment</h3>
-<pre><code class="language-bash">cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+<pre><code class="language-bash">cp lighthouse/app/server/.env.example lighthouse/app/server/.env
 # Then edit server/.env — SMTP_*, AI_*, JIRA_TOKEN are the key fields.
 # PORT is already set to 8001; do not change it without also updating client/package.json proxy.
 </code></pre>
@@ -39,7 +39,7 @@
 <pre><code class="language-bash"># From repo root — starts backend on :8001 and React dev server on :8899
 ./scripts/start.sh
 </code></pre>
-<p>Or start them separately (from <code>apps/delivery-ops/</code>):</p>
+<p>Or start them separately (from <code>lighthouse/app/</code>):</p>
 <pre><code class="language-bash"># Terminal 1 — backend
 npm run server          # Express on http://localhost:8001
 
@@ -47,7 +47,7 @@ npm run server          # Express on http://localhost:8001
 npm run client          # React dev server on http://localhost:8899
 </code></pre>
 <p>Or use the <code>dev</code> script (both in one terminal via concurrently):</p>
-<pre><code class="language-bash">cd apps/delivery-ops &amp;&amp; npm run dev
+<pre><code class="language-bash">cd lighthouse/app &amp;&amp; npm run dev
 </code></pre>
 <h3>4. Open the app</h3>
 <ul>
@@ -63,7 +63,7 @@ npm run client          # React dev server on http://localhost:8899
 <hr>
 <h2>Pre-deploy localhost guard</h2>
 <p>Before shipping to production, verify no hardcoded <code>localhost</code> or <code>127.0.0.1</code> has crept into app code:</p>
-<pre><code class="language-bash">cd apps/delivery-ops &amp;&amp; npm run check:no-localhost
+<pre><code class="language-bash">cd lighthouse/app &amp;&amp; npm run check:no-localhost
 </code></pre>
 <p>This is also run automatically by <code>deploy-to-production.sh</code> before packaging.</p>
 <hr>
@@ -78,19 +78,19 @@ npm run client          # React dev server on http://localhost:8899
 </tr>
 </thead>
 <tbody><tr>
-<td><code>apps/delivery-ops/scripts/deploy-to-production.sh</code></td>
+<td><code>lighthouse/app/scripts/deploy-to-production.sh</code></td>
 <td>Your Mac</td>
 <td>Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script</td>
 </tr>
 <tr>
-<td><code>apps/delivery-ops/scripts/server-deploy.sh</code></td>
+<td><code>lighthouse/app/scripts/server-deploy.sh</code></td>
 <td>Production server</td>
 <td>Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend</td>
 </tr>
 </tbody></table>
 <h3>Quick deploy</h3>
 <pre><code class="language-bash"># From anywhere in the repo
-./apps/delivery-ops/scripts/deploy-to-production.sh
+./lighthouse/app/scripts/deploy-to-production.sh
 </code></pre>
 <p>Both scripts are idempotent — the same command works for the first deploy and every subsequent redeploy.</p>
 <p>See <code>DEPLOYMENT_GUIDE.md</code> for full production setup instructions.</p>
@@ -118,11 +118,11 @@ npm install
 <ol>
 <li>Check <code>server/.env</code> has <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>.</li>
 <li>Check <code>server/config/emailConfig.json</code> has <code>smtp.from</code> set.</li>
-<li>From the server, run: <code>cd apps/delivery-ops/server &amp;&amp; node test-smtp.js</code></li>
+<li>From the server, run: <code>cd lighthouse/app/server &amp;&amp; node test-smtp.js</code></li>
 </ol>
 <hr>
 <h2>Production build only (no server)</h2>
-<pre><code class="language-bash">cd apps/delivery-ops/client &amp;&amp; npm run build
-# Output: apps/delivery-ops/client/build/
+<pre><code class="language-bash">cd lighthouse/app/client &amp;&amp; npm run build
+# Output: lighthouse/app/client/build/
 </code></pre>
 </article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
