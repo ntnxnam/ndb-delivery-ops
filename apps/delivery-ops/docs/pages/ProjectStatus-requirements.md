@@ -37,7 +37,7 @@ The Project Status page is the central release payload dashboard. It shows the f
 2. **Release picker** — dropdown next to the team picker; populated from JIRA; selection persists in localStorage. Choosing a version loads that release’s payload (`POST /api/jira/release-items`). **Load** refreshes the same request.
 3. **Payload summary row** — shows total issues, open bugs, P0/P1 count, closed % as clickable KPI chips
 4. **Filter bar** — team, component, status, priority, issue type; all client-side after initial load
-5. **Payload table** — columns: Key, Summary, Type, Status, Priority, Assignee, Fix Version, Gate Date; sortable
+5. **Payload table** — columns: Key, Summary, Type, Status, Priority, Assignee, Fix Version, Gate Date, Quality (TCMS); sortable. Quality column renders 4 TCMS tables (Release/Master × Overall/Last 4 weeks), each 2×2 (Functional/System × Manual/Automation).
 6. **Gantt section** — horizontal bars per issue using JIRA date hierarchy (gate dates for FEAT tier, dueDate for Epics, sprint end for lower-level); gate rulers as vertical lines
 7. **Email generation button** — opens EmailSender pre-filled with current view's data
 8. **Legend** — colour coding for issue types and RAG statuses
@@ -77,3 +77,4 @@ The Project Status page is the central release payload dashboard. It shows the f
 - [ ] Choosing a team (or Refresh on the current team) reloads Project Status and other team-scoped pages
 - [ ] After Fetch, the release dropdown contains only fixVersions that appear on tickets in the selected team's `baseFilter`
 - [ ] Switching away from NDB does not leave `NDB-2.11` selected
+- [ ] Quality column renders 4 TCMS tables (Release/Master × Overall/Last 4 weeks) with Functional/System rows and "Not Set" fallback when no data

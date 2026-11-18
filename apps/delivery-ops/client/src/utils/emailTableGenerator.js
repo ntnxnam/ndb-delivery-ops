@@ -269,14 +269,14 @@ export function generateTableHTMLForEmail(
     }
     if (columnKey === 'quality') {
       const q = item.tcmsQuality || item.tcmsQI;
-      if (!q) return '<span style="color:#999;font-style:italic;">Not Set</span>';
+      if (!q) return '<span style="background:#fff3cd;font-weight:600;padding:2px 4px;border-radius:2px;">Not Set</span>';
       const buildTable = (title, data) => {
-        if (!data) return `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:10px;color:#2c3e50;margin-bottom:4px;border-bottom:1px solid #dee2e6;padding-bottom:2px;">${escapeHtml(title)}</div><span style="color:#999;font-style:italic;">Not Set</span></div>`;
+        if (!data) return `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:10px;color:#2c3e50;margin-bottom:4px;border-bottom:1px solid #dee2e6;padding-bottom:2px;">${escapeHtml(title)}</div><span style="background:#fff3cd;font-weight:600;padding:2px 4px;border-radius:2px;">Not Set</span></div>`;
         const rows = [
           { label: 'Functional', key: 'functional' },
           { label: 'System', key: 'system' },
         ];
-        const cell = (v) => v ? `<div style="font-size:10px;line-height:1.5;">QI ${v.qi != null ? v.qi + '%' : '—'}<br/>Run ${v.run ?? '—'}<br/>Passed ${v.passed ?? '—'}<br/>Failed ${v.failed ?? '—'}<br/>Rate ${v.rate != null ? v.rate + '%' : '—'}</div>` : '<span style="color:#999;font-style:italic;">Not Set</span>';
+        const cell = (v) => v ? `<div style="font-size:10px;line-height:1.5;">QI ${v.qi != null ? v.qi + '%' : '—'}<br/>Run ${v.run ?? '—'}<br/>Passed ${v.passed ?? '—'}<br/>Failed ${v.failed ?? '—'}<br/>Rate ${v.rate != null ? v.rate + '%' : '—'}</div>` : '<span style="background:#fff3cd;font-weight:600;padding:2px 4px;border-radius:2px;">Not Set</span>';
         let h = `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:10px;color:#2c3e50;margin-bottom:4px;border-bottom:1px solid #dee2e6;padding-bottom:2px;">${escapeHtml(title)}</div>`;
         h += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr><th scope="col" aria-label="Test scope" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:left;font-size:9px;"></th><th scope="col" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:center;font-size:9px;">Manual</th><th scope="col" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:center;font-size:9px;">Automation</th></tr></thead><tbody>';
         rows.forEach(r => {
@@ -290,15 +290,16 @@ export function generateTableHTMLForEmail(
       };
       const tables = [
         { title: `Release ${selectedVersion || ''} — Overall`, data: q.releaseOverall },
-        { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast3Weeks },
+        { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast4Weeks ?? q.releaseLast3Weeks },
         { title: 'Master — Overall', data: q.masterOverall },
-        { title: 'Master — Last 4 weeks', data: q.masterLast3Weeks },
+        { title: 'Master — Last 4 weeks', data: q.masterLast4Weeks ?? q.masterLast3Weeks },
       ];
       const hasData = (d) => d && (d.functional || d.system || d.overall);
       const visible = tables.filter(t => hasData(t.data));
-      if (visible.length === 0) return '<span style="color:#999;font-style:italic;">Not Set</span>';
+      if (visible.length === 0) return '<span style="background:#fff3cd;font-weight:600;padding:2px 4px;border-radius:2px;">Not Set</span>';
       let html = visible.map(t => buildTable(t.title, t.data)).join('');
       if (visible.length < tables.length) html += '<div style="color:#999;font-style:italic;font-size:10px;margin-top:4px;">— No runs in other windows</div>';
+      html += '<div style="font-size:9px;color:#6c757d;margin-top:4px;font-style:italic;">Functional/System share source until TCMS category filter lands</div>';
       return html;
     }
     if (columnKey === 'statusUpdate') {

@@ -13,6 +13,7 @@ source: doc-user-guide @ 2026-05-19
 - [Getting Started](#getting-started)
 - [Sprint Report](#sprint-report)
 - [Release Brief](#release-brief)
+- [Quality Column (TCMS)](#quality-column-tcms)
 - [Tips & FAQ](#tips--faq)
 
 ## Getting Started
@@ -31,6 +32,26 @@ source: doc-user-guide @ 2026-05-19
 
 **Who:** Team Exec / Director
 **Steps:** Open Release Brief → check RAG + blockers → drill into FEAT.
+
+## Quality Column (TCMS)
+
+**Who:** TPM, FEAT owners, QA
+
+The Quality column on the Project Status table shows TCMS test results per
+feature.
+
+- **Four tables per feature**: `Release — Overall`, `Release — Last 4
+  weeks`, `Master — Overall`, `Master — Last 4 weeks`.
+- **Each table is a 2×2 grid**:
+  - Rows: **Functional**, **System**
+  - Columns: **Manual**, **Automation**
+  - Cells: QI / Run / Passed / Failed / Rate
+- **Last 4 weeks** window reflects runs in the most recent 4-week window;
+  shows "Not Set" when there are no runs in that window (it does not fall
+  back to Overall).
+- **Caveat:** Functional and System rows currently share the same source
+  metrics until TCMS exposes a `test_category` filter. Do not read
+  distinctness into the two rows yet. See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
 
 ## Tips & FAQ
 

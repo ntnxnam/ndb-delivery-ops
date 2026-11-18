@@ -12,6 +12,19 @@ source: doc-release-notes @ 2026-05-19
 
 See [release-notes/NDB-2.11.md](./release-notes/NDB-2.11.md) when cut.
 
+### Recent changes (TCMS Quality table)
+
+- TCMS Quality table now renders **Functional** and **System** rows (2×2:
+  Functional/System × Manual/Automation) instead of the legacy
+  Overall/Functional/Automation layout. `Overall` is no longer a row/title.
+- Window label aligned to data source: **Last 4 weeks** (key
+  `releaseLast4Weeks`/`masterLast4Weeks`), with deprecated alias
+  `releaseLast3Weeks`/`masterLast3Weeks` retained for back-compat.
+- Legacy `overall` data falls back to the **System** row for back-compat.
+- Caveat: Functional and System rows currently share the same source metrics
+  (clone) until TCMS exposes a `test_category` filter — see
+  `KNOWN_ISSUES.md` and `docs/tcms-rows-followup.md`.
+
 ## Template for next release
 
 Copy into `release-notes/<version>.md`:

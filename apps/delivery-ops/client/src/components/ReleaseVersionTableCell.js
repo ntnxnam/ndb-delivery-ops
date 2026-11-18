@@ -138,10 +138,10 @@ function renderQualityTable(title, rowData) {
               <tr key={r.key}>
                 <th scope="row" style={{ border: '1px solid #dee2e6', padding: '2px 4px', fontWeight: 600, background: '#f8f9fa', textAlign: 'left' }}>{r.label}</th>
                 <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
-                  {manual ? qualityCellValue(manual.qi, manual.run, manual.passed, manual.failed, manual.rate) : <span style={{ color: '#999', fontStyle: 'italic' }}>Not Set</span>}
+                  {manual ? qualityCellValue(manual.qi, manual.run, manual.passed, manual.failed, manual.rate) : <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px' }}>Not Set</span>}
                 </td>
                 <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
-                  {auto ? qualityCellValue(auto.qi, auto.run, auto.passed, auto.failed, auto.rate) : <span style={{ color: '#999', fontStyle: 'italic' }}>Not Set</span>}
+                  {auto ? qualityCellValue(auto.qi, auto.run, auto.passed, auto.failed, auto.rate) : <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px' }}>Not Set</span>}
                 </td>
               </tr>
             );
@@ -214,7 +214,7 @@ export function renderRiskDetails(item) {
 export function renderQualityCell(item, selectedVersion) {
   let q = item.tcmsQuality || item.tcmsQI;
   if (!q) {
-    return <span style={{ color: '#999', fontStyle: 'italic', fontSize: '11px' }}>Not Set</span>;
+    return <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px', fontSize: '11px' }}>Not Set</span>;
   }
   // Back-compat: legacy tcmsQI shape is { master:{qi,…}, branch:{qi,…} } -> map to new 4-table shape
   if (q.master && q.branch && !q.releaseOverall) {
@@ -241,17 +241,18 @@ export function renderQualityCell(item, selectedVersion) {
   }
   const tables = [
     { title: `Release ${selectedVersion || ''} — Overall`, data: q.releaseOverall },
-    { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast3Weeks },
+    { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast4Weeks ?? q.releaseLast3Weeks },
     { title: 'Master — Overall', data: q.masterOverall },
-    { title: 'Master — Last 4 weeks', data: q.masterLast3Weeks },
+    { title: 'Master — Last 4 weeks', data: q.masterLast4Weeks ?? q.masterLast3Weeks },
   ];
   const hasData = (d) => d && (d.functional || d.system || d.overall);
   const visibleTables = tables.filter(t => hasData(t.data));
-  if (visibleTables.length === 0) return <span style={{ color: '#999', fontStyle: 'italic', fontSize: '11px' }}>Not Set</span>;
+  if (visibleTables.length === 0) return <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px', fontSize: '11px' }}>Not Set</span>;
   return (
     <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
       {visibleTables.map(t => <div key={t.title}>{renderQualityTable(t.title, t.data)}</div>)}
       {visibleTables.length < tables.length && <div style={{ color: '#999', fontStyle: 'italic', fontSize: '10px', marginTop: '4px' }}>— No runs in other windows</div>}
+      <div style={{ fontSize: '9px', color: '#6c757d', marginTop: '4px', fontStyle: 'italic' }}>Functional/System share source until TCMS category filter lands</div>
     </div>
   );
 }

@@ -115,6 +115,7 @@ const releaseSyncRoutes = require('./routes/releaseSync');
 const aiRoutes = require('./routes/ai');
 const jiraDiggingRoutes = require('./routes/jiraDigging');
 const featureRoutes = require('./routes/feature');
+const teamOverallReportRoutes = require('./routes/teamOverallReport');
 
 // CORS preflight: ensure OPTIONS for all /api paths always succeeds.
 // Use RegExp to avoid path-to-regexp wildcard parsing issues.
@@ -141,6 +142,7 @@ app.use('/api/release-dataset', releaseSyncRoutes);   // Sync lifecycle: /sync-s
 app.use('/api/ai', aiRoutes); // AI routes: exec summary generation + JIRA push
 app.use('/api/jira-digging', jiraDiggingRoutes); // Slice 2: digging prepare (read-only)
 app.use('/api/feature', featureRoutes); // Feature-level dashboard endpoints
+app.use('/api/reports/team-overall', teamOverallReportRoutes); // Phase 2: Overall Team Report
 const componentRoutes = require('./routes/component');
   app.use('/api/component', componentRoutes); // Component report endpoints
   const dependencyRoutes = require('./routes/dependency');

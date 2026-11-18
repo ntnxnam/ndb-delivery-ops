@@ -211,15 +211,21 @@ async function enrichItemWithQuality(item, fixVersion, isLongTerm = false) {
       isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all'),
       isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'Last 4 Week'),
     ]);
-    // TODO(TCMS): functional/system currently share same source metrics until TCMS provides category-filtered aggregates.
+    // D1: functional/system currently share same source metrics until TCMS provides category-filtered aggregates.
     // When TCMS exposes test_category filter, split fetchMergedMetrics into functionalMetrics vs systemMetrics here.
+    // Rows are intentionally identical (clone) today; no UI legend claims distinctness (see KPI waiver).
     const toTable = (m) => m ? { functional: { manual: m.manual, automation: m.automation }, system: { manual: m.manual, automation: m.automation } } : null;
     const toLast3Table = toTable;
+    // D2: new keys (releaseLast4Weeks) + back-compat alias (releaseLast3Weeks)
+    const releaseLast4 = branchLast3 ? toLast3Table(branchLast3) : null;
+    const masterLast4 = masterLast3 ? toLast3Table(masterLast3) : null;
     item.tcmsQuality = {
       releaseOverall: branchAll ? toTable(branchAll) : null,
-      releaseLast3Weeks: branchLast3 ? toLast3Table(branchLast3) : null,
+      releaseLast4Weeks: releaseLast4,
+      releaseLast3Weeks: releaseLast4, // deprecated alias, remove after 2 sprints
       masterOverall: masterAll ? toTable(masterAll) : null,
-      masterLast3Weeks: masterLast3 ? toLast3Table(masterLast3) : null,
+      masterLast4Weeks: masterLast4,
+      masterLast3Weeks: masterLast4, // deprecated alias, remove after 2 sprints
     };
     item.tcmsQI = { master: masterAll, branch: branchAll };
   } catch (err) {

@@ -55,6 +55,18 @@ Headers: x-jira-token, x-username
 
 **Item fields**: mapped in `releaseItemsDataService.processReleaseItems` from `RELEASE_ITEMS_CONFIG.FIELDS_LIST`. Includes `assigneeManager` (display name) and `assigneeManagerEmail`, both derived from `customfield_19262`.
 
+### Quality column (TCMS) data shape
+
+When TCMS enrichment runs (`/api/jira/release-items-tcms`), each item carries
+`tcmsQuality` (4 tables: Release/Master × Overall/Last 4 weeks) and legacy
+`tcmsQI`. Each table is `{ functional: {manual,automation}, system:
+{manual,automation} }`; each cell `{ qi, run, passed, failed, rate }`.
+Window keys: `releaseLast4Weeks`/`masterLast4Weeks` (primary) with
+deprecated alias `releaseLast3Weeks`/`masterLast3Weeks`. No `overall` key is
+emitted; legacy `overall` data falls back to the `system` row in renderers.
+Functional/System rows currently share source metrics (clone) until TCMS
+exposes a `test_category` filter — see `../tcms-rows-followup.md`.
+
 **Client-side filtering**: `ReleaseVersionFilterBar` + `applyFilters` narrow the loaded items in memory (no re-fetch). Filters: Risk, Status, Assignee, **Assignee Mgr**, Status-update staleness, plus a commit/long-term-funded Section toggle. `assigneeManager` also drives the manager CC on the release-versions email (`sendReleaseVersions.js`).
 
 ---

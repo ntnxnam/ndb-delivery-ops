@@ -84,9 +84,9 @@ describe('emailTableGenerator — TCMS Quality Functional/System rows', () => {
     // Should contain headers Manual and Automation as col headers
     expect(html).toContain('Manual</th>');
     expect(html).toContain('Automation</th>');
-    // Count Functional occurrences — 1 per non-null table (releaseOverall only = 1 table => 1 Functional row)
+    // Count Functional occurrences — 1 per non-null table (releaseOverall only = 1 table => 1 Functional row) + 1 footnote
     const functionalCount = (html.match(/Functional/g) || []).length;
-    expect(functionalCount).toBe(1);
+    expect(functionalCount).toBe(2);
   });
 
   test('UT-EMAIL-004: legacy overall fallback maps to System row', () => {
@@ -164,8 +164,8 @@ describe('emailTableGenerator — TCMS Quality Functional/System rows', () => {
     expect(html).toContain('Release NDB-2.12 — Last 4 weeks');
     expect(html).toContain('Master — Overall');
     expect(html).toContain('Master — Last 4 weeks');
-    // Functional appears 4 times (one per table)
-    expect((html.match(/Functional/g) || []).length).toBe(4);
-    expect((html.match(/System/g) || []).length).toBe(4);
+    // Functional appears 4 times (one per table) + 1 footnote
+    expect((html.match(/Functional/g) || []).length).toBe(5);
+    expect((html.match(/System/g) || []).length).toBe(5);
   });
 });
