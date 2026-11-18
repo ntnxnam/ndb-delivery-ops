@@ -12,6 +12,13 @@ source: doc-release-notes @ 2026-05-19
 
 See [release-notes/NDB-2.11.md](./release-notes/NDB-2.11.md) when cut.
 
+### NDB 2.12 — JIRA Digging + Chatbot beam Ask (Slice 1.5a · 2b · 3)
+
+- **Custom JQL Digging — Fetch & Index → Ask** in `/chatbot` (Slice 2b+3): `POST /api/jira-digging/prepare` validates JQL, `searchCount` (cap 10 000) → `searchAll` (500/page, `DIGGING_FIELDS`) → optional `changelog`/`comments` enrichment (concurrency 5) → `shared/.cache/jira-digging/{productId}/{jqlHash}/` (`manifest.json` + `tickets.json.gz`). Then **Ask** in digging mode posts `datasetId`+`jqlHash` to `POST /api/ai/chat` → `shared.answerDiggingAsk` (load + compact + beam `muse-spark` grounded only in that staged set, cites `[KEY-...]`). See [api/jira-digging](./api/jira-digging.md) and [ChatbotPage — Data Layer](./pages/ChatbotPage-data-layer.md).
+- **JQL autocomplete** in the digging drawer (Slice 1.5a): ghost + dropdown from local scrub of `jiraFieldsConfig.json` (30 fields + 43 `customfield_*`) + ScriptRunner templates (`portfolioChildrenOf`, etc.) via `jqlAutocompleteLogic.js`; `Tab`/`Enter`/`↑↓`/`Esc`; see [ChatbotPage — Requirements](./pages/ChatbotPage-requirements.md) CH-11.
+- Feature flags `REACT_APP_ENABLE_JIRA_DIGGING` / `REACT_APP_ENABLE_JQL_AUTOCOMPLETE` (both default `true` — see [ADMIN_GUIDE](./ADMIN_GUIDE.md#feature-flags)); ports fixed to **8899** (React) / **8001** (Express), `8888` removed.
+- Beam Ask is read-only (D26): every digging answer carries `trace: loadDiggingCache` + `provenanceId`; no JIRA writes.
+
 ### Recent changes (TCMS Quality table)
 
 - TCMS Quality table now renders **Functional** and **System** rows (2×2:
