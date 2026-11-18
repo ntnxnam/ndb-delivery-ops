@@ -28,6 +28,8 @@
     "rules/weave.mdc",
     "rules/no-localhost.mdc",
     "rules/no-hardcoding.mdc",
+    "rules/no-defensive-statements.mdc",
+    "rules/no-broken-links.mdc",
     "rules/one-shot.mdc",
     "rules/minimal-architecture.mdc",
     "rules/gerrit-push-for-review.mdc"
