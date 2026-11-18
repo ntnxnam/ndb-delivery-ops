@@ -394,8 +394,8 @@ async function chatCompletion(messages, options = {}) {
       temperature: options.temperature ?? 0.3,
     });
   } catch (err) {
-    if (err.message && /AI_API_KEY/.test(err.message)) {
-      throw new Error('NAI API key not configured. Set AI_API_KEY in server/.env');
+    if (err.message && /NAI_API_KEY/.test(err.message)) {
+      throw new Error('NAI API key not configured. Set NAI_API_KEY in server/.env');
     }
     throw err;
   }
