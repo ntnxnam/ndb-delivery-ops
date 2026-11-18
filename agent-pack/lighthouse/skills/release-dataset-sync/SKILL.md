@@ -249,3 +249,7 @@ const cleanupJql = `"Epic Link" in (${epicKeys}) AND fixVersion = "${release}"`;
 - [ ] Sync always clears forced per-release caches before writing fresh data
 - [ ] Group 3 failure (versions API down) does not abort Group 1 + 2 sync
 - [ ] No `project = ERA` or any project filter in any bucket JQL — all cross-project
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

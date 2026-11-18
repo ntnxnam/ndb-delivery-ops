@@ -9,7 +9,7 @@ module.exports = {
     // The top-level Jest config is CJS-only and cannot handle these files.
     'client/src'
   ],
-  modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
+  modulePathIgnorePatterns: ['<rootDir>/../../.claude/worktrees/', '/\\.claude/worktrees/'],
   testMatch: [
     '**/__tests__/**/*.js',
     '**/?(*.)+(spec|test).js'
