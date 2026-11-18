@@ -81,6 +81,7 @@ export const authenticatedGet = async (url, params = {}, options = {}, axiosConf
   let timeout = 30000;
   if (url.includes('/system-test-scale')) timeout = 180000;
   else if (url.includes('/release-items') || url.includes('/project-status') || url.includes('/per-release') || url.includes('/release-dataset/synopsis') || url.includes('/release-dataset/outstanding')) timeout = 180000;
+  else if (url.includes('/api/feature/dashboard')) timeout = 180000;
   return withRequestGate(requestKey('GET', url, null, params), () => axios.get(url, { ...authHeaders, params, timeout, ...axiosConfig, requestGate: { managed: true, ignoreFailureCooldown } }), { ignoreFailureCooldown });
 };
 
