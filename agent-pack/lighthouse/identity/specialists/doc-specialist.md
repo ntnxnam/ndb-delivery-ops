@@ -74,7 +74,7 @@ Every doc claim cites:
 - `agent-pack/skills/doc-release-notes/SKILL.md`
 - `agent-pack/skills/doc-user-guide/SKILL.md`
 - `agent-pack/skills/doc-admin-guide/SKILL.md`
-- `.cursor/rules/page-docs-required.mdc`
-- `.cursor/rules/api-docs-required.mdc`
-- `.cursor/rules/documentation-consistency.mdc`
-- `.cursor/rules/multi-agent-delivery-pipeline.mdc` — stage 8.5
+- `agent-pack/lighthouse/rules/page-docs-required.mdc`
+- `agent-pack/lighthouse/rules/api-docs-required.mdc`
+- `agent-pack/lighthouse/rules/documentation-consistency.mdc`
+- `agent-pack/lighthouse/rules/multi-agent-delivery-pipeline.mdc` — stage 8.5

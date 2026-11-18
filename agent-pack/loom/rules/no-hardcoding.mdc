@@ -2,6 +2,7 @@
 description: No hardcoded hosts, ports, releases, or product strings in app code
 alwaysApply: true
 ---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/no-hardcoding.mdc -->
 
 # No Hardcoding
 

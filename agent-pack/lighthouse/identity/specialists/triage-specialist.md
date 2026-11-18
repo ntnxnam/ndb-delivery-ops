@@ -116,5 +116,5 @@ the Team Executive specialist.
 
 - `agent-pack/skills/backlog-triage/SKILL.md` (merged 2026-11-12, mode=new/stale/pending/all)
 - `agent-pack/skills/crisis-triage/SKILL.md` (P0 fire, separate)
-- `.cursor/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D19

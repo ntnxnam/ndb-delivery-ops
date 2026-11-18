@@ -241,7 +241,13 @@ const fetchEpics = async (opts = {}) => {
       );
       if (fdEpics && fdEpics.length > 0) {
         setEpics(fdEpics);
-        setIssueBreakdown(null);
+        // Derive IssueTypeBreakdown from canonical so the breakdown widget isn't blank on the happy path (review #3.4.1)
+        try {
+          const canonical = Array.isArray(data?.payload?.canonical) ? data.payload.canonical : [];
+          setIssueBreakdown(canonical.length ? buildIssueBreakdownFromCanonical(canonical) : null);
+        } catch {
+          setIssueBreakdown(null);
+        }
         setWorkItems(Array.isArray(data?.payload?.canonical) ? data.payload.canonical : null);
         setPayloadJql(data?.jql?.canonical || '');
         setFetchingBreakdown(false);
@@ -328,4 +334,58 @@ const fetchSprintGanttData = async (opts = {}) => {
 
 
   return { validateJiraKey, fetchJiraData, fetchEpics, fetchSprintGanttData };
+}
+
+// Client-side breakdown builder for canonical path — mirrors taskBreakdownService.processTicketsClientSide
+// but operates on Feature Dashboard canonical issues (issueType/status already normalized).
+function buildIssueBreakdownFromCanonical(canonical) {
+  const categorizeStatus = (status) => {
+    switch (status) {
+      case 'Done':
+      case 'Closed': return 'Done';
+      case 'Resolved': return 'To Be Verified';
+      case 'In Progress':
+      case 'Development': case 'Code Review': case 'In Review':
+      case 'Testing': case 'QA': case 'UAT': case 'Pending Merge': return 'In Progress';
+      case 'To Do': case 'Open': case 'Backlog': case 'New':
+      case 'Ready': case 'Ready for Development': case 'Selected for Development': return 'To Do';
+      case 'Blocked': case 'On Hold': case 'Need Info': case 'Needs Info':
+      case 'Waiting': case 'Waiting for Information': case 'Pending': return 'Blocked';
+      default: return 'Other';
+    }
+  };
+  const doneTickets = canonical.filter((t) => t.status === 'Done' || t.status === 'Closed');
+  const outstanding = canonical.filter((t) => t.status !== 'Done' && t.status !== 'Closed');
+  const breakdown = {};
+  for (const t of outstanding) {
+    const type = t.issueType || 'Unknown';
+    const s = t.status || 'Unknown';
+    if (!breakdown[type]) breakdown[type] = { total: 0, statuses: {} };
+    breakdown[type].total++;
+    breakdown[type].statuses[s] = (breakdown[type].statuses[s] || 0) + 1;
+  }
+  const formattedBreakdown = Object.entries(breakdown).map(([type, data]) => {
+    const statusCategories = { Done: {}, 'To Be Verified': {}, 'In Progress': {}, 'To Do': {}, Blocked: {}, Other: {} };
+    for (const [s, n] of Object.entries(data.statuses)) statusCategories[categorizeStatus(s)][s] = n;
+    return { type, total: data.total, statusCategories };
+  }).sort((a, b) => b.total - a.total);
+  let totalDone = doneTickets.length; let totalToBeVerified = 0; let totalInProgress = 0; let totalToDo = 0; let totalBlocked = 0; let totalOther = 0;
+  for (const { statusCategories } of formattedBreakdown) {
+    for (const n of Object.values(statusCategories['To Be Verified'])) totalToBeVerified += n;
+    for (const n of Object.values(statusCategories['In Progress'])) totalInProgress += n;
+    for (const n of Object.values(statusCategories['To Do'])) totalToDo += n;
+    for (const n of Object.values(statusCategories.Blocked)) totalBlocked += n;
+    for (const n of Object.values(statusCategories.Other)) totalOther += n;
+  }
+  const total = canonical.length;
+  return {
+    total,
+    breakdown: formattedBreakdown,
+    overallStats: {
+      done: totalDone, toBeVerified: totalToBeVerified, inProgress: totalInProgress,
+      toDo: totalToDo, blocked: totalBlocked, other: totalOther,
+      completionRate: total > 0 ? (((totalDone + totalToBeVerified) / total) * 100).toFixed(1) : '0.0',
+    },
+    outstandingCount: outstanding.length,
+  };
 }

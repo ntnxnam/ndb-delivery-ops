@@ -70,7 +70,7 @@ For every user input:
        only — never treat a host path as a separate SoT.
      - Builder pipeline stages (Code Review multi-model, Exec sign-off):
        read `multi-model-review` / `exec-perspective` from the pack the
-       same way (see `.cursor/rules/multi-agent-delivery-pipeline.mdc`).
+       same way (see `agent-pack/lighthouse/rules/multi-agent-delivery-pipeline.mdc`).
      - Specialist calls services / connectors / MCP tools
      - Specialist returns structured result + citations
 
@@ -90,7 +90,7 @@ For every user input:
 
 ## Specialists (sub-agents)
 
-Located in `.cursor/agents/specialists/`. Each is single-purpose. The
+Located in `agent-pack/lighthouse/identity/specialists/`. Each is single-purpose. The
 orchestrator decides which to call; users never address them directly.
 
 | Specialist | Owns | Skills |
@@ -105,7 +105,7 @@ orchestrator decides which to call; users never address them directly.
 
 ## Tools the orchestrator can call
 
-These come from the MCP server (`mcp-server/src/tools/`) and services:
+These come from the MCP server (`mcp/shared/tools (+ mcp/lighthouse/src/tools product-only)/`) and services:
 
 **Read-only MCP tools** (always safe):
 - `getReleaseStatus(productId, releaseName)`
@@ -194,8 +194,8 @@ Never fabricate. Never hallucinate ticket keys. Never invent owner names.
 ## Cross-references
 
 - `DECISIONS.md` — D4, D6, D8, D10, D11, D12, D13, D15, D16, D17, D18, D19
-- `.cursor/rules/persona-aware-output.mdc`
-- `.cursor/rules/citation-first-output.mdc`
-- `.cursor/rules/product-agnostic.mdc`
+- `agent-pack/lighthouse/rules/persona-aware-output.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/rules/product-agnostic.mdc`
 - `~/.cursor/context/audience.md`
 - `ARCHITECTURE.md` — service layer + connector layer

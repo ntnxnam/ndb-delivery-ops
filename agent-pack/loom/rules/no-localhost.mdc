@@ -2,6 +2,7 @@
 description: No hardcoded localhost in production code
 alwaysApply: true
 ---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/no-localhost.mdc -->
 
 # No hardcoded localhost in production code
 

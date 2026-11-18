@@ -123,7 +123,7 @@ Same payload, three renderers:
 ## Cross-references
 
 - `agent-pack/skills/team-exec-briefing/SKILL.md` — the procedure (mode=status / mode=briefing / mode=report)
-- `.cursor/rules/citation-first-output.mdc` — citation policy
-- `.cursor/rules/persona-aware-output.mdc` — audience presenter rules
+- `agent-pack/lighthouse/rules/citation-first-output.mdc` — citation policy
+- `agent-pack/lighthouse/rules/persona-aware-output.mdc` — audience presenter rules
 - `~/.cursor/context/audience.md` — Team Executive audience definition
 - `DECISIONS.md` — D4, D10, D15, D15d

@@ -110,7 +110,7 @@ export function ProjectPlanView({
   groupBy = 'epicLink',
 }) {
   // Groups mode: render directly from pre-grouped data (Email Sender path)
-  if (groups && groups.length >= 0) {
+  if (groups) {
     return (
       <GroupsPlanView
         groups={groups}
@@ -235,7 +235,6 @@ function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
 
       {groups.map((group) => {
         const childItems = group.childItems || group.childEpics || [];
-        if (childItems.length === 0) return null;
         return (
           <EpicSection
             key={group.key}

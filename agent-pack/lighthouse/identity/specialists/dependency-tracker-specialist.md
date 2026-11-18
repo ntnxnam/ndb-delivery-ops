@@ -159,6 +159,6 @@ Inferred dependency: [NDB-12345] may depend on [NDB-20000]
 - `agent-pack/skills/dependency-walk/SKILL.md`
 - `agent-pack/context/domain/dependency_rule.md` — naming, modes, hygiene
 - `agent-pack/context/domain/cross-team-dependencies.md` — Q1–Q7
-- `.cursor/rules/jira-date-hierarchy.mdc`
-- `.cursor/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/rules/jira-date-hierarchy.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D18
