@@ -1,0 +1,50 @@
+---
+description: Always ask for clarification before modifying Confluence HTML/XML content
+alwaysApply: true
+---
+
+# Confluence Content Cleanup Clarification
+
+When the user asks you to cleanup, fix, or modify Confluence HTML or XML
+content, **always ask for clarification** before making assumptions about
+what changes to make.
+
+## What to Ask
+
+1. **What specific changes do you need?**
+   - Remove width styles/constraints?
+   - Fix formatting issues?
+   - Clean up specific HTML elements?
+   - Remove certain attributes?
+
+2. **Should I preserve the existing structure?**
+   - Keep all Confluence macros intact?
+   - Maintain user references and task lists?
+   - Preserve color highlighting and status indicators?
+
+3. **What output format do you need?**
+   - Pure Confluence markup (no HTML wrapper)?
+   - Standard HTML with DOCTYPE?
+   - Just the cleaned content sections?
+
+## Common Confluence Cleanup Tasks
+
+- **Width removal**: Remove `style="width: ..."` and `<colgroup>` elements
+- **Format cleanup**: Fix broken HTML structure or invalid attributes
+- **Macro preservation**: Keep `<ac:structured-macro>`, `<ac:link>`,
+  `<ac:task-list>` intact
+- **Content extraction**: Pull specific sections from larger documents
+
+## Important Notes
+
+- Confluence has specific markup requirements — never assume standard HTML
+- User references (`<ri:user>`) and task elements are usually critical to preserve
+- Width constraints are often the main issue with table formatting
+- Always ask before adding HTML wrappers like `<!DOCTYPE html>` — Confluence may not need them
+
+## Never Do
+
+- Proceed with Confluence cleanup without explicit clarification
+- Assume "width removal" without confirming
+- Strip Confluence macros without explicit permission
+- Add HTML wrappers / DOCTYPE without confirming the destination
