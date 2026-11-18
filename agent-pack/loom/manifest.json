@@ -97,5 +97,5 @@
       "area": "loom"
     }
   ],
-  "memorySchema": "../lighthouse/memory/schema.json"
+  "memorySchema": "memory/schema.json"
 }

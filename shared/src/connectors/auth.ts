@@ -8,7 +8,7 @@ export interface AuthContext {
 
 export type AuthProvider = () => Promise<AuthContext> | AuthContext;
 
-export function loomAuthProvider(): AuthProvider {
+export function envAuthProvider(): AuthProvider {
   return () => ({
     jiraPat: process.env.JIRA_PAT || process.env.JIRA_TOKEN || '',
     jiraBaseUrl: process.env.JIRA_BASE_URL || 'https://jira.nutanix.com',
@@ -17,3 +17,5 @@ export function loomAuthProvider(): AuthProvider {
     githubToken: process.env.GITHUB_TOKEN || undefined,
   });
 }
+// @deprecated Use envAuthProvider — kept for backward compat (loom callers)
+export const loomAuthProvider = envAuthProvider;
