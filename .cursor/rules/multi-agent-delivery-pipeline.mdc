@@ -277,12 +277,12 @@ If a better agent/model becomes available mid-run, re-evaluate and switch.
 
 ## How to spin agents
 
-- Use Cursor `Task` (or named review subagents) with a **single stage role** per spawn.
+- Use the host's subagent/task mechanism (Cursor Task, Claude Code Task, VS Code extension, etc.) with a **single stage role** per spawn. The pipeline is host-agnostic (D38).
 - Pass: **Goal KPI Card**, request summary, files touched, prior stage punch lists / KPI verdicts, and hard constraints (no unapproved JQL edits).
 - Prefer parallel spawns for independent checks after Dev lands (e.g. Code Review + QA + UX + PM together); merge parallel KPI verdicts before Fix.
-- **Multi-model Code Review**: spawn N readonly Tasks in **one** assistant turn (mandatory parallelism); synthesize before Fix.
-- **PM**: spawn a readonly Task with the Goal KPI Card + AC; mandate product acceptance (goal fit, persona, scope); refuse "ships but wrong problem."
-- **Exec**: spawn a readonly Task that follows `/exec-perspective` — L1 skim → L2 risks → L3 detail; cite `persona-aware-output.mdc`; refuse rubber-stamp "looks fine."
+- **Multi-model Code Review**: spawn N readonly subagents in **one** assistant turn (mandatory parallelism); synthesize before Fix.
+- **PM**: spawn a readonly subagent with the Goal KPI Card + AC; mandate product acceptance (goal fit, persona, scope); refuse "ships but wrong problem."
+- **Exec**: spawn a readonly subagent that follows `/exec-perspective` — L1 skim → L2 risks → L3 detail; cite `persona-aware-output.mdc`; refuse rubber-stamp "looks fine."
 - **Code Review (Bugbot)**: prefer `bugbot` with `Diff: uncommitted changes` (or `branch changes`) and a short change description **plus Goal KPI Card**.
 - <!-- PAUSED: **Security**: use `security-review` with `Diff: uncommitted changes` or `branch changes` **plus Security KPIs from the card**. Do not call until re-enabled. -->
 - **Merge (stage 10)**: **only after user says ok** (ok/approve/lgtm/merge/ship it) AND loop exited with all KPIs MET/WAIVED. Spawn `merge-agent` (or run directly) with: Goal KPI Card, branch name, commit message derived from GOAL, and push target. Mandate: `git status` clean after commit+push; never merge with MISS KPIs or before user ok. Skip only if no code change or user opted out.
