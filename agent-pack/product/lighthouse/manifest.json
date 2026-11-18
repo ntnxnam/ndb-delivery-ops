@@ -1,6 +1,6 @@
 {
   "name": "lighthouse",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "decision": "D38",
   "description": "Lighthouse \u2014 Portfolio Delivery Ops (product pack)",
   "orchestrator": "ops-assistant",

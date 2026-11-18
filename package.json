@@ -1,6 +1,6 @@
 {
   "name": "ndb-delivery-ops",
-  "version": "0.1.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Consolidated NDB-Ops delivery tooling: web app, Streamlit TPM tools, and a custom MCP server. Workspace root.",
   "workspaces": [
