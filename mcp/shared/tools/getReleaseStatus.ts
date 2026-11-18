@@ -10,7 +10,7 @@
  * shaping that every NDB-Ops output must do, and the structured-output
  * contract that downstream clients (Cursor, Claude Desktop) will rely on.
  *
- * Once this tool is stable, every other tool in mcp-server/src/tools/
+ * Once this tool is stable, every other tool in mcp/shared/src/tools/
  * follows the same template.
  */
 
