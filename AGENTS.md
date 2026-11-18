@@ -17,29 +17,33 @@ adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Arch
 
 | Workspace | Stack | Purpose |
 |---|---|---|
-| `apps/delivery-ops/` | Node/Express + React | Web app — release versions, sprint reports, KPIs, exec dashboard, status emailer, embedded chat panel (D7). |
-| `apps/tpm-confluence-tools/` | Python / Streamlit (Phase F: rewrite in React) | Bulk Confluence pages, templates, Release Gates Checklist (D20). |
-| `mcp-server/` | TypeScript, `@modelcontextprotocol/sdk` | MCP server exposing every capability as a tool. |
-| `shared/` | TypeScript | Connectors (5 per D3), domain models, services consumed across workspaces. |
+| `lighthouse/app/` | Node/Express + React | Web app — release versions, sprint reports, KPIs, exec dashboard, status emailer, embedded chat panel (D7). |
+| `lighthouse/mcp/` | TypeScript, `@modelcontextprotocol/sdk` | Product MCP server (`lighthouse-mcp`) — product tools + shared tools (D44). |
+| `loom/mcp/` | TypeScript, `@modelcontextprotocol/sdk` | Builder MCP server (`loom-mcp`) — builder tools + shared tools (D44). |
+| `platform/` | TypeScript | Cross-product infra — `email` (SMTP digests) + `ai` (LLM transport) connectors (`@portfolio-delivery-ops/platform`, D44). |
+| `agent-pack/base/` | Markdown / MDC | Portable base rules + prompts shared by every tenancy. |
+| `agent-pack/harness/` | JSON + shell | Adapter registry — `mcp.json`, `cursor.json`, `claude.json`, `install.sh` wiring hosts to packs (D44). |
+| `shared/` | TypeScript | Domain models, services, product connectors (JIRA / Confluence / GitHub / Slack) consumed across tenancies (`@portfolio-delivery-ops/shared`). |
 
 ## Architecture — see `ARCHITECTURE.md`
 
 5-layered: Connectors → Domain Models → Services → API+MCP → UI & AI Surfaces.
-**One feature, one place**.
+**One feature, one place**. Tenancy: Lighthouse (product) + Loom (builder) + Platform (cross-product infra) per D44.
 
-## Five connectors (D3)
+## Five connectors — D3 superseded by D44 (product-owned connectors)
 
-`shared/connectors/` — one TypeScript module per external system:
+Product connectors (`jiraConnector`, `confluenceConnector`, `githubConnector`, `slackConnector`) live in `shared/connectors/` and `lighthouse/connectors/` / `loom/connectors/` per tenancy (D44). Cross-product connectors (`emailConnector`, `aiConnector`) live in `platform/src/email/` and `platform/src/ai/` (`@portfolio-delivery-ops/platform`). No parallel implementations — one module per external system per owning tenancy.
 
-| Connector | Purpose |
-|---|---|
-| `jiraConnector` | All JIRA Data Center REST + Agile calls (`Authorization: Bearer` PAT only, D40) |
-| `confluenceConnector` | All Confluence REST calls |
-| `githubConnector` | GitHub commits / PRs / repos / CI signals |
-| `slackConnector` | Slack reads/posts/DMs |
-| `emailConnector` | Send digests, optional inbox reading |
+| Connector | Owner | Purpose |
+|---|---|---|
+| `jiraConnector` | `shared` / Lighthouse | All JIRA Data Center REST + Agile calls (`Authorization: Bearer` PAT only, D40) |
+| `confluenceConnector` | `shared` / Lighthouse | All Confluence REST calls |
+| `githubConnector` | `shared` / Lighthouse | GitHub commits / PRs / repos / CI signals |
+| `slackConnector` | `shared` | Slack reads/posts/DMs |
+| `emailConnector` | `platform` | Send digests, optional inbox reading |
+| `aiConnector` | `platform` | LLM transport (`chatCompletion`) — separate category |
 
-(Plus `aiConnector` for LLM calls — separate category.)
+D3's "5 connectors in `shared/connectors/`" is superseded by D44: connectors are product-owned and tenancy-scoped, with cross-product infra in `platform/`.
 
 ## AI layer — orchestrator-workers pattern (D16)
 
