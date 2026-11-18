@@ -101,6 +101,7 @@ orchestrator decides which to call; users never address them directly.
 | `triage-specialist` | Backlog health (new/stale/pending) + crisis (P0 fire) | `backlog-triage` (mode=new/stale/pending/all), `crisis-triage` |
 | `confluence-publisher-specialist` | Bulk page creation, templates, width cleanup, page-publish | `confluence-width-cleanup` |
 | `dependency-tracker-specialist` | Cross-team dep graph, upstream/downstream walks | `dependency-walk` |
+| `doc-specialist` | Known issues, release notes, user guide, admin guide — owns stage 8.5 Doc sign-off | `doc-known-issues`, `doc-release-notes`, `doc-user-guide`, `doc-admin-guide` |
 
 ## Tools the orchestrator can call
 

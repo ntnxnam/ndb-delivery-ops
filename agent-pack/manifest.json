@@ -58,6 +58,11 @@
       "name": "dependency-tracker-specialist",
       "role": "specialist",
       "path": "identity/specialists/dependency-tracker-specialist.md"
+    },
+    {
+      "name": "doc-specialist",
+      "role": "specialist",
+      "path": "identity/specialists/doc-specialist.md"
     }
   ],
   "skills": [
@@ -171,6 +176,34 @@
       "owner": "ops-assistant",
       "path": "skills/exec-perspective/SKILL.md",
       "notes": "Builder pipeline stage 5 Exec sign-off; high-level then drill-down"
+    },
+    {
+      "name": "doc-known-issues",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "doc-specialist",
+      "path": "skills/doc-known-issues/SKILL.md"
+    },
+    {
+      "name": "doc-release-notes",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "doc-specialist",
+      "path": "skills/doc-release-notes/SKILL.md"
+    },
+    {
+      "name": "doc-user-guide",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "doc-specialist",
+      "path": "skills/doc-user-guide/SKILL.md"
+    },
+    {
+      "name": "doc-admin-guide",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "doc-specialist",
+      "path": "skills/doc-admin-guide/SKILL.md"
     }
   ],
   "workflows": [
