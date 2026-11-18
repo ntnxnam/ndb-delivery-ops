@@ -44,7 +44,7 @@
   --text-strong: #212529;
   --text-inverse: #ffffff;
   --muted: #6c757d;
-  --muted-soft: #868e96;
+  --muted-soft: #6c757d; /* was #868e96 3.32:1 fail — floor at muted for ≥4.5:1 on 10px hints */
   --muted-label: #495057;
 
   /* ── accent / brand ────────────────────────────────────────────────── */
@@ -188,9 +188,13 @@
   --ds-success-soft: var(--success-soft);
   --ds-warning: var(--warning);
   --ds-warning-soft: var(--warning-soft);
+  --ds-warning-text: var(--warning-text);
   --ds-danger: var(--danger);
   --ds-danger-soft: var(--danger-soft);
   --ds-neutral: var(--neutral);
+  --ds-notset-bg: var(--notset-bg);
+  --ds-notset-border: var(--notset-border);
+  --ds-notset-text: var(--notset-text);
 
   --ds-rag-green: var(--rag-green);
   --ds-rag-amber: var(--rag-amber);
@@ -219,7 +223,7 @@
   --ds-space-6: var(--space-6);
   --ds-radius-sm: var(--radius-sm);
   --ds-radius: var(--radius);
-  --ds-radius-lg: var(--radius-md);
+  --ds-radius-lg: var(--radius-md); /* intentional 8px — matches legacy design-system --ds-radius-lg: 8px, not app --radius-lg 12px */
   --ds-radius-pill: var(--radius-pill);
   --ds-shadow-inset: var(--shadow-inset);
   --ds-shadow-card: var(--shadow-card);

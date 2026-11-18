@@ -66,6 +66,7 @@
   .main-content { margin-left: 0 !important; padding: var(--space-4); }
   .main-content.sidebar-collapsed { margin-left: 0 !important; }
   .main-content > * { margin-bottom: var(--space-4); }
+  /* overlay mode: main inert while drawer open — Esc closes drawer for a11y */
   .main-content.sidebar-expanded { pointer-events: none; }
 }
 

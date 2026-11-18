@@ -65,28 +65,20 @@
   border-color: var(--notset-border);
 }
 
-.rv-badge--green  { background: var(--risk-green); border-color: var(--risk-green); }
-.rv-badge--yellow { background: var(--risk-yellow); border-color: var(--risk-yellow); }
-.rv-badge--red    { background: var(--risk-red); border-color: var(--risk-red); }
-.rv-badge--blue   { background: var(--risk-blue); border-color: var(--risk-blue); }
-.rv-badge--orange { background: var(--risk-yellow); border-color: var(--risk-yellow); }
-.rv-badge--deep-red { background: var(--risk-deep-red); border-color: var(--risk-deep-red); }
+.rv-badge--green  { background: var(--risk-green); border-color: var(--risk-green); color: var(--text-inverse); }
+/* yellow/orange: dark text on amber = 6.57:1 — white would be 2.35:1 FAIL */
+.rv-badge--yellow { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-strong); }
+.rv-badge--red    { background: var(--risk-red); border-color: var(--risk-red); color: var(--text-inverse); }
+.rv-badge--blue   { background: var(--risk-blue); border-color: var(--risk-blue); color: var(--text-inverse); }
+.rv-badge--orange { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-strong); }
+.rv-badge--deep-red { background: var(--risk-deep-red); border-color: var(--risk-deep-red); color: var(--text-inverse); }
 .rv-badge--transparent {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
 }
 
-/* ── Not Set inline (used outside badges too) ────────────────────── */
-.rv-notset {
-  background: var(--notset-bg);
-  color: var(--notset-text);
-  font-weight: var(--fw-semibold);
-  padding: 2px 4px;
-  border-radius: 2px;
-  font-size: var(--fs-xs);
-  border: 1px solid var(--notset-border);
-}
+/* .rv-notset lives in styles/shared.css so utils can import it without layer inversion */
 
 /* ── link ────────────────────────────────────────────────────────── */
 .rv-link {

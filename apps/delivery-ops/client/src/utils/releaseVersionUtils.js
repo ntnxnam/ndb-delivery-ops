@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import '../components/ReleaseVersionTableCell.css';
+import '../styles/shared.css'; /* shared .rv-notset — avoids utils → components inversion */
 
 /**
  * Check if a date is older than specified days
@@ -284,7 +284,7 @@ export function formatJiraWikiMarkup(text, jiraBaseUrl = 'https://jira.nutanix.c
  */
 export function extractExecutiveSummary(statusUpdate) {
   const renderNotSet = () => {
-    return <span style={{ backgroundColor: '#fff3cd', fontWeight: 600 }}>Not Set</span>;
+    return <span className="rv-notset">Not Set</span>;
   };
   
   if (!statusUpdate || typeof statusUpdate !== 'string') return renderNotSet();

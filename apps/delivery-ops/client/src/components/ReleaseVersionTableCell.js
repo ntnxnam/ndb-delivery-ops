@@ -14,6 +14,7 @@ import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ExecSummaryCell from './ExecSummaryCell';
 import './ReleaseVersionTableCell.css';
+import '../styles/shared.css';
 
 function getStatusDisplayValue(item) {
   const raw = item?.status;
@@ -180,17 +181,22 @@ export function renderRiskDetails(item) {
     riskBgColor = '#fff3cd';
   } else if (riskColor && riskColor !== 'transparent') {
     riskBgColor = riskColor;
-    riskTextColor = '#ffffff';
+    // yellow/orange needs dark text for 6.6:1 contrast (white on #ff8b00 is 2.1:1 FAIL)
+    const darkTextBg = ['#ff8b00', '#fff3cd'];
+    riskTextColor = darkTextBg.includes(riskColor.toLowerCase()) ? '#212529' : '#ffffff';
   } else if (typeof riskValue === 'string') {
     const lower = riskValue.toLowerCase().trim();
     if (lower.startsWith('deep red')) {
-      riskBgColor = '#8B0000'; riskTextColor = '#ffffff';
+      riskBgColor = '#8b0000'; riskTextColor = '#ffffff';
     } else {
       const colorMatch = riskValue.match(/^(Green|Yellow|Red|Blue|Orange)/i);
       if (colorMatch) {
         const colorName = colorMatch[1].toLowerCase();
         const colorMap = { green: '#00875a', yellow: '#ff8b00', red: '#de350b', blue: '#0052cc', orange: '#ff8b00' };
-        if (colorMap[colorName]) { riskBgColor = colorMap[colorName]; riskTextColor = '#ffffff'; }
+        if (colorMap[colorName]) {
+          riskBgColor = colorMap[colorName];
+          riskTextColor = (colorName === 'yellow' || colorName === 'orange') ? '#212529' : '#ffffff';
+        }
       }
     }
   }
@@ -200,11 +206,11 @@ export function renderRiskDetails(item) {
     '#ff8b00': 'rv-badge--yellow',
     '#de350b': 'rv-badge--red',
     '#0052cc': 'rv-badge--blue',
-    '#8B0000': 'rv-badge--deep-red',
+    '#8b0000': 'rv-badge--deep-red',
     '#fff3cd': 'rv-badge--notset',
     'transparent': 'rv-badge--transparent',
   };
-  const badgeModifier = badgeMap[riskBgColor];
+  const badgeModifier = badgeMap[(riskBgColor || '').toLowerCase()];
   const badgeClass = isRiskNotSet
     ? 'rv-badge rv-badge--notset'
     : badgeModifier
@@ -518,7 +524,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     } else if (typeof riskValue === 'string') {
       const lower = riskValue.toLowerCase().trim();
       if (lower.startsWith('deep red')) {
-        riskBgColor = '#8B0000'; riskTextColor = '#ffffff';
+        riskBgColor = '#8b0000'; riskTextColor = '#ffffff';
       } else {
         const colorMatch = riskValue.match(/^(Green|Yellow|Red|Blue|Orange)/i);
         if (colorMatch) {
@@ -532,7 +538,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
           };
           if (colorMap[colorName]) {
             riskBgColor = colorMap[colorName];
-            riskTextColor = '#ffffff';
+            riskTextColor = (colorName === 'yellow' || colorName === 'orange') ? '#212529' : '#ffffff';
           }
         }
       }

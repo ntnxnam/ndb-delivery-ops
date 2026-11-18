@@ -12,3 +12,5 @@ jobs:
         with: { node-version: '20' }
       - run: node apps/delivery-ops/scripts/check-no-localhost.js
       - run: node apps/delivery-ops/scripts/check-product-agnostic.js
+      - run: node apps/delivery-ops/scripts/check-no-hardcoded-colors.js
+        continue-on-error: true # warn-only until 2740 → 0
