@@ -9,7 +9,7 @@
 # (the .git directory IS preserved so the tarball is a full restore.)
 #
 # Usage:
-#   ./scripts/archive-decommissioned-projects.sh
+#   ./scripts/loom/archive/archive-decommissioned-projects.sh
 #
 # Idempotent: re-running overwrites an existing tarball for the same project.
 

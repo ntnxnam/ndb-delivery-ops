@@ -440,11 +440,12 @@ export const Sidebar = () => {
           top: 0;
           left: 0;
           height: 100vh;
-          background: #343a40;
-          color: white;
+          background: var(--ds-surface, #1a2332);
+          color: var(--ds-text, #e6edf3);
           display: flex;
           flex-direction: column;
-          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+          border-right: 1px solid var(--ds-border, #2d3a4d);
+          box-shadow: var(--ds-shadow-card, 2px 0 8px rgba(0, 0, 0, 0.4));
           transition: transform 0.3s ease;
           z-index: 1000;
           overflow: hidden;
@@ -470,7 +471,7 @@ export const Sidebar = () => {
           display: flex;
           align-items: center;
           gap: 12px;
-          border-bottom: 1px solid #495057;
+          border-bottom: 1px solid var(--ds-border, #2d3a4d);
           flex-shrink: 0;
         }
 
@@ -531,7 +532,7 @@ export const Sidebar = () => {
 
         .team-selector-section {
           padding: 16px;
-          border-bottom: 1px solid #495057;
+          border-bottom: 1px solid var(--ds-border, #2d3a4d);
           flex-shrink: 0;
         }
 
@@ -658,10 +659,10 @@ export const Sidebar = () => {
           background: none;
           border: none;
           border-left: 3px solid transparent;
-          color: #ced4da;
+          color: var(--ds-muted, #8b949e);
           font-size: 0.75rem;
           font-weight: 600;
-          letter-spacing: 0.02em;
+          letter-spacing: 0.05em;
           text-transform: uppercase;
           cursor: pointer;
           text-align: left;
@@ -669,13 +670,13 @@ export const Sidebar = () => {
         }
 
         .nav-group-header:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #f8f9fa;
+          background: var(--ds-accent-soft, rgba(88, 166, 255, 0.12));
+          color: var(--ds-text-strong, #f0f6fc);
         }
 
         .nav-group.has-active > .nav-group-header {
-          color: #87ceeb;
-          border-left-color: rgba(0, 123, 255, 0.5);
+          color: var(--ds-accent, #58a6ff);
+          border-left-color: var(--ds-accent, #58a6ff);
         }
 
         .nav-group-icon {
@@ -729,7 +730,7 @@ export const Sidebar = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.375rem 0.75rem 0.375rem 2.25rem;
-          color: #adb5bd;
+          color: var(--ds-muted, #8b949e);
           text-decoration: none;
           font-size: 0.8125rem;
           font-weight: 500;
@@ -737,18 +738,19 @@ export const Sidebar = () => {
           border-left: 3px solid transparent;
           min-height: 2rem;
           box-sizing: border-box;
+          border-radius: 0 var(--ds-radius-sm, 4px) var(--ds-radius-sm, 4px) 0;
         }
 
         .nav-item:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #f8f9fa;
-          border-left-color: rgba(255, 255, 255, 0.3);
+          background: var(--ds-accent-soft, rgba(88, 166, 255, 0.12));
+          color: var(--ds-text, #e6edf3);
+          border-left-color: var(--ds-accent-border, rgba(88, 166, 255, 0.4));
         }
 
         .nav-item.active {
-          background: rgba(0, 123, 255, 0.15);
-          color: #87ceeb;
-          border-left-color: #007bff;
+          background: var(--ds-accent-soft, rgba(88, 166, 255, 0.12));
+          color: var(--ds-accent, #58a6ff);
+          border-left-color: var(--ds-accent, #58a6ff);
           font-weight: 600;
         }
 
@@ -796,7 +798,7 @@ export const Sidebar = () => {
 
         .sidebar-footer {
           padding: 16px;
-          border-top: 1px solid #495057;
+          border-top: 1px solid var(--ds-border, #2d3a4d);
           flex-shrink: 0;
         }
         .sidebar-docs-link {

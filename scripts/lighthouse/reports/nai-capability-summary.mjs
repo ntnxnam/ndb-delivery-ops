@@ -1,5 +1,5 @@
 import fs from 'fs';
-const { completeChat } = await import('../shared/src/connectors/aiConnector.ts');
+const { completeChat } = await import('../../../shared/src/connectors/aiConnector.ts');
 const releases = {
   'NDB-2.10': fs.readFileSync('/tmp/NDB-2.10_features.txt','utf8'),
   'NDB-2.11': fs.readFileSync('/tmp/NDB-2.11_features.txt','utf8'),

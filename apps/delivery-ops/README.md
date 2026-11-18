@@ -71,7 +71,7 @@ A web application for Confluence-based status update emails and JIRA release ver
 - **Jira rich text in email**: Wiki markup and Atlassian Document Format (ADF) in description/status-update columns are converted to HTML in the email table (same behavior as elsewhere in the app).
 - **Email layout**: Tighter cell padding (5px), viewport-friendly max-width and table-wrap so the email fits and wide tables scroll.
 - **Sprint/agile fields**: `jiraFieldsConfig.json` includes Sprint and Sprints (customfield_10020, customfield_10021) so they appear in column selection when data exists.
-- **Client**: Proxy set to `http://localhost:6001`; **Fetch** and **Send Email** buttons are side-by-side at the top.
+- **Client**: Proxy set to `http://localhost:8001`; **Fetch** and **Send Email** buttons are side-by-side at the top.
 
 **Config**:
 
@@ -170,8 +170,8 @@ npm run dev
 ```
 
 This will start:
-- Backend server on `http://localhost:6001`
-- Frontend on `http://localhost:6100`
+- Backend server on `http://localhost:8001`
+- Frontend on `http://localhost:8899`
 
 Email Sender (`/`), Release Versions (`/all-status`), Generic Emailer (`/generic-emailer`), and Sprint Report (`/sprint-report`) will be available.
 
@@ -226,7 +226,7 @@ npm start
      SMTP_PORT=587
      SMTP_USER=your-email@nutanix.com
      SMTP_PASS=your-app-password
-     PORT=6001
+     PORT=8001
      ```
    - For Release Versions: set `JIRA_TOKEN` (or your JIRA auth) in server environment.
 
@@ -242,8 +242,8 @@ npm run dev
 ```
 
 **Or run separately**:
-- Backend: `npm run server` (runs on http://localhost:6001)
-- Frontend: `npm run client` (runs on http://localhost:6100)
+- Backend: `npm run server` (runs on http://localhost:8001)
+- Frontend: `npm run client` (runs on http://localhost:8899)
 
 ### Usage
 
@@ -333,5 +333,5 @@ npm run dev
 - ✅ Jira rich text in email: wiki markup and ADF converted to HTML in table cells
 - ✅ Email: subject always appended with date; tighter spacing, viewport max-width, table-wrap; empty cells show N/A
 - ✅ Sprint/agile fields in `jiraFieldsConfig.json`; `genericEmailerCCConfig.json` for Generic Emailer CC
-- ✅ Fetch and Send Email buttons side-by-side; client proxy to port 6001
+- ✅ Fetch and Send Email buttons side-by-side; client proxy to port 8001
 - ✅ **Refactored structure**: Email routes under `server/routes/email/`, JIRA routes under `server/routes/jira/`; EmailSender component in `client/src/components/EmailSender/`; shared `OutlookFallback.js`. See [DEVELOPER_GUIDE.md](../../docs/guides/DEVELOPER_GUIDE.md).

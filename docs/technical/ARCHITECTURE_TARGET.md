@@ -20,7 +20,7 @@ status email, executive snapshot — and nothing else.**
 This monorepo is the **fusion** of two predecessor apps, not a port of one
 into the other:
 
-- **React `ndb-status-sender`** brought: Gantt (loved), Release Versions table,
+- **React `ndb-status-sender`** (predecessor — now `apps/delivery-ops`) brought: Gantt (loved), Release Versions table,
   date-mover with audit, email sender, auth + permissions, multi-team context.
 - **Streamlit chatbot app** brought: 3-stream velocity with gate chips,
   landing forecast, burn trajectory, insights engine, NAI chatbot.

@@ -10,7 +10,7 @@ source: doc-release-notes @ 2026-05-19
 
 ## NDB 2.11 — _TBD_
 
-See [release-notes/NDB-2.11.md](./release-notes/NDB-2.11.md) when cut.
+See [NDB-2.11.md](./NDB-2.11.md) when cut.
 
 ### Recent changes (TCMS Quality table)
 
@@ -38,4 +38,4 @@ Copy into `release-notes/<version>.md`:
 - What's New / Enhancements / Bug Fixes
 - Breaking Changes (⚠️ + migration step)
 - Upgrade Notes
-- Known Issues → [KNOWN_ISSUES.md](./KNOWN_ISSUES.md)
+- Known Issues → [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md)

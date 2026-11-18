@@ -72,7 +72,6 @@ export class AiConnectorError extends Error {
  *
  * The API key is secret and must be set via environment variable:
  *   NAI_API_KEY in server/.env  (retrieve from tokens.corp.nutanix.com)
- *   AI_API_KEY is deprecated and no longer accepted — use NAI_API_KEY.
  *
  * No fallback defaults — every required value must be explicitly configured.
  *

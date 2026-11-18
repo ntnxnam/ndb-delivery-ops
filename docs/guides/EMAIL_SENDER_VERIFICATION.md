@@ -90,8 +90,8 @@ res.json({
 4. ✅ **Compilation**: No TypeScript/linting errors introduced
 
 ### Server Status
-1. ✅ **Backend Running**: Port 6001 responding correctly
-2. ✅ **Frontend Running**: Port 6100 compiled successfully  
+1. ✅ **Backend Running**: Port 8001 responding correctly
+2. ✅ **Frontend Running**: Port 8899 compiled successfully  
 3. ✅ **No Errors**: Clean logs with proper authentication handling
 
 ## 📧 **Email Generation Verification**
@@ -135,7 +135,7 @@ Other: 30 (20.0%)
 ### Manual UI Testing
 ```bash
 # 1. Access Email Sender page
-http://localhost:6100
+http://localhost:8899
 
 # 2. Navigate to Email Sender tab
 # 3. Select a project with known issues

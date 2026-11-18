@@ -20,7 +20,7 @@ shared services.
    The heavy lifting lives in a service that's reusable from the web app,
    the MCP server, or a CLI.
 5. **One runtime for users.** Users interact with **one React app** on
-   `:8888`. Streamlit gets retired (see Phase D/E in the rollout).
+   `:8899` (React) + `:8001` (Express) — see `AGENTS.md` fixed ports. Streamlit gets retired (see Phase D/E in the rollout).
 6. **Personas drive *presentation*, not access** (D6). The role lens
    re-renders the same data using audience-appropriate style. It does **not**
    hide pages.
@@ -41,7 +41,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 │ Layer 5: UI & AI surfaces                                            │
 │  ┌────────────────────────────┐    ┌─────────────────────────────┐   │
 │  │ delivery-ops React app     │    │ Cursor agents & workflows   │   │
-│  │ (single :8888 runtime,     │    │ (TPM, RM, Team Executive, FEAT Mgr,     │   │
+│  │ (single :8899 React / :8001 Express runtime,     │    │ (TPM, RM, Team Executive, FEAT Mgr,     │   │
 │  │  persona-aware sidebar)    │    │  Team Mgr, IC assistants)   │   │
 │  └────────────────────────────┘    └─────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
@@ -170,7 +170,7 @@ Two parallel surfaces over the services:
 
 ### Layer 5 — UI & AI surfaces
 
-**delivery-ops React app** — single web runtime on `:8888`
+**delivery-ops React app** — single web runtime on `:8899` (React) + `:8001` (Express)
 - **All capabilities visible to all users** (D6). The Portfolio Manager sees
   everything; specialists see everything too — they just lean on different
   pages. No nav-level filtering.
@@ -256,7 +256,7 @@ blanket project filter on the fetch.
 │
 ├── apps/
 │   └── delivery-ops/                    THE single user runtime
-│       ├── client/                      React (port 8888)
+│       ├── client/                      React (port 8899)
 │       │   └── src/
 │       │       ├── domains/             pages grouped by feature domain
 │       │       │   ├── status/          ReleaseVersions, OutstandingWork, ReleaseBrief
@@ -271,7 +271,7 @@ blanket project filter on the fetch.
 │       │       ├── auth/                JIRA PAT auth, role detection
 │       │       └── shared/              common components, hooks
 │       │
-│       └── server/                      Express (port 6001)
+│       └── server/                      Express (port 8001)
 │           ├── routes/                  thin route handlers per domain
 │           ├── services/                business logic per domain
 │           └── middleware/              auth, rate-limit, error, timeout

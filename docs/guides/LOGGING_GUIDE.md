@@ -3,7 +3,7 @@
 
 ## Overview
 
-Complete logging system for NDB Status Sender that captures all errors, warnings, and info messages to log files.
+Complete logging system for Portfolio Delivery Ops that captures all errors, warnings, and info messages to log files.
 
 ---
 
@@ -175,22 +175,22 @@ Check interval:  Every 30 seconds
 
 ```bash
 # View live logs
-pm2 logs ndb-status-sender
+pm2 logs delivery-ops
 
 # View last 100 lines
-pm2 logs ndb-status-sender --lines 100
+pm2 logs delivery-ops --lines 100
 
 # View only errors
-pm2 logs ndb-status-sender --err
+pm2 logs delivery-ops --err
 
 # View only output
-pm2 logs ndb-status-sender --out
+pm2 logs delivery-ops --out
 
 # Clear logs
-pm2 flush ndb-status-sender
+pm2 flush delivery-ops
 
 # Show log paths
-pm2 show ndb-status-sender
+pm2 show delivery-ops
 ```
 
 ### Direct File Access
@@ -251,7 +251,7 @@ chmod 644 logs/*.log
 
 **Check 2: PM2 Configuration**
 ```bash
-pm2 show ndb-status-sender
+pm2 show delivery-ops
 # Look for error_file and out_file paths
 ```
 
@@ -263,7 +263,7 @@ df -h
 
 **Check 4: Restart Application**
 ```bash
-pm2 restart ndb-status-sender
+pm2 restart delivery-ops
 ```
 
 ### Logs Growing Too Large
@@ -365,7 +365,7 @@ Edit `ecosystem.config.js`:
 
 Then restart:
 ```bash
-pm2 restart ndb-status-sender --update-env
+pm2 restart delivery-ops --update-env
 ```
 
 ---
@@ -376,7 +376,7 @@ pm2 restart ndb-status-sender --update-env
 
 ```
 YYYY-MM-DD HH:mm:ss Z | LEVEL | Message
-2026-01-14 10:30:45 +0000 | INFO | Server started on port 6001
+2026-01-14 10:30:45 +0000 | INFO | Server started on port 8001
 2026-01-14 10:31:12 +0000 | ERROR | Database connection failed
 ```
 
@@ -470,11 +470,11 @@ pm2 set pm2-logrotate:retain 5
 |------|---------|
 | View logs interactively | `./view-logs.sh` |
 | Manage logs | `./manage-logs.sh` |
-| Live tail | `pm2 logs ndb-status-sender` |
+| Live tail | `pm2 logs delivery-ops` |
 | Check log sizes | `du -sh logs/` |
 | Search errors | `grep ERROR logs/err.log` |
 | Rotate logs | `./manage-logs.sh` → Option 2 |
-| Clear logs | `pm2 flush ndb-status-sender` |
+| Clear logs | `pm2 flush delivery-ops` |
 | Archive location | `logs/archive/` |
 
 ---

@@ -199,7 +199,22 @@ function evaluateTeamRiskNarrative(indicatorRaw, assessmentText, pathText) {
 
 function parseDate(value) {
   const str = getStringValue(value);
-  if (!str) return null;
+  if (!str || str === 'Not Set' || str === 'N/A' || str === 'NA') return null;
+  // DD/Mon/YYYY — the format server/routes/jira/shared.js:fetch formats dates as
+  // (e.g. "12/Dec/2027"). Native Date can't parse this, so handle explicitly.
+  const m = str.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4})$/);
+  if (m) {
+    const months = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+    const mi = months[m[2].toLowerCase()];
+    if (mi != null) {
+      const d = new Date(Number(m[3]), mi, Number(m[1]));
+      if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+    }
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str.slice(0,10) + 'T00:00:00');
+    if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+  }
   const d = new Date(str);
   if (isNaN(d.getTime())) return null;
   d.setHours(0, 0, 0, 0);

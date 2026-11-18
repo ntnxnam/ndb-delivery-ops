@@ -10,5 +10,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: node apps/delivery-ops/scripts/check-no-localhost.js
-      - run: node apps/delivery-ops/scripts/check-product-agnostic.js
+      - run: node scripts/lighthouse/checks/check-no-localhost.js
+      - run: node scripts/lighthouse/checks/check-product-agnostic.js

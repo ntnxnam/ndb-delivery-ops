@@ -11,7 +11,7 @@
  * - Test scripts: test-*.js, test-*.sh in repo root
  * - __tests__ directories
  *
- * Run: node scripts/check-no-localhost.js (from project root)
+ * Run: node scripts/lighthouse/checks/check-no-localhost.js (from project root)
  * Exit: 0 if clean, 1 if forbidden pattern found.
  */
 
@@ -23,7 +23,8 @@ const FORBIDDEN = [
   /\b127\.0\.0\.1\b/,
 ];
 
-const ROOT = path.resolve(__dirname, '..');
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+const ROOT = path.join(REPO_ROOT, 'apps/delivery-ops');
 
 // Paths to scan (relative to ROOT). Only app code that gets deployed.
 const SCAN_DIRS = ['client/src', 'server'];
@@ -31,6 +32,7 @@ const SCAN_DIRS = ['client/src', 'server'];
 // Exact path suffixes that are allowed to contain localhost (e.g. dev-only config).
 const ALLOWED_SUFFIXES = [
   path.join('client', 'package.json'), // "proxy" for dev server
+  'setupProxy.js', // CRA dev proxy — never deployed (see D6: fixed ports 8899→8001)
 ];
 
 // Dir names to skip when scanning
@@ -51,6 +53,9 @@ const SKIP_PATH_CONTAINS = [
   'test-app-email.js',
   'test-changelog',
   'start-servers.sh',
+  // Security sanitizers that intentionally test for localhost to block it (not depend on it)
+  'emailSenderHelpers',
+  'emailHtmlSanitize',
 ];
 
 function isAllowed(filePath) {
@@ -71,6 +76,7 @@ function stripComments(line, state) {
       const end = line.indexOf('*/', i);
       if (end === -1) return out;
       i = end + 1;
+      state.inBlock = false;
       continue;
     }
     if (line[i] === '/' && line[i + 1] === '*') {

@@ -14,7 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../../..');
 const GATE_PATH = path.join(ROOT, 'apps/delivery-ops/server/config/releaseVersionsEmailConfig.json');
 const KPI_PATH = path.join(ROOT, 'apps/delivery-ops/server/config/kpiConfig.json');
 const JIRA_PATH = path.join(ROOT, 'apps/delivery-ops/server/config/jiraConfig.json');

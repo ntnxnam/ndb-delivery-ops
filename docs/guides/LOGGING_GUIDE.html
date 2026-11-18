@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>LOGGING_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>LOGGING_GUIDE</span></nav><div class="container"><article class="prose"><h1>📝 Logging Guide</h1>
 <h2>Overview</h2>
-<p>Complete logging system for NDB Status Sender that captures all errors, warnings, and info messages to log files.</p>
+<p>Complete logging system for Portfolio Delivery Ops that captures all errors, warnings, and info messages to log files.</p>
 <hr>
 <h2>📁 Log Files Location</h2>
 <p>All logs are stored in the <code>./logs/</code> directory:</p>
@@ -142,22 +142,22 @@ Check interval:  Every 30 seconds
 <h2>🛠️ Manual Log Commands</h2>
 <h3>PM2 Commands</h3>
 <pre><code class="language-bash"># View live logs
-pm2 logs ndb-status-sender
+pm2 logs delivery-ops
 
 # View last 100 lines
-pm2 logs ndb-status-sender --lines 100
+pm2 logs delivery-ops --lines 100
 
 # View only errors
-pm2 logs ndb-status-sender --err
+pm2 logs delivery-ops --err
 
 # View only output
-pm2 logs ndb-status-sender --out
+pm2 logs delivery-ops --out
 
 # Clear logs
-pm2 flush ndb-status-sender
+pm2 flush delivery-ops
 
 # Show log paths
-pm2 show ndb-status-sender
+pm2 show delivery-ops
 </code></pre>
 <h3>Direct File Access</h3>
 <pre><code class="language-bash"># View application output
@@ -203,7 +203,7 @@ sudo grep &quot; 404 &quot; /var/log/nginx/access.log | wc -l
 chmod 644 logs/*.log
 </code></pre>
 <p><strong>Check 2: PM2 Configuration</strong></p>
-<pre><code class="language-bash">pm2 show ndb-status-sender
+<pre><code class="language-bash">pm2 show delivery-ops
 # Look for error_file and out_file paths
 </code></pre>
 <p><strong>Check 3: Disk Space</strong></p>
@@ -211,7 +211,7 @@ chmod 644 logs/*.log
 # Ensure you have free space
 </code></pre>
 <p><strong>Check 4: Restart Application</strong></p>
-<pre><code class="language-bash">pm2 restart ndb-status-sender
+<pre><code class="language-bash">pm2 restart delivery-ops
 </code></pre>
 <h3>Logs Growing Too Large</h3>
 <p><strong>Option 1: Manual Rotation</strong></p>
@@ -280,13 +280,13 @@ pm2 set pm2-logrotate:compress false    # Disable compression
 }
 </code></pre>
 <p>Then restart:</p>
-<pre><code class="language-bash">pm2 restart ndb-status-sender --update-env
+<pre><code class="language-bash">pm2 restart delivery-ops --update-env
 </code></pre>
 <hr>
 <h2>📋 Log Format</h2>
 <h3>Application Logs Format</h3>
 <pre><code>YYYY-MM-DD HH:mm:ss Z | LEVEL | Message
-2026-01-14 10:30:45 +0000 | INFO | Server started on port 6001
+2026-01-14 10:30:45 +0000 | INFO | Server started on port 8001
 2026-01-14 10:31:12 +0000 | ERROR | Database connection failed
 </code></pre>
 <h3>Nginx Access Log Format</h3>
@@ -375,7 +375,7 @@ chmod 755 logs/
 </tr>
 <tr>
 <td>Live tail</td>
-<td><code>pm2 logs ndb-status-sender</code></td>
+<td><code>pm2 logs delivery-ops</code></td>
 </tr>
 <tr>
 <td>Check log sizes</td>
@@ -391,7 +391,7 @@ chmod 755 logs/
 </tr>
 <tr>
 <td>Clear logs</td>
-<td><code>pm2 flush ndb-status-sender</code></td>
+<td><code>pm2 flush delivery-ops</code></td>
 </tr>
 <tr>
 <td>Archive location</td>

@@ -334,7 +334,7 @@ router.post('/oncall-blurbs', validateJiraTokenMiddleware, async (req, res) => {
     logger.error(`[oncall-blurbs] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
     if (err.message?.includes('NAI API key not configured')) {
       // Narrative-only path should still work inside the service; this is unexpected.
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'OnCall blurb generation failed');
   }
@@ -397,7 +397,7 @@ router.post('/oncall-summary', validateJiraTokenMiddleware, async (req, res) => 
   } catch (err) {
     logger.error(`[oncall-summary] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
     if (err.message?.includes('NAI API key not configured')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'OnCall summary generation failed');
   }
@@ -450,7 +450,7 @@ router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) =>
   } catch (err) {
     logger.error(`[release-summary] Failed for ${version}`, err, { naiDebug: err.naiDebug });
     if (err.message?.includes('NAI API key not configured')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'Release summary generation failed');
   }
@@ -481,8 +481,8 @@ router.post('/sos-tier-summary', validateJiraTokenMiddleware, async (req, res) =
     });
   } catch (err) {
     logger.error(`[sos-tier-summary] Failed for ${release}/${tier}`, err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS tier summary generation failed');
   }
@@ -503,8 +503,8 @@ router.post('/sos-overall-summary', validateJiraTokenMiddleware, async (req, res
     });
   } catch (err) {
     logger.error('[sos-overall-summary] Failed', err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS overall summary generation failed');
   }
@@ -532,8 +532,8 @@ router.post('/sos-leader-release-summary', validateJiraTokenMiddleware, async (r
     });
   } catch (err) {
     logger.error(`[sos-leader-release-summary] Failed for ${release}`, err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS leader-release summary generation failed');
   }
@@ -568,8 +568,8 @@ router.post('/sprint-leadership-asks', validateJiraTokenMiddleware, async (req, 
     });
   } catch (err) {
     logger.error('[sprint-leadership-asks] Failed', err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'Sprint leadership asks generation failed');
   }
@@ -612,8 +612,8 @@ router.post('/sos-leader-coaching', validateJiraTokenMiddleware, async (req, res
     });
   } catch (err) {
     logger.error(`[sos-leader-coaching] Failed for ${leaderName || leaderId}`, err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS leader coaching generation failed');
   }
@@ -644,8 +644,8 @@ router.post('/weekly-skim', validateJiraTokenMiddleware, async (req, res) => {
     if (err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'Weekly skim generation failed');
   }
@@ -692,8 +692,8 @@ router.post(
   } catch (err) {
     const status = err.statusCode || 502;
     logger.error(`[page-briefing] Failed surface=${surface}`, err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
-      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
     }
     if (status === 400) {
       return res.status(400).json({ error: err.message });

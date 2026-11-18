@@ -1,7 +1,7 @@
 # NDB Delivery Ops — Full Capability Brief (Exec-Slide Source)
 
 **Document purpose**: Dense source material to convert into executive slides (“what was built”).  
-**Surface**: Delivery Ops web app (React UI typically `:8899` in local; Express API typically `:8001` / `:6001`)  
+**Surface**: Delivery Ops web app (React UI typically `:8899` in local; Express API typically `:8001`)  
 **Scope**: Every navigable page + shared platform chrome  
 **Depth**: Capabilities, audiences, outcomes, UI surface, trust model, and suggested slide talking points  
 
