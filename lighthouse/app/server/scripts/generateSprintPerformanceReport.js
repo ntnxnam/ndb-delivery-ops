@@ -2,10 +2,10 @@
 /**
  * Generate the standalone Sprint Performance leadership report (HTML).
  *
- * Usage (from apps/delivery-ops/server):
+ * Usage (from lighthouse/app/server):
  *   node scripts/generateSprintPerformanceReport.js [--team ndb] [--cache /tmp/sprint-perf.json] [--json]
  *
- * Reads JIRA_PAT from server/.env. Writes to apps/delivery-ops/reports/.
+ * Reads JIRA_PAT from server/.env. Writes to lighthouse/app/reports/.
  */
 
 const path = require('path');

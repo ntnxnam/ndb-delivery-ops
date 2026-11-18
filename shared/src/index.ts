@@ -6,7 +6,7 @@
  *   - connectors/   — JIRA (+ Confluence/GitHub/Slack/Email in Phase D2)
  *   - services/     — business logic (productService, statusService, ...)
  *
- * Consumers (mcp-server, apps/delivery-ops/server) import from these
+ * Consumers (lighthouse/mcp, lighthouse/app/server) import from these
  * three sub-paths or from the root re-export.
  */
 

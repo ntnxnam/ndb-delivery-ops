@@ -68,7 +68,7 @@ export class AiConnectorError extends Error {
 
 /**
  * Non-secret config (endpoint, model, limits) lives in:
- *   apps/delivery-ops/server/config/aiConfig.json
+ *   lighthouse/app/server/config/aiConfig.json
  *
  * The API key is secret and must be set via environment variable:
  *   NAI_API_KEY in server/.env  (retrieve from tokens.corp.nutanix.com)
@@ -89,7 +89,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? process.env.NAI_API_BASE_URL ?? '').trim();
   if (!baseUrl) {
     throw new Error(
-      'AI_API_BASE_URL (or NAI_API_BASE_URL) is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+      'AI_API_BASE_URL (or NAI_API_BASE_URL) is not set. Set it in server/.env or check lighthouse/app/server/config/aiConfig.json.'
     );
   }
   if (/localhost|127\.0\.0\.1/i.test(baseUrl) && process.env.NODE_ENV === 'production') {
@@ -104,7 +104,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '').trim();
   if (!defaultModel) {
     throw new Error(
-      'AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+      'AI_DEFAULT_MODEL is not set. Set it in server/.env or check lighthouse/app/server/config/aiConfig.json.'
     );
   }
 

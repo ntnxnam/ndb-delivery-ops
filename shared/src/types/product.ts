@@ -6,7 +6,7 @@
  * entry. Services consult productService to resolve product-specific
  * values; no NDB-specific strings live in code.
  *
- * The on-disk file is `apps/delivery-ops/server/config/teamBoardConfig.json`
+ * The on-disk file is `lighthouse/app/server/config/teamBoardConfig.json`
  * (legacy name). Each "team" entry in that file IS a product in the new
  * model.
  */

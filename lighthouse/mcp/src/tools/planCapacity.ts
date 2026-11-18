@@ -10,12 +10,12 @@
  *
  * The original surfaced this through a Streamlit UI with a YAML config
  * file. We move the math to an MCP tool so it's callable from any
- * client; the UI moves into apps/delivery-ops/ (where the existing
+ * client; the UI moves into lighthouse/app/ (where the existing
  * KPIPage can render it).
  *
  * Pure-compute tool — no JIRA call. A future enhancement (queued)
  * would resolve a real velocity from JIRA sprint history via the
- * sprint reports already in apps/delivery-ops/server.
+ * sprint reports already in lighthouse/app/server.
  */
 
 import { z } from 'zod';

@@ -3,7 +3,7 @@
 **Date:** 2026-11-13T02:48:00Z → corrected 2026-11-13T12:40:00Z
 **Report:** NDB-2.10 / NDB-2.11 / NDB-2.12 — Feature/Initiative/KPI/Gantt slide-deck
 **Generator:** `scripts/generate-past-release-report.mjs`
-**Evidence:** `apps/delivery-ops/reports/_verify-2026-11-13-jql-totals.json` (updated)
+**Evidence:** `lighthouse/app/reports/_verify-2026-11-13-jql-totals.json` (updated)
 
 ## Correction #1 — Missing `fixVersion` in KPI JQL (CRITICAL)
 

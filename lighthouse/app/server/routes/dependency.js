@@ -58,7 +58,7 @@ router.get('/wishlist-config', auth, (req, res) => {
 /**
  * PUT /api/dependency/wishlist-config
  * Body: { linkTypeFilter?, labelSuffix?, partnerLabelSuffixes? }
- * Writes apps/delivery-ops/server/config/dependencyViewConfig.json
+ * Writes lighthouse/app/server/config/dependencyViewConfig.json
  */
 router.put('/wishlist-config', auth, (req, res) => {
   try {

@@ -10,7 +10,7 @@ No JIRA I/O, no Node builtins beyond `require`.
 | `execSummarySignals.cjs` | CJS | Express `require()` without ESM interop; also importable from ESM via `createRequire`. SoT for signal derivation. |
 | `execSummaryAnalytics.cjs` | CJS | Same reason — Express route injects `gateDates` + `formatDate`. |
 | `sprintMetrics.cjs` | CJS | SoT for sprint health rates; `shared/src/services/sprintMetrics.ts` is the typed ESM wrapper that mirrors this logic. |
-| `bundleDerive.js` | ESM (`.js`) | Browser-safe; CRA imports the same-export adapter copy at `apps/delivery-ops/client/src/release/utils/bundleUtils.js` (CRA cannot import `@portfolio-delivery-ops/shared` without pulling Node connectors). Keep the two in sync — `smoke:wave3` checks this. |
+| `bundleDerive.js` | ESM (`.js`) | Browser-safe; CRA imports the same-export adapter copy at `lighthouse/app/client/src/release/utils/bundleUtils.js` (CRA cannot import `@portfolio-delivery-ops/shared` without pulling Node connectors). Keep the two in sync — `smoke:wave3` checks this. |
 
 `shared/package.json` `exports` point directly at `src/domain/*` (not `dist/`) because these files are intentionally excluded from `tsconfig.json` (`exclude: ["src/domain"]`) and are consumed as source.
 

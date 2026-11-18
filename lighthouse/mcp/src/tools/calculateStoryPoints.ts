@@ -6,7 +6,7 @@
  *
  * Replaces the standalone ~/ndb-story-point-calculator/ web app — that
  * app did the same JIRA walk plus its own UI; the UI moves into
- * apps/delivery-ops/ (where it can re-use this tool via the in-process
+ * lighthouse/app/ (where it can re-use this tool via the in-process
  * API), and the *calculation* lives here so any MCP client can call it.
  *
  * Uses two JIRA conventions:

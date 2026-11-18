@@ -3,7 +3,7 @@
  * Fail if app code contains hardcoded product-specific literals.
  * Enforces agent-pack/rules/product-agnostic.mdc (D1).
  *
- * Forbidden in app code (apps/delivery-ops/server, client/src, shared/src):
+ * Forbidden in app code (lighthouse/app/server, client/src, shared/src):
  * 1. Hardcoded customfield_NNNNN outside productService / jiraFieldsConfig
  * 2. Hardcoded release label literals like "ndb-2.12-deferred", "ndb-2.12-mustfix", "ndb-2.12-demo-site-test"
  *    → must be derived via deferredLabel(release) / mustFixLabel(release) / `${release}-demo-site-test`
@@ -11,17 +11,17 @@
  *
  * Allowed:
  * - shared/src/services/productService.ts (source of truth)
- * - server/config/*, shared/config/*, apps/delivery-ops/server/config/*
+ * - server/config/*, shared/config/*, lighthouse/app/server/config/*
  * - __tests__/, scripts/, reports/, docs/, .md files (examples)
  *
- * Run: node scripts/check-product-agnostic.js (from apps/delivery-ops)
+ * Run: node scripts/check-product-agnostic.js (from lighthouse/app)
  * Exit: 0 if clean, 1 if forbidden pattern found.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..'); // apps/delivery-ops
+const ROOT = path.resolve(__dirname, '..'); // lighthouse/app
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 
 // Patterns that indicate hardcoding (tested against code stripped of comments)

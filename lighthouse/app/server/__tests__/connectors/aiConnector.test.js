@@ -160,7 +160,7 @@ describe('aiConnector — no-fallback contract (error message assertions)', () =
   test('UT-AICNX-AI_API_BASE_URL: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
+      new Error('AI_API_BASE_URL is not set. Set it in server/.env or check lighthouse/app/server/config/aiConfig.json.')
     );
     await expect(chatCompletion([], {})).rejects.toThrow('AI_API_BASE_URL is not set');
   });
@@ -168,7 +168,7 @@ describe('aiConnector — no-fallback contract (error message assertions)', () =
   test('UT-AICNX-AI_DEFAULT_MODEL: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
+      new Error('AI_DEFAULT_MODEL is not set. Set it in server/.env or check lighthouse/app/server/config/aiConfig.json.')
     );
     await expect(chatCompletion([], {})).rejects.toThrow('AI_DEFAULT_MODEL is not set');
   });

@@ -9,7 +9,7 @@
  * Replaces the standalone ~/ndb-projects-bin-packing/ HTML viz. That
  * project was purely client-side JS — the packing algorithm lives here
  * (so any MCP client can ask for a packed plan); the visualisation
- * stays in apps/delivery-ops/ where the existing Gantt UI can render
+ * stays in lighthouse/app/ (where the existing where the existing Gantt UI can render
  * the result.
  *
  * This is a pure-compute tool — no JIRA call, no env, no side effects.

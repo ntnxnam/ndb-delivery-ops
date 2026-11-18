@@ -3,7 +3,7 @@
  * without making JIRA API calls. Shared SoT (Wave 3 / D41).
  *
  * Browser-safe (no Node builtins). CRA cannot import this path, so
- * apps/delivery-ops/client/src/release/utils/bundleUtils.js is a
+ * lighthouse/app/client/src/release/utils/bundleUtils.js is a
  * same-export adapter copy — keep the two in sync (smoke:wave3).
  *
  * Exports

@@ -58,7 +58,7 @@ export class ProductService {
 
   /**
    * @param configPath Path to `teamBoardConfig.json`. Defaults to the
-   *   legacy location under `apps/delivery-ops/server/config/`.
+   *   legacy location under `lighthouse/app/server/config/`.
    */
   constructor(configPath?: string) {
     const path = configPath ?? defaultConfigPath();
@@ -295,10 +295,10 @@ export class ProductService {
 
 function defaultConfigPath(): string {
   // Walk up from this compiled file's own location to find the monorepo
-  // root, then descend into apps/delivery-ops/server/config. This is
+  // root, then descend into lighthouse/app/server/config. This is
   // robust regardless of which directory the caller's process is started
   // from — using process.cwd() doubled the path when callers invoked
-  // from inside apps/delivery-ops/server (the most common server cwd).
+  // from inside lighthouse/app/server (the most common server cwd).
   //
   // At runtime this file is at:
   //   <monorepo>/shared/dist/services/productService.js

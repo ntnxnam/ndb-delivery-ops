@@ -144,6 +144,6 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 2. Read `DECISIONS.md` — every architectural decision has an ID
 3. Read `ARCHITECTURE.md` for layer model
 4. Read `~/.cursor/context/audience.md` for persona detail
-5. Pick the workspace (`apps/*`, `mcp-server`, `shared`)
+5. Pick the workspace (`lighthouse/app`, `lighthouse/mcp`, `loom/mcp`, `platform`, `shared`)
 6. Identify the right layer (Connector, Domain Model, Service, API/MCP, UI/AI)
 7. Follow rules — never duplicate existing services or connectors

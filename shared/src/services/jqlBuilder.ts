@@ -5,7 +5,7 @@
  * and MCP tools. No hardcoded product/version strings; all team/version/field
  * references come from config or caller params.
  *
- * Consumers: delivery-ops routes, mcp-server tools, agent-pack skills.
+ * Consumers: lighthouse/app routes, lighthouse/mcp tools, agent-pack skills.
  */
 
 import { JqlBuilderParams, JqlBuildResult } from '../types/reports.js';

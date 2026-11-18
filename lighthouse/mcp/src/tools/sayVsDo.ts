@@ -7,7 +7,7 @@
  *
  * Replaces the standalone ~/ndb-say-vs-do/ Node app, which combined the
  * JIRA aggregation with its own React UI. We move the aggregation here;
- * the UI lives in apps/delivery-ops/ (already has a release-trends
+ * the UI lives in lighthouse/app/ (already has a release-trends
  * view that can call this tool).
  *
  * For accurate Say-vs-Do we need both populations:

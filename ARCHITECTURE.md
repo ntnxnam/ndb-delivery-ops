@@ -114,7 +114,7 @@ Both server-side services and React components import from here.
 
 ### Layer 3 — Services
 
-Lives in `server/services/` (in `apps/delivery-ops/`). Each service owns
+Lives in `server/services/` (in `lighthouse/app/`). Each service owns
 one domain's business logic. A service:
 - Calls connectors (Layer 1)
 - Uses domain models (Layer 2)
@@ -203,7 +203,7 @@ in. The sidebar entry opens the app in a new browser tab so the two UIs
 don't have to share a viewport. The expectation is that a static-mounted
 app eventually gets its algorithm core extracted to `shared/services/`
 and its UI rewritten as a React component under
-`apps/delivery-ops/client/src/domains/`, but only when there's a
+`lighthouse/app/client/src/domains/`, but only when there's a
 functional reason — never for stylistic harmony.
 
 ---
@@ -314,7 +314,7 @@ blanket project filter on the fetch.
 
 Two things go away vs. today:
 - `apps/tpm-confluence-tools/` (Streamlit) — its features move into
-  `apps/delivery-ops/client/src/domains/confluence/`
+  `lighthouse/app/client/src/domains/confluence/`
 - The duplicated JIRA / Confluence code in route files, components, and the
   Streamlit app — consolidated into `shared/connectors/`
 

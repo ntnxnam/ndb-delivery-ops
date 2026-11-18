@@ -7,7 +7,7 @@
  * Replaces ~/Release-Timelines-Visualizer/ — that was a React + Vite
  * client-only viewer with no backend. We move the *data shaping* here
  * (so the data is callable from any MCP client + can drive multiple
- * UIs) and the rendering stays in apps/delivery-ops/ (which already
+ * UIs) and the rendering stays in lighthouse/app/ (which already
  * has a ReleaseVersionGantt component the data can drive directly).
  *
  * Date resolution follows the nutanix-jira-date-hierarchy rule:

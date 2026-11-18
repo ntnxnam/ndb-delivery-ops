@@ -3,7 +3,7 @@
  * Run base-filter Detect for configured teams and seed `featureComponents`
  * (plus boardId / sprintCalendar when a team has none) in teamBoardConfig.json.
  *
- * Usage (from apps/delivery-ops):
+ * Usage (from lighthouse/app):
  *   node scripts/seed-feature-components.js [teamId[=CompA,CompB] ...]           # dry run
  *   node scripts/seed-feature-components.js [teamId[=CompA,CompB] ...] --write   # save
  * Without an explicit list, the suggested components (≥3 tickets or ≥5%) are used.

@@ -51,7 +51,7 @@ Decision IDs (D1, D6, D8, D9, etc.) reference `DECISIONS.md`.
 ┌──────────────────────────────────────────────────────────────────────┐
 │ Layer 4: API + MCP tools                                             │
 │  ┌────────────────────────────┐    ┌─────────────────────────────┐   │
-│  │ delivery-ops server/       │    │ mcp-server/src/tools/       │   │
+│  │ lighthouse/app server/       │    │ lighthouse/mcp/src/tools/       │   │
 │  │ (Express routes, thin)     │    │ (one tool per feature)      │   │
 │  └────────────────────────────┘    └─────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
@@ -162,7 +162,7 @@ Two parallel surfaces over the services:
 - One file per domain (`routes/status.js`, `routes/capacity.js`, etc.)
 - Max 150 lines per file (per existing `minimal-architecture` rule)
 
-**MCP tools** (`mcp-server/src/tools/`) — for the AI agent
+**MCP tools (`lighthouse/mcp/src/tools/`) — for the AI agent
 - One tool per feature
 - Each tool calls the same shared connector/service the Express route does (D40)
 - JIRA auth is Data Center PAT `Authorization: Bearer` only

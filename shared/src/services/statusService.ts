@@ -44,7 +44,7 @@ export interface StatusServiceOptions {
 
 /**
  * Thresholds for RAG computation. Tunable; defaults below match what the
- * legacy `apps/delivery-ops/server/services/releaseAnalysisService.js`
+ * legacy `lighthouse/app/server/services/releaseAnalysisService.js`
  * has been using empirically.
  */
 const RAG_THRESHOLDS = {

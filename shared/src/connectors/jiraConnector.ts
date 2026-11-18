@@ -8,7 +8,7 @@
  *
  * Per `minimal-architecture.mdc` (no axios in components/services/routes),
  * JIRA calls go through this module. Express reaches it via
- * `apps/delivery-ops/server/utils/jiraClient.js`.
+ * `lighthouse/app/server/utils/jiraClient.js`.
  *
  * Features:
  *   - Bearer PAT auth via a single headers() helper

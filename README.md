@@ -7,17 +7,17 @@ MCP surface.
 
 | Path | Stack | Run command |
 |---|---|---|
-| [`apps/delivery-ops/`](apps/delivery-ops/) | Node/Express + React | `./restart` (from inside the workspace) |
+| [`lighthouse/app/`](lighthouse/app/) | Node/Express + React | `./restart` (from inside the workspace) |
 | [`apps/bin-packing/`](apps/bin-packing/) | Vanilla JS / ESM | Served statically by `delivery-ops` server at `/bin-packing/`. Standalone: `npm start` (port 3847). |
 | [`apps/tpm-confluence-tools/`](apps/tpm-confluence-tools/) | Python / Streamlit | `streamlit run app.py` (inside its own venv) |
-| [`mcp-server/`](mcp-server/) | TypeScript, MCP SDK | `npm run mcp:start` (from repo root) |
-| [`shared/`](shared/) | TypeScript (ESM) | Library only — connectors + services + types consumed by everything above |
+| [`lighthouse/mcp/`](lighthouse/mcp/) + [`loom/mcp/`](loom/mcp/) | TypeScript, MCP SDK | `npm run mcp:build` (from repo root) |
+| [`platform/`](platform/) + [`shared/`](shared/) | TypeScript (ESM) | Shared email/AI + connectors/services (lighthouse owns its own; platform is cross-product) |
 
 ## Architecture — Anthropic's five pillars
 
 ```
                                             +-----------------+
-   Cursor / Claude Desktop / Claude.ai ---->|   mcp-server    |
+   Cursor / Claude Desktop / Claude.ai ---->| lighthouse/mcp + loom/mcp |
                                             | (stdio bridge)  |
                                             +--------+--------+
                                                      |
@@ -34,11 +34,11 @@ MCP surface.
 
 | Pillar | Where |
 |---|---|
-| 1. MCP server | `mcp-server/src/index.ts` |
-| 2. Connectors | `shared/connectors/*.ts` (JIRA, Confluence today; GitHub / Slack / Email / AI pending) |
-| 3. Rules / system instructions | `~/.cursor/rules/` (inherited) + `.cursor/rules/` |
-| 4. Skills | `~/.cursor/skills/` (inherited) + `.cursor/skills/` |
-| 5. Workflows | `.cursor/workflows/` |
+| 1. MCP servers | `lighthouse/mcp/src/index.ts` + `loom/mcp/src/index.ts` |
+| 2. Connectors | `lighthouse/mcp/src/connectors/` + `loom/mcp/src/connectors/` (per-product) + `platform/email+ai` (shared) |
+| 3. Rules / system instructions | `agent-pack/base/rules/` (shared) + `lighthouse/rules/` / `loom/rules/` (per-product) |
+| 4. Skills | `lighthouse/skills/` + `loom/skills/` |
+| 5. Workflows | `lighthouse/workflows/` |
 
 ## Agents (orchestrator-workers, D16)
 
@@ -59,7 +59,7 @@ specialists directly.
 
 ```bash
 # Web app
-cd apps/delivery-ops
+cd lighthouse/app
 ./restart
 
 # Streamlit TPM tools (own venv)
@@ -84,7 +84,7 @@ workspace is open. For **Claude Desktop**, add this to
   "mcpServers": {
     "ndb-delivery-ops": {
       "command": "node",
-      "args": ["/Users/namratha.singh/NDB-Ops-Tools/ndb-delivery-ops/mcp-server/dist/index.js"]
+      "args": ["/Users/namratha.singh/NDB-Ops-Tools/ndb-delivery-ops/lighthouse/mcp/dist/index.js"]  // or loom/mcp for the builder MCP
     }
   }
 }
@@ -93,9 +93,9 @@ workspace is open. For **Claude Desktop**, add this to
 ## Repo lineage
 
 This repo replaces:
-- `~/ndb-status-sender/` (carried into `apps/delivery-ops/`)
+- `~/ndb-status-sender/` (carried into `lighthouse/app/`)
 - `~/Confluence-Page-Creator/` (carried into `apps/tpm-confluence-tools/`)
-- ~7 sibling NDB tools, ported to MCP tools under `mcp-server/src/tools/` — see
+- ~7 sibling NDB tools, ported to MCP tools under `lighthouse/mcp/src/tools/` + `loom/mcp/src/tools/` — see
   the migration plan at `.cursor/plans/` (user-level).
 
 Originals are kept at `~/NDB-Ops-Tools/_archive/` until the new structure is

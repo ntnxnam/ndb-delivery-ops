@@ -406,7 +406,7 @@ export function buildReleasePayloadJql(
 }
 
 // ── Sidecars (wishlist + deferred — NOT in the 5-bucket union) ─────────────
-// Source of truth for label taxonomy: apps/delivery-ops/server/config/jiraFieldsConfig.json
+// Source of truth for label taxonomy: lighthouse/app/server/config/jiraFieldsConfig.json
 // (labels.porExclude, labels.lifecycle.{deferred,mustfix,wishlist,longTermFunded,extension},
 //  labels.dependency.trainAsk, labels.testType). The helpers below derive
 //  release suffixes and JQL to stay aligned with that config; shared consumers

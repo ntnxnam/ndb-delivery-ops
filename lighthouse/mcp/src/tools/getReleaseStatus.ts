@@ -10,7 +10,7 @@
  * shaping that every NDB-Ops output must do, and the structured-output
  * contract that downstream clients (Cursor, Claude Desktop) will rely on.
  *
- * Once this tool is stable, every other tool in mcp-server/src/tools/
+ * Once this tool is stable, every other tool in lighthouse/mcp/src/tools/
  * follows the same template.
  */
 
@@ -20,7 +20,7 @@ import { classifyRiskIndicator, JiraConnector } from '@portfolio-delivery-ops/sh
 import type { Env } from '../config/env.js';
 
 // Custom field IDs used in the snapshot. Same canonical set as
-// apps/delivery-ops/server/services/releaseItemsService.js. Keep this list
+// lighthouse/app/server/services/releaseItemsService.js. Keep this list
 // in sync with shared/jira/fields.ts when that lands.
 const FIELDS = [
   'key',
