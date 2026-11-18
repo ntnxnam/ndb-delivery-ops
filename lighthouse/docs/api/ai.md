@@ -262,7 +262,7 @@ No.
 **Error responses**
 | HTTP code | When | Client should |
 |---|---|---|
-| 400 | Missing `surface` / required fields / `AI_API_KEY` | Fix request or admin config |
+| 400 | Missing `surface` / required fields / `NAI_API_KEY` | Fix request or admin config |
 | 502 / 504 | NAI or JIRA failure / timeout | Retry |
 
 **Caching**: No.
@@ -327,7 +327,7 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
 | HTTP code | When | Client should |
 |---|---|---|
 | 400 | `version` missing | Fix request |
-| 400 | `AI_API_KEY` not configured | Admin must set env var |
+| 400 | `NAI_API_KEY` not configured | Admin must set env var |
 | 502 | JIRA search failed or NAI returned empty | Show retry button |
 
 **Caching**: No — generated on demand. Typical latency: 15–30 s (JIRA fetch + per-feature signals + NAI call).
@@ -440,7 +440,7 @@ Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI 
 | HTTP code | When | Client should |
 |---|---|---|
 | 400 | `release` / `tier` missing or invalid | Fix request |
-| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 400 | `NAI_API_KEY` not configured | Admin must set env |
 | 502 | NAI empty / upstream failure | Retry that tier |
 | 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` (default 120s) | Retry that tier; if frequent, raise timeout |
 
@@ -475,7 +475,7 @@ Route → `generateSosOverallSummary(payload)` → NAI (`SOS_OVERALL_SYSTEM_PROM
 **Error responses**
 | HTTP code | When | Client should |
 |---|---|---|
-| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 400 | `NAI_API_KEY` not configured | Admin must set env |
 | 502 | NAI empty / upstream failure | Retry |
 | 504 | NAI timeout | Retry |
 
@@ -519,7 +519,7 @@ Route → `generateSosLeaderReleaseSummary(payload)` → empty-slice short-circu
 | HTTP code | When | Client should |
 |---|---|---|
 | 400 | `release` missing | Fix request |
-| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 400 | `NAI_API_KEY` not configured | Admin must set env |
 | 502 / 504 | NAI failure / timeout | Retry that leader×release |
 
 **Caching**: No — on demand. Client queues one leader×release at a time.
@@ -578,7 +578,7 @@ Also invoked automatically at the end of **Regenerate from JIRA** (`sprintPerfor
 | HTTP code | When | Client should |
 |---|---|---|
 | 400 | Intelligence packet / model missing | Send packet or `{ model }` |
-| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 400 | `NAI_API_KEY` not configured | Admin must set env |
 | 502 | NAI empty / unparseable asks | Retry; report gen falls back to rules |
 | 504 | NAI timeout | Retry |
 
@@ -633,7 +633,7 @@ Route → `sosLeaderCoachingService.generateLeaderCoaching` → packet builder �
 | HTTP code | When | Client should |
 |---|---|---|
 | 400 | `leaderId`/`leaderName` or `items` missing | Fix request |
-| 400 | `AI_API_KEY` not configured | Admin must set env (rules fallback still attempted inside service when NAI throws after config) |
+| 400 | `NAI_API_KEY` not configured | Admin must set env (rules fallback still attempted inside service when NAI throws after config) |
 | 502 | Unexpected failure outside NAI path | Retry |
 
 **Caching**: No — on demand.
@@ -736,7 +736,7 @@ Route → `sosLeaderCoachingService.generateLeaderCoaching` → packet builder �
 **Error responses**
 | HTTP code | When | Client should |
 |---|---|---|
-| 400 | `AI_API_KEY` not configured | Show config error |
+| 400 | `NAI_API_KEY` not configured | Show config error |
 | 502 / 504 | NAI failure / timeout | Retry; quantitative page still works |
 
 **Caching**: Narrative bundles 5 min per key; briefing itself on demand.

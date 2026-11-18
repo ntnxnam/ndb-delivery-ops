@@ -313,7 +313,7 @@ Chrome ≥ 120, Firefox ≥ 120, Safari ≥ 17, Edge ≥ 120.
 
 1. JIRA PAT is user-supplied; the platform cannot pre-provision access.
 2. SMTP relay (`mailrelay.dyn.nutanix.com:25`) has no auth; available only on Nutanix internal network.
-3. NAI (AI API) requires `AI_API_KEY` env var; responses are non-deterministic and must be reviewed before forwarding.
+3. NAI (AI API) requires `NAI_API_KEY` env var; responses are non-deterministic and must be reviewed before forwarding.
 4. JIRA API rate limits enforced at ~300 req/min per token; batch operations must respect backoff.
 5. Confluence API (port 8443) accessible only from the server host; not proxied to the client.
 6. Production server is Rocky Linux 9; deploy is via SCP + PM2 (no CI/CD pipeline today).

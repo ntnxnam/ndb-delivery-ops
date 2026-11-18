@@ -76,7 +76,7 @@ Header + Refresh All
 | Assignee Manager empty / unknown | Item in Unmapped |
 | Leader has zero items | Empty message under that leader |
 | Nested managers (e.g. Balram under Akshay) | Roll up to Naveen |
-| AI_API_KEY missing | Summary boxes show error + Retry |
+| NAI_API_KEY missing | Summary boxes show error + Retry |
 
 ---
 

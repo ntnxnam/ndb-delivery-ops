@@ -287,7 +287,7 @@ Developer deploy:
 |---|---|---|---|
 | JIRA REST API v2 | HTTPS | Bearer PAT | Exponential backoff (3 retries); 500ms delay on pagination |
 | Confluence REST API (port 8443) | HTTPS | Basic (email + Confluence token) | Per-request |
-| NAI (LLM) | HTTPS | `AI_API_KEY` env var | Per request; timeout 30s |
+| NAI (LLM) | HTTPS | `NAI_API_KEY` env var | Per request; timeout 30s |
 | SMTP (`mailrelay.dyn.nutanix.com:25`) | SMTP/plaintext | None (internal relay) | One send per user action |
 | TCMS | HTTPS | Internal token | Parallel batch |
 

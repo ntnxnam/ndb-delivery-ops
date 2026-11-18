@@ -111,7 +111,7 @@ This document defines the overarching testing philosophy, coverage model, toolin
 | Environment | JIRA | Confluence | SMTP | NAI | When used |
 |---|---|---|---|---|---|
 | Unit/Integration CI | `nock` mock | `nock` mock | `nodemailer-mock` | `nock` mock | Every push |
-| Local dev | Live (developer's PAT) | Live | Internal relay | Live (if `AI_API_KEY` set) | During development |
+| Local dev | Live (developer's PAT) | Live | Internal relay | Live (if `NAI_API_KEY` set) | During development |
 | Pre-deploy manual | Live (test PAT) | Live | Internal relay → trap mailbox | Live | Before each production deploy |
 | Post-deploy smoke | Live (production) | Live | Live relay | Live | Immediately after deploy |
 
