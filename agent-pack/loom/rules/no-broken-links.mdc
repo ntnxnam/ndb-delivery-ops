@@ -1,0 +1,49 @@
+---
+description: Every markdown and HTML link must resolve — no broken or dead-on-arrival hyperlinks
+alwaysApply: true
+---
+
+# No Broken Links
+
+Every hyperlink in `docs/`, `agent-pack/`, and `apps/*/client/src` must resolve
+to a file that exists in the repo. Broken links erode trust and block onboarding.
+
+## Hard rule
+
+1. **All `[label](path)` targets must exist** — `path` (before any `#anchor`) must
+   resolve relative to the source file. No `*.md` placeholder links, no links to
+   files that were deleted or never created.
+2. **Anchors should be valid** — `path#anchor` anchors should match a heading `id`
+   or be omitted. Do not invent anchor slugs that don't match `docs-build.js` output.
+3. **No links to non-served paths in HTML** — links like `../../AGENTS.md` work in
+   GitHub markdown but 404 when `docs/` is served at `/docs` via
+   `server/index.js:docsRoot`. Prefer either:
+   - plain code span `` `AGENTS.md` `` for repo-root references, or
+   - a path that `docs-verify.sh` can validate via `find $ROOT -name <basename>`.
+4. **Verify before merge** — run before every docs change:
+   ```bash
+   node scripts/docs-build.js && bash scripts/docs-verify.sh
+   ```
+   `WARN: possible broken link` on a link you added is a **Blocking MISS** for QA.
+
+## Allowed exceptions
+
+- `http://` / `https://` external links (not checked locally).
+- Links inside fenced code blocks / inline code (not rendered as hyperlinks).
+- `docs-verify.sh` shallow `basename` check may warn on repo-root files like
+  `AGENTS.md` — fix by ensuring `find $ROOT -name <basename>` resolves (i.e. the
+  file exists somewhere in the repo, not only under `docs/`).
+
+## Fix patterns
+
+| Broken | Fix |
+|---|---|
+| `[x](./STREAMLIT_PARITY.md)` (file doesn't exist) | Remove link or create the file |
+| `[x](../../agent-pack/context/domain/dependency_rule.md)` (deleted) | Update to new path or remove |
+| `[x](../../AGENTS.md)` that 404s at `/docs/` | Keep for GitHub, or use `` `AGENTS.md` `` if HTML-only |
+
+## Enforcement
+
+- `scripts/docs-verify.sh` — broken `*.md` basenames under `docs/` (WARN → fail if introduced by this change).
+- Code Review must flag any new `[label](*.md)` where `path` doesn't resolve.
+- QA link-integrity gate in `weave.mdc` — broken/DOA links block merge.

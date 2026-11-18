@@ -6,7 +6,7 @@
 **Depth**: Capabilities, audiences, outcomes, UI surface, trust model, and suggested slide talking points  
 
 > Dependency rules SoT:  
-> [`agent-pack/context/domain/dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md)
+> [`agent-pack/lighthouse/context/domain/dependency_rule.md`](../../agent-pack/lighthouse/context/domain/dependency_rule.md)
 
 ---
 
@@ -641,7 +641,7 @@ Read-only NDB-first **3-axis** map for a release: project type × Mode (Dependen
 | Hygiene | NDB: Dependency without wishlist · Them: Commit/Stretch↔fixVersion gaps · Missing labels on they-wait |
 | Safety | **No JIRA link/parent writes** in MVP |
 
-**Rules SoT**: [`dependency_rule.md`](../../agent-pack/context/domain/dependency_rule.md) · page docs: requirements + data-layer (rebuild in progress)
+**Rules SoT**: [`dependency_rule.md`](../../agent-pack/lighthouse/context/domain/dependency_rule.md) · page docs: requirements + data-layer (rebuild in progress)
 
 **Talking points**:
 - “Who waits on whom — and whose hygiene is broken — before the next gate.”
@@ -1176,15 +1176,15 @@ JIRA Issue ─────────┼─ blocks / is blocked by ──► Mo
 |------|----------|
 | Routes / nav | `client/src/layout/utils/routeConfig.js`, `Sidebar.js` |
 | Page requirements | `docs/pages/*-requirements.md` |
-| Agent page briefs | `agent-pack/context/pages/*.md` |
-| Dependency rules SoT | `agent-pack/context/domain/dependency_rule.md` |
-| Domain (deps JQL) | `agent-pack/context/domain/cross-team-dependencies.md` |
-| Domain (hygiene) | `agent-pack/context/domain/jira-hygiene-and-collaterals.md` |
-| Domain (workflows) | `agent-pack/context/domain/jira-workflows-and-resolutions.md` |
-| Domain (gates) | `agent-pack/context/domain/release-gates.md` |
-| Domain (deferral) | `agent-pack/context/domain/deferral-tracking.md` |
-| Domain (velocity) | `agent-pack/context/domain/velocity-and-sprints.md` |
-| Domain (leader org) | `agent-pack/context/domain/leader-org.md` |
+| Agent page briefs | `agent-pack/lighthouse/context/pages/*.md` |
+| Dependency rules SoT | `agent-pack/lighthouse/context/domain/dependency_rule.md` |
+| Domain (deps JQL) | `agent-pack/lighthouse/context/domain/cross-team-dependencies.md` |
+| Domain (hygiene) | `agent-pack/lighthouse/context/domain/jira-hygiene-and-collaterals.md` |
+| Domain (workflows) | `agent-pack/lighthouse/context/domain/jira-workflows-and-resolutions.md` |
+| Domain (gates) | `agent-pack/lighthouse/context/domain/release-gates.md` |
+| Domain (deferral) | `agent-pack/lighthouse/context/domain/deferral-tracking.md` |
+| Domain (velocity) | `agent-pack/lighthouse/context/domain/velocity-and-sprints.md` |
+| Domain (leader org) | `agent-pack/lighthouse/context/domain/leader-org.md` |
 | Field SoT | `server/config/jiraFieldsConfig.json` |
 | Dataset hierarchy | `agent-pack/skills/release-dataset-sync/SKILL.md` |
 
