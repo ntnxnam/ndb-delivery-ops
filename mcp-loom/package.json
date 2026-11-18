@@ -5,7 +5,7 @@
   "description": "Loom MCP \u2014 builder tools",
   "type": "module",
   "bin": {
-    "ndb-mcp-server": "dist/index.js"
+    "loom-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

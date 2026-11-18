@@ -5,7 +5,7 @@
   "description": "Lighthouse MCP \u2014 product tools",
   "type": "module",
   "bin": {
-    "ndb-mcp-server": "dist/index.js"
+    "lighthouse-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

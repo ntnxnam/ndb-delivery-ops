@@ -1,5 +1,5 @@
 /**
- * NDB-Delivery-Ops MCP server entry point.
+ * Lighthouse MCP server entry point.
  *
  * Spawned by the host (Cursor, Claude Desktop, Claude.ai connectors) over
  * stdio. Registers tools and resources, then connects to the transport.
@@ -29,7 +29,7 @@ import { registerLeadershipCommitReport } from './tools/leadershipCommitReport.j
 import { registerNdbGlossary } from './resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
-  'You are connected to the NDB-Delivery-Ops MCP server. It exposes NDB-Ops capabilities (JIRA queries, release reports, sprint analytics) as tools.',
+  'You are connected to the Lighthouse MCP server. It exposes portfolio delivery ops capabilities (JIRA queries, release reports, sprint analytics) as tools.',
   '',
   'Conventions:',
   '- Every tool that produces user-facing output takes an `audience` arg (vp | em | engineer). Pick the right one from context; default is `em` (engineering manager).',
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   const env = loadEnv();
 
   const server = new McpServer(
-    { name: 'mcp-lighthouse', version: '0.1.0' },
+    { name: 'lighthouse', version: '0.1.0' },
     { instructions: SERVER_INSTRUCTIONS }
   );
 
