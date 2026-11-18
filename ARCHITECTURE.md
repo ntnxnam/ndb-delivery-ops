@@ -307,7 +307,7 @@ blanket project filter on the fetch.
 │   ├── skills/ → ../agent-pack/skills
 │   ├── workflows/ → ../agent-pack/workflows
 │   ├── rules/                           builder rules + symlinks to pack rules
-│   └── mcp.json                         host MCP registration
+│   └── harness/ → ../agent-pack/harness  MCP registration (mcp.json, cursor/claude/codex/opencode)
 │
 └── _archive/  ← actually at ~/NDB-Ops-Tools/_archive/   17 tarballs of decommissioned originals
 ```
