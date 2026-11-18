@@ -38,7 +38,7 @@ UI wait direction (orthogonal to mode):
 
 ## Aligned release trains
 
-Config SoT: `apps/delivery-ops/server/config/dependencyViewConfig.json` → `alignedTrains`.
+Config SoT: `lighthouse/app/server/config/dependencyViewConfig.json` → `alignedTrains`.
 
 | NDB release | Aligned train |
 |---|---|

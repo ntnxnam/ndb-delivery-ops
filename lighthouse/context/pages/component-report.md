@@ -224,10 +224,10 @@ Currently: basic heuristic. Needs real P0 counts from payload.
 
 | File | Purpose |
 |---|---|
-| `apps/delivery-ops/client/src/components/ComponentReport.js` | All UI — 679 lines |
-| `apps/delivery-ops/client/src/components/ComponentReport.css` | Styles — accordion, widget, chip |
-| `apps/delivery-ops/server/routes/component.js` | `/list`, `/health`, `/data` endpoints — 402 lines |
-| `apps/delivery-ops/server/services/componentReportService.js` | `fetchComponentsFromERA`, `fetchComponentPayload` |
+| `lighthouse/app/client/src/components/ComponentReport.js` | All UI — 679 lines |
+| `lighthouse/app/client/src/components/ComponentReport.css` | Styles — accordion, widget, chip |
+| `lighthouse/app/server/routes/component.js` | `/list`, `/health`, `/data` endpoints — 402 lines |
+| `lighthouse/app/server/services/componentReportService.js` | `fetchComponentsFromERA`, `fetchComponentPayload` |
 
 ---
 
