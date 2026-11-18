@@ -287,7 +287,7 @@ export const Sidebar = () => {
 
           {!isCollapsed && (
             <div className="app-title-section">
-              <h1 className="app-title">NDB Status Update Sender</h1>
+              <h1 className="app-title">Nutanix Lighthouse</h1>
               {!isMobile && (
                 <div className="resize-hint">
                   <span className="resize-hint-text">Drag edge to resize</span>
@@ -377,6 +377,9 @@ export const Sidebar = () => {
         </nav>
 
         <div className="sidebar-footer">
+          {!isCollapsed && (
+            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="sidebar-docs-link" title="Open product documentation">Documentation</a>
+          )}
           {!isCollapsed && user && (
             <div className="user-info">
               <span className="user-label">Logged in as:</span>
@@ -795,6 +798,18 @@ export const Sidebar = () => {
           border-top: 1px solid #495057;
           flex-shrink: 0;
         }
+        .sidebar-docs-link {
+          display: block;
+          margin-bottom: 12px;
+          color: #adb5bd;
+          font-size: 12px;
+          text-decoration: none;
+          padding: 6px 8px;
+          border: 1px solid #495057;
+          border-radius: 4px;
+          text-align: center;
+        }
+        .sidebar-docs-link:hover { color: #fff; border-color: #6c757d; background: rgba(255,255,255,0.05); }
 
         .user-info {
           margin-bottom: 16px;

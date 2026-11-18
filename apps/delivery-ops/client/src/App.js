@@ -48,7 +48,7 @@ const LoginPage = () => {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>NDB Status Update Sender</h1>
+          <h1>Nutanix Lighthouse</h1>
           <p>Sign in with your JIRA API token</p>
         </div>
         <LoginForm 
@@ -459,7 +459,7 @@ const AppRouter = () => {
       <div className="app-loading">
         <div className="loading-content">
           <div className="loading-spinner" role="status" aria-label="Checking your session" />
-          <h2>NDB Status Update Sender</h2>
+          <h2>Nutanix Lighthouse</h2>
           <p>Checking your session...</p>
         </div>
         

@@ -51,7 +51,7 @@ export const Header = () => {
     <header className="app-header">
       <div className="header-content">
         <div className="header-left">
-          <h1 className="app-title">NDB Status Update Sender</h1>
+          <h1 className="app-title">Nutanix Lighthouse</h1>
         </div>
 
         <div className="header-center">
@@ -67,6 +67,7 @@ export const Header = () => {
           )}
 
           <div className="header-actions">
+            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="docs-link" title="Open product documentation">Documentation</a>
             <button
               type="button"
               onClick={testConnection}
@@ -225,6 +226,15 @@ export const Header = () => {
           opacity: 0.6;
           cursor: not-allowed;
         }
+        .docs-link {
+          color: #e9ecef;
+          font-size: 13px;
+          text-decoration: none;
+          padding: 6px 10px;
+          border: 1px solid #6c757d;
+          border-radius: 4px;
+        }
+        .docs-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
         .connection-status {
           padding: 4px 8px;
