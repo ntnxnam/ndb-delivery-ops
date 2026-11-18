@@ -17,6 +17,20 @@ audience: rm, tpm, portfolio_mgr
 - User wants to verify or update `RELEASE_DATASET_FIELDS` in `releaseDatasetService.ts`
 - User reports hierarchy reconstruction not working (epics not linking to features, tasks not linking to epics)
 
+
+## Quick Start
+
+```text
+Input: { productId, forceReleases?: string[], skipChangelog?: boolean, includeLongTermFunded?: boolean }
+Output: { syncedReleases: string[], totals: { bucket, count }[], bundlePath: "shared/.cache/release-dataset/<product>/bundle.json" }
+
+1. Resolve productId via productService -> projectKey, futureReleases via getProjectVersions
+2. Sequential fetch: Wave 1 (top_level, standalone, direct, moved_out, long_term, sidecars) -> Wave 2 (Parent/Epic Link IN parentKeys chunked 75) -> Wave 3 (Epic Link IN epicKeys)
+3. In-memory dedup + hierarchy rebuild + changelog enrichment
+4. Write per-release .json + bundle.json via releaseDatasetService
+5. Return verification: Portfolio Parent Key / Epic Link Key non-null spot-check
+```
+
 ## Core Rules
 
 1. **One sync operation** — fetch from JIRA + rebuild bundle is always one atomic action. Never expose bundle-only reset or per-release reset to end users.
