@@ -17,6 +17,7 @@
     "rules/ndb-gate-status-semantics.mdc",
     "rules/no-defensive-statements.mdc",
     "rules/no-localhost.mdc",
+    "rules/no-hardcoding.mdc",
     "rules/persona-aware-output.mdc",
     "rules/product-agnostic.mdc",
     "rules/program-management-pov.mdc",
