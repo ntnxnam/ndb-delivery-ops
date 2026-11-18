@@ -9,16 +9,13 @@ jest.mock('../../middleware/auth/jira', () => ({
 const request = require('supertest');
 const app = require('../../index');
 
-jest.mock('@portfolio-delivery-ops/shared', () => {
-  const actual = jest.requireActual('@portfolio-delivery-ops/shared');
-  return {
-    ...actual,
-    JiraConnector: jest.fn().mockImplementation(() => ({
-      searchCount: jest.fn(),
-      searchAll: jest.fn(),
-    })),
-  };
-});
+jest.mock('@portfolio-delivery-ops/shared', () => ({
+  loadEnv: jest.fn().mockReturnValue({}),
+  JiraConnector: jest.fn().mockImplementation(() => ({
+    searchCount: jest.fn(),
+    searchAll: jest.fn(),
+  })),
+}));
 
 const { JiraConnector } = require('@portfolio-delivery-ops/shared');
 

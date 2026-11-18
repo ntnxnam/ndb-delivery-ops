@@ -9,7 +9,7 @@ audience: tpm, rm, portfolio_mgr
 This skill is canonically defined at:
 
 ```
-~/.cursor/skills/sprint-gantt-chart/SKILL.md
+agent-pack/lighthouse/skills/sprint-gantt-chart/SKILL.md
 ```
 
 ## When to Use This Skill
@@ -43,7 +43,7 @@ This is **capability #18** in `CONSOLIDATION.md`. Once ported,
 2. A static HTML Gantt for email reports
 
 Both obey the Nutanix JIRA date hierarchy rule
-(`.cursor/rules/jira-date-hierarchy.mdc`).
+(`agent-pack/lighthouse/rules/jira-date-hierarchy.mdc`).
 
 ## Core Rules (memorise — these come from the date-hierarchy rule)
 

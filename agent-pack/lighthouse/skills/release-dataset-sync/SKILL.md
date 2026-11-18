@@ -1,6 +1,7 @@
 ---
 name: release-dataset-sync
 description: Manage the JIRA release dataset sync pipeline — 3-group/6-bucket fetch model, field validation, bundle rebuild, and SyncHubPage UI. Use when the user asks to sync data, refetch releases, add Group 2 (moved-out) or Group 3 (long-term funded) data, fix missing fields, update the field list, simplify the sync UI, or verify that hierarchy link fields (Portfolio Parent Key, Epic Link) are being returned by JIRA.
+audience: rm, tpm, portfolio_mgr
 ---
 
 # Release Dataset Sync

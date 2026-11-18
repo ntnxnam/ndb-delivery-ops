@@ -121,7 +121,7 @@ Audit log: reports/audit/triage-crisis-NDB-12345-2026-05-19T14-30Z.json
 
 ## Cross-references
 
-- `.cursor/skills/dependency-walk/SKILL.md` (used for upstream check)
-- `.cursor/agents/specialists/triage-specialist.md`
-- `.cursor/agents/specialists/dependency-tracker-specialist.md`
+- `agent-pack/lighthouse/skills/dependency-walk/SKILL.md` (used for upstream check)
+- `agent-pack/lighthouse/identity/specialists/triage-specialist.md`
+- `agent-pack/lighthouse/identity/specialists/dependency-tracker-specialist.md`
 - `DECISIONS.md` — D19 (4 triage flavours), D3 (Slack connector)

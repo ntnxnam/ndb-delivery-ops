@@ -9,7 +9,7 @@ audience: team-exec, portfolio_mgr
 This skill is canonically defined at:
 
 ```
-~/.cursor/skills/predictive-team-exec-analytics/SKILL.md
+agent-pack/lighthouse/skills/predictive-team-exec-analytics/SKILL.md
 ```
 
 The canonical package includes a substantial implementation:

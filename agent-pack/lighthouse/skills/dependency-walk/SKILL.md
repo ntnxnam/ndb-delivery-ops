@@ -146,5 +146,5 @@ Owner: `dependency-tracker-specialist`. Triggered by `ops-assistant` via `loadAg
 - `agent-pack/lighthouse/context/domain/dependency_rule.md`
 - `agent-pack/lighthouse/context/domain/cross-team-dependencies.md`
 - `agent-pack/lighthouse/context/pages/dependency-view.md`
-- `.cursor/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D18
