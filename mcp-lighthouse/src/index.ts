@@ -17,6 +17,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadEnv } from './config/env.js';
 import { registerGetReleaseStatus } from './tools/getReleaseStatus.js';
+import { registerBuildJql } from './tools/buildJql.js';
+import { registerTeamOverallReport } from './tools/teamOverallReport.js';
 import { registerMoveJiraDates } from './tools/moveJiraDates.js';
 import { registerCalculateStoryPoints } from './tools/calculateStoryPoints.js';
 import { registerSayVsDo } from './tools/sayVsDo.js';
@@ -48,6 +50,8 @@ async function main(): Promise<void> {
 
   // ── tools ──────────────────────────────────────────────────────────────
   registerGetReleaseStatus(server, env);
+  registerBuildJql(server);
+  registerTeamOverallReport(server);
   registerMoveJiraDates(server, env);
   registerCalculateStoryPoints(server, env);
   registerSayVsDo(server, env);
