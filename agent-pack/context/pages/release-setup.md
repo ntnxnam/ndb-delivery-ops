@@ -19,7 +19,7 @@ Create / rename releases, cleanup filters.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → ReleaseSetup-requirements.md, ReleaseSetup-data-layer.md
+`Documentation/pages/` → ReleaseSetup-requirements.md, ReleaseSetup-data-layer.md
 
 ## Agent notes
 

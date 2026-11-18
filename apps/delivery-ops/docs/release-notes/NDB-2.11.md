@@ -25,6 +25,9 @@ source: doc-specialist @ 2026-05-19
   to document the 2-row (Functional/System) × 2-col (Manual/Automation)
   layout. See `docs/pages/ProjectStatus-*`.
 - TCMS follow-up migration note: `docs/tcms-rows-followup.md`.
+- TCMS time-filtered (Last 4 weeks) metrics now genuinely filtered via
+  `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`,
+  `target={milestone}-qcow2`); no fallback to Overall.
 
 ## Breaking Changes
 
@@ -36,6 +39,12 @@ source: doc-specialist @ 2026-05-19
 
 - No config change required. Cached payloads carrying `overall` are still
   rendered under the System row via the back-compat fallback.
+- TCMS time-filtered metrics migrated to
+  `/api/v1/all_test_cases/aggregate/metrics` with `time_filter=four_weeks`
+  and `target={milestone}-qcow2`. Legacy callers using
+  `/api/v1/milestone_all_test_cases/aggregate/metrics` with `target_milestone`
+  must migrate; legacy time-filter strings (e.g. "Last 4 Week") map to
+  `four_weeks`.
 
 ## Known Issues
 

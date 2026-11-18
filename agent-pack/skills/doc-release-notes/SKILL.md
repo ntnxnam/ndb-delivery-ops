@@ -15,7 +15,7 @@ audience: team_mgr, tpm, portfolio_mgr, team-exec, director
 
 ```
 Input: { productId, releaseName, fromVersion, toVersion }
-Output: apps/delivery-ops/docs/RELEASE_NOTES.md (rolling) + docs/release-notes/<release>.md (versioned)
+Output: Documentation/release-notes/RELEASE_NOTES.md (rolling) + Documentation/release-notes/<release>.md (versioned)
 ```
 
 Procedure:

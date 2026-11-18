@@ -20,7 +20,7 @@ Conversational release/ticket Q&A via agent runtime.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → ChatbotPage-requirements.md, ChatbotPage-data-layer.md
+`Documentation/pages/` → ChatbotPage-requirements.md, ChatbotPage-data-layer.md
 
 ## Agent notes
 

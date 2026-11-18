@@ -20,4 +20,4 @@ source: doc-known-issues @ 2026-05-19
 
 | Area | Summary | Severity | Workaround / Status | Introduced | Reference |
 |---|---|---|---|---|---|
-| TCMS Quality table | `Functional` and `System` rows currently share the same source metrics (clone) until TCMS exposes a `test_category` filter | Medium | None — rows are intentionally identical; do not read distinctness into them. Tracked in `docs/tcms-rows-followup.md` | 2.12 | [tcms-rows-followup.md](./tcms-rows-followup.md) |
+| TCMS Quality table | `Functional` and `System` rows currently share the same source metrics (clone) until TCMS exposes a `test_category` filter. Time-filtered (Last 4 weeks) metrics now use `/api/v1/all_test_cases/aggregate/metrics` with `time_filter=four_weeks` and `target={milestone}-qcow2` (previously errored/echoed Overall). | Medium | None — rows are intentionally identical; do not read distinctness into them. Last 4 weeks shows "Not Set" when no runs in window. Tracked in `docs/tcms-rows-followup.md` | 2.12 | [tcms-rows-followup.md](./tcms-rows-followup.md) |

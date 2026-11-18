@@ -21,8 +21,10 @@ const TCMS_TIMEOUT_MS = 15000; // Reduced from 30s to 15s
 async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all') {
   try {
     const filters = JSON.stringify({ $and: [{ 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }] });
-    const resp = await axios.get(`${TCMS_API_BASE}/api/v1/milestone_all_test_cases/aggregate/metrics`, {
-      params: { aggregation_field: 'test_case.metadata.requirements', time_filter: timeFilter, target_milestone: milestone, feat_type: 'all', filters },
+    const VALID_TIME_FILTERS = ['all', 'four_weeks'];
+    const tcmsTimeFilter = VALID_TIME_FILTERS.includes(timeFilter) ? timeFilter : 'all';
+    const resp = await axios.get(`${TCMS_API_BASE}/api/v1/all_test_cases/aggregate/metrics`, {
+      params: { aggregation_field: 'test_case.metadata.requirements', time_filter: tcmsTimeFilter, target: `${milestone}-qcow2`, feat_type: 'all', filters },
       timeout: TCMS_TIMEOUT_MS,
     });
     const row = resp.data?.data?.[0];
@@ -38,6 +40,8 @@ async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all') {
       raw: row,
     };
   } catch (e) {
+    const isTimeout = e.code === 'ECONNABORTED' || (e.message || '').includes('timeout');
+    console.warn(`[tcmsService] fetchMilestoneMetrics failed for ${featKey}@${milestone} (${timeFilter}):`, isTimeout ? 'timeout' : (e?.response?.data || e.message));
     return null;
   }
 }
@@ -134,7 +138,7 @@ async function fetchFeatureMetrics(featKey, milestone) {
       tcmsCache.set(cacheKey, result);
       return result;
     }
-    // quality_index has no entry -> fallback to milestone+requirements metrics (milestone_all_test_cases/aggregate/metrics)
+    // quality_index has no entry -> fallback to milestone+requirements metrics (all_test_cases/aggregate/metrics)
     const m = await fetchMilestoneMetrics(featKey, milestone, 'all');
     if (m) {
       const result = { qi: m.qi, total: m.total, run: m.run, passed: m.passed, failed: m.failed, manual: m.manual, automation: m.automation, raw: m.raw, date: data.date || null, overallQI: null, featureQI: null };
@@ -186,15 +190,16 @@ async function fetchMergedMetrics(featKey, milestone, timeFilter = 'all') {
   if (!qi && !m) return null;
   // For time-filtered windows (e.g. Last 4 weeks) don't fall back to overall QI — show empty if no recent runs
   if (timeFilter !== 'all' && !m) return null;
-  // Merge: prefer metrics manual/automation/run, fall back to qi (only for Overall window)
+  const isWindow = timeFilter !== 'all';
+  // Merge: prefer metrics manual/automation/run; for windowed calls never fall back to qi (avoids echoing Overall)
   return {
-    qi: m?.qi ?? qi?.qi ?? null,
-    total: m?.total ?? qi?.total ?? null,
+    qi: isWindow ? (m?.qi ?? null) : (m?.qi ?? qi?.qi ?? null),
+    total: isWindow ? (m?.total ?? null) : (m?.total ?? qi?.total ?? null),
     run: m?.run ?? null,
     passed: m?.passed ?? null,
     failed: m?.failed ?? null,
-    manual: m?.manual ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null),
-    automation: m?.automation ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null),
+    manual: isWindow ? (m?.manual ?? null) : (m?.manual ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null)),
+    automation: isWindow ? (m?.automation ?? null) : (m?.automation ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null)),
     date: qi?.date ?? null,
     overallQI: qi?.overallQI ?? null,
     featureQI: qi?.featureQI ?? null,
@@ -207,9 +212,9 @@ async function enrichItemWithQuality(item, fixVersion, isLongTerm = false) {
     const branchMilestone = fixVersion;
     const [masterAll, masterLast3, branchAll, branchLast3] = await Promise.all([
       fetchMergedMetrics(item.key, 'NDB-master', 'all'),
-      fetchMergedMetrics(item.key, 'NDB-master', 'Last 4 Week'),
+      fetchMergedMetrics(item.key, 'NDB-master', 'four_weeks'),
       isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all'),
-      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'Last 4 Week'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'four_weeks'),
     ]);
     // D1: functional/system currently share same source metrics until TCMS provides category-filtered aggregates.
     // When TCMS exposes test_category filter, split fetchMergedMetrics into functionalMetrics vs systemMetrics here.
@@ -281,6 +286,8 @@ async function enrichLongTermItemsWithQI(items, fixVersion) {
 module.exports = {
   buildTcmsQueryUrl,
   fetchFeatureMetrics,
+  fetchMilestoneMetrics,
+  fetchMergedMetrics,
   enrichItemWithTCMS,
   enrichItemWithQuality,
   enrichCommitItemsWithQI,

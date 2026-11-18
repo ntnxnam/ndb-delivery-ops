@@ -19,7 +19,7 @@ Audit of sent emails.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → EmailHistory-requirements.md, EmailHistory-data-layer.md
+`Documentation/pages/` → EmailHistory-requirements.md, EmailHistory-data-layer.md
 
 ## Agent notes
 

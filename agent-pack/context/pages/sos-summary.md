@@ -20,7 +20,7 @@ Cross-release Feature/Initiative SoS with tier AI + email snapshot.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → SosSummary-requirements.md, SosSummary-data-layer.md
+`Documentation/pages/` → SosSummary-requirements.md, SosSummary-data-layer.md
 
 ## Agent notes
 

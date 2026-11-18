@@ -15,7 +15,7 @@ audience: ic, qa_lead, team_mgr, portfolio_mgr
 
 ```
 Input: { productId, releaseName, includeResolved: false }
-Output: apps/delivery-ops/docs/KNOWN_ISSUES.md (canonical) + optional docs/known-issues/<release>.md
+Output: Documentation/known-issues/KNOWN_ISSUES.md (canonical) + optional Documentation/known-issues/<release>.md
 ```
 
 Procedure:

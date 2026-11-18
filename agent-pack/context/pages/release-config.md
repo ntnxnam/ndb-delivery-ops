@@ -19,7 +19,7 @@ Edit release gate dates configuration.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → (ReleaseConfig page; config API)
+`Documentation/pages/` → (ReleaseConfig page; config API)
 
 ## Agent notes
 

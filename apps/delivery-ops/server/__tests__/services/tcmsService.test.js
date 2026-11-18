@@ -8,6 +8,7 @@ const {
   buildTcmsQueryUrl,
   enrichItemWithQuality,
   enrichItemWithTCMS,
+  fetchMilestoneMetrics,
 } = require('../../services/tcmsService');
 
 describe('tcmsService — TCMS table rows Functional/System', () => {
@@ -27,7 +28,7 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
           },
         });
       }
-      if (url.includes('/milestone_all_test_cases/aggregate/metrics')) {
+      if (url.includes('/all_test_cases/aggregate/metrics')) {
         return Promise.resolve({
           data: {
             data: [
@@ -186,8 +187,8 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
         const featKey = opts?.params?.feats || 'FEAT-FISHY';
         return Promise.resolve({ data: { date: '2026-05-06', QI: 80, feats: [{ name: featKey, QI: 80 }], teams: [] } });
       }
-      if (url.includes('/milestone_all_test_cases/aggregate/metrics')) {
-        if (timeFilter === 'Last 4 Week') {
+      if (url.includes('/all_test_cases/aggregate/metrics')) {
+        if (timeFilter === 'four_weeks') {
           // Simulate no runs in last 4 weeks
           return Promise.resolve({ data: { data: [] } });
         }
@@ -228,5 +229,47 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
     if (item.tcmsQuality.releaseOverall && item.tcmsQuality.releaseLast3Weeks) {
       expect(item.tcmsQuality.releaseOverall).not.toEqual(item.tcmsQuality.releaseLast3Weeks);
     }
+  });
+});
+
+describe('tcmsService — fetchMilestoneMetrics endpoint/params', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('UT-TCMS-012: uses new endpoint with time_filter=four_weeks and target={milestone}-qcow2', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ run: 45, total: 204 }] } });
+    const r = await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'four_weeks');
+    expect(r.run).toBe(45);
+    const [url, opts] = axios.get.mock.calls[0];
+    expect(url).toContain('/api/v1/all_test_cases/aggregate/metrics');
+    expect(opts.params.aggregation_field).toBe('test_case.metadata.requirements');
+    expect(opts.params.time_filter).toBe('four_weeks');
+    expect(opts.params.target).toBe('NDB-2.12-qcow2');
+    expect(opts.params.feat_type).toBe('all');
+  });
+
+  test('UT-TCMS-013: time_filter=all for Overall window', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ run: 204, total: 204 }] } });
+    await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'all');
+    const [, opts] = axios.get.mock.calls[0];
+    expect(opts.params.time_filter).toBe('all');
+  });
+
+  test('UT-TCMS-014: legacy time filter maps to four_weeks (back-compat)', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ run: 45 }] } });
+    await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'Last 4 Week');
+    const [, opts] = axios.get.mock.calls[0];
+    expect(opts.params.time_filter).toBe('four_weeks');
+  });
+
+  test('UT-TCMS-015: empty data returns null', async () => {
+    axios.get.mockResolvedValue({ data: { data: [] } });
+    const r = await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'four_weeks');
+    expect(r).toBeNull();
+  });
+
+  test('UT-TCMS-016: axios error returns null (no throw)', async () => {
+    axios.get.mockRejectedValue(new Error('network down'));
+    const r = await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'four_weeks');
+    expect(r).toBeNull();
   });
 });

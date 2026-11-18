@@ -32,7 +32,7 @@ no UI/email label claims distinctness. Tracked as a known limitation in
 `KNOWN_ISSUES.md`.
 
 **Unblock condition:** TCMS exposes a `test_category` (or equivalent)
-filter on `milestone_all_test_cases/aggregate/metrics` (or
+filter on `all_test_cases/aggregate/metrics` (or
 `quality_index`). When available, split `fetchMergedMetrics` into
 `functionalMetrics` vs `systemMetrics` in `tcmsService.js` and stop cloning.
 
@@ -66,6 +66,34 @@ fallback is removed.
 4. Add distinct-data test coverage once clone is resolved (KPI item 4).
 5. Update `docs/api/jira-project-status.md` and `docs/pages/ProjectStatus-*`
    if the `tcmsQuality` shape changes.
+
+## Endpoint migration — time-filtered metrics (Last 4 weeks)
+
+Previously the time-filtered window called
+`/api/v1/milestone_all_test_cases/aggregate/metrics` with `target_milestone`
+and passed the raw time-filter string (e.g. `Last 4 Week`); TCMS either
+errored or echoed the Overall window, so "Last 4 weeks" was not genuinely
+filtered.
+
+Corrected call (shipped):
+
+- Endpoint: `/api/v1/all_test_cases/aggregate/metrics`
+- `aggregation_field`: `test_case.metadata.requirements`
+- `time_filter`: `all` (Overall window) or `four_weeks` (Last 4 weeks)
+- `target`: `{milestone}-qcow2` (e.g. `NDB-2.12-qcow2`)
+- `feat_type`: `all`
+- `filters`: `{"$and":[{"test_case.metadata.requirements":"{featKey}"},{"test_case.deprecated":false}]}`
+
+Legacy time-filter strings are mapped to `four_weeks` for back-compat
+(`tcmsService.fetchMilestoneMetrics`: `timeFilter === 'all' ? 'all' : 'four_weeks'`).
+For time-filtered windows, `fetchMergedMetrics` no longer falls back to the
+Overall QI — the table shows "Not Set" when there are no runs in the window.
+
+Migration note for callers/consumers: any code or cached payload still using
+the old `milestone_all_test_cases/aggregate/metrics` + `target_milestone`
+path must migrate to the call above; the old path is retired for time-filtered
+metrics (it remains in use only for the count fallback
+`/api-readonly/v1/milestone_all_test_cases/aggregate/total`).
 
 ## References
 

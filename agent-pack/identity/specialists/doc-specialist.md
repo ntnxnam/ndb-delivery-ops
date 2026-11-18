@@ -21,10 +21,10 @@ Invoked by `ops-assistant`. Owns the four doc surfaces that ship with every rele
 
 | Skill | Path | Output |
 |---|---|---|
-| `doc-known-issues` | `agent-pack/skills/doc-known-issues/SKILL.md` | `apps/delivery-ops/docs/KNOWN_ISSUES.md` (or versioned `docs/known-issues/<release>.md`) |
-| `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `apps/delivery-ops/docs/RELEASE_NOTES.md` + per-release `docs/release-notes/<release>.md` |
-| `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `apps/delivery-ops/docs/USER_GUIDE.md` |
-| `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `apps/delivery-ops/docs/ADMIN_GUIDE.md` |
+| `doc-known-issues` | `agent-pack/skills/doc-known-issues/SKILL.md` | `Documentation/known-issues/KNOWN_ISSUES.md` (or versioned `Documentation/known-issues/<release>.md`) |
+| `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `Documentation/release-notes/RELEASE_NOTES.md` + per-release `Documentation/release-notes/<release>.md` |
+| `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `Documentation/guides/USER_GUIDE.md` |
+| `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `Documentation/guides/ADMIN_GUIDE.md` |
 
 All four are `toolClass: draft` — I produce markdown, never mutate without user approval. Merge stage (10) commits only after user ok.
 

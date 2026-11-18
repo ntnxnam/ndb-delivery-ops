@@ -1,0 +1,796 @@
+# API Contract — `/api/jira/*`
+
+**Route file**: `server/routes/jira/index.js`  
+**Auth**: most endpoints require `validateJiraTokenMiddleware`; noted where different  
+**Mounted at**: `/api/jira`
+
+This file covers the ~40 endpoints in `jira/index.js`. Grouped by domain.
+
+---
+
+## Diagnostics & Validation
+
+### GET /api/jira/jira-diagnostic
+
+**Purpose**: Test JIRA connectivity and return API version + current user info.
+
+**Auth**: validates token from query/header
+
+**Response**: `{ user, serverInfo, status: "ok" }`
+
+---
+
+### POST /api/jira/test-jql
+
+**Purpose**: Run a test JQL query and return the count + first 10 keys. For dev/debug.
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string }`
+
+**Response**: `{ total, issues: [{ key }] }`
+
+---
+
+### POST /api/jira/validate
+
+**Purpose**: Validate a JIRA token — returns the authenticated user's profile.
+
+**Auth**: token from body
+
+**Request** — Body: `{ token: string, username: string }`
+
+**Response**: `{ valid: true, user: { displayName, email, accountId } }`
+
+---
+
+## Search & Fetch
+
+### POST /api/jira/search-by-jql
+
+**Purpose**: Generic JQL search — returns issues with requested fields.
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string, fields: string[], maxResults?: number, startAt?: number }`
+
+> ⚠️ JQL approval rule applies — any change to JQL passed by callers requires approval.
+
+**Response**: `{ issues: [...], total, startAt, maxResults }`
+
+---
+
+### POST /api/jira/fetch-all-jira-tickets
+
+**Purpose**: Paginated bulk fetch of all tickets matching a JQL, up to a high limit (e.g. 10 000).
+
+**Auth**: required
+
+**Request** — Body: `{ jql: string, fields: string[], batchSize?: number }`
+
+**Response**: `{ issues: [...], total }`
+
+---
+
+### POST /api/jira/fetch-epics
+
+**Purpose**: Fetch all epics for a set of parent keys.
+
+**Auth**: required
+
+**Request** — Body: `{ parentKeys: string[], productId: string }`
+
+**Response**: `{ epics: [...] }`
+
+---
+
+### POST /api/jira/fetch
+
+**Purpose**: Generic JIRA fetch — passes a pre-built request config to the connector. Lower-level than `search-by-jql`.
+
+**Auth**: required
+
+**Request** — Body: `{ endpoint: string, method: string, params?: object, body?: object }`
+
+---
+
+## KPI
+
+### POST /api/jira/kpi-results
+
+**Purpose**: Run a single KPI query for a team and return the result (count + JIRA link).
+
+**Auth**: required
+
+**Request** — Body: `{ teamId, kpiId, release, productId }`
+
+**Response**: `{ kpiId, label, count, jql, jiraUrl }`
+
+---
+
+### POST /api/jira/kpi-results-batch
+
+**Purpose**: Run all KPI queries for a team in parallel and return results array.
+
+**Auth**: required
+
+**Request** — Body: `{ teamId, release, productId, kpiIds?: string[] }`
+
+**Response**: `{ results: [{ kpiId, label, count, jql, jiraUrl }] }`
+
+---
+
+### POST /api/jira/release-kpi-results
+
+**Purpose**: Run a single release-level KPI query (not team-scoped).
+
+**Auth**: required
+
+**Request** — Body: `{ kpiId, release, productId }`
+
+**Response**: `{ kpiId, label, count, jql, jiraUrl }`
+
+---
+
+### POST /api/jira/release-kpi-results-batch
+
+**Purpose**: Batch release-level KPI queries — powers `ReleaseBriefPage` KPI cards.
+
+**Auth**: required
+
+**Request** — Body: `{ release, productId, kpiIds?: string[] }`
+
+**Response**: `{ results: [{ kpiId, label, count, jql, jiraUrl }] }`
+
+---
+
+### POST /api/jira/release-kpi-breakdown-batch
+
+**Purpose**: For each team KPI, return `total` / `done` / `open` counts scoped to
+a release version, split by resolution. Powers the Retrospective page's
+Cross-Release Comparison "KPI Categories" rows, and leader-scoped KPI chips on
+SoS by Leader (via optional `jqlExtra`).
+
+**Auth**: required — KPI view authorization (same gate as `kpi-results-batch`).
+
+**Request**
+- Method + path: `POST /api/jira/release-kpi-breakdown-batch`
+- Required headers: `x-jira-token` (PAT), `x-username`
+- Body params:
+  - `releaseVersion` (string, required) — e.g. `NDB-2.11`
+  - `teamId` (string, required) — team key whose KPI config is used
+  - `jqlExtra` (string, optional) — AND-ed onto every bucket JQL (e.g.
+    `"Assignee Manager" in ("Jovan Cukalovic", …)` for leader SoS)
+
+**Server flow**
+Route (`routes/jira/kpi.js`) → `kpiService.getReleaseKpiResolutionBreakdown`
+→ per KPI builds `buildReleaseKpiResolutionJql(total|done|open)` (release base
+filter + KPI filter + optional `jqlExtra` + resolution/status clause) →
+`jira.searchCount` (count-only, maxResults=0) for each bucket.
+
+**Response shape**
+```json
+{
+  "success": true,
+  "results": {
+    "product-blockers": {
+      "name": "Product Blockers",
+      "total": 12,
+      "done": 9,
+      "open": 3,
+      "links": {
+        "total": "fixVersion = \"NDB-2.11\" and (...) ",
+        "done": "... and resolution in (Fixed, Done, Resolved, Complete)",
+        "open": "... and status not in (Done, Closed)"
+      }
+    },
+    "system-test": { "error": "..." }
+  }
+}
+```
+Per-KPI `error` strings are returned inline; a failing KPI does not fail the batch.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | `releaseVersion` or `teamId` missing | fix request |
+| 403 | not KPI-view authorized | hide the comparison KPI rows |
+| 5xx | JIRA/query failure | show error, allow retry |
+
+**Caching**: No server cache. Client caches per (teamId, releaseSet) via the
+`useRetroComparison` hook key; no auto-refetch on empty results.
+
+> JQL buckets approved via the richer-retrospective plan (2026-09-21):
+> `total = <releaseBaseFilter> AND (<kpiPart>)`;
+> `done = total AND resolution in (Fixed, Done, Resolved, Complete)`;
+> `open = total AND status not in (Done, Closed)`. `excludeDeferred` KPIs also
+> append the deferred-label exclusion.
+
+---
+
+## Issue Breakdown & History
+
+### POST /api/jira/issue-breakdown
+
+**Purpose**: Break down a set of issue keys by issue type group (Project Hierarchy / Bug / Dev Code / Test / etc.).
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], productId: string }`
+
+**Response**: `{ breakdown: { "Bug": 34, "Dev Code": 120, ... } }`
+
+---
+
+### POST /api/jira/checkpoint-history
+
+**Purpose**: Fetch the date-history of a custom field (e.g. gate date changes over time) for a set of tickets.
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], fieldId: string, productId: string }`
+
+**Response**: `{ history: [{ key, changes: [{ date, from, to }] }] }`
+
+---
+
+## Release Versions
+
+### POST /api/jira/release-versions
+
+**Purpose**: List versions in the selected team's JIRA project (`GET /project/{projectKey}/versions`). Default is unreleased only; pass `includeReleased: true` for Retrospective and other past-release pickers.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body:
+- `teamId` (string, required). No fallback to another team when missing or unknown.
+- `includeReleased` (boolean, optional, default `false`). When `true`, also return shipped (`released: true`) versions. Archived versions are always excluded.
+
+**Server flow**
+`jira/versions.js` → `releaseDataService.listOpenReleaseVersions` → `listFixVersionsForTeam` → `GET /rest/api/2/project/{team.projectKey}/versions` → drop archived → optionally keep released → pick next upcoming unreleased `releaseDate` as `defaultVersion`
+
+**Response shape**
+```json
+{
+  "success": true,
+  "versions": [
+    { "name": "MSP-2.1", "released": false, "releaseDate": "2026-10-01" },
+    { "name": "MSP-2.0", "released": true, "releaseDate": "2026-01-01" }
+  ],
+  "projectKey": "ENG",
+  "defaultVersion": "MSP-2.1",
+  "teamId": "prism-infra"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | teamId missing, unknown, or team has no `projectKey` | Show Fetch / Admin error |
+| 429 | JIRA rate limit | Retry later |
+
+**Caching**: ~10 min per team on the server (shared across includeReleased true/false).
+
+> ⚠️ Breaking change in 2026-08-26: versions are unreleased names from `GET /project/{team.projectKey}/versions` (one call). No ticket search.
+>
+> 2026-10-15: optional `includeReleased` for Retrospective past-release dropdown. Default behaviour unchanged.
+
+---
+
+### POST /api/jira/discover-versions
+
+**Purpose**: Auto-discover release versions from JIRA that match the product naming pattern.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ productId: string, pattern?: string }`
+
+**Response**: `{ versions: [...] }`
+
+---
+
+### POST /api/jira/check-version-exists
+
+**Purpose**: Check if a version name already exists before creating.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ versionName: string, projectKey: string }`
+
+**Response**: `{ exists: boolean, version?: { id, name } }`
+
+---
+
+### POST /api/jira/create-version
+
+**Purpose**: Create a new JIRA release version.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ name: string, description?: string, releaseDate?: string, projectKey: string }`
+
+**Response**: `{ success: true, version: { id, name, self } }`
+
+---
+
+### POST /api/jira/rename-release-cascade
+
+**Purpose**: Cascade-rename a release and all companion versions (NDB-2.11 → NDB-2.12, plus .1, .1.1, etc.).
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ oldName: string, newName: string, projectKey: string, dryRun?: boolean }`
+
+**Response**: `{ success: true, renamed: [{ id, oldName, newName }], errors: [] }`
+
+---
+
+## Filters
+
+### POST /api/jira/check-filter-exists
+
+**Auth**: required + `releaseSetup` permission  
+**Request** — Body: `{ filterName: string }`  
+**Response**: `{ exists: boolean, filter?: { id, name } }`
+
+---
+
+### POST /api/jira/create-filter
+
+**Auth**: required + `releaseSetup` permission  
+**Request** — Body: `{ name: string, jql: string, description?: string }`  
+**Response**: `{ success: true, filter: { id, name, self } }`
+
+---
+
+### POST /api/jira/cleanup-duplicate-prefix-filters
+
+**Purpose**: Remove duplicate JIRA filters that have a redundant prefix from a rename operation.
+
+**Auth**: required + `releaseSetup` permission
+
+**Request** — Body: `{ prefix: string, dryRun?: boolean }`
+
+**Response**: `{ deleted: [{ id, name }], errors: [] }`
+
+---
+
+## Sprints
+
+### GET /api/jira/sprints
+
+**Purpose**: List sprints for a board.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Query: `boardId` (number, required)
+
+**Response**: `{ sprints: [{ id, name, state, startDate, endDate }] }`
+
+---
+
+### POST /api/jira/sprints
+
+**Purpose**: (Alternate) List sprints — accepts boardId in body for clients that can't use query params.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ boardId: number }`
+
+**Response**: same as GET
+
+---
+
+### GET /api/jira/project-components
+
+**Purpose**: List components for a JIRA project.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Query: `projectKey` (string, required)
+
+**Response**: `{ components: [{ id, name }] }`
+
+---
+
+### POST /api/jira/sprint-report
+
+**Purpose**: Full sprint report for a team/sprint — velocity, resolution breakdown, issue type breakdown.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, sprintId, boardId, startDate, endDate, productId }`
+
+**Response**:
+```json
+{
+  "dev": { "count": 47, "storyPoints": 89, "jql": "..." },
+  "qaVerification": { "count": 18, "adjustedCount": 5.94, "jql": "..." },
+  "qaTestTasks": { "count": 12, "storyPoints": 24, "jql": "..." },
+  "resolutionBreakdown": { "Done": 47, "Unresolved": 5, "Duplicate or Not Reproducible": 3, "Others": 2 }
+}
+```
+
+---
+
+### POST /api/jira/sprint-report-by-range
+
+**Purpose**: Sprint report across a date range (e.g., a fiscal quarter) — returns per-sprint data.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, startDate, endDate, productId }`
+
+**Response**: `{ sprints: [ /* per-sprint report objects */ ] }`
+
+---
+
+### POST /api/jira/sprint-kpi-breakdown
+
+**Purpose**: KPI breakdown per sprint — used for multi-sprint trend charts.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, sprintIds: number[], productId }`
+
+---
+
+### POST /api/jira/sprint-report-trends
+
+**Purpose**: Multi-sprint trend data — velocity over time, issue type trends.
+
+**Auth**: required + `sprintReport` permission
+
+**Request** — Body: `{ teamId, boardId, startDate, endDate, productId }`
+
+---
+
+### POST /api/jira/sprint-gantt-data
+
+**Purpose**: Gantt chart data for sprint-based tickets — resolves sprint end dates for timeline bars.
+
+**Auth**: required
+
+**Request** — Body: `{ keys: string[], productId: string }`
+
+**Response**: `{ items: [{ key, summary, startDate, endDate, issueType }] }`
+
+---
+
+## Release Items
+
+### POST /api/jira/release-items
+
+**Purpose**: Live Feature/Initiative items for Project Status. Always JIRA; disk cache is ignored.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ fixVersions: string[], teamId: string }` (both required)
+
+**Server flow**  
+`jira/versions.js` → `releaseItemsDataService.fetchAllItemsAcrossVersions` → wrap `(${team.baseFilter}) AND ((fixVersion = "…" OR labels = "<labelPrefix>-<suffix>-long-term-funded") AND issuetype IN (Feature, Initiative) AND status != Cancelled) ORDER BY key ASC`
+
+**Response**: `{ success: true, data: { allItems: [...] } }`
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | no team, no `baseFilter`, empty `fixVersions`, or JIRA rejected the JQL | Show the server `error` string (JIRA message when present) |
+
+---
+
+### POST /api/jira/release-items-history
+
+**Purpose**: Checkpoint date history for Project Status — walks JIRA changelog per ticket for Code Complete / Commit Gate / Promotion Gate (and FS/DS, Test Plan, Status Update Date). Powers the struck-through old dates and `moved N times by X weeks` label on `/project-status` (also used by `/sos-summary` via `/sos-items-history`).
+
+**Duration rule** (fixed 2026-11): `weeks = |current - first ever set|`, not `max - min`. A revert to the original date shows `0 weeks` (a spike-then-revert no longer shows phantom delay). Count stays `distinct values - 1`.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ fixVersion: string, teamId?: string }` — server resolves item keys via the same JQL as `/release-items`, then `fetchFieldHistoryForMultiple` per key.
+
+---
+
+### POST /api/jira/release-items-tcms
+
+**Purpose**: Enrich release items with TCMS (test management) data.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string }`
+
+> TCMS time-filtered (Last 4 weeks) metrics use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`); see `../tcms-rows-followup.md`.
+
+---
+
+## Executive Summary
+
+### PUT /api/jira/update-executive-summary
+
+**Purpose**: Write an updated executive summary string to a JIRA field.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ issueKey: string, summary: string }`
+
+---
+
+### POST /api/jira/generate-exec-summary
+
+**Purpose**: AI-generate an executive summary for a release payload. Returns generated text.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+
+**Response**: `{ summary: string, generatedAt: string }`
+
+---
+
+### POST /api/jira/enhanced-exec-summary
+
+**Purpose**: Enhanced (richer) AI executive summary with predictive analytics section.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string, teamId?: string }`
+
+---
+
+## Risk & Misc
+
+### POST /api/jira/risk-indicator-changes
+
+**Purpose**: Fetch the history of risk indicator changes for items in a release.
+
+**Auth**: required + `releaseVersions` permission
+
+**Request** — Body: `{ release: string, productId: string }`
+
+---
+
+### GET /api/jira/fields
+
+**Purpose**: Return JIRA field metadata — field IDs and display names. Used by column configurator in JIRA Emailer.
+
+**Auth**: required
+
+**Response**: `{ fields: [{ id, name, type }] }`
+
+---
+
+### GET /api/jira/team-configurations
+
+**Purpose**: Return team configurations visible to the current user.
+
+**Auth**: `releaseVersions` permission
+
+**Response**: `{ teams: [{ id, name, boardId, kpiConfig }] }`
+
+---
+
+### POST /api/jira/log-user-action
+
+**Purpose**: Server-side audit log for significant user actions (e.g., email sent, release renamed).
+
+**Auth**: none (fire-and-forget from client; no sensitive data logged)
+
+**Request** — Body: `{ action: string, meta?: object }`
+
+**Response**: `{ logged: true }`
+
+---
+
+### GET /api/jira/test-changelog/:key
+
+**Purpose**: Dev/debug endpoint — return the full changelog for a JIRA ticket key.
+
+**Auth**: required
+
+**Request** — Path: `key` (JIRA issue key)
+
+**Response**: `{ changelog: [...] }`
+
+---
+
+## System-Test Scale
+
+### GET /api/jira/system-test-scale
+
+**Purpose**: Return live System-Test scale dashboard counts, per-metric JQL, RAG, components, release-over-release trends, and label-based ST pulse (filters 188191–188195) scoped by team KPI `filter={teamCode}-System-Test` with `cf[13260]` regression typing.
+
+**Auth**: required · KPI view authorization (`kpi_view`)
+
+**Request**
+- Method + path: `GET /api/jira/system-test-scale`
+- Query params:
+  - `teamId` (string, optional) — team board id (e.g. `ndb`); resolves `teamCode` → `filter={teamCode}-System-Test`
+  - `currentRelease` (string, optional) — e.g. `NDB-2.11`
+  - `compareRelease` (string, optional) — e.g. `NDB-2.10`
+- Required headers: JIRA token (middleware)
+
+**Server flow**
+Route handler → `checkKpiViewAuthorization` → `systemTestScaleService.getDashboard({ teamId, … })` → resolve teamCode / kpiFilter → parallel `jira.searchCount` → assemble payload
+
+**Response shape**
+```json
+{
+  "success": true,
+  "generatedAt": "2026-10-08T06:00:00.000Z",
+  "fetchSeconds": 52.3,
+  "teamId": "ndb",
+  "teamCode": "NDB",
+  "kpiFilter": "filter=NDB-System-Test",
+  "regressionField": "cf[13260]",
+  "currentRelease": "NDB-2.11",
+  "compareRelease": "NDB-2.10",
+  "rag": { "level": "yellow", "why": "..." },
+  "current": { "open": { "count": 19, "jql": "..." }, "rates": { "regressionRate": 8.1 } },
+  "compare": { },
+  "byRelease": { },
+  "stPulse": {
+    "global": { "all": { "count": 0, "jql": "..." }, "open": {}, "resolvedNotClosed": {} },
+    "byRelease": { "NDB-2.12": { "affectedOpen": {}, "fixVersionOpen": {} } },
+    "sourceFilters": { "all": 188191, "open": 188192, "resolvedNotClosed": 188193, "affectedOpen": 188194, "fixVersionOpen": 188195 },
+    "byLabel": {
+      "longevity": { "key": "longevity", "title": "Longevity", "label": "longevity", "all": {}, "open": {} },
+      "smoke": { "key": "smoke", "title": "System Smoke", "label": "ndb-system-smoke-test", "all": {}, "open": {} },
+      "functional": { "key": "functional", "title": "Functional (ST-found)", "label": "ndb-systest-found-functional-bug", "all": {}, "open": {} },
+      "scale": { "key": "scale", "title": "Scale", "label": "ndb-scale", "all": {}, "open": {} }
+    }
+  },
+  "trends": { "series": [], "rateSeries": [] },
+  "components": { },
+  "carry": { }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Team has no releases in `systemTestScaleConfig.teams` | Show configure message |
+| 403 | User lacks KPI view | Show access denied |
+| 500 | JIRA / internal failure | Show error + retry |
+
+**Caching**
+No — always live JIRA `searchCount`.
+
+---
+
+### POST /api/jira/system-test-scale/refresh
+
+**Purpose**: Explicit pull — same live re-count as GET (user-triggered Refresh).
+
+**Auth**: required · KPI view authorization
+
+**Request**
+- Method + path: `POST /api/jira/system-test-scale/refresh`
+- Body params:
+  - `teamId` (string, optional)
+  - `currentRelease` (string, optional)
+  - `compareRelease` (string, optional)
+- Required headers: JIRA token
+
+**Server flow**
+Route handler → `getDashboard` → respond
+
+**Response shape**
+Same as GET `/api/jira/system-test-scale`.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | Team not configured for System-Test | Show configure message |
+| 403 | No KPI view | Show access denied |
+| 500 | Refresh failed | Show error + retry |
+
+**Caching**
+No.
+
+---
+
+## KPI Pulse (shared kit — service contract)
+
+**Not a standalone route.** Page APIs (OnCalls, System-Test Scale, future KPI pages) call `kpiPulseService.buildPulse` and attach the result as `pulse` on their response. UI mounts `client/src/components/KpiPulse/KpiPulseBand`.
+
+**Purpose**: Reusable last-2-Nutanix-Q analytics — exec heroes, weekly created vs resolved, MTTR, status dwell, product-impact shell. Only `baseJql` changes per page.
+
+**Service**: `server/services/kpiPulseService.js` → `buildPulse({ token, baseJql, quarterCount?, agedOpenDays?, sampleCap?, optionalHeroes?, productImpact? })`
+
+**Quarters**: `server/utils/nutanixQuarters.js` — Q1 starts 01-Aug; default window = last 2 quarters through today.
+
+**Skill / rule**: `agent-pack/skills/kpi-pulse-analytics/SKILL.md`, `.cursor/rules/kpi-pulse-analytics.mdc`
+
+**Response shape (`pulse`)**
+```json
+{
+  "window": { "start": "2026-05-01", "end": "2026-10-16", "label": "Last 2 Nutanix Qs (…)", "quarters": ["Q4 FY25", "Q1 FY26"] },
+  "story": "Falling behind — created 148 vs resolved 136 (net -12). Typical wait 4.2d. …",
+  "seriesCaption": "Created ahead of resolved in 12 of 24 weeks.",
+  "heroes": {
+    "openNow": { "count": 12, "jql": "…" },
+    "createdWindow": { "count": 148, "jql": "…" },
+    "resolvedWindow": { "count": 136, "jql": "…" },
+    "netBurn": { "count": -12, "createdCount": 148, "resolvedCount": 136, "jql": null, "label": "-12" },
+    "mttrMedian": { "count": 4.2, "unit": "days", "jql": "…", "sampleSize": 80, "truncated": false },
+    "mttrP90": { "count": 18, "unit": "days", "jql": "…", "sampleSize": 80, "truncated": false },
+    "agedOpen": { "count": 9, "jql": "…" },
+    "topDwellStatus": { "status": "Waiting for customer", "count": 6, "unit": "days", "jql": null }
+  },
+  "series": [{ "weekStart": "2026-05-04", "created": { "count": 3, "jql": "…" }, "resolved": { "count": 2, "jql": "…" } }],
+  "mttr": { "medianDays": 4.2, "p90Days": 18, "sampleSize": 80, "truncated": false, "jql": "…" },
+  "statusDwell": [{ "status": "Waiting for customer", "medianDays": 6, "sampleSize": 20, "jql": null }],
+  "productImpact": { "summary": null, "generatedAt": null, "citations": [] },
+  "asOf": "2026-10-16T12:00:00.000Z",
+  "baseJql": "(…)"
+}
+```
+
+**Caching**: No durable cache — computed on each page dashboard load / Pull.
+
+**JQL**: Composes date/status clauses onto the caller’s `baseJql` only; does not edit `kpiConfig` baseQuery strings.
+
+---
+
+## OnCalls
+
+### GET /api/jira/oncalls
+
+**Purpose**: Live OnCalls quantitative dashboard — KPI Pulse (`buildPulse` on OnCalls KPI `baseQuery`), path/portfolio chips, escalation to CFD/CFI, assignee/priority mix, deterministic RAG.
+
+**Auth**: required · KPI view authorization (`kpi_view`)
+
+**Request**
+- Method + path: `GET /api/jira/oncalls`
+- Query params:
+  - `teamId` (string, optional) — team board id (e.g. `ndb`)
+- Required headers: JIRA token (middleware)
+
+**Server flow**
+Route handler → `checkKpiViewAuthorization` → `oncallService.getDashboard` → counts + stacks + `buildPulse({ baseJql: baseScopeJql })` (soft-fail) + escalation → respond
+
+**Response shape**
+```json
+{
+  "success": true,
+  "teamId": "ndb",
+  "onCallProject": "OnCall",
+  "baseScopeJql": "filter = NDB-OnCalls",
+  "asOf": "2026-10-16T09:00:00.000Z",
+  "pulse": { "window": {}, "story": "...", "heroes": {}, "series": [] },
+  "hero": { "open": { "count": 12, "jql": "..." } },
+  "paths": { "withTechHelp": { "count": 4, "jql": "key in (...)" } },
+  "escalation": { "cells": {}, "rows": [] },
+  "rag": { "level": "YELLOW", "why": "..." },
+  "stacksPreview": [],
+  "assigneeMix": [],
+  "priorityMix": []
+}
+```
+
+`pulse` follows `kpiPulseService.buildPulse` (see KPI Pulse kit section). If pulse fails, `pulse` is `null` and `errors.pulse` is set; path/escalation still return.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 403 | No KPI view | Show access denied |
+| 500 | Dashboard failed | Show error + retry |
+
+**Caching**
+No — live on load / Pull.
+
+### POST /api/jira/oncalls/refresh
+
+**Purpose**: Explicit Pull from JIRA — same payload as GET.
+
+**Auth**: required · `kpi_view`
+
+**Request**
+- Method + path: `POST /api/jira/oncalls/refresh`
+- Body: `{ "teamId": "ndb" }` (optional)
+
+**Response shape**
+Same as GET `/api/jira/oncalls`.
+
+**Caching**
+No.

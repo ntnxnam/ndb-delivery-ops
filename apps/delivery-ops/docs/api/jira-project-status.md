@@ -32,6 +32,12 @@ Each row (`functional`/`system`) has `{ manual, automation }`, each cell
 rows currently share source metrics (clone) until TCMS `test_category`
 filter lands — see `../tcms-rows-followup.md`.
 
+**TCMS metrics source**: time-filtered (Last 4 weeks) windows query
+`/api/v1/all_test_cases/aggregate/metrics` with `time_filter=four_weeks` and
+`target={milestone}-qcow2` (Overall windows use `time_filter=all`). Legacy
+`/api/v1/milestone_all_test_cases/aggregate/metrics` + `target_milestone`
+callers must migrate; see `../tcms-rows-followup.md` (Endpoint migration).
+
 **Caching**: TCMS cache per `featKey:milestone` (TTL per simpleCache).
 **Error responses**: TCMS down → tables null, `tcmsQueryUrl` still set.
 

@@ -11,17 +11,17 @@ is committed in any `server/routes/` file), its contract must be documented.
 ## Where the doc lives
 
 ```
-apps/delivery-ops/docs/api/
+Documentation/api/
   {resource}.md          ← one file per route file / resource domain
 ```
 
 Examples:
 ```
-docs/api/release-dataset.md
-docs/api/jira.md
-docs/api/email.md
-docs/api/admin.md
-docs/api/component.md
+Documentation/api/release-dataset.md
+Documentation/api/jira.md
+Documentation/api/email.md
+Documentation/api/admin.md
+Documentation/api/component.md
 ```
 
 Group endpoints by the route file they live in. Do not create one file per endpoint.
@@ -62,7 +62,7 @@ Yes/No — TTL and invalidation trigger if yes.
 ## Hard rules
 
 1. **No new route line without a doc entry.** If you add `router.get('/foo', ...)`, the
-   corresponding entry in `docs/api/{resource}.md` must exist in the same commit.
+   corresponding entry in `Documentation/api/{resource}.md` must exist in the same commit.
 
 2. **No undocumented query params.** Every `req.query.*` read must appear in the doc.
 

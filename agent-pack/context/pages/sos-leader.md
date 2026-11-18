@@ -22,7 +22,7 @@ email to `sosEmailConfig`.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → SosLeaderSummary-requirements.md, SosLeaderSummary-data-layer.md
+`Documentation/pages/` → SosLeaderSummary-requirements.md, SosLeaderSummary-data-layer.md
 
 ## Agent notes
 

@@ -19,7 +19,7 @@ System-test bug scale, regressions, release trends.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → SystemTestScale-requirements.md, SystemTestScale-data-layer.md
+`Documentation/pages/` → SystemTestScale-requirements.md, SystemTestScale-data-layer.md
 
 ## Agent notes
 

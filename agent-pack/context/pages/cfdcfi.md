@@ -18,8 +18,8 @@ KPI Pulse (last 2 Nutanix Qs) and an open-ticket drill.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → CfdCfi-requirements.md, CfdCfi-data-layer.md  
-`apps/delivery-ops/docs/api/cfdcfi.md`  
+`Documentation/pages/` → CfdCfi-requirements.md, CfdCfi-data-layer.md  
+`Documentation/api/cfdcfi.md`  
 Skill: `kpi-pulse-analytics` · Rule: `kpi-config-driven`
 
 ## Agent notes

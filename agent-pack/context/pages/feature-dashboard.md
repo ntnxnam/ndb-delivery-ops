@@ -19,7 +19,7 @@ Feature payload, gates, reconciliation view.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → FeatureDashboard-requirements.md, FeatureDashboard-data-layer.md
+`Documentation/pages/` → FeatureDashboard-requirements.md, FeatureDashboard-data-layer.md
 
 ## Agent notes
 

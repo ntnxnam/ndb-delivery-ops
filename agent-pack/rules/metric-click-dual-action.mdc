@@ -2,7 +2,7 @@
 description: Dual-click metrics — count opens in-app drill; Open in JIRA opens exact JQL (all delivery-ops pages)
 globs:
   - apps/delivery-ops/client/src/**/*
-  - apps/delivery-ops/docs/pages/**/*
+  - Documentation/pages/**/*
 alwaysApply: true
 ---
 

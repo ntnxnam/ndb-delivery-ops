@@ -48,7 +48,9 @@ feature.
   - Cells: QI / Run / Passed / Failed / Rate
 - **Last 4 weeks** window reflects runs in the most recent 4-week window;
   shows "Not Set" when there are no runs in that window (it does not fall
-  back to Overall).
+  back to Overall). Time-filtered runs now come from the corrected TCMS
+  metrics endpoint (`/api/v1/all_test_cases/aggregate/metrics` with
+  `time_filter=four_weeks`).
 - **Caveat:** Functional and System rows currently share the same source
   metrics until TCMS exposes a `test_category` filter. Do not read
   distinctness into the two rows yet. See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).

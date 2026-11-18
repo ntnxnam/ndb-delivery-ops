@@ -58,7 +58,7 @@ See `../prompts/INDEX.md`.
 
 ## 5. Engineering contracts (not duplicated here)
 
-- Page requirements / data layer: `apps/delivery-ops/docs/pages/`
-- API contracts: `apps/delivery-ops/docs/api/`
+- Page requirements / data layer: `Documentation/pages/`
+- API contracts: `Documentation/api/`
 - AI LLD: `apps/delivery-ops/docs/LLD-ai-layer.md`
 - Architecture: repo root `ARCHITECTURE.md`, `DECISIONS.md`, `FEATURE_CATALOG.md`

@@ -21,14 +21,17 @@
     "metrics": {
       "path": "/api/v1/all_test_cases/aggregate/metrics",
       "method": "GET",
-      "description": "Per-FEAT pass/fail rollup (from your HAR drill-down)",
+      "description": "Per-FEAT pass/fail rollup (from your HAR drill-down). time_filter: all | four_weeks. target: {milestone}-qcow2.",
+      "supportedTimeFilters": ["all", "four_weeks"],
       "query": {
-        "aggregation_field": "target_package_type",
-        "time_filter": "all",
+        "aggregation_field": "test_case.metadata.requirements",
+        "time_filter": "all | four_weeks",
         "target": "{milestone}-qcow2",
         "feat_type": "all",
         "filters": "{\"$and\":[{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}"
-      }
+      },
+      "supportedTimeFilters": ["all", "four_weeks"],
+      "response": "{ total, data:[{ _id, total, run, passed, failed, manual_run, manual_passed, manual_failed, automation_run, automation_passed, automation_failed, average_total_op_success_percentage, average_run_op_success_percentage, average_manual_op_success_percentage, average_automation_op_success_percentage }], success }"
     },
     "bugTypeMetrics": {
       "path": "/api/v1/all_test_cases/aggregate/bug_type_metrics",
@@ -43,7 +46,7 @@
       "body": "[{\"$match\":{\"$and\":[{\"target_milestone\":\"{milestone}\"},{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}}]",
       "totalPath": "/api-readonly/v1/milestone_all_test_cases/aggregate/total",
       "supportedMilestones": { "release": "{milestone}", "masterForNDB": "NDB-master" },
-      "supportedTimeFilters": ["all", "Last 4 Week"]
+      "supportedTimeFilters": ["all", "four_weeks"]
     },
     "testResults": {
       "path": "/api/v1/test_results",
@@ -75,6 +78,7 @@
     "1. POST {baseUrl}{auth.endpoint} -> { token, token_type, expiry } (refresh JWT; cache until expiry-5m)",
     "2. For each FEAT key in release: GET {baseUrl}{endpoints.qualityIndex.path}?milestone={milestone}&feats={featKey} [+ repeat with milestone=master] (parallel, max concurrency=5)",
     "3. Fallback if QI null: POST {baseUrl}{endpoints.milestoneAggregate.path} and {endpoints.milestoneAggregate.totalPath} with body [{\"$match\":{\"$and\":[{\"target_milestone\":\"{milestone}\"},{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}}] -> counts",
+    "3b. Time-windowed (Last 4 weeks): GET {baseUrl}{endpoints.metrics.path}?aggregation_field=test_case.metadata.requirements&time_filter=four_weeks&target={milestone}-qcow2&feat_type=all&filters={...} -> run/passed/failed for last 4 weeks only.",
     "4. Assemble { qi, overallQI, featureQI, teams/components, date, master, branch } + build uiLink template -> attach as item.tcmsQI + item.tcmsQueryUrl",
     "5. (On drill-down) same milestone+requirements POST -> paginated test-cases"
   ]

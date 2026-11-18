@@ -19,7 +19,7 @@ Add/edit teams, RBAC surfaces.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → Admin-requirements.md, Admin-data-layer.md
+`Documentation/pages/` → Admin-requirements.md, Admin-data-layer.md
 
 ## Agent notes
 

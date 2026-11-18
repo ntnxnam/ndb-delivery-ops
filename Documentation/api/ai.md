@@ -1,0 +1,742 @@
+# AI Endpoints — `/api/ai`
+
+Route file: `apps/delivery-ops/server/routes/ai.js`
+
+---
+
+### POST /api/ai/chat
+
+**Purpose**: Conversational release Q&A. Perceive (cached snapshot) then run the portable agent runtime (pack bootstrap + tool loop + memory + provenance). Same LLM transport as exec/release summaries (`aiConnector.completeChat`).
+
+> Additive in 2026-08-26 (D42): `sessionId`, `provenanceId`, `pendingApprovals`, `memoryMeta`. Optional body field `sessionId`. Mutate tools are HITL-queued and never executed while D26 is open.
+
+**Auth**: Required (JIRA token in `Authorization: Bearer <token>` header)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `message` | string | yes | User chat prompt |
+  | `history` | array | no | Prior turns as `{ role, content }`; only `user` and `assistant` roles are accepted |
+  | `release` | string | no | Default focus release if prompt does not explicitly name one |
+  | `productId` | string | no | Product namespace for dataset cache; default `ndb` |
+  | `audience` | string | no | Presenter lens for the orchestrator session; default `tpm` |
+  | `sessionId` | string | no | Client chat session key; server sanitizes and persists memory against it |
+  | `availableReleases` | string[] | no | Client-supplied release list to improve intent extraction |
+  | `knownTeams` | string[] | no | Client-supplied team/component names to improve intent extraction |
+
+**Server flow**
+`POST /api/ai/chat`
+→ `chatIntentRouter.extractScope`
+→ `chatSnapshotBuilder.buildSnapshot` (live per-release fetch or empty snapshot + gate config + optional release intelligence)
+→ load session/user/org memory
+→ `loadAgentPack()` + `runAgentTurn` (`shared/agentRuntime`)
+→ pack tools (`list_skills`, `read_skill`, `read_specialist`) and host tools (`get_release_snapshot`, `get_release_health`, `remember_correction`, `propose_jira_write`)
+→ `read`/`draft` execute; `mutate` HITL-queued (D26 open — no JIRA write)
+→ append provenance JSONL
+→ `aiConnector.completeChat`
+→ response
+
+**Response shape**
+```json
+{
+  "reply": "- NDB-2.12 has 3 open P0/P1 items [source: releaseContext.NDB-2.12.summary.topP0P1Open]",
+  "scope": {
+    "releases": ["NDB-2.12"],
+    "teams": [],
+    "ticketKeys": [],
+    "sprints": [],
+    "intent": "single_release",
+    "assumedFocus": false
+  },
+  "snapshotMeta": {
+    "generatedAt": "2026-06-29T15:03:00.000Z",
+    "releaseCount": 1,
+    "validTicketKeyCount": 1024
+  },
+  "trace": [
+    { "tool": "get_release_health", "toolClass": "read", "ok": true, "detail": "ok" }
+  ],
+  "runtime": "agent",
+  "sessionId": "s_1724_ab12",
+  "provenanceId": "3f2c9e0a-…",
+  "pendingApprovals": [],
+  "memoryMeta": { "sessionEntities": 1, "userCorrections": 0 }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `message` missing/empty | Fix request payload |
+| 502 | NAI call failed or snapshot pipeline failed | Show retry affordance and preserve unsent prompt |
+
+**Caching**
+- Session/user/org memory and provenance JSONL under `AGENT_RUNTIME_DIR` (default `.cache/agent-runtime`).
+- Snapshot is rebuilt per turn from on-disk release cache (`shared/.cache/release-dataset`) and gate config.
+
+---
+
+### GET /api/ai/approvals
+
+**Purpose**: List HITL mutate proposals for the current user (Wave 4 inbox).
+
+**Auth**: required
+
+**Request**
+- Method + path: `GET /api/ai/approvals`
+- Query params:
+  - `sessionId` (string, optional) — filter to one chat session
+  - `status` (string, optional) — `pending` | `rejected` | `blocked_d26`
+- Body: none
+- Required headers: `Authorization: Bearer <jira-pat>`
+
+**Server flow**
+`routes/ai.js` → `chatService.listApprovals` → `FileHitlInbox.list`
+
+**Response shape**
+```json
+{ "approvals": [{ "id": "…", "status": "pending", "tool": "propose_jira_write", "args": {}, "requestedBy": "alice" }] }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 500 | Store read failed | Retry |
+
+**Caching**
+No — reads the HITL JSON file.
+
+---
+
+### POST /api/ai/approvals/:id
+
+**Purpose**: Approve or reject a queued mutate. Approve records `blocked_d26` and **does not write to JIRA** while D26 is open.
+
+**Auth**: required (same user as `requestedBy`)
+
+**Request**
+- Method + path: `POST /api/ai/approvals/:id`
+- Query params: none
+- Body params: `decision` (`approve` | `reject`)
+- Required headers: `Authorization: Bearer <jira-pat>`
+
+**Server flow**
+`routes/ai.js` → `chatService.decideApproval` → `FileHitlInbox.decide` (no DateMover / JIRA call)
+
+**Response shape**
+```json
+{ "approval": { "id": "…", "status": "blocked_d26" }, "executed": false }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 400 | Missing/invalid `decision` | Fix body |
+| 403 | Caller is not the requester, or auth username is missing | Stop |
+| 404 | Unknown id | Refresh inbox |
+
+**Caching**
+No.
+
+---
+
+### POST /api/ai/exec-summary
+
+**Purpose**: Generate a phase-aware AI executive summary for a single JIRA feature/initiative using NAI.
+
+**Auth**: Required (JIRA token in `Authorization: Bearer <token>` header)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `item` | object | yes | Full raw JIRA item including `customfield_*` fields |
+  | `ganttConfig` | object | no | Per-version gate marker dates from `/api/config/release-versions` |
+  | `breakdownData` | object | no | Task breakdown from `taskBreakdownService` |
+  | `release` | string | no | e.g. `"NDB-2.11"` |
+  | `releaseContext` | object | no | Aggregate release health data from `/api/jira/executive-summary-unified` |
+
+**Server flow**
+`POST /api/ai/exec-summary` → `fetchTicketNarrative` (JIRA) → `deriveSignals` (`shared/src/domain/execSummarySignals.cjs`) → `generateExecSummary` (NAI) → response
+
+**Response shape**
+```json
+{
+  "summary": "[2026-06-16] GREEN: Commit Gate confirmed on schedule...",
+  "phase": "CG Met",
+  "signals": { "...": "..." }
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `item.key` missing | Fix the request body |
+| 502 | NAI returned empty or failed | Show retry button; log `naiDebug` |
+| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` | Retry; raise timeout if frequent |
+
+**Caching**: No — summaries are generated on demand and written to JIRA via the PUT endpoint.
+
+---
+
+### PUT /api/ai/exec-summary/:key
+
+**Purpose**: Write a generated executive summary back to the JIRA custom field `customfield_38460`.
+
+**Auth**: Required (JIRA token)
+
+**Request**
+- Method: PUT
+- Path param: `key` — JIRA issue key (e.g. `FEAT-12345`)
+- Body:
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `summary` | string | yes | Full stamped summary string, e.g. `"[2026-06-16] GREEN: ..."` |
+
+**Server flow**
+`PUT /api/ai/exec-summary/:key` → `PUT JIRA_API_V2.ISSUE(key)` with `customfield_38460`
+
+**Response shape**
+```json
+{ "success": true, "key": "FEAT-12345", "field": "customfield_38460" }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | Missing key or summary | Fix request |
+| 401 | No JIRA token | Re-authenticate |
+| 502 | JIRA write rejected | Show error; log JIRA status |
+
+**Caching**: No.
+
+---
+
+### POST /api/ai/page-briefing
+
+**Purpose**: **"What ails the team"** — exec-audience page briefing. Builds multiple facet intelligence packages, calls NAI **in parallel per facet**, **stitches** into one VP/exec story, then **compresses** again when the stitch exceeds the char budget (~1600).
+
+**Auth**: Required (JIRA Bearer — used for release/oncall JIRA fetches)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `surface` | string | yes | `release` \| `oncall` \| `kpi` \| `feature` |
+  | `version` | string | for release | e.g. `NDB-2.12` |
+  | `teamId` | string | for oncall/kpi | Team id |
+  | `featureKey` | string | for feature | Feature/Initiative key |
+  | `snapshot` | object | for kpi/feature/oncall | Client-built metrics; for oncall = dashboard payload (same asOf as tiles) |
+
+**Server flow**
+`POST /api/ai/page-briefing`
+→ `pageAiBriefingService.buildPageBriefing`
+  → facet packages (deterministic)
+  → parallel `generatePageFacetBrief` (NAI)
+  → `generatePageStitchBrief` (NAI)
+  → optional `generatePageCompressBrief` (NAI)
+→ response
+
+**Response shape**
+```json
+{
+  "summary": "## What ails the team: YELLOW\n...\n## Where it hurts\n...\n## Chase this week\n...",
+  "facets": [{ "id": "blockers", "title": "…", "text": "…" }],
+  "meta": {
+    "surface": "release",
+    "facetCount": 3,
+    "naiCalls": 4,
+    "compressed": false,
+    "durationMs": 12000,
+    "validKeyCount": 8
+  },
+  "intelligence": { "version": "NDB-2.12", "bucketCounts": {} },
+  "generatedAt": "2026-10-17T00:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | Missing `surface` / required fields / `AI_API_KEY` | Fix request or admin config |
+| 502 / 504 | NAI or JIRA failure / timeout | Retry |
+
+**Caching**: No.
+
+**Client gate**: Auto-invoked only when user has `exec_audience` (`execAudienceUsers` in `allowedUsers.json`). Non-exec users keep manual Generate where it already exists.
+
+---
+
+### POST /api/ai/release-summary
+
+**Purpose**: Generate a full release-level AI briefing — overall health verdict, top blockers with owners, and a 7-day action list — by running `deriveSignals` across every committed feature and calling NAI.
+
+Unlike the VP report (which counts self-reported JIRA risk indicators), this endpoint uses the objective release calendar: it computes which features have **not confirmed clearance** of the most recently elapsed release-level gate (`latestPassedMarker`), groups them into structured buckets (gate-lagging, blocked, compliance, dark, watching, clear), and provides those buckets directly to the LLM.
+
+**Auth**: Required (JIRA token — used for JIRA search calls inside the service)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `version` | string | yes | Release version, e.g. `"NDB-2.12"` |
+
+**Server flow**
+`POST /api/ai/release-summary`
+→ `buildReleaseIntelligence(version, jiraToken)`
+  → `buildCommitItemsJQL` → JIRA search (all committed features)
+  → P0 bugs count query (JIRA)
+  → `deriveSignals` (per feature, CPU-only)
+  → bucket aggregation
+  → `computeReleaseHealthVerdict` (shared)
+→ `generateReleaseSummary(intelligence)` (NAI via `aiConnector`)
+→ response
+
+**Response shape**
+```json
+{
+  "summary": "## Release Health: RED\n...\n## Top Blockers\n...\n## 7-Day Action List\n...",
+  "intelligence": {
+    "version": "NDB-2.12",
+    "totalFeatures": 28,
+    "p0BugsCount": 3,
+    "phaseDist": { "CG Met": 12, "CC Met": 8, "Coding (late)": 5, "PG Met": 3 },
+    "selfReportedRisk": { "red": 4, "yellow": 9, "green": 12, "notSet": 3 },
+    "health": { "verdict": "RED", "rule": 1, "reason": "3 open P0 blocker(s)" },
+    "dateMetrics": { "currentCGDate": "2026-06-03", "currentPGDate": "2026-07-15", "daysFromCutoff": 29 },
+    "bucketCounts": {
+      "gate-lagging": 6,
+      "blocked": 2,
+      "compliance": 3,
+      "dark": 4,
+      "watching": 11,
+      "clear": 3
+    },
+    "generatedAt": "2026-06-16T16:30:00.000Z"
+  },
+  "generatedAt": "2026-06-16T16:30:05.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `version` missing | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env var |
+| 502 | JIRA search failed or NAI returned empty | Show retry button |
+
+**Caching**: No — generated on demand. Typical latency: 15–30 s (JIRA fetch + per-feature signals + NAI call).
+
+**Bucket definitions**:
+| Bucket | Meaning |
+|---|---|
+| `gate-lagging` | Feature has not confirmed clearance of the most recently elapsed release-level gate |
+| `blocked` | Feature has a P0/P1 open blocker or other cited blocker in `criticalRisks` |
+| `compliance` | Feature has an unfiled security or legal review ticket near or past CG |
+| `dark` | Status update is ≥14 days stale |
+| `watching` | On track, no critical signals |
+| `clear` | At PG Met or Shipped |
+
+---
+
+### POST /api/ai/weekly-skim
+
+**Purpose**: Multi-release ADHD email skim — outstanding Open tile + P0 / must-fix counts + serial NAI release summaries assembled into THIS WEEK prose, table rows, and ≤3 chase bullets.
+
+**Auth**: Required (JIRA token — outstanding + release intelligence + NAI)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `releases` | string[] | yes | Release names, e.g. `["NDB-2.11","NDB-2.10"]` |
+  | `productId` | string | no | Product id for outstanding tiles; default `ndb` |
+
+**Server flow**
+`POST /api/ai/weekly-skim`
+→ for each release **serially**:
+  → `computeOutstandingCounts` (shared outstandingService — existing JQL)
+  → `buildReleaseIntelligence` → `generateReleaseSummary` (one NAI call)
+→ assemble `thisWeek` + `rows` + `chase`
+
+**Response shape**
+```json
+{
+  "generatedAt": "ISO",
+  "thisWeek": "…",
+  "chase": [{ "text": "…", "release": "NDB-2.11" }],
+  "rows": [
+    {
+      "release": "NDB-2.11",
+      "ga": "2026-03-26",
+      "rag": "YELLOW",
+      "open": { "count": 142, "jql": "…" },
+      "p0": { "count": 2, "jql": "…" },
+      "mustFix": { "count": 5, "jql": "…" },
+      "pulse": "…",
+      "summary": "…",
+      "error": null
+    }
+  ]
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `releases` missing / AI key missing | Fix request / admin |
+| 502 / 504 | NAI or JIRA failure for whole request | Retry |
+
+**Caching**: No. Latency ≈ (2s outstanding + 15–30s NAI) × N releases.
+
+---
+
+### POST /api/ai/sos-tier-summary
+
+**Purpose**: Team-exec SoS work-tier briefing (FEAT / Standalone / Direct) from a tiny client-assembled packet — RAG, outstanding-by-type, gates, ≤8 CRITICAL_ITEMS, and CALL_OUTS (Risk not set, stale status updates ≥14d, date moves in last 7d with exact keys). No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-tier-summary`
+- Body:
+  - `release` (string, required)
+  - `tier` (`feat` | `standalone` | `direct`, required)
+  - `ragCounts` `{ Red, Yellow, Green, NotSet }`
+  - `itemCount` number
+  - `outstandingByType` map of open counts by issue-type group
+  - `gateDates` `{ cgDate, pgDate, daysToCommitGate, daysToPromotionGate }`
+  - `criticalItems` `[{ key, rag, tldr, summary }]` — max ~8
+  - `callouts` optional hygiene packet:
+    - `riskNotSet` `{ count, keys[] }`
+    - `staleStatusUpdates` `{ count, keys[], thresholdDays }`
+    - `dateMovesLast7d` `[{ field, label, keys[] }]` e.g. FS/DS Done Date moved
+    - `pastGateLagging` `{ count, keys[], gate: { kind, label, iso, expectedStatus, daysAgo } }` — this release's most recently elapsed gate; status not cleared
+    - `datesPastNextGate` `{ count, keys[], gate: { kind, label, iso, daysUntil } }` — item CC/CG/PG dates after upcoming gate ("Keep an eye")
+    - `gateContext` `{ pastGate, nextGate }` snapshot of the release calendar
+  - `p0Count`, `mustFixCount` numbers
+  - `p0Keys`, `mustFixKeys` optional string arrays for VALID TICKET KEYS
+
+**Server flow**
+Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI (`SOS_TIER_SYSTEM_PROMPT`) → response
+
+**Response shape**
+```json
+{
+  "summary": "## FEAT Work — NDB-3.0\n🟡 TLDR: …\n⚠️ Call-outs:\n• Risk Indicator not set (2): ERA-1, ERA-2\n📋 Key Risks:\n• …\n✅ Next Owner Actions:\n• FEAT Manager — …",
+  "release": "NDB-3.0",
+  "tier": "feat",
+  "generatedAt": "2026-09-25T17:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `release` / `tier` missing or invalid | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / upstream failure | Retry that tier |
+| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` (default 120s) | Retry that tier; if frequent, raise timeout |
+
+**Caching**: No — on demand. One call per tier; client runs tiers sequentially per release.
+
+---
+
+### POST /api/ai/sos-overall-summary
+
+**Purpose**: Cross-release SoS overall brief for the SoS by Leader page from a client-assembled rollup packet. No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-overall-summary`
+- Body:
+  - `releases` `[{ version, itemCount, ragCounts, categoryCounts, gateDates }]`
+  - `validKeys` string[] (optional)
+  - `staleCount`, `notSetCount`, `p0Count`, `mustFixCount` numbers (optional)
+
+**Server flow**
+Route → `generateSosOverallSummary(payload)` → NAI (`SOS_OVERALL_SYSTEM_PROMPT`) → response
+
+**Response shape**
+```json
+{
+  "summary": "## Overall SoS\n🟡 TLDR: …",
+  "generatedAt": "2026-10-08T12:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / upstream failure | Retry |
+| 504 | NAI timeout | Retry |
+
+**Caching**: No — on demand.
+
+---
+
+### POST /api/ai/sos-leader-release-summary
+
+**Purpose**: Leader-scoped SoS brief for one eng leader × one release (Feature/Initiative slice). Client-assembled packet. No JIRA on the server.
+
+**Auth**: required (`validateJiraTokenMiddleware`) — token for auth only
+
+**Request**
+- Method + path: `POST /api/ai/sos-leader-release-summary`
+- Body:
+  - `release` (string, required)
+  - `leaderId`, `leaderName` (strings)
+  - `itemCount` number
+  - `ragCounts` `{ Red, Yellow, Green, NotSet }`
+  - `gateDates` `{ cgDate, pgDate }`
+  - `staleCount`, `notSetCount` numbers
+  - `items` `[{ key, summary, rag, status }]`
+  - `validKeys` string[] (optional; defaults to item keys)
+
+**Server flow**
+Route → `generateSosLeaderReleaseSummary(payload)` → empty-slice short-circuit OR NAI → response
+
+**Response shape**
+```json
+{
+  "summary": "## Anil — NDB-3.0\n🟡 TLDR: …",
+  "release": "NDB-3.0",
+  "leaderId": "anil",
+  "leaderName": "Anil",
+  "generatedAt": "2026-10-08T12:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `release` missing | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 / 504 | NAI failure / timeout | Retry that leader×release |
+
+**Caching**: No — on demand. Client queues one leader×release at a time.
+
+---
+
+### POST /api/ai/sprint-leadership-asks
+
+**Purpose**: Generate org-wide **Asks of leadership** for the Sprint Performance report using a **sprint-specific** NAI prompt (`SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT`). This is not the release briefing prompt — inputs are say/do, scope creep, QA Resolved queue, chronic carry-over keys, and sprint hygiene (not gate dates / P0 release blockers / feature buckets).
+
+Also invoked automatically at the end of **Regenerate from JIRA** (`sprintPerformanceReportService`); on NAI failure the report keeps rule-based asks (`asksSource: "rules"`).
+
+**Auth**: Required (JIRA token — auth only; no JIRA search in this handler)
+
+**Request**
+- Method + path: `POST /api/ai/sprint-leadership-asks`
+- Body (JSON) — either a compact intelligence packet or `{ model }` from `computeSprintPerformance`:
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `teamId` / `teamName` | string | no | Product team label for the prompt |
+  | `window` | string | no | e.g. `S34–S59` |
+  | `overall` | object | recommended | `sayDo`, `sayDoDevFinished`, `sayDoRecent`, trends, `scopeCreep`, `pendingQA`, `committed`, `carried`, `completion`, `rag`, `unmappedPct` |
+  | `devFinishedGap` | object | no | Org + per-team Completed vs Dev-finished (Resolved∪Closed) gap |
+  | `qaLag` | object | no | Still-waiting counts/ages, closed lag median/p90, `longestWaits[]` (keys → VALID TICKET KEYS) |
+  | `orgRankings` | object | no | `topLeaders` / `trailingLeaders` / `topManagers` / `trailingManagers` |
+  | `velocityStreams` | object | no | Dev / QA verification adj / Test for window + last trend slots |
+  | `highlights` / `lowlights` | string[] | no | Org-wide narrative lines |
+  | `decliningTeams` / `improvingTeams` / `scopeCreepTeams` | string[] | no | Team trend / creep lines |
+  | `chronic` | `{ key, summary, sprints, assignee, scrumTeam }[]` | no | Open chronic carry-overs |
+  | `hygiene` | object | no | `staleActive` / `startedEmpty` / `lateClosed` |
+  | `seedAsks` | `{ text, owner }[]` | no | Rule-based candidates to refine |
+  | `model` | object | alt | Full Sprint Performance model — server runs `buildSprintAsksIntelligence` |
+
+**Server flow**
+`POST /api/ai/sprint-leadership-asks`
+→ normalize body → `buildSprintAsksIntelligence(model)` if needed
+→ `generateSprintLeadershipAsks` (`SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` + user packet)
+→ parse `N. Ask: … \| Owner: …` lines
+→ response
+
+**Response shape**
+```json
+{
+  "asks": [
+    { "text": "Deep-dive with Team X on the say/do decline…", "owner": "Team EMs + TPM" }
+  ],
+  "asksSource": "ai",
+  "teamId": "ndb",
+  "teamName": "NDB",
+  "window": "S34–S59",
+  "generatedAt": "2026-10-08T09:15:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | Intelligence packet / model missing | Send packet or `{ model }` |
+| 400 | `AI_API_KEY` not configured | Admin must set env |
+| 502 | NAI empty / unparseable asks | Retry; report gen falls back to rules |
+| 504 | NAI timeout | Retry |
+
+**Caching**: No — on demand. Report generation embeds the result into the HTML once per regenerate.
+
+---
+
+### POST /api/ai/sos-leader-coaching
+
+**Purpose**: Per-eng-leader coaching Asks for SoS-by-Leader. Server builds a deterministic LEADER_PACKET (release gates/hygiene/blockers + sprint mix + breakdown outstanding) then calls NAI (`SOS_LEADER_COACHING_SYSTEM_PROMPT`). On NAI failure, returns rule-based Asks (`source: "rules"`). No JIRA search — auth only.
+
+**Auth**: Required (`validateJiraTokenMiddleware`)
+
+**Request**
+- Method + path: `POST /api/ai/sos-leader-coaching`
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `leaderId` | string | one of id/name | Leader id from org config |
+  | `leaderName` | string | one of id/name | Display name for prompt |
+  | `role` | string | no | e.g. `dev_director` |
+  | `items` | array | yes | Feature/Initiative SoS items for this leader |
+  | `gateDataByRelease` | object | no | `{ [version]: gateData }` |
+  | `breakdownDataMap` | object | no | Task breakdown by issue key |
+  | `checkpointHistory` | object | no | Date-move history by key |
+  | `expectedManagerNames` | string[] | no | For ownership-gap detection |
+
+**Server flow**
+Route → `sosLeaderCoachingService.generateLeaderCoaching` → packet builder → `generateSosLeaderCoaching` (or rule fallback) → response
+
+**Response shape**
+```json
+{
+  "asks": [
+    {
+      "ask": "Clear 2 open P0/must-fix item(s)…",
+      "why": "2 keys e.g. ERA-1, ERA-2",
+      "owner": "Anil",
+      "urgency": "P0"
+    }
+  ],
+  "text": "## Asks for Anil\n\n1. Ask: …",
+  "packet": { "leaderId": "anil", "buckets": {}, "sprint": {} },
+  "validKeys": ["ERA-1", "ERA-2"],
+  "source": "ai",
+  "generatedAt": "2026-10-08T10:00:00.000Z",
+  "error": null
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `leaderId`/`leaderName` or `items` missing | Fix request |
+| 400 | `AI_API_KEY` not configured | Admin must set env (rules fallback still attempted inside service when NAI throws after config) |
+| 502 | Unexpected failure outside NAI path | Retry |
+
+**Caching**: No — on demand.
+
+
+---
+
+### POST /api/ai/oncall-blurbs
+
+**Purpose**: Lightweight per-OnCall “about” lines + status for path/escalation drill drawers. Narrative fetch first; optional batched NAI one-liners when available.
+
+**Auth**: Required (JIRA token)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `keys` | string[] | yes | OnCall issue keys (capped at 24) |
+  | `teamId` | string | no | Team id for oncall config |
+
+**Server flow**
+`POST /api/ai/oncall-blurbs`
+→ `oncallBlurbService.buildOncallBlurbs`
+  → `ticketNarrativeService.fetchTicketNarrativeBundle` per key
+  → deterministic about (description/summary) + stack blurb
+  → optional batched NAI JSON map key→sentence
+→ response
+
+**Response shape**
+```json
+{
+  "blurbs": {
+    "ONCALL-24955": {
+      "key": "ONCALL-24955",
+      "status": "In Progress",
+      "about": "Customer DB patch restore shows wrong profile version; waiting on eng path.",
+      "comments": [
+        { "author": "pramod.kulkarni", "ageDays": 1, "created": "…", "body": "Restored DB profile version mismatch…" }
+      ],
+      "stack": "[ONCALL-24955] …",
+      "dwellDays": 6,
+      "source": "nai"
+    }
+  },
+  "source": "narrative+nai",
+  "asOf": "2026-10-16T17:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | missing `keys` | Fix request |
+| 502 / 504 | NAI failure after narrative | Show narrative-only if partial; else retry |
+
+**Caching**: Narrative bundles 5 min per key (existing).
+
+---
+
+### POST /api/ai/oncall-summary
+
+**Purpose**: Generate an OnCall portfolio AI briefing (health, interrupt/KTLO load, customer impact, chase list) from deterministic stack graphs (OnCall → TechHelp → eng fix) with status dwell and comments.
+
+**Auth**: Required (JIRA token)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `teamId` | string | no | Team id (default from oncallConfig) |
+  | `dashboard` | object | no | Current OnCalls dashboard payload; when present and teamId matches, skips a second `getDashboard` so AI numbers match on-screen tiles |
+
+**Server flow**
+`POST /api/ai/oncall-summary`
+→ `oncallAiSummaryService.buildIntelligence({ teamId, dashboard? })`
+  → use `dashboard` snapshot when teamId matches; else `oncallService.getDashboard`
+  → `ticketNarrativeService.fetchTicketNarrativeBundle` (top seeds)
+→ `generateOncallSummary(intelligence)` (NAI)
+→ response
+
+**Response shape**
+```json
+{
+  "summary": "## OnCall Health: YELLOW\n...",
+  "intelligence": {
+    "teamId": "ndb",
+    "hero": {},
+    "paths": {},
+    "rag": { "level": "YELLOW", "why": "..." },
+    "health": { "verdict": "YELLOW", "reason": "..." },
+    "stacks": [],
+    "validKeys": ["ONCALL-1"]
+  },
+  "generatedAt": "2026-10-16T09:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `AI_API_KEY` not configured | Show config error |
+| 502 / 504 | NAI failure / timeout | Retry; quantitative page still works |
+
+**Caching**: Narrative bundles 5 min per key; briefing itself on demand.

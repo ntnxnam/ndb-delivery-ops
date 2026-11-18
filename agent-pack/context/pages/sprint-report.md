@@ -19,7 +19,7 @@ Sprint reporting and metrics.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → SprintReport-requirements.md, SprintReport-data-layer.md
+`Documentation/pages/` → SprintReport-requirements.md, SprintReport-data-layer.md
 
 ## Agent notes
 

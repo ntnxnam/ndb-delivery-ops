@@ -45,8 +45,8 @@ None dedicated. Skill: `dependency-walk` (ticket walk; UI uses release-level Q1�
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → DependencyView-requirements.md, DependencyView-data-layer.md  
-`apps/delivery-ops/docs/api/dependency.md`
+`Documentation/pages/` → DependencyView-requirements.md, DependencyView-data-layer.md  
+`Documentation/api/dependency.md`
 
 ## Agent notes
 

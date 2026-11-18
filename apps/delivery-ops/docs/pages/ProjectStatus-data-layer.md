@@ -66,6 +66,9 @@ deprecated alias `releaseLast3Weeks`/`masterLast3Weeks`. No `overall` key is
 emitted; legacy `overall` data falls back to the `system` row in renderers.
 Functional/System rows currently share source metrics (clone) until TCMS
 exposes a `test_category` filter — see `../tcms-rows-followup.md`.
+Time-filtered (Last 4 weeks) windows use `/api/v1/all_test_cases/aggregate/metrics`
+(`time_filter=four_weeks`, `target={milestone}-qcow2`) and do not fall back to
+Overall.
 
 **Client-side filtering**: `ReleaseVersionFilterBar` + `applyFilters` narrow the loaded items in memory (no re-fetch). Filters: Risk, Status, Assignee, **Assignee Mgr**, Status-update staleness, plus a commit/long-term-funded Section toggle. `assigneeManager` also drives the manager CC on the release-versions email (`sendReleaseVersions.js`).
 

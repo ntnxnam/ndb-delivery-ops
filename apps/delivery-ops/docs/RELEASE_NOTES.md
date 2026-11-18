@@ -24,6 +24,11 @@ See [release-notes/NDB-2.11.md](./release-notes/NDB-2.11.md) when cut.
 - Caveat: Functional and System rows currently share the same source metrics
   (clone) until TCMS exposes a `test_category` filter — see
   `KNOWN_ISSUES.md` and `docs/tcms-rows-followup.md`.
+- TCMS time-filtered metrics corrected: "Last 4 weeks" now queries
+  `/api/v1/all_test_cases/aggregate/metrics` with `time_filter=four_weeks`
+  and `target={milestone}-qcow2`, returning genuinely filtered data instead
+  of erroring or echoing Overall. See `docs/tcms-rows-followup.md` (Endpoint
+  migration).
 
 ## Template for next release
 

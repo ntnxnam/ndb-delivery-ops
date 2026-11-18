@@ -19,7 +19,7 @@ Compose and send release status emails with charts, AI draft cells, gate dates.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → EmailSender-requirements.md, EmailSender-data-layer.md
+`Documentation/pages/` → EmailSender-requirements.md, EmailSender-data-layer.md
 
 ## Agent notes
 

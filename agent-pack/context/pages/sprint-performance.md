@@ -19,7 +19,7 @@ Say/do by team, leader, manager + leadership asks.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → SprintPerformance-requirements.md, SprintPerformance-data-layer.md
+`Documentation/pages/` → SprintPerformance-requirements.md, SprintPerformance-data-layer.md
 
 ## Agent notes
 

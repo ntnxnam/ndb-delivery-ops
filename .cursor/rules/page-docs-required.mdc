@@ -6,7 +6,7 @@ alwaysApply: true
 # New Page Documentation Gate
 
 Before a new page (route entry in `routeConfig.js`) ships, two docs **must** exist
-under `apps/delivery-ops/docs/pages/`:
+under `Documentation/pages/`:
 
 | Doc | Filename pattern | Required sections |
 |---|---|---|
@@ -28,7 +28,7 @@ session. Do not leave the gap wider than you found it.
 ## Doc location
 
 ```
-apps/delivery-ops/docs/pages/
+Documentation/pages/
   EmailSender-requirements.md
   EmailSender-data-layer.md
   ProjectStatus-requirements.md

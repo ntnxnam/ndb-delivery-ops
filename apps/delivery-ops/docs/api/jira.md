@@ -499,6 +499,8 @@ Per-KPI `error` strings are returned inline; a failing KPI does not fail the bat
 
 **Request** — Body: `{ release: string, productId: string }`
 
+> TCMS time-filtered (Last 4 weeks) metrics use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`); see `../tcms-rows-followup.md`.
+
 ---
 
 ## Executive Summary

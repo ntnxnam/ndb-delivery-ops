@@ -78,3 +78,4 @@ The Project Status page is the central release payload dashboard. It shows the f
 - [ ] After Fetch, the release dropdown contains only fixVersions that appear on tickets in the selected team's `baseFilter`
 - [ ] Switching away from NDB does not leave `NDB-2.11` selected
 - [ ] Quality column renders 4 TCMS tables (Release/Master × Overall/Last 4 weeks) with Functional/System rows and "Not Set" fallback when no data
+- [ ] Last 4 weeks table reflects genuinely time-filtered runs (no fallback to Overall) via `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`)
