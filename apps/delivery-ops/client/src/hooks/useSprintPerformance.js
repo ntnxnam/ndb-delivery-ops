@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { authenticatedGet, authenticatedPost } from '../utils/api';
+import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 
 const POLL_MS = 5000;
 const creds = () => ({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { authenticatedPost, authenticatedGet, authenticatedPut, authenticatedDelete } from '../utils/api';
+import { authenticatedPost, authenticatedGet, authenticatedPut, authenticatedDelete } from '../shared/services/apiService';
 import { useGenericEmailerConfig } from '../hooks/useGenericEmailerConfig';
 import { formatters } from '../shared/utils/formatters';
 import OutlookFallback from './shared/OutlookFallback';

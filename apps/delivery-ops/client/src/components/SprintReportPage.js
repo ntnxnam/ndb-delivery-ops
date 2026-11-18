@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { formatters } from '../shared/utils/formatters';
 import { useTeam } from '../contexts/TeamContext';
-import { authenticatedPost, authenticatedGet, getApiBase } from '../utils/api';
+import { authenticatedPost, authenticatedGet, getApiBase } from '../shared/services/apiService';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 

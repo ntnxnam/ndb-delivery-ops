@@ -16,7 +16,7 @@ import { useSosHistory } from '../hooks/useSosHistory';
 import { useSosTierSummary, SOS_TIERS } from '../hooks/useSosTierSummary';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
-import { authenticatedPost, authenticatedPut, authenticatedGet } from '../utils/api';
+import { authenticatedPost, authenticatedPut, authenticatedGet } from '../shared/services/apiService';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { formatRiskWithHistory } from '../utils/riskHistoryDisplay';
 import ExecSummaryCell from './ExecSummaryCell';

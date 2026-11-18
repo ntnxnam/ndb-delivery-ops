@@ -8,7 +8,7 @@
  * parent re-renders do not storm NAI.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 const creds = () => ({
   jiraToken: localStorage.getItem('jiraToken') || '',

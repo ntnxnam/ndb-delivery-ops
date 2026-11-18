@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PageLoading } from '../shared/components/PageLoading';
 import html2canvas from 'html2canvas';
 import { createPortal } from 'react-dom';
-import { authenticatedPost, authenticatedGet } from '../utils/api';
+import { authenticatedPost, authenticatedGet } from '../shared/services/apiService';
 import { generateTableHTMLForEmail } from '../utils/emailTableGenerator';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';

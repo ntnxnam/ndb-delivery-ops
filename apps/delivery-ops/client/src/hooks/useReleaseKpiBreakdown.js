@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 function cacheKey(releaseVersion, scopeKey) {
   if (scopeKey) return `${releaseVersion}::${scopeKey}`;

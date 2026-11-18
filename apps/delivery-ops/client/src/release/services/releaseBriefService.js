@@ -13,7 +13,7 @@ import {
   authenticatedGet,
   authenticatedPost,
   getApiBase,
-} from '../../utils/api';
+} from '../../shared/services/apiService';
 
 const API_BASE = getApiBase();
 

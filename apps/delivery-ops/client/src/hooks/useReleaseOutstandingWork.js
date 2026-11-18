@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { authenticatedGet, authenticatedPost, getApiBase } from '../utils/api';
+import { authenticatedGet, authenticatedPost, getApiBase } from '../shared/services/apiService';
 
 const API = () => `${getApiBase()}/api/release-outstanding-work`;
 

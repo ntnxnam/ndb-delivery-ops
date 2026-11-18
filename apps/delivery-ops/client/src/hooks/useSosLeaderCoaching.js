@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 
 export function useSosLeaderCoaching() {

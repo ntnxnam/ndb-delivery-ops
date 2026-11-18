@@ -1,5 +1,5 @@
 import React, { useState, useCallback, memo } from 'react';
-import { authenticatedPost, authenticatedPut } from '../utils/api';
+import { authenticatedPost, authenticatedPut } from '../shared/services/apiService';
 
 const STALE_DAYS = 7;
 const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;

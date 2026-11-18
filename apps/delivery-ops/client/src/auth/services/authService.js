@@ -1,4 +1,4 @@
-import { getApiBase } from '../../utils/api';
+import { getApiBase } from '../../shared/services/apiService';
 
 /**
  * Clean Authentication Service

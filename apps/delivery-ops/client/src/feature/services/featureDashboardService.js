@@ -1,4 +1,4 @@
-import { authenticatedGet, authenticatedPost, getApiBase } from '../../utils/api';
+import { authenticatedGet, authenticatedPost, getApiBase } from '../../shared/services/apiService';
 
 const API_BASE = getApiBase();
 

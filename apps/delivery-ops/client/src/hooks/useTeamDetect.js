@@ -6,7 +6,7 @@
  * (POST /api/admin/board-calendar). Detection only runs on explicit calls.
  */
 import { useState, useCallback, useRef } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import { adminAuth, adminErrorMessage } from './useTeamAdmin';
 
 export function useTeamDetect() {

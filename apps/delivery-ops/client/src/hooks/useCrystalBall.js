@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { authenticatedGet, authenticatedPost } from '../utils/api';
+import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 import { useTeam } from '../contexts/TeamContext';
 

@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCrystalBall } from '../../hooks/useCrystalBall';
-import * as api from '../../utils/api';
+import * as api from '../../shared/services/apiService';
 
 // Mock the API functions
 jest.mock('../../utils/api');

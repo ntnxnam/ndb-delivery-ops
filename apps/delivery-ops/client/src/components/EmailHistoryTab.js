@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { authenticatedGet, authenticatedDelete } from '../utils/api';
+import { authenticatedGet, authenticatedDelete } from '../shared/services/apiService';
 import { PageLoading } from '../shared/components/PageLoading';
 import { formatters } from '../shared/utils/formatters';
 

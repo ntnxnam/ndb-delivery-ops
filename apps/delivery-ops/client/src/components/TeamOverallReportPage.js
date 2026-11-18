@@ -12,7 +12,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import { useTeam } from '../contexts/TeamContext';
-import { authenticatedGet, getApiBase } from '../utils/api';
+import { authenticatedGet, getApiBase } from '../shared/services/apiService';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 

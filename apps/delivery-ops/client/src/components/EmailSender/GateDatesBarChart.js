@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   Cell,
 } from 'recharts';
-import { authenticatedGet } from '../../utils/api';
+import { authenticatedGet } from '../../shared/services/apiService';
 import {
   buildGateVsActualRows,
   maxCompareDays,

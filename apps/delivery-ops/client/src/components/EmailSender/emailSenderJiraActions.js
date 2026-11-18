@@ -1,4 +1,4 @@
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedPost } from '../../shared/services/apiService';
 import { fetchFeatureDashboard } from '../../feature/services/featureDashboardService';
 import { buildEpicsFromFeatureDashboard } from './buildEpicsFromFeatureDashboard';
 import { buildWeeklyUpdateSubject } from './emailSenderHelpers';

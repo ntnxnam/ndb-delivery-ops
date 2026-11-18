@@ -5,7 +5,7 @@
  * Returns { teams, loading, error, loadTeams, saveTeam, testTeam }.
  */
 import { useState, useCallback } from 'react';
-import { authenticatedGet, authenticatedPost, authenticatedPut } from '../utils/api';
+import { authenticatedGet, authenticatedPost, authenticatedPut } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 
 export function adminAuth() {

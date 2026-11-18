@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import { requestKey, resetGateForKey } from '../utils/requestGate';
 import { useTeam } from '../contexts/TeamContext';
 

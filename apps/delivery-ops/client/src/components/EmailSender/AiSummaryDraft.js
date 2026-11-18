@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { authenticatedGet, authenticatedPost } from '../../utils/api';
+import { authenticatedGet, authenticatedPost } from '../../shared/services/apiService';
 import { jiraDataToAiItem } from './gateDateUtils';
 
 const DATE_PREFIX_REGEX = /^\[\d{4}-\d{2}-\d{2}\]\s*/;

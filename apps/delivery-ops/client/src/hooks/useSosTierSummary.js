@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { authenticatedGet, authenticatedPost } from '../utils/api';
+import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 
 export const SOS_TIERS = ['feat', 'standalone', 'direct'];

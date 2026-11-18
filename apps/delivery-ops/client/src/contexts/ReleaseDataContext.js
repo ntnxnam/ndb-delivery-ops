@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { authenticatedGet } from '../utils/api';
+import { authenticatedGet } from '../shared/services/apiService';
 import { useSelectedRelease } from './SelectedReleaseContext';
 import { useTeam } from './TeamContext';
 

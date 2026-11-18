@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedPost } from '../../shared/services/apiService';
 import { generateFilterChain, releaseProjectsForTeam, isValidVersionName } from '../../utils/jqlTemplates';
 import { useTeam } from '../../contexts/TeamContext';
 import { STATUS, statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';

@@ -3,7 +3,7 @@
  * Centralized service for fetching and caching JIRA issue breakdown data
  */
 
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 // Cache for breakdown data with TTL
 const breakdownCache = new Map();

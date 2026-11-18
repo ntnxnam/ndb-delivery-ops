@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 import { useTeam } from '../contexts/TeamContext';
 

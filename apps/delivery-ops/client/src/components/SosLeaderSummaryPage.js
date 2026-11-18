@@ -12,7 +12,7 @@ import { useSosLeaderAiSummaries } from '../hooks/useSosLeaderAiSummaries';
 import { useReleaseKpiBreakdown } from '../hooks/useReleaseKpiBreakdown';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
-import { authenticatedGet } from '../utils/api';
+import { authenticatedGet } from '../shared/services/apiService';
 import {
   ReleaseSection,
   useMultiReleaseGateData,

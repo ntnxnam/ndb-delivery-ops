@@ -3,7 +3,7 @@
  * Components render; hooks fetch; this file is HTTP / pure transform only.
  */
 
-import { authenticatedPost, getApiBase } from '../../utils/api';
+import { authenticatedPost, getApiBase } from '../../shared/services/apiService';
 import { jiraSearchUrl } from './releaseBriefService';
 
 const API_BASE = getApiBase();

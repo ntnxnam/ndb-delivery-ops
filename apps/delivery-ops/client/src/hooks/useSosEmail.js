@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import { buildSosSnapshotHtml, buildSosLeaderSnapshotHtml } from '../utils/sosEmailHtml';
 
 function authHeaders() {

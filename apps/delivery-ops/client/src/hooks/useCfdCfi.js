@@ -5,7 +5,7 @@
  * POST /api/jira/cfdcfi/refresh
  */
 import { useState, useCallback, useEffect } from 'react';
-import { authenticatedGet, authenticatedPost } from '../utils/api';
+import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 
 const creds = () => ({
   jiraToken: localStorage.getItem('jiraToken') || '',

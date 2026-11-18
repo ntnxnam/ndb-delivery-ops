@@ -3,7 +3,7 @@ import { useChat } from '../hooks/useChat';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
 import { useJqlAutocomplete } from '../hooks/useJqlAutocomplete';
 import { ENABLE_JIRA_DIGGING, ENABLE_JQL_AUTOCOMPLETE } from '../config/featureFlags';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 import './ChatbotPage.css';
 
 function linkifyTicketKeys(text) {

@@ -6,7 +6,7 @@
  * Returns { components: string[], loading, error }
  */
 import { useState, useEffect } from 'react';
-import { authenticatedGet } from '../utils/api';
+import { authenticatedGet } from '../shared/services/apiService';
 
 const cache = {};
 

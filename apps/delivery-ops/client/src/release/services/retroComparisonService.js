@@ -1,4 +1,4 @@
-import { authenticatedGet, authenticatedPost } from '../../utils/api';
+import { authenticatedGet, authenticatedPost } from '../../shared/services/apiService';
 
 export { jiraSearchUrl } from './retrospectiveService';
 

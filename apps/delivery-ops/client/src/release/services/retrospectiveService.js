@@ -1,4 +1,4 @@
-import { authenticatedGet } from '../../utils/api';
+import { authenticatedGet } from '../../shared/services/apiService';
 import { listReleaseVersions, pickDefaultRelease } from './releaseBriefService';
 
 export { listReleaseVersions, pickDefaultRelease };

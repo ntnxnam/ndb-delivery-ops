@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedPost } from '../../shared/services/apiService';
 import { useJiraConfig } from '../../utils/jiraConfig';
 import { useTeam } from '../../contexts/TeamContext';
 import { useEmailSenderCCConfig } from '../../hooks/useEmailSenderCCConfig';

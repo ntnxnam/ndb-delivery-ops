@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { authenticatedGet, getApiBase } from '../utils/api';
+import { authenticatedGet, getApiBase } from '../shared/services/apiService';
 import './ComponentReport.css';
 
 const API_BASE = getApiBase();

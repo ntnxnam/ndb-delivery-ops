@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { authenticatedPost, authenticatedGet } from '../../utils/api';
+import { authenticatedPost, authenticatedGet } from '../../shared/services/apiService';
 import { statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';
 
 function CleanupFilters() {

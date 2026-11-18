@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 // Module-level cache keyed by fixVersion. Same shape as the cache in
 // useReleaseItems / useReleaseVersions: survives component re-mounts so

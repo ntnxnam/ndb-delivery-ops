@@ -6,7 +6,7 @@
  * POST /api/ai/oncall-summary
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { authenticatedGet, authenticatedPost } from '../utils/api';
+import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 
 const creds = () => ({
   jiraToken: localStorage.getItem('jiraToken') || '',

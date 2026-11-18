@@ -3,7 +3,7 @@
  * Fixes: cancelled inflight must not stick loading forever.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 const creds = () => ({
   jiraToken: localStorage.getItem('jiraToken') || '',

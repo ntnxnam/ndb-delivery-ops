@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { authenticatedPost } from '../utils/api';
+import { authenticatedPost } from '../shared/services/apiService';
 
 /**
  * Hook to fetch TCMS QI + component data for release items.

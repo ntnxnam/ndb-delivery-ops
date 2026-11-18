@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { getApiBase, getAuthHeaders } from '../utils/api';
+import { getApiBase, getAuthHeaders } from '../shared/services/apiService';
 import { requestKey, withRequestGate } from '../utils/requestGate';
 import { STORAGE_KEYS } from '../shared/utils/constants';
 

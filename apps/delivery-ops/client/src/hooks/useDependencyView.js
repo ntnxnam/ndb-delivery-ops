@@ -4,7 +4,7 @@
  * PUT /api/dependency/wishlist-config
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { authenticatedGet, authenticatedPut } from '../utils/api';
+import { authenticatedGet, authenticatedPut } from '../shared/services/apiService';
 
 const creds = () => ({
   jiraToken: localStorage.getItem('jiraToken') || '',

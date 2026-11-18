@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useExecPageBriefing } from '../../hooks/useExecPageBriefing';
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedPost } from '../../shared/services/apiService';
 
 jest.mock('../../utils/api', () => ({
   authenticatedPost: jest.fn(),

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AdminPanel from '../../components/AdminPanel/AdminPanel';
 import TeamForm, { slugifyTeamId } from '../../components/AdminPanel/TeamForm';
-import * as api from '../../utils/api';
+import * as api from '../../shared/services/apiService';
 
 jest.mock('../../utils/api');
 

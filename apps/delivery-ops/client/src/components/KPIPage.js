@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PageLoading } from '../shared/components/PageLoading';
-import { authenticatedGet, authenticatedPost, authenticatedDelete, getApiBase } from '../utils/api';
+import { authenticatedGet, authenticatedPost, authenticatedDelete, getApiBase } from '../shared/services/apiService';
 import { useTeam } from '../contexts/TeamContext';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import { usePermissions } from '../auth/hooks/usePermissions';
