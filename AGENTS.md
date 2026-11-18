@@ -116,7 +116,8 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 - **Citation-first output** (D10) — every claim sourced
 - **Persona-aware output** (D6) — declare audience, use presenter
 - **Workflows for recurring artefacts; agents for ad-hoc questions** (D8, D9)
-- **Single React runtime** on `:8888` — no Streamlit in user-facing path
+- **Fixed ports — no fallback:** React `8899` (`client/package.json` `PORT=8899`), Express `8001` (`server/.env` `PORT=8001`, `server/index.js:25` default `8001`); `8888` was stale and conflicts on shared hosts — do not reintroduce fallback/auto-detect
+- **Single React runtime** — no Streamlit in user-facing path
 - **Web chat panel** (D7) is the agent surface for non-IDE users
 - **Agent pack is portable** (D38) — cookbook in `agent-pack/`; Cursor is one adapter
 

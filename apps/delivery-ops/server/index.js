@@ -22,7 +22,8 @@ const { formatContentForEmail, formatJiraWikiMarkupForEmail } = require('./utils
 // directly rather than a separate npm sub-package.
 
 const app = express();
-const PORT = process.env.PORT || 7001;
+// Fixed ports — no fallback: 8001 backend, 8899 frontend (AGENTS.md). Do not change without updating all docs/scripts.
+const PORT = Number(process.env.PORT || 8001);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Security and Performance Middleware
