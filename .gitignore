@@ -43,6 +43,7 @@ Thumbs.db
 build/
 coverage/
 dist/
+generated/
 node_modules/
 shared/.cache/jira-digging/
 test-project-breakdown.js
