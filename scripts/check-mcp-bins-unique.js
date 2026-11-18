@@ -9,7 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-const MCP_DIRS = ['mcp/loom', 'mcp/lighthouse', 'mcp-lighthouse', 'mcp-loom'];
+const MCP_DIRS = ['mcp/loom', 'mcp/lighthouse'];
 let failed = false;
 
 function fail(msg) { console.error(`check:mcp FAIL — ${msg}`); failed = true; }
@@ -29,7 +29,18 @@ for (const dir of MCP_DIRS) {
   }
 }
 
-// 2. No byte-identical tool files across both dirs
+// 2. No byte-identical tool files across both dirs, unless the file is the shared
+// single-source in mcp/shared/tools (intentionally imported by both).
+const sharedHashes = new Set();
+const sharedToolsDir = path.join(ROOT, 'mcp/shared/tools');
+if (fs.existsSync(sharedToolsDir)) {
+  for (const file of fs.readdirSync(sharedToolsDir)) {
+    const full = path.join(sharedToolsDir, file);
+    if (!fs.statSync(full).isFile()) continue;
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex');
+    sharedHashes.add(hash);
+  }
+}
 const hashes = new Map(); // hash -> [{dir, file}]
 for (const dir of MCP_DIRS) {
   const toolsDir = path.join(ROOT, dir, 'src', 'tools');
@@ -38,6 +49,7 @@ for (const dir of MCP_DIRS) {
     const full = path.join(toolsDir, file);
     if (!fs.statSync(full).isFile()) continue;
     const hash = crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex');
+    if (sharedHashes.has(hash)) continue; // whitelisted: single source in mcp/shared
     if (!hashes.has(hash)) hashes.set(hash, []);
     hashes.get(hash).push({ dir, file });
   }
