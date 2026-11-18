@@ -33,6 +33,12 @@ source: doc-user-guide @ 2026-11-18
 **Who:** Team Exec / Director
 **Steps:** Open Release Brief → check RAG + blockers → drill into FEAT.
 
+## Risk Details (Project Status)
+
+**Who:** Portfolio Manager, TPM, Director
+**Steps:** Open Project Status → select release → scan the Risk Details column.
+**What it shows:** Risk Indicator pill (Deep Red/Red/Green/Yellow) + Risk Assessment + Path to Green. Rich-text values authored in JIRA (ADF) render as plain text; URLs render as Link; empty stays Not Set. Previously cached HTML values strip on next fetch.
+
 ## Quality Column (TCMS)
 
 **Who:** TPM, FEAT owners, QA

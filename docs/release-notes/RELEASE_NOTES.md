@@ -12,6 +12,10 @@ source: doc-release-notes @ 2026-05-19
 
 See [release-notes/NDB-2.11.md](./release-notes/NDB-2.11.md) when cut.
 
+### Fix: Risk Details on Project Status (47780 / 55664)
+
+- Risk Assessment (`customfield_47780`) and Path to Green (`customfield_55664`) now render as plain text on `/project-status` → Risk Details (ADF doc → plain text; `customfield_38460` email HTML unchanged). Stale cached HTML payloads strip to text on next fetch; URLs still render as Link, empty as Not Set. See [USER_GUIDE — Risk Details](../guides/USER_GUIDE.md#risk-details-project-status).
+
 ### Recent changes (TCMS Quality table)
 
 - TCMS Quality table now renders **Functional** and **System** rows (2×2:
