@@ -3,13 +3,25 @@
     "ndb-exec-updates@nutanix.com",
     "bharath@nutanix.com",
     "ashish.kumar@nutanix.com",
-    "ashish.mohindroo@nutanix.com"
+    "ashish.mohindroo@nutanix.com",
+    "karan.singh@nutanix.com"
+  ],
+  "mustFixLeadershipCC": [
+    "ndb-tech-leads@nutanix.com",
+    "ndb-managers@nutanix.com"
   ],
   "versionDRIs": {
     "NDB-2.11": [
-      "srikanth.cg@nutanix.com",
-      "aleksandar.minic@nutanix.com"
+      "jovan.cukalovic@nutanix.com"
+    ],
+    "NDB-2.12": [
+      "akshay.chandak@nutanix.com"
+    ],
+    "NDB-3.0": [
+      "nkumar@nutanix.com"
+    ],
+    "NDB-3.1": [
+      "pranay.ega@nutanix.com"
     ]
   }
 }
-

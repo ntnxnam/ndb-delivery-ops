@@ -6,6 +6,7 @@ const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware, extractToken } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
+const { loadKpiConfigSync, getKpisForTeam } = require('../utils/teamConfig');
 
 const PRODUCT_CONFIG_PATH = path.resolve(__dirname, '..', 'config', 'teamBoardConfig.json');
 const RELEASE_GATE_CONFIG_PATH = path.resolve(
@@ -51,11 +52,13 @@ function buildFeatNumberMentionJql(featureKey) {
 // Add new fields here — one place, not buried in the route handler.
 function buildDashboardFields(getFieldIdFn) {
   return [
-    'summary', 'issuetype', 'status', 'assignee', 'priority',
-    'created', 'updated', 'resolutiondate',
+    'summary', 'issuetype', 'status', 'resolution', 'assignee', 'priority',
+    'created', 'updated', 'resolutiondate', 'duedate',
     'labels',                        // bug-by-phase analytics
+    'fixVersions',                  // soft hygiene vs selected release
     getFieldIdFn('parentLink'),      // Parent Link (customfield_20363) — Epic → FEAT/Initiative
     getFieldIdFn('epicLink'),        // Epic Link (customfield_10361) — Task/Bug/Test → Epic
+    getFieldIdFn('qaContact'),       // QA Contact — Status Sender epic table
     'issuelinks',
     getFieldIdFn('riskIndicator'),
     getFieldIdFn('riskAssessment'),
@@ -73,27 +76,109 @@ function buildDashboardFields(getFieldIdFn) {
   ].filter(Boolean).join(',');
 }
 
+/** Extract JIRA issue-link key from string or { key } object. */
+function linkKey(value) {
+  if (value == null) return null;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (typeof value === 'object' && typeof value.key === 'string' && value.key.trim()) {
+    return value.key.trim();
+  }
+  return null;
+}
+
+/** Display name from a JIRA user field (assignee / QA Contact). */
+function userDisplayName(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return value;
+  return value.displayName || value.name || null;
+}
+
+function extractFixVersionNames(fields) {
+  const raw = fields?.fixVersions;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((v) => (typeof v === 'string' ? v : v?.name))
+    .filter((n) => typeof n === 'string' && n);
+}
+
+const COMPANION_PROJECT_PREFIXES = new Set(['TECHPUBS', 'SDL', 'LEG', 'SR', 'NDBQUAL']);
+
+function isCompanionKey(key) {
+  const prefix = String(key || '').split('-')[0].toUpperCase();
+  return COMPANION_PROJECT_PREFIXES.has(prefix);
+}
+
+function isDoneStatus(status) {
+  return ['done', 'resolved', 'closed', 'complete', 'fixed'].includes(
+    String(status || '').toLowerCase()
+  );
+}
+
+/**
+ * For each work-item key, fetch changelog once and return:
+ *   - firstInProgressIso — real-start signal
+ *   - closedIso — last status → Closed (QA verification for Bug/Improvement)
+ * Concurrency capped to avoid JIRA 429s.
+ */
+async function collectChangelogSignals(jira, keys, statusCategoryByName, sharedHelpers) {
+  const { extractFirstInProgressIso, extractClosedDate } = sharedHelpers;
+  const concurrency = Math.min(3, Math.max(1, keys.length));
+  const results = new Array(keys.length);
+  let nextIdx = 0;
+
+  async function worker() {
+    for (;;) {
+      const i = nextIdx++;
+      if (i >= keys.length) return;
+      const key = keys[i];
+      try {
+        const issue = await jira.getIssue(key, {
+          fields: ['status'],
+          expand: 'changelog',
+        });
+        const closedRaw = extractClosedDate(issue);
+        results[i] = {
+          key,
+          firstInProgressIso: extractFirstInProgressIso(issue, statusCategoryByName),
+          closedIso: typeof closedRaw === 'string' && closedRaw ? closedRaw.slice(0, 10) : null,
+        };
+      } catch (_e) {
+        results[i] = { key, firstInProgressIso: null, closedIso: null };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return results;
+}
+
 function issueFromJira(issue) {
   const fields = issue?.fields || {};
+  const qaField = getFieldId('qaContact') || 'customfield_10860';
+  const parentLinkField = getFieldId('parentLink') || 'customfield_20363';
+  const epicLinkField = getFieldId('epicLink') || 'customfield_10361';
+  const managerField = getFieldId('assigneeManager') || 'customfield_19262';
   return {
     key: issue.key,
     summary: String(fields.summary || ''),
     issueType: (fields.issuetype?.name || '').trim(),
     status: (fields.status?.name || '').trim(),
-    assignee: fields.assignee?.displayName || null,
+    resolution: fields.resolution?.name || null,
+    assignee: userDisplayName(fields.assignee),
     assigneeEmail: fields.assignee?.emailAddress || null,
-    assigneeManager: fields.customfield_19262?.displayName || null,
-    assigneeManagerEmail: fields.customfield_19262?.emailAddress || null,
+    assigneeManager: userDisplayName(fields[managerField]),
+    assigneeManagerEmail: fields[managerField]?.emailAddress || null,
+    qaContact: userDisplayName(fields[qaField]),
     created: typeof fields.created === 'string' ? fields.created.slice(0, 10) : null,
     resolved: typeof fields.resolutiondate === 'string' ? fields.resolutiondate.slice(0, 10) : null,
     updated: typeof fields.updated === 'string' ? fields.updated.slice(0, 10) : null,
+    duedate: typeof fields.duedate === 'string' ? fields.duedate.slice(0, 10) : null,
     priority: fields.priority?.name || null,
     labels: Array.isArray(fields.labels) ? fields.labels : [],
-    // customfield_10361 = Epic Link (Task/Bug/Test → their Epic).
-    // customfield_20363 = Parent Link (Epic → FEAT/Initiative) — a different field.
-    epicLink: typeof fields.customfield_10361 === 'string' ? fields.customfield_10361 :
-              (fields.customfield_10361 != null && typeof fields.customfield_10361?.key === 'string'
-                ? fields.customfield_10361.key : null),
+    fixVersions: extractFixVersionNames(fields),
+    // Epic Link (Task/Bug/Test → their Epic) vs Parent Link (Epic → FEAT/Initiative).
+    epicLink: linkKey(fields[epicLinkField]),
+    parentLink: linkKey(fields[parentLinkField]),
   };
 }
 
@@ -370,7 +455,15 @@ router.get('/dashboard', auth, async (req, res) => {
       loadEnv,
       getProductService,
       parseReleaseGateTimeline,
-      
+      buildStatusCategoryByName,
+      extractFirstInProgressIso,
+      computeFeatureTiming,
+      computeFixVersionHygiene,
+      buildEnrichedFlowSeries,
+      findKickoffEpic,
+      evaluateKickoff,
+      inferFeatureConfidence,
+      extractClosedDate,
     } = shared;
 
     const productService = getProductService(PRODUCT_CONFIG_PATH);
@@ -384,7 +477,7 @@ router.get('/dashboard', auth, async (req, res) => {
     const featNumberJql = buildFeatNumberMentionJql(featureKey);
     const fields = buildDashboardFields(getFieldId);
 
-    const [canonicalRaw, featIdRaw, featNumberRaw, featureRoot] = await Promise.all([
+    const [canonicalRaw, featIdRaw, featNumberRaw, featureRoot, statusList] = await Promise.all([
       jira.searchAll(canonicalJql, fields, { pageSize: 500 }),
       jira.searchAll(`project = ${projectKey} AND (${featIdJql})`, fields, { pageSize: 500 }),
       jira.searchAll(`project = ${projectKey} AND (${featNumberJql})`, fields, { pageSize: 500 }),
@@ -406,6 +499,7 @@ router.get('/dashboard', auth, async (req, res) => {
           getFieldId('promotionGate'),
         ].filter(Boolean),
       }),
+      jira.get('/rest/api/2/status').then((r) => r.data).catch(() => []),
     ]);
 
     const canonicalIssues = canonicalRaw.map(issueFromJira);
@@ -435,9 +529,107 @@ router.get('/dashboard', auth, async (req, res) => {
     const workItems = canonicalIssues.filter((i) => !PORTFOLIO_TYPES.has(i.issueType.toLowerCase()));
     const workItemsJql = `(${canonicalJql}) AND issuetype not in (Feature, Initiative, Epic, "X-FEAT", Capability)`;
 
-    const flow = buildFlowSeries(workItems, startIso, endIso);
-    const allKpis = buildFeatureKpis(workItems, workItemsJql);
+    const plannedStart = ecGate?.iso || null;
+    const statusCategoryByName = buildStatusCategoryByName(
+      Array.isArray(statusList) ? statusList : []
+    );
+    // One changelog pass: real start (In Progress) + QA closed date (→ Closed).
+    const changelogSignals = await collectChangelogSignals(
+      jira,
+      workItems.map((i) => i.key),
+      statusCategoryByName,
+      { extractFirstInProgressIso, extractClosedDate }
+    );
+    const closedByKey = new Map(
+      changelogSignals.map((s) => [s.key, s.closedIso || null])
+    );
+    const workItemsWithClosed = workItems.map((i) => ({
+      ...i,
+      closed: closedByKey.get(i.key) || null,
+    }));
+
+    // Legacy daily series kept for back-compat; enriched series powers Spec C/E toggles.
+    // Verified line uses changelog → Closed (QA), not resolutiondate (dev).
+    const flow = buildFlowSeries(workItemsWithClosed, startIso, endIso);
+    const flowDaily = buildEnrichedFlowSeries(workItemsWithClosed, startIso, endIso);
+    const allKpis = buildFeatureKpis(workItemsWithClosed, workItemsJql);
     const kpis = allKpis.filter((k) => k.count > 0);
+
+    const timing = computeFeatureTiming(plannedStart, changelogSignals);
+    const hygiene = computeFixVersionHygiene(workItemsWithClosed, release, workItemsJql);
+
+    // Spec B — kick-off epic (children = Epic Link to that epic)
+    const kickoffEpic = findKickoffEpic(canonicalIssues);
+    const kickoffChildren = workItemsWithClosed.filter(
+      (i) => kickoffEpic && i.epicLink === kickoffEpic.key
+    );
+    const kickoff = evaluateKickoff({
+      epic: kickoffEpic,
+      children: kickoffChildren,
+      ecDate: ecGate?.iso || null,
+      featureKey,
+    });
+    if (kickoffEpic && kickoffChildren.length === 0) {
+      kickoff.message = `Kick-off epic ${kickoffEpic.key} found but no children linked via Epic Link.`;
+      if (!isDoneStatus(kickoffEpic.status) && kickoff.pastEc) {
+        kickoff.status = 'incomplete';
+        kickoff.message += ` Past EC ${kickoff.ecDate}.`;
+      } else if (isDoneStatus(kickoffEpic.status)) {
+        kickoff.status = 'hygiene';
+        kickoff.message = `Kick-off epic ${kickoffEpic.key} is ${kickoffEpic.status} but has no Epic Link children to verify.`;
+      }
+    }
+
+    // Spec D — team KPI open counts scoped to this feature (count-only JIRA calls).
+    // Full list from getKpisForTeam (kpiConfig.json) — never slice or hard-code names.
+    const kpiTeamId = String(req.query.teamId || 'ndb').trim() || 'ndb';
+    const kpiTeams = loadKpiConfigSync();
+    const { kpis: teamKpiDefs } = getKpisForTeam(kpiTeams, kpiTeamId);
+    const keyClause =
+      workItemsWithClosed.length > 0 && workItemsWithClosed.length <= 80
+        ? `key in (${workItemsWithClosed.map((i) => i.key).join(',')})`
+        : workItemsJql;
+    const teamKpiBoxes = [];
+    if (Array.isArray(teamKpiDefs) && teamKpiDefs.length > 0) {
+      const boxes = await Promise.all(
+        teamKpiDefs.map(async (kpi) => {
+          const base = String(kpi.baseQuery || '').trim();
+          if (!base) return null;
+          const openJql = `(${base}) AND (${keyClause}) AND statusCategory != Done`;
+          try {
+            const count = await jira.searchCount(openJql);
+            return { id: kpi.id, name: kpi.name, count, jql: openJql, order: kpi.order ?? 0 };
+          } catch (_e) {
+            return { id: kpi.id, name: kpi.name, count: null, jql: openJql, order: kpi.order ?? 0, error: true };
+          }
+        })
+      );
+      // Preserve getKpisForTeam order (already sorted by config `order`).
+      teamKpiBoxes.push(...boxes.filter(Boolean));
+    }
+
+    // Spec F — deterministic inference (coding by PG, companion/spoke by GA)
+    const inferenceItems = [
+      ...workItemsWithClosed,
+      ...canonicalIssues.filter(
+        (i) =>
+          isCompanionKey(i.key) &&
+          !workItemsWithClosed.some((w) => w.key === i.key)
+      ),
+    ];
+    const inference = inferFeatureConfidence({
+      timing,
+      kickoff,
+      workItems: inferenceItems,
+      gates: {
+        ec: ecGate?.iso || null,
+        pg: pgGate?.iso || null,
+        ga: gaGate?.iso || null,
+      },
+      hygieneWrongFixVersionCount: hygiene.wrongFixVersionCount,
+      hygieneJql: hygiene.jql || '',
+      workItemsScopeJql: workItemsJql || '',
+    });
 
     const rootFields = featureRoot.fields || {};
     const statusUpdate = getFieldValue(rootFields, 'statusUpdate');
@@ -466,6 +658,14 @@ router.get('/dashboard', auth, async (req, res) => {
           pgChecklistLink: asTextOrLink(getFieldValue(rootFields, 'pgChecklistLink')),
           statusUpdateDate: statusUpdateDate || null,
         },
+        timing,
+        hygiene: {
+          wrongFixVersionCount: hygiene.wrongFixVersionCount,
+          jql: hygiene.jql,
+        },
+        kickoff,
+        inference,
+        teamKpiBoxes,
         gates: {
           ec: ecGate?.iso || null,
           // ccm = original planned CC date; ccmException = mgmt-approved extension (null if no extension).
@@ -494,11 +694,14 @@ router.get('/dashboard', auth, async (req, res) => {
           startIso,
           endIso,
           points: flow,
+          daily: flowDaily,
           markers: {
+            ec: ecGate?.iso || null,
             ccm: ccmGate?.iso || null,
             ccmException: ccmExceptionGate?.iso || null,
             cg: cgGate?.iso || null,
             pg: pgGate?.iso || null,
+            ga: gaGate?.iso || null,
           },
         },
         kpis,

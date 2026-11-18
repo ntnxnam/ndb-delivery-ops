@@ -4,6 +4,7 @@
  */
 
 const { JIRA_BASE_URL } = require('../config/api');
+const { sanitizeEmailHtml, safeHttpUrl } = require('./emailHtmlSanitize');
 
 /**
  * Convert Quill HTML to clean HTML for email
@@ -18,25 +19,22 @@ function convertQuillHtmlToEmail(quillHtml) {
   const trimmed = quillHtml.trim();
   if (!trimmed || trimmed === '<p><br></p>' || trimmed === '<p></p>') return '';
   
-  // Quill outputs HTML, so we can use it directly but need to:
-  // 1. Convert JIRA keys to links
-  // 2. Ensure links are properly formatted
-  // 3. Sanitize any dangerous content
-  
-  let html = trimmed;
+  let html = sanitizeEmailHtml(trimmed);
   
   // Convert JIRA keys (e.g., FEAT-12345) to links
-  html = html.replace(/([A-Z]+-\d+)/g, `<a href="${JIRA_BASE_URL}/browse/$1" style="color: #0065ff; text-decoration: none;">$1</a>`);
+  html = html.replace(/([A-Z]+-\d+)/g, `<a href="${JIRA_BASE_URL}/browse/$1" style="color: #0065ff; text-decoration: none;" rel="noopener noreferrer">$1</a>`);
   
-  // Ensure all links have proper styling
-  html = html.replace(/<a\s+href="([^"]+)"([^>]*)>/g, (match, href, attrs) => {
-    if (!attrs || !attrs.includes('style=')) {
-      return `<a href="${href}" style="color: #0065ff; text-decoration: none;"${attrs}>`;
-    }
-    return match;
+  // Re-validate hrefs after link injection; drop anchors with unsafe URLs
+  html = html.replace(/<a\s+href="([^"]+)"([^>]*)>([\s\S]*?)<\/a>/g, (match, href, attrs, inner) => {
+    const safe = safeHttpUrl(href);
+    if (!safe) return inner;
+    const style = (!attrs || !attrs.includes('style='))
+      ? ' style="color: #0065ff; text-decoration: none;"'
+      : '';
+    return `<a href="${safe}"${style}${attrs || ''} rel="noopener noreferrer">${inner}</a>`;
   });
   
-  return html;
+  return sanitizeEmailHtml(html);
 }
 
 /**
@@ -166,6 +164,7 @@ function formatJiraWikiMarkupForEmail(text) {
   // Process inline formatting
   formatted = formatted.replace(/\{color:([^}]+)\}(.*?)\{color\}/g, (match, color, content) => {
     const colorMap = {
+      'deep red': '#8B0000',
       'red': '#de350b',
       'green': '#00875a',
       'yellow': '#ff8b00',

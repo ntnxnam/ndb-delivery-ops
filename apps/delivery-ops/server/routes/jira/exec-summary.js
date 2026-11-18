@@ -362,8 +362,8 @@ router.get('/executive-summary-unified', validateJiraTokenMiddleware, async (req
     let projectDetails = { green: [], yellow: [], red: [] };
     
     try {
-      // Use existing commit items JQL
-      const commitJQL = buildCommitItemsJQL(version);
+      const labelPrefix = version ? String(version).split(/[- ]/)[0].toLowerCase() : undefined;
+      const commitJQL = buildCommitItemsJQL(version, labelPrefix ? { labelPrefix } : undefined);
       const jira = await getJira(jiraToken);
       const commitResponse = await jira.get(JIRA_API_V2.SEARCH, {
         timeout: 30000,

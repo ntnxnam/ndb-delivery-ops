@@ -1,0 +1,59 @@
+---
+description: Team KPIs are config-driven — no hard-coded names or caps
+globs:
+  - apps/delivery-ops/**/*kpi*
+  - apps/delivery-ops/**/*Kpi*
+  - apps/delivery-ops/server/config/kpiConfig.json
+  - apps/delivery-ops/server/utils/teamConfig.js
+  - apps/delivery-ops/server/routes/feature.js
+  - apps/delivery-ops/client/src/feature/**
+  - apps/delivery-ops/client/src/release/**
+  - apps/delivery-ops/client/src/components/Sos*
+  - apps/delivery-ops/client/src/components/KPIPage*
+  - apps/delivery-ops/client/src/components/EmailSender/**
+alwaysApply: false
+---
+
+# KPI tiles — config-driven only
+
+## Source of truth
+
+`apps/delivery-ops/server/config/kpiConfig.json` (edited via the KPIs admin page / `/api/config/kpi`).
+
+Server load path: `loadKpiConfigSync()` → `getKpisForTeam(teams, teamId)`.
+
+## Hard rules
+
+1. **Never hard-code KPI names or ids** in page/route/service code (e.g. `"Top-CFI"`, `"Bugs Out of SLA"`). Render with `kpis.map(...)`. Match by config pattern (e.g. `/CFD|CFI/`) only when the need is “all KPIs of that class,” never a fixed name list.
+2. **Never `.slice(0, N)` (or any cap)** on the team KPI definition list. New KPIs must appear on every consumer without a code change.
+3. **UI only maps API results** — Feature Dashboard / Email Sender use `teamKpiBoxes`; Release Brief / SoS / Retrospective / Sprint Report use batch KPI APIs that iterate `getKpisForTeam`.
+4. Optional filters (e.g. hide zero counts) are UI toggles — not a permanent server-side drop of defs.
+5. **Outcome-first surfaces** — when a KPI page shows linked / downstream / portfolio counts, lead with chaseable gaps (open, no path, aged). All-status linked footprint is proof-only (`kpi-pulse-analytics` outcome-first). Do not advertise “config-driven” in user copy (`no-defensive-statements`).
+6. **Click = exact population** — every KPI tile / hero count links to the JQL (or in-page drill) that produced it (`jira-authenticity-links`).
+
+## Correct pattern
+
+```javascript
+const { kpis } = getKpisForTeam(loadKpiConfigSync(), teamId);
+// kpis is the full ordered list — map all of them
+for (const kpi of kpis || []) { /* count / render */ }
+```
+
+```jsx
+{teamKpiBoxes.map((k) => (
+  <KpiTile key={k.id} name={k.name} count={k.count} href={jiraUrl(k.jql)} />
+))}
+```
+
+## Wrong patterns
+
+```javascript
+kpis.slice(0, 12)                    // ❌ drops new KPIs past the cap
+if (kpi.name === 'Top-CFI') ...      // ❌ name special-case
+const TILES = ['Top-CFI', 'CVE']     // ❌ hard-coded list
+```
+
+## Exceptions
+
+- **System Test Scale** looks up a KPI whose `baseQuery` matches `filter={team}-System-Test` by convention — that is a named *filter pattern*, not a hard-coded tile list. Do not extend that pattern to other dashboards.
+- Count-query concurrency limits are fine; definition-list length caps are not.

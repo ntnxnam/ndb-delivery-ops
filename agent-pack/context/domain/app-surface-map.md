@@ -23,12 +23,13 @@ is the primary live tenant today.
 | `/chatbot` | AI Chatbot | Conversational Q&A | orchestrator pack + tools | ops-assistant |
 | `/kpis` | KPIs | Configured KPI chips | none | — |
 | `/system-test-scale` | System-Test Scale | System-test bug scale / trends | none (charts) | — |
+| `/oncalls` | OnCalls | OnCall → TechHelp → eng-fix pulse + AI briefing | `oncall-ops-briefing` | tpm |
 | `/sos-summary` | SoS Summary | Cross-release FEAT SoS + tier AI | `feature-exec-summary`, `sos-tier-briefing` | tpm |
 | `/sos-leader-summary` | SoS by Leader | Same SoS regrouped by eng leader + coaching + email | `sos-leader-coaching` | tpm |
-| `/release/brief` | Release Brief | Release RAG + blockers + 7-day asks | `release-health-briefing` | `release-ai-briefing` |
+| `/release/brief` | Release Brief | Release RAG + blockers + 7-day asks | `release-health-briefing` | `team-exec-briefing` (mode=briefing) |
 | `/release-config` | Release Config | Gate date config | none | rm |
 | `/team-management` | Admin | Teams / RBAC | none | admin |
-| `/dependency-view` | Dependency View | 3-axis deps matrix + hygiene (read-only) | none | `dependency-walk`, dependency-tracker |
+| `/dependency-view` | Post EC dependency view | 3-axis deps matrix + hygiene (read-only) | none | `dependency-walk`, dependency-tracker |
 
 ## Non-UI surfaces
 

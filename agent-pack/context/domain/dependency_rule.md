@@ -147,6 +147,20 @@ UI must surface these as chase / needs-attention, with owner clear (us vs them).
 
 ---
 
+## 6b. Previously linked (removed Mode Dependency)
+
+When a `blocks` / `is blocked by` **issue link** existed and was later **removed**, Dependency View may still show the pair as **Previously linked** (from JIRA Link changelog):
+
+- **Flat pairs** only — no historical wait-tree / no ghost multi-hop arrows
+- **No wait arrow** in UI (live Mode Dependency keeps `→ waits on →`)
+- **Not** Partnership (Parent Link / Epic Link history)
+- **Not** Early calls **Missing arrows** (labels that were **never** linked)
+- Live peer still linked → must not also appear under Previously linked
+- Same ticket may appear in the live swimlane **and** Previously linked for **different** peers
+- Discovery is **post-fetch changelog** on home + live-chain partner seeds — **not** a new Q1–Q7 JQL
+
+---
+
 ## 7. What these terms are *not*
 
 | Term | Not the same as |
@@ -156,6 +170,7 @@ UI must surface these as chase / needs-attention, with owner clear (us vs them).
 | **Wishlist** | Ask label or Mode Dependency |
 | Project type `*-ew` | Train labels (`ndb-leto-*`, wishlist) |
 | Team internal | A matrix Dependency cell |
+| **Previously linked** | Missing arrows (never linked) or live Mode Dependency |
 
 ---
 
@@ -179,3 +194,4 @@ UI must surface these as chase / needs-attention, with owner clear (us vs them).
 - 2026-10-15 — Initial rules from owner walkthrough; Companionship dropped; Partnership/Dependency renamed.
 - 2026-10-15 — They-wait-on-me: no label standard; highlight missing-label hygiene when Dependency link exists.
 - 2026-10-15 — Closed open questions as implications of confirmed rules.
+- 2026-10-16 — Previously linked (§6b): removed blocks/blocked-by via Link changelog; flat pairs; ≠ Missing arrows.

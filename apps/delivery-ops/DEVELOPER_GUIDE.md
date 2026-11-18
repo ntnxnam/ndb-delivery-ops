@@ -120,7 +120,7 @@ ndb-status-update-sender/
 │   │   └── react-useeffect-infinite-loop-prevention.md
 │   └── skills/                    # AI task skills
 │       ├── team-exec-release-report/
-│       ├── fetch-project-tickets/
+│       ├── ticket-insights/  # merged: fetch-project-tickets + issue-type-breakdown
 │       ├── sprint-gantt-chart/
 │       ├── predictive-team-exec-analytics/
 │       └── confluence-width-cleanup/

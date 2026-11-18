@@ -17,12 +17,15 @@ export async function listReleaseFeatures({ release, jiraToken, username }) {
 export async function fetchFeatureDashboard({
   release,
   featureKey,
+  teamId,
   jiraToken,
   username,
 }) {
+  const params = { release, featureKey };
+  if (teamId) params.teamId = teamId;
   const res = await authenticatedGet(
     `${API_BASE}/api/feature/dashboard`,
-    { release, featureKey },
+    params,
     { jiraToken, username }
   );
   if (!res?.data?.success) {

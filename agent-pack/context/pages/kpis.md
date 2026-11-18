@@ -23,4 +23,4 @@ Configured KPI dashboard chips with JIRA deep-links.
 
 ## Agent notes
 
-Counts must be clickable (jira authenticity).
+Counts must be clickable (jira authenticity). When a page has an in-app list for a chip, use dual-click: count → panel, Open in JIRA → JQL.

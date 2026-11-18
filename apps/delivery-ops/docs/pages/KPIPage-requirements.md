@@ -57,9 +57,22 @@ tpm, rm, team_lead — KPI operators. Admin users for a team may edit the team's
 
 ---
 
+## Cross-page contract (config-driven)
+
+`kpiConfig.json` is the sole source of truth for team KPI definitions. Consumers (Feature Dashboard, Email Sender, Release Brief, SoS, Retrospective, Sprint Report) must:
+
+1. Load via `getKpisForTeam` / `GET /api/config/kpi` — **full list**, no `.slice(0, N)` cap
+2. Render with `.map` over that list — **never** hard-code KPI names/ids
+3. Adding a KPI on this page must make it appear on those consumers **without a code change**
+
+See `.cursor/rules/kpi-config-driven.mdc`.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] Changing team in the sidebar reloads this page's KPIs with no 1s localStorage poll
 - [ ] Saving a base filter makes `GET /api/config/teams` (and in-memory context) return the new value
 - [ ] Widget JQL is `(baseFilter) AND (kpi.baseQuery)` when baseFilter is set
 - [ ] Team id match is case-insensitive (`NDB` and `ndb` are the same team)
+- [ ] New KPIs appear on Feature Dashboard / Email Sender / Release Brief / SoS without editing those pages

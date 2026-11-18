@@ -127,7 +127,7 @@ router.post('/discover-versions', releaseVersionsLimiter, validateJiraTokenMiddl
  * GET /api/jira/sprints → 405 (diagnostic: if you get 405 instead of 404, the route is reached but method is wrong).
  */
 
-router.post('/release-items', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
+router.post('/release-items', releaseVersionsLimiter, jiraTimeout, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
   try {
     const data = await releaseItemsService.fetchAllItemsAcrossVersions(req.jiraToken, req.body || {});
     return res.json({ success: true, data });

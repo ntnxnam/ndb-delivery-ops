@@ -26,6 +26,8 @@ export const PERMISSIONS = {
   // AI & Predictions
   AI_INSIGHTS_VIEW: 'ai_insights_view',
   CRYSTAL_BALL_ACCESS: 'crystal_ball_access',
+  /** Auto top-of-page VP/exec NAI briefing ("What ails the team") */
+  EXEC_AUDIENCE: 'exec_audience',
   
   // System
   SYSTEM_CONFIG: 'system_config'
@@ -36,6 +38,7 @@ export const TAB_PERMISSIONS = {
   '/': [], // Email Sender - available to all authenticated users
   '/project-status': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/release/brief': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+  '/release/weekly-skim': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/release/retrospective': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/feature-dashboard': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
   '/component-report': [PERMISSIONS.RELEASE_VERSIONS_VIEW],
@@ -50,6 +53,8 @@ export const TAB_PERMISSIONS = {
   '/sprint-report': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/sprint-performance': [PERMISSIONS.SPRINT_REPORTS_VIEW],
   '/kpis': [PERMISSIONS.KPI_VIEW],
+  '/oncalls': [PERMISSIONS.KPI_VIEW],
+  '/cfdcfi': [PERMISSIONS.KPI_VIEW],
   '/system-test-scale': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS]
 };
@@ -64,5 +69,6 @@ export const LEGACY_PERMISSION_MAPPING = {
   genericEmailerAllowedUsers: [PERMISSIONS.EMAIL_SEND_GENERIC],
   releaseSetupAllowedUsers: [PERMISSIONS.RELEASE_SETUP_MANAGE],
   releaseConfigAllowedUsers: [PERMISSIONS.RELEASE_CONFIG_MANAGE],
-  sprintReportAllowedUsers: [PERMISSIONS.SPRINT_REPORTS_VIEW]
+  sprintReportAllowedUsers: [PERMISSIONS.SPRINT_REPORTS_VIEW],
+  execAudienceUsers: [PERMISSIONS.EXEC_AUDIENCE],
 };

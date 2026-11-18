@@ -8,19 +8,20 @@ specialist owns. Canonical home is this directory (D38), not `.cursor/`.
 
 | Skill | Owner specialist | Purpose | Decision IDs |
 |---|---|---|---|
-| `team-exec-status-answer/` | `team-exec-specialist` | Compound question + risk register answer for Team Executive / Director | D4, D10, D15 |
+| `team-exec-briefing/` | `team-exec-specialist` | Unified exec view: status (compound Q + risk register) + report (6 sections, dense bullets) + briefing (RAG + blockers + 7-day) | D4, D10, D15, D9 |
 | `weekly-status-email/` | `tpm-specialist` | 3-tier hybrid weekly status for broad leadership | D17, D15d |
-| `bug-triage/` | `triage-specialist` | Proposes owner/priority/component/severity for new defects | D19 |
-| `crisis-triage/` | `triage-specialist` | P0 / escalation response coordination | D19 |
-| `stale-ticket-sweep/` | `triage-specialist` | Weekly backlog hygiene | D19 |
-| `pending-response-chase/` | `triage-specialist` | Chase unreplied JIRA ask comments (D24) | D19, D24 |
-| `dependency-walk/` | `dependency-tracker-specialist` | Upstream/downstream walk in JIRA dep graph | D18 |
-| `confluence-width-cleanup/` | `confluence-publisher-specialist` | Pre-push storage XML cleanup (canonical at user level) | D3, D15d |
-| `move-gate-date/` | `rm-specialist` | Gate-date moves (CC/CG/PG) with mandatory reason + Confluence audit | **D30** |
-| `fetch-project-tickets/` | `tpm-specialist` / `team-exec-specialist` | 8-clause portfolio-children JQL primitive (canonical at user level) | — |
-| `team-exec-release-report/` | `team-exec-specialist` | Team Executive-Executive release report with risk escalation rules | D9 |
-| `predictive-team-exec-analytics/` | `team-exec-specialist` | Monte Carlo + completion-probability forecasts | D8, D9 |
+| `kpi-pulse-analytics/` | `tpm-specialist` | Reusable KPI Pulse band (last 2 Qs, MTTR, status dwell) | — |
 | `sprint-gantt-chart/` | `tpm-specialist` / `rm-specialist` | Date-hierarchy-aware Gantt for sprint-tier tickets | — |
+| `backlog-triage/` | `triage-specialist` | Unified backlog health: new defects + stale idle + pending unreplied asks (D19/D24) | D19, D24 |
+| `crisis-triage/` | `triage-specialist` | P0 / escalation response coordination | D19 |
+| `dependency-walk/` | `dependency-tracker-specialist` | Upstream/downstream walk in JIRA dep graph | D18 |
+| `release-gate-ops/` | `rm-specialist` | Unified gate-date mutations: JIRA FEAT fields (D30 audit) + release config slip + sprint extension | **D30**, D31 |
+| `ticket-insights/` | `tpm-specialist` | Unified fetch+breakdown: 8-clause JQL + 6-group / Dev vs QA / status with JIRA links | — |
+| `release-dataset-sync/` | `rm-specialist` | 3-group/6-bucket release dataset sync pipeline | D36 |
+| `release-retrospective/` | `tpm-specialist` | Gate contracts analysis (CCM/CG/PG/GA) + naughty ranking | — |
+| `era-csv-jira-import/` | `tpm-specialist` / `ops-assistant` | CSV/Excel → ERA Epics+Tasks; fail-fast mandatory fields; AuthZ bulk import | — |
+| `predictive-team-exec-analytics/` | `team-exec-specialist` | Monte Carlo + completion-probability forecasts | D8, D9 |
+| `past-releases-report/` | `rm-specialist` | Live-verified past-release deck: Feature/Initiative counts, closed KPIs by Integrated Version (cf11360 OR fixVersion), gate Gantt (EC=Execute Commit), NAI capability grouping | D10, D15, D30 |
 | `multi-model-review/` | `ops-assistant` (builder) | Parallel multi-model Code Review (pipeline stage 2) | — |
 | `exec-perspective/` | `ops-assistant` (builder) | Exec sign-off: high-level first, then drill-down (stage 5) | — |
 
@@ -42,9 +43,10 @@ For each skill, the layers it touches:
 - **Connector** — JIRA / Confluence / GitHub / Slack / Email in
   `shared/src/connectors/`
 
-The `move-gate-date` skill is the first one to exercise the *full*
+The `release-gate-ops` skill (merged from `move-gate-date`+`update-release-date`) exercises the *full*
 stack: orchestrator → rm-specialist → skill → `/api/date-mover/move-gate-date`
-→ `DateMoverService` → `JiraConnector` + `ConfluenceConnector`. Use it
+→ `DateMoverService` → `JiraConnector` + `ConfluenceConnector` (Route J) or
+`releaseVersionsEmailConfig.json` slip + `sprintDates` extension (Route C). Use it
 as the reference shape when porting other capabilities from
 `CONSOLIDATION.md`.
 

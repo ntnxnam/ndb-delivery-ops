@@ -12,13 +12,19 @@ const {
   generateSosOverallSummary,
   generateSosLeaderReleaseSummary,
   generateSprintLeadershipAsks,
+  generateOncallSummary,
 } = require('../services/naiService');
 const { generateLeaderCoaching } = require('../services/sosLeaderCoachingService');
 const { answerChat, listApprovals, decideApproval } = require('../services/chatService');
 const { deriveSignals } = require('../utils/execSummarySignals');
 const { buildReleaseIntelligence } = require('../services/releaseAiSummaryService');
 const { buildSprintAsksIntelligence } = require('../services/sprintLeadershipAsksService');
+const { buildIntelligence: buildOncallIntelligence } = require('../services/oncallAiSummaryService');
+const { buildOncallBlurbs } = require('../services/oncallBlurbService');
+const { buildPageBriefing } = require('../services/pageAiBriefingService');
+const { generateWeeklySkim } = require('../services/weeklySkimService');
 const { fetchTicketNarrative } = require('../utils/jiraTicketNarrative');
+const { requireAuth } = require('../middleware/authMiddleware');
 const { JIRA_API_V2 } = require('../config/api');
 const { getJira } = require('../utils/jiraClient');
 const logger = require('../utils/logger');
@@ -67,10 +73,69 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
     sessionId = null,
     availableReleases = [],
     knownTeams = [],
+    datasetId = null,
+    jqlHash = null,
   } = req.body || {};
 
   if (!message || !String(message).trim()) {
     return res.status(400).json({ error: 'message is required' });
+  }
+
+  // — Slice 3: digging branch — if datasetId/jqlHash present, load cached JIRA
+  // tickets (shared/.cache/jira-digging/{productId}/{jqlHash}/tickets.json.gz)
+  // and answer grounded via muse-spark/beam (aiConnector). Read-only D26.
+  const rawHash = String(jqlHash || '').trim();
+  const rawDatasetId = String(datasetId || '').trim();
+  const effectiveHash = rawHash || (rawDatasetId.startsWith('dig_') ? rawDatasetId.split('_')[1] || '' : '');
+  const isDigging = Boolean(rawDatasetId || rawHash);
+  if (isDigging) {
+    if (!effectiveHash) return res.status(400).json({ error: 'jqlHash or datasetId with hash is required for digging ask' });
+    try {
+      const shared = await import('@portfolio-delivery-ops/shared');
+      const result = await shared.answerDiggingAsk({
+        productId: productId || 'ndb',
+        jqlHash: effectiveHash,
+        datasetId: rawDatasetId || undefined,
+        question: String(message).trim(),
+        history,
+        audience,
+        userId: req.username || req.body?.username,
+        sessionId: sessionId || undefined,
+      });
+      // Provenance (best-effort) — reuse agent runtime stores; fallback to UUID if unavailable
+      let provenanceId = null;
+      try {
+        const { getShared, getStores } = require('../services/agentRuntimeHost');
+        const s = await getShared();
+        const stores = await getStores();
+        const rec = s.provenanceFromTurn({
+          session: { productId: productId || 'ndb', audience: audience || 'tpm', userId: req.username || req.body?.username, sessionId: result.manifest.datasetId || sessionId },
+          trace: [{ tool: 'loadDiggingCache', toolClass: 'read', ok: true, detail: `tickets=${result.manifest.ticketCount} compacted=${result.compacted.length}` }],
+          reply: result.reply,
+          dataScopes: [result.manifest.jql],
+          validTicketKeys: result.validKeys || [],
+          pendingApprovalIds: [],
+        });
+        const appended = stores.provenance.append(rec);
+        provenanceId = appended.id || null;
+      } catch (_) { /* provenance optional */ }
+      return res.json({
+        reply: result.reply,
+        scope: { intent: 'digging', datasetId: result.manifest.datasetId, jql: result.manifest.jql, productId: result.manifest.productId, ticketCount: result.manifest.ticketCount, jqlHash: result.manifest.jqlHash },
+        snapshotMeta: { generatedAt: result.manifest.fetchedAt, ticketCount: result.manifest.ticketCount, compactedCount: result.compacted.length, validTicketKeyCount: result.validKeys.length, mode: 'digging' },
+        trace: [{ tool: 'loadDiggingCache', toolClass: 'read', ok: true, detail: `tickets=${result.manifest.ticketCount} compacted=${result.compacted.length} via ${result.manifest.jqlHash}` }],
+        runtime: 'digging',
+        sessionId: sessionId || result.manifest.datasetId,
+        provenanceId,
+        pendingApprovals: [],
+        memoryMeta: null,
+      });
+    } catch (err) {
+      logger.error('[ai/chat digging] failed', err, { naiDebug: err.naiDebug, hash: effectiveHash });
+      if (String(err.message || '').includes('dataset not found')) return res.status(404).json({ error: err.message });
+      if (String(err.message || '').includes('invalid')) return res.status(400).json({ error: err.message });
+      return naiFailureResponse(res, err, 'Digging chat failed');
+    }
   }
 
   try {
@@ -247,6 +312,97 @@ router.put('/exec-summary/:key', validateJiraTokenMiddleware, async (req, res) =
  * shared/src/domain/execSummarySignals.cjs and the CLOSEST-DATE-THAT-PASSED RULE
  * in naiService.js for the full logic.
  */
+/**
+ * POST /api/ai/oncall-blurbs
+ * Lightweight per-OnCall about lines for path/escalation drills.
+ * Body: { teamId?: string, keys: string[] }
+ */
+router.post('/oncall-blurbs', validateJiraTokenMiddleware, async (req, res) => {
+  const teamId = (req.body?.teamId || '').trim() || undefined;
+  const keys = Array.isArray(req.body?.keys) ? req.body.keys : [];
+  const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
+
+  if (!keys.length) {
+    return res.status(400).json({ error: 'keys array is required' });
+  }
+
+  try {
+    logger.info(`[oncall-blurbs] team=${teamId || 'default'} keys=${keys.length}`);
+    const result = await buildOncallBlurbs({ token: jiraToken, teamId, keys });
+    return res.json(result);
+  } catch (err) {
+    logger.error(`[oncall-blurbs] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured')) {
+      // Narrative-only path should still work inside the service; this is unexpected.
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'OnCall blurb generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/oncall-summary
+ * OnCall portfolio briefing from stack graphs (OnCall → TechHelp → eng fix).
+ * Body: { teamId?: string, dashboard?: object } — pass dashboard to skip a second JIRA metrics fetch
+ */
+router.post('/oncall-summary', validateJiraTokenMiddleware, async (req, res) => {
+  const teamId = (req.body?.teamId || '').trim() || undefined;
+  const dashboard = req.body?.dashboard && typeof req.body.dashboard === 'object' ? req.body.dashboard : undefined;
+  const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
+
+  try {
+    logger.info(
+      `[oncall-summary] Building intelligence for team=${teamId || 'default'}` +
+        (dashboard?.asOf ? ` snapshot=${dashboard.asOf}` : ' (live fetch)')
+    );
+    const intelligence = await buildOncallIntelligence({ token: jiraToken, teamId, dashboard });
+    const summary = await generateOncallSummary(intelligence);
+
+    const responseIntelligence = {
+      teamId: intelligence.teamId,
+      onCallProject: intelligence.onCallProject,
+      hero: intelligence.hero,
+      paths: intelligence.paths,
+      rag: intelligence.rag,
+      health: intelligence.health,
+      priorityMix: intelligence.priorityMix,
+      assigneeMix: intelligence.assigneeMix,
+      stacks: (intelligence.stacks || []).map((s) => ({
+        key: s.key,
+        summary: s.summary,
+        status: s.status,
+        priority: s.priority,
+        assignee: s.assignee,
+        ageDays: s.ageDays,
+        dwell: s.dwell
+          ? {
+              currentStatus: s.dwell.currentStatus,
+              currentDwellDays: s.dwell.currentDwellDays,
+              dwellByStatus: s.dwell.dwellByStatus,
+            }
+          : null,
+        techHelp: s.techHelp,
+        engFixes: s.engFixes,
+        blurb: s.blurb,
+      })),
+      validKeys: intelligence.validKeys,
+      generatedAt: intelligence.generatedAt,
+    };
+
+    return res.json({
+      summary,
+      intelligence: responseIntelligence,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error(`[oncall-summary] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'OnCall summary generation failed');
+  }
+});
+
 router.post('/release-summary', validateJiraTokenMiddleware, async (req, res) => {
   const { version } = req.body || {};
 
@@ -460,6 +616,89 @@ router.post('/sos-leader-coaching', validateJiraTokenMiddleware, async (req, res
       return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
     }
     return naiFailureResponse(res, err, 'SoS leader coaching generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/weekly-skim
+ * Multi-release ADHD email skim: outstanding tiles + serial NAI release summaries.
+ * Body: { productId?: string, releases: string[] }
+ */
+router.post('/weekly-skim', validateJiraTokenMiddleware, async (req, res) => {
+  const releases = Array.isArray(req.body?.releases) ? req.body.releases : [];
+  const productId = (req.body?.productId || 'ndb').toString().trim() || 'ndb';
+  const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
+
+  if (!releases.length) {
+    return res.status(400).json({ error: 'releases array is required' });
+  }
+
+  try {
+    logger.info(
+      `[weekly-skim] product=${productId} releases=${releases.length}: ${releases.join(', ')}`
+    );
+    const payload = await generateWeeklySkim({ productId, releases, jiraToken });
+    return res.json(payload);
+  } catch (err) {
+    logger.error('[weekly-skim] Failed', err, { naiDebug: err.naiDebug });
+    if (err.statusCode === 400) {
+      return res.status(400).json({ error: err.message });
+    }
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'Weekly skim generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/page-briefing
+ * "What ails the team" — multi-facet NAI (parallel) → stitch → optional compress.
+ * Surfaces: release | oncall | kpi | feature
+ *
+ * Body: {
+ *   surface: string,
+ *   version?: string,      // release
+ *   teamId?: string,       // oncall | kpi
+ *   featureKey?: string,   // feature
+ *   snapshot?: object      // kpi | feature (client-built metrics)
+ * }
+ */
+router.post(
+  '/page-briefing',
+  validateJiraTokenMiddleware,
+  requireAuth('execAudience'),
+  async (req, res) => {
+  const surface = (req.body?.surface || '').trim();
+  const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
+
+  if (!surface) {
+    return res.status(400).json({ error: 'surface is required (release|oncall|kpi|feature)' });
+  }
+
+  try {
+    logger.info(
+      `[page-briefing] surface=${surface} version=${req.body?.version || '-'} team=${req.body?.teamId || '-'} user=${req.username || '-'}`
+    );
+    const result = await buildPageBriefing({
+      surface,
+      token: jiraToken,
+      version: req.body?.version,
+      teamId: req.body?.teamId,
+      featureKey: req.body?.featureKey,
+      snapshot: req.body?.snapshot,
+    });
+    return res.json(result);
+  } catch (err) {
+    const status = err.statusCode || 502;
+    logger.error(`[page-briefing] Failed surface=${surface}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('AI_API_KEY')) {
+      return res.status(400).json({ error: 'AI_API_KEY not configured on the server' });
+    }
+    if (status === 400) {
+      return res.status(400).json({ error: err.message });
+    }
+    return naiFailureResponse(res, err, 'Page briefing generation failed');
   }
 });
 

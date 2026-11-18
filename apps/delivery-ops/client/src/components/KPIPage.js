@@ -6,10 +6,15 @@
  * Only visible to users in kpiTabAllowedUsers.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { PageLoading } from '../shared/components/PageLoading';
 import { authenticatedGet, authenticatedPost, authenticatedDelete, getApiBase } from '../utils/api';
 import { useTeam } from '../contexts/TeamContext';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
+import { usePermissions } from '../auth/hooks/usePermissions';
+import { useExecPageBriefing } from '../hooks/useExecPageBriefing';
+import ExecPageBriefing from './ExecPageBriefing';
 import './ReleaseVersionTab.css';
 
 const API_BASE = getApiBase();
@@ -96,6 +101,9 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
   const jiraSearchUrl = combinedJql
     ? `${jiraBase}/issues/?jql=${encodeURIComponent(combinedJql)}`
     : null;
+  const isOnCallsKpi = /oncalls?/i.test(kpi?.name || '');
+  const isCfdCfiKpi = /CFD|CFI/i.test(kpi?.name || '') && !isOnCallsKpi;
+  const deepLink = isOnCallsKpi ? '/oncalls' : isCfdCfiKpi ? `/cfdcfi?kpi=${encodeURIComponent(kpi?.id || '')}` : null;
 
   const issues = hasData && displayType === 'list' && data.issues ? data.issues : [];
   const totalCount = hasData && displayType === 'list' && data.total != null ? data.total : issues.length;
@@ -111,7 +119,15 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
     <div style={CARD_STYLES.card}>
       <div style={CARD_STYLES.cardHeader}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-          {jiraSearchUrl ? (
+          {deepLink ? (
+            <Link
+              to={deepLink}
+              title={isOnCallsKpi ? 'Open OnCalls info page' : 'Open CFD/CFI pulse page'}
+              style={{ color: '#0d6efd', textDecoration: 'none', fontWeight: 600 }}
+            >
+              {kpi.name}
+            </Link>
+          ) : jiraSearchUrl ? (
             <a
               href={jiraSearchUrl}
               target="_blank"
@@ -126,6 +142,15 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
           )}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          {deepLink && (
+            <Link
+              to={deepLink}
+              title={isOnCallsKpi ? 'OnCalls info page' : 'CFD/CFI pulse page'}
+              style={{ fontSize: '0.7rem', color: '#0f766e', textDecoration: 'none' }}
+            >
+              Info
+            </Link>
+          )}
           {jiraSearchUrl && (
             <a
               href={jiraSearchUrl}
@@ -264,6 +289,41 @@ export default function KPIPage() {
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
   const currentTeam = selectedTeam;
   const currentTeamBaseFilter = (currentTeam && currentTeam.baseFilter) ? String(currentTeam.baseFilter) : '';
+  const { isExecAudience } = usePermissions();
+
+  const kpiBriefingSnapshot = useMemo(() => {
+    if (!widgetResults || widgetResults._error) return null;
+    const rows = (kpis || []).map((k) => {
+      const w = widgetResults[k.id];
+      const count =
+        w && !w.error
+          ? (typeof w.count === 'number' ? w.count : (w.total != null ? w.total : (w.issues || []).length))
+          : null;
+      return { id: k.id, name: k.name, count };
+    }).filter((r) => r.count != null);
+    if (!rows.length) return null;
+    return { label: currentTeam?.name || teamId, kpis: rows };
+  }, [widgetResults, kpis, currentTeam, teamId]);
+
+  const kpiSnapshotKey = useMemo(() => {
+    if (!kpiBriefingSnapshot) return '';
+    return kpiBriefingSnapshot.kpis.map((k) => `${k.id}:${k.count}`).join(',');
+  }, [kpiBriefingSnapshot]);
+
+  const {
+    state: execBriefState,
+    summary: execBriefSummary,
+    meta: execBriefMeta,
+    error: execBriefError,
+    refresh: refreshExecBrief,
+  } = useExecPageBriefing({
+    enabled: isExecAudience,
+    surface: 'kpi',
+    teamId,
+    snapshot: kpiBriefingSnapshot,
+    snapshotKey: kpiSnapshotKey,
+    ready: Boolean(kpiBriefingSnapshot),
+  });
 
   const fetchKpis = useCallback(async () => {
     if (!teamId) {
@@ -459,6 +519,14 @@ export default function KPIPage() {
         {' — KPIs use this team’s base filter'}
       </p>
 
+      <ExecPageBriefing
+        state={execBriefState}
+        summary={execBriefSummary}
+        meta={execBriefMeta}
+        error={execBriefError}
+        onRetry={refreshExecBrief}
+      />
+
       {teamId && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Team base filter</label>
@@ -523,7 +591,7 @@ export default function KPIPage() {
       )}
 
       {loading ? (
-        <p style={{ color: '#6c757d' }}>Loading KPIs…</p>
+        <PageLoading message="Loading KPIs…" />
       ) : (
         <>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
@@ -672,7 +740,7 @@ export default function KPIPage() {
                       {widgetsLoading ? 'Loading…' : 'Refresh'}
                     </button>
                   )}
-                  {widgetsLoading && !widgetResults && <p style={CARD_STYLES.loading}>Loading widget data…</p>}
+                  {widgetsLoading && !widgetResults && <PageLoading message="Loading widget data…" />}
                   {(() => {
                     const countKpis = kpis.filter((k) => k.displayType !== 'list');
                     const listKpis = kpis.filter((k) => k.displayType === 'list');

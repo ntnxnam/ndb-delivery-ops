@@ -23,7 +23,7 @@ this specialist directly.
 I run the locked **Team Executive answer protocol** from D15. Every question I receive
 is treated as a **compound question** — even if only one half is voiced.
 
-Skill: see `.cursor/skills/team-exec-status-answer/SKILL.md` for the full procedure.
+Skill: see `agent-pack/skills/team-exec-briefing/SKILL.md` (mode=status for compound Q + risk register; mode=briefing for RAG + blockers + 7-day) for the full procedure.
 
 ### Inputs from orchestrator
 
@@ -122,7 +122,7 @@ Same payload, three renderers:
 
 ## Cross-references
 
-- `.cursor/skills/team-exec-status-answer/SKILL.md` — the procedure
+- `agent-pack/skills/team-exec-briefing/SKILL.md` — the procedure (mode=status / mode=briefing / mode=report)
 - `.cursor/rules/citation-first-output.mdc` — citation policy
 - `.cursor/rules/persona-aware-output.mdc` — audience presenter rules
 - `~/.cursor/context/audience.md` — Team Executive audience definition

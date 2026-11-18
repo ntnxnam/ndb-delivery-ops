@@ -2,14 +2,14 @@
  * Tool: move_jira_dates
  *
  * Thin MCP adapter over shared DateMoverService (D30). Express
- * (`POST /api/date-mover/move-gate-date`) and this tool are the same bus:
+ * (`POST /api/date-mover/move-gate-date`, via release-gate-ops skill) and this tool are the same bus:
  * JiraConnector (Data Center Bearer PAT) + Confluence audit + mandatory reason.
  *
  * Destructive, so:
  *   - annotations.destructiveHint = true
  *   - dryRun defaults true
  *
- * Epic `duedate` is out of scope (D30 / move-gate-date skill). Gate fields
+ * Epic `duedate` is out of scope (D30 / release-gate-ops Route J). Gate fields
  * only, resolved via GATE_DATE_FIELD_ALIASES — do not duplicate customfield IDs here.
  */
 

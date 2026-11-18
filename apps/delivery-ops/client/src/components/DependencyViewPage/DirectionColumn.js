@@ -22,12 +22,13 @@ export default function DirectionColumn({
   jiraUrl,
   jql,
   emptyHint,
+  hideEmptyBuckets = false,
 }) {
   const list = issues || [];
   const byBucket = EW_BUCKETS.map((b) => ({
     ...b,
     issues: list.filter((i) => spanIdOf(i) === b.id),
-  }));
+  })).filter((b) => !hideEmptyBuckets || b.issues.length > 0);
   const fyi = list.filter((i) => !EW_BUCKETS.some((b) => b.id === spanIdOf(i)));
 
   return (

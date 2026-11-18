@@ -41,7 +41,7 @@
 ### Headline outcomes
 
 1. **One control plane** for release payload, gates, SoS, sprint say/do, status email, KPIs, quality scale, and cross-team dependencies — instead of fragmented Confluence + ad-hoc JIRA searches + offline spreadsheets.
-2. **Forwardable truth**: every displayed count is designed to open the **exact JIRA query** that produced it (JIRA authenticity).
+2. **Forwardable truth**: every displayed count exposes the **exact JIRA query** that produced it (JIRA authenticity). When an in-app list exists: **count → side drill**, **Open in JIRA ↗ → JQL** (never both external).
 3. **Persona-ready surfaces**: same underlying data packaged for Portfolio Manager / TPM workflow, RM gate ops, director / Team Exec leadership views, FEAT managers, EMs, and QA leads.
 4. **AI where it helps — with guardrails**: release synopsis & forecast, SoS exec summaries, sprint leadership asks, chatbot Q&A; citations required; JIRA mutates stay HITL / blocked under open policy.
 5. **Operational email path**: compose and send status / SoS / query emails via corporate SMTP, with audit history and Outlook fallback.
@@ -73,7 +73,7 @@
 | Renaming a release is multi-project toil | Release Setup: create / rename / cascade / filter cleanup with preview |
 | Leadership can’t see org say/do without Excel | Sprint Performance: JIRA-matched say/do by leader/manager + downloadable HTML |
 | SoS prep is a fire drill | SoS Summary: all active releases, AI summaries, Email SoS snapshot |
-| Partner deps are invisible until a gate slips | Dependency View: who waits on whom, wishlist, train alignment, chase list |
+| Partner deps are invisible until a gate slips | Post EC dependency view: who waits on whom, wishlist, train alignment, chase list |
 | KPI widgets are one-off filters | KPIs page: team baseFilter AND configurable widgets |
 | System-test / regression story is tribal | System-Test Scale: typed regressions, trends, carry-over, component hotspots |
 | “Did we follow gate contracts?” is anecdotal | Retrospective: compliance, naughty list, cross-release comparison |
@@ -85,7 +85,7 @@
 
 | Audience | Primary pages | What they get |
 |----------|---------------|---------------|
-| **Portfolio Manager / TPM** | SoS, Project Status, Dependency View, Chatbot, Email | Cross-release inventory, chase lists, briefing email |
+| **Portfolio Manager / TPM** | SoS, Project Status, Post EC dependency view, Chatbot, Email | Cross-release inventory, chase lists, briefing email |
 | **Release Manager** | Release Config/Setup, Project Status, Retrospective, Email | Gates, renames, compliance, status send |
 | **Director / Team Exec** | Sprint Performance, Release Brief, SoS, Retrospective | Say/do, forecast, RAG, forwardable HTML |
 | **Feature Manager** | Feature Dashboard, Email Sender, Project Status | Feature payload, reconciliation, status email |
@@ -113,9 +113,10 @@
 | 12 | SoS Summary | `/sos-summary` | `release_versions_view` | All active releases SoS + AI + Email SoS |
 | 13 | SoS by Leader (temp) | `/sos-leader-summary` | `release_versions_view` | SoS regrouped by eng leader |
 | 14 | Component Report | `/component-report` | `release_versions_view` | Component health, P0/P1, cleanup |
-| 15 | Dependency View | `/dependency-view` | `release_versions_view` | Cross-team deps map (read-only MVP) |
+| 15 | Post EC dependency view | `/dependency-view` | `release_versions_view` | Cross-team deps map (read-only MVP) |
 | 16 | KPIs | `/kpis` | `kpi_view` | Configurable team KPI widgets |
 | 17 | System-Test Scale | `/system-test-scale` | `kpi_view` | ST bug scale, regressions, trends |
+| 17b | OnCalls | `/oncalls` | `kpi_view` | OnCall → TechHelp → eng-fix metrics + AI briefing |
 | 18 | AI Chatbot | `/chatbot` | `ai_insights_view` | Conversational release/ticket Q&A |
 | 19 | Team Management | `/team-management` | `admin_panel_access` | Teams, RBAC, cache, sync |
 | — | Bin Packing | `/bin-packing/` | sibling app | Capacity / packing (linked, not in React tab) |
@@ -229,7 +230,7 @@ Capabilities available across the app (not tied to one tab):
 
 ### 7.5 Cross-team dependencies & SoS
 
-**Pages**: Dependency View · SoS Summary · SoS by Leader  
+**Pages**: Post EC dependency view · SoS Summary · SoS by Leader  
 
 **What was done**: Surface Dependency / Partnership / wishlist deps and a Scrum-of-Scrums control surface across all active releases — including leader org rollup.
 
@@ -616,14 +617,14 @@ Director-focused component health: P0/P1, other priority, projects by fixVersion
 | Stale cleanup | Closed/cancelled projects with outstanding descendants |
 | Anomalies | affectedVersion ERA Future / Triage highlighted |
 | WIP | KPI counts + Deferral Behaviour widgets may still be placeholders |
-| Trust | Every count → JIRA |
+| Trust | Count → panel when drill exists; else / also Open in JIRA → exact JQL |
 
 **Talking points**:
 - “Which component is burning — P0 age and project hygiene in one scroll.”
 
 ---
 
-### 8.15 Dependency View (`/dependency-view`)
+### 8.15 Post EC dependency view (`/dependency-view`)
 
 **Purpose**  
 Read-only NDB-first **3-axis** map for a release: project type × Mode (Dependency | Partnership) × aligned train — plus wishlist/ask discovery and hygiene chase. Companionship retired.
@@ -645,6 +646,27 @@ Read-only NDB-first **3-axis** map for a release: project type × Mode (Dependen
 **Talking points**:
 - “Who waits on whom — and whose hygiene is broken — before the next gate.”
 - “Train asks and EW project type stay separate — no glossary collision.”
+
+---
+
+### 8.15b KPI Pulse kit (shared)
+
+**Purpose**  
+Reusable exec pulse for any KPI-scoped page: last **2 Nutanix fiscal quarters** (Q1 starts 01-Aug), weekly created vs resolved, MTTR median/p90, status dwell, net burn / aged open heroes, and a qualitative **Product impact** card shell.
+
+**Not a route** — consumed by OnCalls, System-Test Scale, and future KPI pages via `buildPulse({ baseJql })` + `<KpiPulseBand />`.
+
+| Cap | Detail |
+|-----|--------|
+| Service | `kpiPulseService.buildPulse` |
+| UI | `client/src/components/KpiPulse/` |
+| Quarters | `nutanixQuarters.lastNQuartersWindow(2)` |
+| Skill | `kpi-pulse-analytics` |
+| Rule | `.cursor/rules/kpi-pulse-analytics.mdc` |
+| Trust | Dual-click on open heroes; JQL composed onto page KPI filter |
+
+**Talking points**:
+- “Same pulse graph and tiles everywhere — only the KPI filter changes.”
 
 ---
 
@@ -789,7 +811,7 @@ App admin: RBAC, team onboarding from base filter, JIRA diagnostics, cache/sync.
 ☐ System-Test Scale · ☐ Component Report  
 
 **Cross-team**  
-☐ Dependency View · ☐ SoS Summary · ☐ SoS by Leader  
+☐ Post EC dependency view · ☐ SoS Summary · ☐ SoS by Leader  
 
 **AI**  
 ☐ Chatbot · ☐ Brief synopsis/forecast · ☐ SoS GenAI · ☐ Sprint asks · ☐ Email AI risk  
@@ -872,6 +894,8 @@ Delivery Ops uses **three different wiring mechanisms**. Mixing them up is the #
 | **Clone / Duplicate** | Ignored as dependency edges | Not a real “wait on” relationship — hygiene if wishlist only has these |
 
 Mode Dependency discovery: `linkedIssuesOf("fixVersion = {release}", "is blocked by"|"blocks")`.
+
+**Previously linked (UI):** When a blocks / blocked-by link is later **removed**, Dependency View may still list the pair as flat “previously linked” rows (Link changelog; no wait arrow). Not Partnership hierarchy history; not Early-calls Missing arrows. Click-through uses `key in (...)` only — there is no JQL for “historical links.”
 
 #### C. Labels (discovery & callouts — not structure)
 
@@ -1126,7 +1150,7 @@ For FEAT / Initiative owners:
 For RMs / TPMs using the app:
 
 - Chase lists (Dependency View Next actions, SoS callouts, Component cleanup) are **hygiene backlog**, not vanity metrics.  
-- Every count opens the exact JQL — fix data in JIRA; the dashboard will follow.
+- Every count exposes the exact JQL (panel + Open in JIRA when a drill exists) — fix data in JIRA; the dashboard will follow.
 
 ---
 

@@ -76,64 +76,46 @@ function formatDate(dateValue) {
 function formatDateWithHistoryHTML(itemKey, fieldName, currentDate, checkpointHistory = {}) {
   const normalizedKey = (itemKey != null && itemKey !== '') ? String(itemKey).trim() : '';
   const history = checkpointHistory[normalizedKey]?.[fieldName] || [];
-  
-  // Get all unique dates from history
-  const allDates = new Set();
+
+  // Current always first; historical by date value descending (de-duplicated)
+  const currentDateStr = normalizeDateStr(currentDate);
+  const currentDateObj = currentDateStr ? (() => { const [y,m,d]=currentDateStr.split('-').map(Number); return new Date(y,m-1,d); })() : null;
+  const histSet = new Set();
   history.forEach(entry => {
     if (entry && entry.date) {
-      const dateStr = normalizeDateStr(entry.date);
-      if (dateStr) {
-        allDates.add(dateStr);
-      }
+      const ds = normalizeDateStr(entry.date);
+      if (ds && ds !== currentDateStr) histSet.add(ds);
     }
   });
-  
-  // Add current date if it exists
-  if (currentDate) {
-    const currentDateStr = normalizeDateStr(currentDate);
-    if (currentDateStr) {
-      allDates.add(currentDateStr);
-    }
-  }
-  
-  // Convert to array and sort in reverse chronological order (newest first)
-  const sortedDates = Array.from(allDates)
-    .map(dateStr => {
-      try {
-        // Parse date as local date (YYYY-MM-DD) to avoid timezone conversion
-        const [year, month, day] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day); // month is 0-indexed in JS Date
-      } catch (e) {
-        return null;
-      }
-    })
-    .filter(date => date !== null && !isNaN(date.getTime()))
-    .sort((a, b) => b - a); // Reverse order: newest first
-  
+  const histDates = Array.from(histSet).map(ds => { const [y,m,d]=ds.split('-').map(Number); return new Date(y,m-1,d); }).filter(d=>d&&!isNaN(d.getTime())).sort((a,b)=>b-a);
+  const sortedDates = currentDateObj ? [currentDateObj, ...histDates] : histDates;
+
   if (sortedDates.length === 0) {
-    // If no dates in history and no current date, show "Not Set"
-    if (!currentDate) {
-      return '<span style="color: #999; font-style: italic;">Not Set</span>';
-    }
+    if (!currentDate) return '<span style="color: #999; font-style: italic;">Not Set</span>';
     const formatted = formatDate(currentDate);
     return formatted ? `<span style="color: #28a745; font-weight: 600;">${formatted}</span>` : '<span style="color: #999; font-style: italic;">Not Set</span>';
   }
-  
-  // If only one date, just show it (no history to display)
   if (sortedDates.length === 1) {
     const formatted = formatDate(sortedDates[0]);
     return formatted ? `<span style="color: #28a745; font-weight: 600;">${formatted}</span>` : '<span style="color: #999; font-style: italic;">Not Set</span>';
   }
+
+  // Duration = current vs first-ever set (chronological), not max-min — fixes revert phantom delay
+  const parseLocal = (ds) => { const [y,m,d]=ds.split('-').map(Number); return new Date(y,m-1,d); };
+  const getFirstSet = () => {
+    const hasChangedAt = history.some(e=>e&&e.changedAt);
+    const ordered = hasChangedAt ? [...history].sort((a,b)=>new Date(a.changedAt)-new Date(b.changedAt)) : history;
+    for (const e of ordered) { if(e&&e.date){ const ds=normalizeDateStr(e.date); if(ds){ const d=parseLocal(ds); if(d&&!isNaN(d.getTime())) return d; } } }
+    return sortedDates[sortedDates.length-1];
+  };
+  const firstDate = getFirstSet();
+  const isDelayed = currentDateObj ? currentDateObj > firstDate : sortedDates[0] > firstDate;
+  const movedForward = currentDateObj ? currentDateObj < firstDate : false;
   
-  // Get the newest (first) and oldest (last) dates to determine if delayed
-  const newestDate = sortedDates[0];
-  const oldestDate = sortedDates[sortedDates.length - 1];
-  const isDelayed = newestDate > oldestDate; // Newest is later than oldest = delayed
-  
-  // Calculate delay in days
+  // Delay = |current - first|; show only for net delay (not early)
   let delayText = '';
   if (isDelayed && sortedDates.length > 1) {
-    const delayMs = newestDate.getTime() - oldestDate.getTime();
+    const delayMs = Math.abs(currentDateObj.getTime() - firstDate.getTime());
     const delayDays = Math.floor(delayMs / (1000 * 60 * 60 * 24));
     
     if (delayDays <= 3) {

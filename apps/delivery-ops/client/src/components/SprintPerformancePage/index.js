@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { PageLoading } from '../../shared/components/PageLoading';
 import { useSprintPerformance } from '../../hooks/useSprintPerformance';
 
 const bar = { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '6px 0 10px' };
@@ -58,7 +59,7 @@ export default function SprintPerformancePage() {
           No report yet. Click <b>Regenerate from JIRA</b> to build the latest view.
         </div>
       )}
-      {loading && !html && <div style={note}>Loading report…</div>}
+      {loading && !html && <PageLoading message="Loading report…" />}
       {blobUrl && (
         <iframe
           key={iframeKey || selected || 'report'}

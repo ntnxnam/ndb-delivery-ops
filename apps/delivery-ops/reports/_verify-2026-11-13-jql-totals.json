@@ -1,0 +1,11 @@
+{
+  "verifiedAt": "2026-11-13T14:35:00Z",
+  "correction": "KPI JQL now uses (\"Integrated Version\" = VER OR fixVersion = VER) per user clarification — cf11360 OR fixVersion — verified live",
+  "jiraBase": "https://jira.nutanix.com",
+  "method": "GET /rest/api/2/search?jql=<encoded>&maxResults=0 -> total",
+  "releases": {
+    "NDB-2.10": {"feature":{"jql":"fixVersion = \"NDB-2.10\" AND issuetype = Feature","total":12},"initiative":{"jql":"fixVersion = \"NDB-2.10\" AND issuetype = Initiative","total":13},"kpiClosed":{"Top-CFI":3,"Top-CFD":19,"Non-Top-CFI":10,"Non-Top-CFD":57,"Product Blockers":97,"Product Criticals":365,"OnCalls":0,"System Test":0,"Smokes":39,"NDB PreCommits":1,"CVE":10,"Deferral":764,"Bugs Out of SLA":0,"totalSum":1365}},
+    "NDB-2.11": {"feature":{"jql":"fixVersion = \"NDB-2.11\" AND issuetype = Feature","total":16},"initiative":{"jql":"fixVersion = \"NDB-2.11\" AND issuetype = Initiative","total":11},"kpiClosed":{"Top-CFI":5,"Top-CFD":22,"Non-Top-CFI":8,"Non-Top-CFD":75,"Product Blockers":138,"Product Criticals":599,"OnCalls":0,"System Test":0,"Smokes":25,"NDB PreCommits":2,"CVE":26,"Deferral":1231,"Bugs Out of SLA":0,"totalSum":2131}},
+    "NDB-2.12": {"feature":{"jql":"fixVersion = \"NDB-2.12\" AND issuetype = Feature","total":10},"initiative":{"jql":"fixVersion = \"NDB-2.12\" AND issuetype = Initiative","total":8},"kpiClosed":{"Top-CFI":0,"Top-CFD":12,"Non-Top-CFI":4,"Non-Top-CFD":34,"Product Blockers":54,"Product Criticals":245,"OnCalls":0,"System Test":0,"Smokes":2,"NDB PreCommits":2,"CVE":24,"Deferral":104,"Bugs Out of SLA":0,"totalSum":481}}
+  }
+}

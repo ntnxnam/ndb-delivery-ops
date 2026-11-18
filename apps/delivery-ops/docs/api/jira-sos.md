@@ -64,7 +64,9 @@
 
 ## POST /api/jira/sos-items-history
 
-**Purpose**: Fetch checkpoint-field date change history (Code Complete, Commit Gate, Promotion Gate) **and Risk Indicator (RAG) change history** for the Feature/Initiative tickets the client scopes to the tracked upcoming releases. Used by the SoS Summary page to show struck-out old dates + delay deltas next to the current gate dates, and a RAG movement trail next to the risk dot.
+**Purpose**: Checkpoint date history (Code Complete, Commit Gate, Promotion Gate — plus FS/DS, Test Plan) and RAG history for SoS. Shows struck-through old dates with `moved N times by X weeks` next to current gate dates.
+
+**How time is counted**: weeks = how far today's date is from the very first date ever set (not the biggest minus smallest). So if you move a date forward then back to where it started, it correctly shows 0 weeks. Count stays "distinct dates - 1".
 
 **Auth**: Required (`validateJiraTokenMiddleware`)
 

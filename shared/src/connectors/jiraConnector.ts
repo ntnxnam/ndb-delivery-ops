@@ -302,6 +302,21 @@ export class JiraConnector {
   }
 
   /**
+   * Comments for an issue (read) — Slice 2 digging enrichment.
+   */
+  async getComments(key: string): Promise<Array<{ id: string; body: string; author?: string; created?: string }>> {
+    const res = await this.get<{ comments?: Array<{ id: string; body: string; author?: { displayName?: string }; created?: string }> }>(
+      `/rest/api/2/issue/${encodeURIComponent(key)}/comment`
+    );
+    return (res.data.comments || []).map((c) => ({
+      id: String(c.id),
+      body: typeof c.body === 'string' ? c.body : JSON.stringify(c.body),
+      author: c.author?.displayName,
+      created: c.created,
+    }));
+  }
+
+  /**
    * Add a comment to an issue (mutating).
    */
   async addComment(key: string, body: string): Promise<void> {

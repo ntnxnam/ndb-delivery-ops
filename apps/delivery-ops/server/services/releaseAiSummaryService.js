@@ -29,9 +29,7 @@ const logger = require('../utils/logger');
 let _shared;
 async function getShared() {
   if (!_shared) {
-    _shared = process.env.NODE_ENV === 'test'
-      ? Promise.resolve(require('@portfolio-delivery-ops/shared'))
-      : import('@portfolio-delivery-ops/shared');
+    _shared = import('@portfolio-delivery-ops/shared');
   }
   return _shared;
 }
@@ -47,6 +45,7 @@ const FIELDS = [
   'customfield_10860',  // QA Contact
   'customfield_27764',  // TPM Owner
   'customfield_14463',  // Requirements Link
+  'customfield_13860',  // Rqmnts Done Date
   'customfield_13861',  // FS/DS Done Date
   'customfield_11068',  // Test Plan Date
   'customfield_31460',  // TCMS Link
@@ -81,7 +80,8 @@ async function buildReleaseIntelligence(version, jiraToken) {
 
   // Committed features — same scope as the UI commit section:
   // fixVersion = version, Feature/Initiative, not cancelled, not long-term-funded.
-  const commitJql = `${buildCommitItemsJQL(version)} AND labels != "${versionLabel}-long-term-funded"`;
+  const labelPrefix = version ? String(version).split(/[- ]/)[0].toLowerCase() : undefined;
+  const commitJql = `${buildCommitItemsJQL(version, labelPrefix ? { labelPrefix } : undefined)} AND labels != "${versionLabel}-long-term-funded"`;
   const jira = await getJira(jiraToken);
   const response = await jira.get(JIRA_API_V2.SEARCH, {
     timeout: 45000,

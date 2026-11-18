@@ -101,6 +101,7 @@ Recovered + new:
 | `citation-first-output.mdc` | Every claim cites a source (D10) |
 | `no-defensive-statements.mdc` | No defensive / self-justifying UI or chat copy |
 | `product-agnostic.mdc` | No hardcoded product strings (D1) |
+| `metric-click-dual-action.mdc` | Count → in-app drill; Open in JIRA → exact JQL (all pages) |
 
 ## Recipient roles (audience tiers)
 
@@ -134,7 +135,7 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 
 ## When you start a task in this repo
 
-1. Follow **`multi-agent-delivery-pipeline.mdc`** (primary, alwaysApply): Dev → Code Review → QA → UX → Exec → JIRA query check → Fix → Security → hand back to user. Code Review may use `/multi-model-review`; Exec sign-off uses `/exec-perspective` (high-level first, then drill-down). Neither replaces the pipeline.
+1. Follow **`multi-agent-delivery-pipeline.mdc`** (primary, alwaysApply): Dev → Code Review → QA → UX → Exec → JIRA query check → Fix → hand back to user. <!-- PAUSED: Security stage / `security-review` sub-agent — skip until re-enabled --> Code Review may use `/multi-model-review`; Exec sign-off uses `/exec-perspective` (high-level first, then drill-down). Neither replaces the pipeline.
 2. Read `DECISIONS.md` — every architectural decision has an ID
 3. Read `ARCHITECTURE.md` for layer model
 4. Read `~/.cursor/context/audience.md` for persona detail

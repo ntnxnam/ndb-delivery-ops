@@ -36,7 +36,38 @@ export interface FeatureDashboardIssue {
   priority: string | null;
   labels: string[];
   epicLink: string | null;
+  /** Fix versions on the ticket (names). Used for soft hygiene vs selected release. */
+  fixVersions?: string[];
+  /**
+   * ISO day when status last transitioned to Closed (from changelog).
+   * QA verification signal for Bug/Improvement — not resolutiondate.
+   */
+  closed?: string | null;
 }
+
+/** Planned (release EC) vs real (first work-item In Progress) start. */
+export interface FeatureTiming {
+  plannedStart: string | null;
+  realStart: string | null;
+  realStartKey: string | null;
+  /** realStart − plannedStart in calendar days; null if either missing. */
+  deltaDaysVsEc: number | null;
+}
+
+/** Soft fixVersion hygiene — does not filter analytics. */
+export interface FeatureFixVersionHygiene {
+  wrongFixVersionCount: number;
+  wrongFixVersionKeys: string[];
+  jql: string;
+}
+
+export const FEATURE_PORTFOLIO_TYPES = new Set([
+  'feature',
+  'initiative',
+  'epic',
+  'x-feat',
+  'capability',
+]);
 
 // Canonical list of JIRA fields to fetch for every feature dashboard issue.
 // Add new fields here when adding new widgets — one place, not scattered.
@@ -298,4 +329,139 @@ function toDate(iso: string): Date {
 
 function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** JIRA status list entry (from GET /rest/api/2/status). */
+export interface JiraStatusDescriptor {
+  name?: string;
+  statusCategory?: { key?: string; name?: string };
+}
+
+/**
+ * Map status name → category key (`new` | `indeterminate` | `done`).
+ * In Progress = `indeterminate` (or name "In Progress").
+ */
+export function buildStatusCategoryByName(
+  statuses: JiraStatusDescriptor[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const s of statuses) {
+    const name = (s.name || '').trim();
+    if (!name) continue;
+    const key = (s.statusCategory?.key || '').toLowerCase();
+    const catName = (s.statusCategory?.name || '').toLowerCase();
+    if (key) {
+      map.set(name.toLowerCase(), key);
+    } else if (catName.includes('progress')) {
+      map.set(name.toLowerCase(), 'indeterminate');
+    } else if (catName === 'done' || catName === 'complete') {
+      map.set(name.toLowerCase(), 'done');
+    } else {
+      map.set(name.toLowerCase(), 'new');
+    }
+  }
+  return map;
+}
+
+function isInProgressCategory(categoryKey: string | undefined): boolean {
+  return (categoryKey || '').toLowerCase() === 'indeterminate';
+}
+
+export interface IssueChangelogSlice {
+  changelog?: {
+    histories?: Array<{
+      created?: string;
+      items?: Array<{ field?: string; toString?: string; fromString?: string }>;
+    }>;
+  };
+}
+
+/**
+ * Earliest timestamp when the issue entered an In Progress status category.
+ * Walks changelog oldest → newest. Returns ISO day (YYYY-MM-DD) or null.
+ */
+export function extractFirstInProgressIso(
+  issue: IssueChangelogSlice,
+  statusCategoryByName: Map<string, string>
+): string | null {
+  const histories = issue.changelog?.histories;
+  if (!histories?.length) return null;
+
+  // JIRA usually returns oldest-first; sort defensively by created.
+  const ordered = [...histories].sort((a, b) =>
+    String(a.created || '').localeCompare(String(b.created || ''))
+  );
+
+  for (const h of ordered) {
+    for (const item of h.items ?? []) {
+      if (item.field !== 'status') continue;
+      const toName = (item.toString || '').trim().toLowerCase();
+      if (!toName) continue;
+      const cat = statusCategoryByName.get(toName);
+      // Fallback: literal "in progress" when status map is incomplete.
+      if (isInProgressCategory(cat) || toName === 'in progress') {
+        return asIsoDay(h.created) || null;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Among work-item first-In-Progress dates, pick the earliest as real start.
+ */
+export function computeFeatureTiming(
+  plannedStart: string | null,
+  candidates: Array<{ key: string; firstInProgressIso: string | null }>
+): FeatureTiming {
+  let realStart: string | null = null;
+  let realStartKey: string | null = null;
+  for (const c of candidates) {
+    if (!c.firstInProgressIso) continue;
+    if (!realStart || c.firstInProgressIso < realStart) {
+      realStart = c.firstInProgressIso;
+      realStartKey = c.key;
+    }
+  }
+  let deltaDaysVsEc: number | null = null;
+  if (realStart && plannedStart) {
+    const ms =
+      toDate(realStart).getTime() - toDate(plannedStart).getTime();
+    deltaDaysVsEc = Math.round(ms / 86400000);
+  }
+  return { plannedStart, realStart, realStartKey, deltaDaysVsEc };
+}
+
+/**
+ * Soft hygiene: work items whose fixVersions do not include the selected release.
+ */
+export function computeFixVersionHygiene(
+  workItems: FeatureDashboardIssue[],
+  release: string,
+  workItemsJql: string
+): FeatureFixVersionHygiene {
+  const wrong = workItems.filter((i) => {
+    const versions = i.fixVersions || [];
+    return !versions.includes(release);
+  });
+  const keys = wrong.map((i) => i.key);
+  // Prefer exact key list so the click-through count matches the claim.
+  // Fallback scoped filter only when the list would blow JIRA's URL/JQL limits.
+  const jql =
+    keys.length === 0
+      ? ''
+      : keys.length <= 200
+        ? keys.length === 1
+          ? `key = ${keys[0]}`
+          : `key in (${keys.join(',')})`
+        : `(${workItemsJql}) AND (fixVersion is EMPTY OR fixVersion != "${release}")`;
+  return {
+    wrongFixVersionCount: wrong.length,
+    wrongFixVersionKeys: keys,
+    jql,
+  };
+}
+
+export function isFeaturePortfolioType(issueType: string): boolean {
+  return FEATURE_PORTFOLIO_TYPES.has((issueType || '').toLowerCase());
 }

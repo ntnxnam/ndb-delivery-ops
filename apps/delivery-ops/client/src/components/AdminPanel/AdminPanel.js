@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PageLoading } from '../../shared/components/PageLoading';
 import { useTeam } from '../../contexts/TeamContext';
 import { useTeamAdmin } from '../../hooks/useTeamAdmin';
 import TeamForm from './TeamForm';
@@ -61,11 +62,7 @@ function AdminPanel() {
   };
 
   if (loading && teams.length === 0) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '256px' }}>
-        <div style={{ color: '#6b7280' }}>Loading teams...</div>
-      </div>
-    );
+    return <PageLoading message="Loading teams…" />;
   }
 
   if (error) {
@@ -89,7 +86,13 @@ function AdminPanel() {
         </div>
         {activeView === 'teams' ? (
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={refresh} style={headerButton('#f3f4f6', '#374151')}>🔄 Refresh</button>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              style={{ ...headerButton('#f3f4f6', '#374151'), opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+            >
+              {loading ? 'Loading…' : '🔄 Refresh'}
+            </button>
             <button onClick={() => setActiveView('create')} style={headerButton('#3b82f6')}>+ Add team</button>
           </div>
         ) : (

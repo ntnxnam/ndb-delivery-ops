@@ -57,13 +57,20 @@ Headers: x-jira-token, x-username
 2. Fetch all children: `issueFunction in portfolioChildrenOf("key = {featKey}")` — all epics/stories/bugs
 3. Fetch epic children: `issueFunction in issuesInEpics("issueFunction in portfolioChildrenOf('key = {featKey}') AND type=Epic")`
 
-**Fields fetched**: `summary, status, priority, issuetype, fixVersions, assignee, labels, duedate, customfield_11067, customfield_35863, customfield_35864, customfield_10360 (sprint), components, resolutiondate`
+**Fields fetched** (dashboard canonical via `buildDashboardFields`): includes `summary, issuetype, status, resolution, assignee, priority, created, updated, resolutiondate, duedate, labels, fixVersions, parentLink, epicLink, qaContact`, plus risk/gate/status-update custom fields. Status Sender reuses `payload.canonical` epics with Status Sender column formatting.
+
+**Server-side timing (Spec A)** — on `GET /api/feature/dashboard`:
+- Load JIRA status → category map (`GET /rest/api/2/status`)
+- For each non-portfolio work item, `getIssue(key, { expand: 'changelog' })` (concurrency 3)
+- `timing.realStart` = earliest transition into statusCategory In Progress; `timing.plannedStart` = release EC
+- `hygiene.wrongFixVersionCount` = work items whose `fixVersions` omit the selected release (soft; clickable JQL)
 
 **Client-side derivation** (in `FeatureDashboardPage.js`):
 - Gate open counts: filter by `ccDate ≤ today` + `status != Done`
 - Bug phase distribution: scan `labels` array for `PHASE_LABEL_MAP` keys
 - Reconciliation: issues where `fixVersions` does not include selected release
 - Epic completion over time: group by `resolutiondate` week
+- Timing strip: planned EC vs real start + quiet hygiene caption
 
 ---
 

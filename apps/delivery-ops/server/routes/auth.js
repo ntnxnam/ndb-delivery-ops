@@ -137,7 +137,9 @@ function transformLegacyPermissions(serverData, username) {
     genericEmailerAllowedUsers: ['email_send_generic'],
     releaseSetupAllowedUsers: ['release_setup_manage'],
     releaseConfigAllowedUsers: ['release_config_manage'],
-    sprintReportAllowedUsers: ['sprint_reports_view']
+    sprintReportAllowedUsers: ['sprint_reports_view'],
+    // Exec-audience auto NAI briefing ("What ails the team") — not default-on
+    execAudienceUsers: ['exec_audience'],
   };
 
   // Check each legacy permission array
@@ -194,6 +196,9 @@ function transformLegacyPermissions(serverData, username) {
   }
   if (permissions.has('kpi_view')) {
     roles.add('kpi_manager');
+  }
+  if (permissions.has('exec_audience')) {
+    roles.add('team_exec');
   }
 
   // Default permissions for all authenticated users — every content page is open

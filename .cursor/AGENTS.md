@@ -40,16 +40,17 @@ Registry: `agent-pack/manifest.json`. Paths below are pack-relative.
 
 | Skill | Specialist | Use when |
 |---|---|---|
-| `skills/team-exec-status-answer/` | `team-exec-specialist` | Team Executive / Director asks about release status |
+| `skills/team-exec-briefing/` | `team-exec-specialist` | Unified exec view: status (compound Q + risk register) / report (6 sections) / briefing (RAG + blockers + 7-day) — mode=status/report/briefing |
 | `skills/weekly-status-email/` | `tpm-specialist` | Weekly TPM status email (Monday job or on demand) |
-| `skills/bug-triage/` | `triage-specialist` | New defects need triage |
+| `skills/kpi-pulse-analytics/` | `tpm-specialist` | Reusable KPI Pulse band (last 2 Qs, MTTR, status dwell) |
+| `skills/backlog-triage/` | `triage-specialist` | Unified backlog health: new defects + stale idle + pending unreplied asks (mode=new/stale/pending/all) |
 | `skills/crisis-triage/` | `triage-specialist` | P0 / escalation |
-| `skills/stale-ticket-sweep/` | `triage-specialist` | Periodic backlog hygiene |
-| `skills/pending-response-chase/` | `triage-specialist` | Chase un-answered dependency / deferral asks |
+| `skills/sprint-gantt-chart/` | `tpm-specialist` | Date-hierarchy-aware Gantt |
+| `skills/ticket-insights/` | `tpm-specialist` | Unified fetch+breakdown: 8-clause JQL + 6-group / Dev vs QA / status |
+| `skills/release-dataset-sync/` | `rm-specialist` | 3-group/6-bucket release dataset sync pipeline |
 | `skills/dependency-walk/` | `dependency-tracker-specialist` | "What blocks my feature?" |
-| `skills/move-gate-date/` | `rm-specialist` | Gate date move with mandatory reason + audit (D30) |
+| `skills/release-gate-ops/` | `rm-specialist` | Unified gate-date move (JIRA + config) with mandatory reason + audit (D30/D31) |
 | `skills/confluence-width-cleanup/` | `confluence-publisher-specialist` | Cleaning Confluence storage XML |
-| `skills/release-ai-briefing/` | `tpm-specialist` | Release-level RAG + top blockers + 7-day action list |
 | `skills/multi-model-review/` | `ops-assistant` (builder) | Pipeline stage 2 — parallel multi-model Code Review |
 | `skills/exec-perspective/` | `ops-assistant` (builder) | Pipeline stage 5 — Exec sign-off (high-level → drill-down) |
 

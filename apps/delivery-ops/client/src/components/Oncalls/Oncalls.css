@@ -1,0 +1,568 @@
+.oc-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 2rem;
+}
+
+.oc-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.oc-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.oc-header p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.oc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.oc-btn {
+  padding: 0.375rem 0.875rem;
+  min-height: 2rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.oc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.oc-btn-primary {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.oc-chip {
+  font-size: 0.75rem;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+}
+
+.oc-section {
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.oc-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.oc-heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.oc-hero {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.oc-hero .label {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.oc-hero .value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.oc-hero a.value,
+.oc-jira-link {
+  color: #0f766e;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.oc-hero a.value:hover,
+.oc-jira-link:hover {
+  text-decoration: underline;
+  color: #115e59;
+}
+
+.oc-hero-linked {
+  border-color: #99f6e4;
+}
+
+.oc-hero-chase {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.oc-hero-chase .value,
+.oc-hero-chase .oc-hero-open {
+  color: #c2410c;
+}
+
+.oc-hero-watch {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.oc-hero-monitor {
+  border-color: #bbf7d0;
+}
+
+.oc-hero-jira-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #0f766e;
+  text-decoration: none;
+}
+
+.oc-hero-jira-hint:hover {
+  text-decoration: underline;
+}
+
+.oc-footprint {
+  margin: 0.65rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.oc-story-count {
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.oc-story-count-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #c2410c;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.oc-story-count-btn:hover {
+  color: #9a3412;
+}
+
+.oc-hero .sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.oc-rag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.65rem;
+}
+
+.oc-rag.GREEN { background: #ebfbee; color: #2b8a3e; border: 1px solid #2f9e44; }
+.oc-rag.YELLOW { background: #fff9db; color: #e67700; border: 1px solid #f08c00; }
+.oc-rag.RED { background: #fff5f5; color: #c92a2a; border: 1px solid #e03131; }
+
+.oc-story {
+  margin: 0.25rem 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.35;
+  max-width: 52rem;
+}
+
+.oc-story-tight {
+  margin: 0.15rem 0 0.35rem;
+  font-weight: 600;
+}
+
+.oc-mix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  color: #475569;
+  max-height: 4.5rem;
+  overflow-y: auto;
+}
+
+.oc-mix-second {
+  margin-top: 0.4rem;
+}
+
+.oc-drill {
+  margin-top: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.35rem 0.65rem 0.5rem;
+}
+
+.oc-drill > summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  padding: 0.25rem 0;
+}
+
+.oc-ai-panel {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+
+.oc-ai-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  background: #f8f9fa;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+}
+
+.oc-ai-body {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #212529;
+  white-space: pre-wrap;
+}
+
+.oc-ai-body h2,
+.oc-ai-body h3 {
+  font-size: 0.95rem;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.oc-stacks {
+  margin-top: 0.75rem;
+}
+
+.oc-stack {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+  background: #fff;
+}
+
+.oc-stack summary {
+  cursor: pointer;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.oc-stack-body {
+  padding: 0 0.65rem 0.55rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.oc-stack-body a {
+  color: #0052cc;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.oc-error {
+  color: #c92a2a;
+  font-size: 0.88rem;
+}
+
+.oc-muted {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.oc-table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 280px;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.oc-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.oc-table th,
+.oc-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.oc-table th {
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #f8fafc;
+}
+
+.oc-table a {
+  color: #0052cc;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.oc-table-summary {
+  max-width: 280px;
+}
+
+.oc-table-link {
+  display: inline-block;
+  margin-right: 0.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.oc-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  margin-right: 0.25rem;
+}
+
+.oc-badge-open {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.oc-badge-done {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* Escalation cost ladder — Top CFD most expensive */
+.oc-badge-kpi-top-cfd {
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.oc-badge-kpi-top-cfi {
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 650;
+}
+
+.oc-badge-kpi-nontop {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+
+/* Escalation hero → Sprint-style right drill drawer */
+.oc-hero-open {
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: #0f766e;
+}
+
+.oc-hero-open:hover {
+  text-decoration: underline;
+}
+
+.oc-drill-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 37, 41, 0.35);
+  z-index: 1200;
+}
+
+.oc-drill-overlay.open {
+  display: block;
+}
+
+.oc-drill-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /* Grow with viewport on wide monitors; keep ~860px floor for 13" / mid sizes */
+  width: min(95vw, 1280px, max(860px, 62vw));
+  background: #fff;
+  box-shadow: -4px 0 18px rgba(0, 0, 0, 0.15);
+  padding: 16px 18px;
+  overflow: auto;
+}
+
+.oc-drill-table-wrap {
+  max-height: none;
+  overflow-y: visible;
+}
+
+.oc-drill-lead {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  max-width: 52rem;
+}
+
+.oc-drill-kpi-row {
+  margin-bottom: 0.55rem;
+}
+
+.oc-drill-oncall-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.oc-badge-oncall-status {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.oc-drill-about {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: #1e293b;
+  line-height: 1.35;
+  max-width: 40rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.oc-drill-about-fallback .oc-drill-about-text {
+  color: #475569;
+}
+
+.oc-drill-about-banner {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+.oc-drill-comments {
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 220px;
+  max-width: min(420px, 36vw);
+}
+
+.oc-drill-comment {
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.oc-drill-comment:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.oc-drill-comment-meta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.1rem;
+}
+
+.oc-drill-comment-body {
+  font-size: 0.75rem;
+  color: #334155;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.oc-drill-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.oc-drill-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: #1e293b;
+}
+
+.oc-drill-blurb {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  max-width: 48rem;
+}
+
+.oc-drill-stats {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+}
+
+.oc-drill-stats a {
+  color: #0052cc;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.oc-drill-stats a:hover {
+  text-decoration: underline;
+}
+
+.oc-drill-panel .oc-table {
+  min-width: 900px;
+}

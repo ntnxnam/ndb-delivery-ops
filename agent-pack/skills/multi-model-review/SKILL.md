@@ -98,6 +98,7 @@ Each subagent prompt must include:
   - `no-localhost` in production paths
   - `jql-edit-approval` — flag JQL drift; never propose silent JQL edits as applied
   - `jira-authenticity-links` / clickable metrics when counts/JQL/links touched
+    (dual-click: count → panel when drill exists; Open in JIRA → exact JQL; never both external)
   - `ui-density` / `visual-storyteller-ui` when UI changes
   - `page-docs-required` / `api-docs-required` when pages or routes ship
   - Auth, secrets, injection, unsafe HTML/email, data exposure (security lens)

@@ -1,24 +1,40 @@
 /**
  * Sprint Performance report store + background generation jobs.
- * Reports are written to apps/delivery-ops/reports/ as
- * Sprint-{Team}-{FirstSlot}-{LastSlot}-{YYYY-MM-DD}.html (documentation-consistency).
+ *
+ * Persistence model:
+ * - `.json` = JIRA-derived model (source of truth for metrics / narrative inputs)
+ * - `.html` = optional cache for download / offline forward
+ *
+ * On read, HTML is always re-rendered from the saved `.json` with the current
+ * template + inline app (so UI fixes show without a full JIRA regenerate).
+ * Legacy HTML-only reports fall back to the baked file.
  */
 
 const fs = require('fs');
 const path = require('path');
 const { collectSprintPerformance, computeFromRaw } = require('./sprintPerformanceService');
-const { renderSprintPerformanceHtml } = require('../utils/sprintPerformanceHtml');
+const {
+  renderSprintPerformanceHtml,
+  renderSprintPerformanceFromPayload,
+  extractPayloadFromHtml,
+} = require('../utils/sprintPerformanceHtml');
 const { enrichModelAsksWithAi } = require('./sprintLeadershipAsksService');
 const { getTeamById } = require('../utils/teamConfig');
 
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'reports');
-const FILE_RE = /^Sprint-(.+)-S(\d+)-S(\d+)-(\d{4}-\d{2}-\d{2})\.html$/;
+// Optional -HHmmss suffix so each "Regenerate from JIRA" writes a distinct file
+// (same calendar day no longer overwrites / looks unchanged).
+const FILE_RE = /^Sprint-(.+)-S(\d+)-S(\d+)-(\d{4}-\d{2}-\d{2})(?:-(\d{6}))?\.html$/;
 const jobs = new Map();
 
 function resolveTeam(teamId) {
   const team = getTeamById(teamId);
   if (!team) throw Object.assign(new Error(`Unknown team "${teamId}"`), { statusCode: 400 });
   return team;
+}
+
+function jsonPathFor(htmlFile) {
+  return path.join(REPORTS_DIR, htmlFile.replace(/\.html$/i, '.json'));
 }
 
 function listReports(teamId) {
@@ -34,18 +50,34 @@ function listReports(teamId) {
     .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
 }
 
+function renderHtmlForEntry(entry) {
+  const htmlPath = path.join(REPORTS_DIR, entry.file);
+  const jsonPath = jsonPathFor(entry.file);
+  if (fs.existsSync(jsonPath)) {
+    const model = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    return renderSprintPerformanceHtml(model);
+  }
+  // Legacy: HTML only — re-shell with current template using embedded payload when possible.
+  const baked = fs.readFileSync(htmlPath, 'utf8');
+  const payload = extractPayloadFromHtml(baked);
+  if (payload) return renderSprintPerformanceFromPayload(payload);
+  return baked;
+}
+
 function readReport(teamId, file) {
   const reports = listReports(teamId);
   const entry = file ? reports.find((r) => r.file === file) : reports[0];
   if (!entry) return null;
-  return { ...entry, html: fs.readFileSync(path.join(REPORTS_DIR, entry.file), 'utf8') };
+  return { ...entry, html: renderHtmlForEntry(entry) };
 }
 
 function writeReport(model) {
   const slots = model.meta.slots;
   const date = model.meta.generatedAt.slice(0, 10);
-  const file = `Sprint-${model.meta.teamName}-${slots[0].name}-${slots[slots.length - 1].name}-${date}.html`;
+  const base = `Sprint-${model.meta.teamName}-${slots[0].name}-${slots[slots.length - 1].name}-${date}`;
+  const file = `${base}.html`;
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  fs.writeFileSync(jsonPathFor(file), JSON.stringify(model));
   fs.writeFileSync(path.join(REPORTS_DIR, file), renderSprintPerformanceHtml(model));
   return file;
 }

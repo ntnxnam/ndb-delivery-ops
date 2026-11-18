@@ -1,4 +1,4 @@
-# Dependency View — Data Layer
+# Post EC dependency view — Data Layer
 
 **Route**: `/dependency-view`  
 **Hook**: `useDependencyView`  
@@ -16,7 +16,7 @@ DependencyViewPage
   → useTeam()
   → useDependencyView(teamId, release)
   → authenticatedGet('/api/dependency/overview')
-  → filters: Show · Project type
+  → filters: EW scope · Component (wait tabs, client-side)
   → Hygiene chase (client-derived from dependency_rule.md §6)
   → Direction columns: I wait | They wait
   → Wishlist / Train asks / Partnership hierarchy (details)
@@ -54,12 +54,31 @@ Legacy section keys (`partnershipBlockedBy`, `companions`, …) remain for API s
 |-------|---------|
 | `operationMode` | `{ id: dependency\|partnership\|wishlist\|train_ask, label, hint }` |
 | `span` / `spanInfo` | Project type EW |
+| `components` | `string[]` — JIRA component names (`DEPENDENCY_EXTRA_FIELDS` includes `components`) |
 | `commitState` | `clean` \| `ask` |
 | `commitNature` | `Commit` \| `Stretch` \| null |
 | `commitHygiene` | `partner_missing_fixversion` \| `partner_missing_release_commit` \| null |
 | `releaseCommit` | Raw field value |
 
+### Component filter (client)
+
+1. After EW scope, collect unique `components` from the partner ticket list for the active wait tab.
+2. Keep issues where `components` includes the selected name (any project).
+3. Display proof JQL / URL appends `AND component = "<name>"` — fetch JQL for Q3/Q4 is unchanged.
+
 ---
+
+## Previously linked (post-fetch)
+
+After Q1–Q7 + chain context, `fetchPreviouslyLinked` (`server/utils/previouslyLinkedDeps.js`):
+
+1. **Seeds** (cap ~80): home wait-roots / wishlist / Q3–Q4 home keys, then live-chain partners (Q3/Q4 non-home + `blockerHops`) so “their dependency removed” is visible.
+2. **Changelog**: `expand=changelog` Link field add/remove for `blocks` / `is blocked by` wording.
+3. **Lookback**: on/after release EC date, else last 90 days.
+4. **Exclude** pairs still present in live `issuelinks`.
+5. Response top-level `previouslyLinked: { count, jql, jiraUrl, pairs[] }` — `jql` is `key in (...)` only (no invented historical-link JQL). Q1–Q7 strings unchanged.
+
+UI: flat pairs under wait tabs (`PreviouslyLinkedBlock`) — muted “previously linked” connector, **no** `WaitArrow`.
 
 ## Caching
 

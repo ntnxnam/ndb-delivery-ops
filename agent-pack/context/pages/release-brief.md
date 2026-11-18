@@ -19,7 +19,7 @@ AI health briefing per release: RAG, blockers, 7-day actions.
 
 ## Engineering docs
 
-`apps/delivery-ops/docs/pages/` → (skill release-ai-briefing; LLD-ai-layer)
+`apps/delivery-ops/docs/pages/` → (skill team-exec-briefing mode=briefing; LLD-ai-layer)
 
 ## Agent notes
 

@@ -19,5 +19,5 @@
     "incremental": true
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "src/domain"]
+  "exclude": ["dist", "node_modules", "src/domain", "src/**/__tests__/**"]
 }

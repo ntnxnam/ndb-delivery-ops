@@ -1,0 +1,24 @@
+{
+  "datasetId": "dig_fe426f8656e6_1794501226766",
+  "jql": "project = JCH and reporter = namratha.singh",
+  "productId": "ndb",
+  "jqlHash": "fe426f8656e6",
+  "ticketCount": 245,
+  "fetchedAt": "2026-11-12T16:33:46.766Z",
+  "fields": "key,summary,issuetype,status,priority,assignee,reporter,fixVersions,created,updated,resolution,resolutiondate,duedate,labels,components,parent,customfield_10002,customfield_10360,customfield_10361,customfield_10860,customfield_11065,customfield_11067,customfield_11068,customfield_11861,customfield_13860,customfield_13861,customfield_14463,customfield_15160,customfield_20363,customfield_23073,customfield_23560,customfield_27764,customfield_31460,customfield_35863,customfield_35864,customfield_38460,customfield_45660,customfield_47780,customfield_51460,customfield_55662,customfield_55663,customfield_55664",
+  "mode": "cached-full",
+  "includeHistory": true,
+  "includeComments": true,
+  "sampleKeys": [
+    "JCH-12556",
+    "JCH-12424",
+    "JCH-12542",
+    "JCH-12471",
+    "JCH-12454",
+    "JCH-12412",
+    "JCH-12453",
+    "JCH-12337",
+    "JCH-12313",
+    "JCH-12187"
+  ]
+}

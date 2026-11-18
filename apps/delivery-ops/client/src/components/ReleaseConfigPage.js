@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Toast } from '../shared/components/Toast';
+import { PageLoading } from '../shared/components/PageLoading';
 import ReleaseGantt from './ReleaseGantt';
 
 /**
@@ -244,16 +245,56 @@ const ReleaseConfigPage = () => {
     }));
   }
 
+  function driListEqual(a, b) {
+    const norm = (v) =>
+      (Array.isArray(v) ? v : String(v || '').split(/[,;\n]+/))
+        .map((x) => String(x).trim().toLowerCase().split('@')[0])
+        .filter(Boolean)
+        .sort()
+        .join(',');
+    return norm(a) === norm(b);
+  }
+
   function detectChangedCols(version) {
     const original = releases[version] || {};
     const edited   = pendingEdits[version] || {};
     return GATE_COLUMNS.filter(col => col.getCurrent(edited) !== col.getCurrent(original));
   }
 
+  function drisChanged(version) {
+    const original = releases[version] || {};
+    const edited = pendingEdits[version] || {};
+    return (
+      !driListEqual(original.devDRIs, edited.devDRIs) ||
+      !driListEqual(original.qaDRIs, edited.qaDRIs)
+    );
+  }
+
   function requestSave(version) {
     const changed = detectChangedCols(version);
-    if (!changed.length) { cancelEdit(version); return; }
+    const driOnly = drisChanged(version);
+    if (!changed.length && !driOnly) { cancelEdit(version); return; }
+    // Gate date slips need a reason; DRI-only edits save immediately
+    if (!changed.length && driOnly) {
+      doSave(version, pendingEdits[version] || releases[version] || {}, '');
+      return;
+    }
     setShowModal({ version, changedCols: changed });
+  }
+
+  function updateDriField(version, field, value) {
+    setPendingEdits((prev) => ({
+      ...prev,
+      [version]: {
+        ...(prev[version] || JSON.parse(JSON.stringify(releases[version] || {}))),
+        [field]: value,
+      },
+    }));
+  }
+
+  function formatDriInput(list) {
+    if (Array.isArray(list)) return list.join(', ');
+    return String(list || '');
   }
 
   async function confirmSave(reason) {
@@ -314,7 +355,7 @@ const ReleaseConfigPage = () => {
     }
   }
 
-  if (loading) return <div className="rc-loading">Loading…</div>;
+  if (loading) return <PageLoading message="Loading release config…" />;
 
   const versions = Object.keys(releases);
 
@@ -323,7 +364,10 @@ const ReleaseConfigPage = () => {
       <div className="rc-header">
         <div>
           <h1>Release Configuration</h1>
-          <p>Struck-out dates show previous revisions with their reasons. GA changes update JIRA and notify the team.</p>
+          <p>
+            Struck-out dates show previous revisions with their reasons. GA changes update JIRA and notify the team.
+            Set Dev / QA DRIs per release (usernames) for Release Outstanding Work and email CC.
+          </p>
         </div>
         <button className="btn-primary" onClick={() => setShowNewForm(true)} disabled={saving}>
           + New Release
@@ -361,6 +405,8 @@ const ReleaseConfigPage = () => {
                 {GATE_COLUMNS.map(col => (
                   <th key={col.key} className={col.isGA ? 'col-ga' : ''}>{col.label}</th>
                 ))}
+                <th className="col-dri">Dev DRIs</th>
+                <th className="col-dri">QA DRIs</th>
                 <th className="col-actions">Actions</th>
               </tr>
             </thead>
@@ -416,6 +462,41 @@ const ReleaseConfigPage = () => {
                         </td>
                       );
                     })}
+
+                    <td className="col-dri">
+                      {editing ? (
+                        <input
+                          className="dri-input"
+                          placeholder="user1, user2"
+                          value={formatDriInput(draft.devDRIs)}
+                          onChange={(e) => updateDriField(version, 'devDRIs', e.target.value)}
+                          title="Comma-separated usernames (Dev DRI)"
+                        />
+                      ) : (
+                        <span className="dri-text">
+                          {Array.isArray(cfg.devDRIs) && cfg.devDRIs.length
+                            ? cfg.devDRIs.join(', ')
+                            : <span className="date-empty">—</span>}
+                        </span>
+                      )}
+                    </td>
+                    <td className="col-dri">
+                      {editing ? (
+                        <input
+                          className="dri-input"
+                          placeholder="user1, user2"
+                          value={formatDriInput(draft.qaDRIs)}
+                          onChange={(e) => updateDriField(version, 'qaDRIs', e.target.value)}
+                          title="Comma-separated usernames (QA DRI)"
+                        />
+                      ) : (
+                        <span className="dri-text">
+                          {Array.isArray(cfg.qaDRIs) && cfg.qaDRIs.length
+                            ? cfg.qaDRIs.join(', ')
+                            : <span className="date-empty">—</span>}
+                        </span>
+                      )}
+                    </td>
 
                     <td className="col-actions">
                       {editing ? (
@@ -485,8 +566,14 @@ const ReleaseConfigPage = () => {
 
         .col-version { font-weight: 600; min-width: 90px; white-space: nowrap; }
         .col-ga      { background: rgba(40,167,69,0.04); }
+        .col-dri     { min-width: 120px; max-width: 180px; }
         .col-actions { min-width: 104px; white-space: nowrap; }
         .date-cell   { min-width: 80px; }
+        .dri-input {
+          width: 100%; min-width: 110px; padding: 3px 6px;
+          border: 1px solid #007bff; border-radius: 3px; font-size: 11px; box-sizing: border-box;
+        }
+        .dri-text { font-size: 11px; color: #333; word-break: break-word; }
 
         /* Date stack */
         .date-stack   { display: flex; flex-direction: column; gap: 3px; }

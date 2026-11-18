@@ -64,11 +64,12 @@ Return: Exec punch list (Blocking / High / Medium / Nit) — not a rewrite
 2. **Structure the review like the persona reads:**
    - L1 headline / RAG / ask
    - L2 risk register (ranked)
-   - L3 drill-in readiness (are counts clickable? is detail one click away?)
+   - L3 drill-in readiness (count → in-app detail when a list exists; separate Open in JIRA for proof?)
 3. **Fail on:**
    - Raw data dumps as primary view
    - Metrics without plain-English meaning
    - Unverifiable counts (no JIRA / source path)
+   - Count and “Open in JIRA” both leaving the app when an in-app drill exists (`jira-authenticity-links` dual-click)
    - JQL strings in exec-facing body copy
    - Tables that should be a chart + one sentence
    - Missing Path to Green / owner / ETA on Yellow/Red items
@@ -112,6 +113,6 @@ Return: Exec punch list (Blocking / High / Medium / Nit) — not a rewrite
 
 ## Related
 
-- Status **answers** for live releases → `agent-pack/skills/team-exec-status-answer/`
+- Status **answers** for live releases → `agent-pack/skills/team-exec-briefing/` (mode=status / report / briefing)
 - Pipeline ownership → `.cursor/rules/multi-agent-delivery-pipeline.mdc` stage 5
 - Multi-model Code Review → `agent-pack/skills/multi-model-review/`

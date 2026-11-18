@@ -589,14 +589,15 @@ function ReleaseVersionGantt({
         }}
       >
         <div style={{ 
-          minWidth: '200px', 
-          maxWidth: '200px',
+          width: 'var(--gantt-label-w)',
+          flex: '0 0 var(--gantt-label-w)',
           fontSize: '10px', 
           marginRight: '8px',
-          marginLeft: '-208px',
+          marginLeft: 'calc(-1 * (var(--gantt-label-w) + 8px))',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          boxSizing: 'border-box'
         }}>
           {/* Jira key link */}
           <div style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -848,7 +849,11 @@ function ReleaseVersionGantt({
         padding: '12px', 
         backgroundColor: '#fff',
         border: '1px solid #ddd',
-        borderRadius: '4px'
+        borderRadius: '4px',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'auto',
       }}>
         <h4 style={{ marginTop: 0, marginBottom: '12px', fontSize: '14px', color: '#495057' }}>
           Gate Dates Configuration for {selectedVersion}
@@ -1269,10 +1274,12 @@ function ReleaseVersionGantt({
       
       {/* Container for timeline and bars with full-height vertical markers */}
       <div style={{
+        // px/vw only — % in a shared custom property re-resolves per nesting level and skews bars
+        '--gantt-label-w': 'clamp(140px, 12vw, 220px)',
         position: 'relative',
-        marginLeft: '208px', // Account for Y-axis label width (200px) + marginRight (8px)
-        width: 'calc(100% - 208px)', // Must match bar container width
-        minWidth: '800px', // Ensure minimum width for better visibility
+        marginLeft: 'calc(var(--gantt-label-w) + 8px)',
+        width: 'calc(100% - var(--gantt-label-w) - 8px)',
+        minWidth: '720px', // Narrow viewports scroll instead of crushing markers
         boxSizing: 'border-box',
         minHeight: '200px', // Ensure container has height for full-height markers (EC, GA, gates)
         overflow: 'visible' // Allow markers at edges (0% and 100%) to be visible

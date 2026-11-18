@@ -88,15 +88,35 @@ function loadKpiConfigSync() {
 }
 
 /**
+ * Sort KPIs by config `order` (stable for display / batch execution).
+ * @param {Array} kpis
+ * @returns {Array}
+ */
+function sortKpisByOrder(kpis) {
+  if (!Array.isArray(kpis)) return [];
+  return [...kpis].sort((a, b) => (a.order ?? 999999) - (b.order ?? 999999));
+}
+
+/**
  * Given a teams map (from loadKpiConfigSync) and a teamId, return the team's
- * KPI array. Returns { kpis: null, normalizedTeamId: '' } if not found.
+ * KPI array sorted by `order`.
+ *
+ * **Config-driven contract** (`kpiConfig.json` is the sole source of truth):
+ * - Returns the **full** list — never slice/cap by a magic number.
+ * - Callers must `.map` over this list; never hard-code KPI names/ids in UI
+ *   or route handlers (e.g. do not special-case "Top-CFI").
+ * - New KPIs added on the KPIs admin page must appear on every consumer
+ *   without a code change.
+ *
+ * Returns { kpis: null, normalizedTeamId: '' } if team not found.
  */
 function getKpisForTeam(teams, teamId) {
   const normalizedTeamId = normalizeTeamId(teamId);
   if (!normalizedTeamId) return { kpis: null, normalizedTeamId: '' };
   const kpis = teams[normalizedTeamId];
+  if (!Array.isArray(kpis)) return { kpis: null, normalizedTeamId };
   return {
-    kpis: Array.isArray(kpis) ? kpis : null,
+    kpis: sortKpisByOrder(kpis),
     normalizedTeamId,
   };
 }
@@ -202,6 +222,7 @@ module.exports = {
   findTeamInList,
   loadKpiConfigSync,
   getKpisForTeam,
+  sortKpisByOrder,
   loadTeamBoardConfig,
   saveTeamBoardConfig,
   invalidateTeamBoardCache,

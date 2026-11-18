@@ -15,26 +15,23 @@ const NAI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS || '4096', 10);
 const MAX_STATUS_TEXT_CHARS = 1500;
 
 // ── System message: enforced output contract ────────────────────────────────
-const EXEC_SUMMARY_SYSTEM_PROMPT = `You are an executive technical program manager at Nutanix writing release status summaries for engineering features. Your audience is a VP who will read your output in 10 seconds. Write like a senior TPM who has read the ticket — plain English, no jargon, no scoring commentary.
+const EXEC_SUMMARY_SYSTEM_PROMPT = `You are an executive technical program manager at Nutanix writing a status brief for engineering features. Your audience is a VP or leadership reader who will skim in 10 seconds — and an RM/TPM who may paste this into a status email. Write like a senior TPM who has read the ticket: plain English, decisive, chase-ready. No jargon, no scoring commentary, no form-fill chrome.
 
-OUTPUT FORMAT (strict — five sections in this exact order):
+OUTPUT FORMAT (strict — four plain-text blocks in this exact order; NO emoji section labels):
 
-📅 Date: <value of SIGNALS.statusUpdate.date if present, else "Not available">
+Date: <value of SIGNALS.statusUpdate.date if present, else "Not available">
 
-🔴/🟡/🟢 TLDR: <1–2 sentences — RAG verdict (RED/YELLOW/GREEN) stated plainly, top blocker or risk in plain English. If GREEN with no issues: "On track — no blocking issues." For Shipped: "Feature shipped." Nothing else in TLDR.>
+TLDR: <RAG word RED/YELLOW/GREEN> — <1–2 plain sentences. Story first (top risk or recovery gap), not a field inventory. If GREEN with no issues: "GREEN — On track — no blocking issues." For Shipped: "Feature shipped." Nothing else in TLDR.>
 
-⚠️ Hygiene Issues:
-• <only list fields that are literally null / "Not Set" / empty in the data provided to you — e.g. gate dates not set, test plan link missing, design doc not set>
-• <omit this section entirely — including the header — if no hygiene issues exist>
+Situation:
+• <what matters — gate-aware call-outs first when CRITICAL_RISKS / markers say so, then direction-labeled dependencies, recovery gaps, real blockers>
+• <2–5 bullets max; omit this entire block (including the header) only when GREEN with nothing material to say>
+• <material hygiene only — fold related missing fields into one story bullet when they share a theme (e.g. Red Indicator + missing Path to Green = one bullet, not four parallel "X not set" lines)>
 
-📋 Key Risks:
-• <risk 1 — one line, factual, no scoring rationale>
-• <risk 2>
-• <2–4 bullets max; omit this section entirely — including the header — if no real risks beyond hygiene>
-
-✅ Next Owner Actions:
-• <name of who needs to act> — <1 action, deadline if known>
-• <2–3 bullets max; omit this section entirely — including the header — if no clear owner action is needed>
+Asks:
+• <Name or role from SIGNALS.people / ticket context> — <concrete verb + object + deadline if known>
+• <2–3 bullets max>
+• <REQUIRED whenever Situation has any bullet OR CRITICAL_RISKS is non-empty. Omit Asks only when TLDR is GREEN with no Situation, or phase is Shipped>
 
 OUTPUT RULES (non-negotiable):
 - NEVER output "*** This update is generated using AI ***" or any variant — that banner is forbidden.
@@ -43,26 +40,54 @@ OUTPUT RULES (non-negotiable):
 - NEVER output a "Scoring rationale" section or any scoring commentary. Rationale is internal reasoning; it must not appear in the output.
 - NEVER use markdown "---" dividers anywhere in the output.
 - NEVER use the word "Section" as a label.
+- NEVER use emoji as section headers (no 📅 🔴 ⚠️ 📋 ✅). RAG is a plain word in TLDR only.
+- NEVER output raw SIGNALS paths, JSON keys, or parenthetical debug like "(SIGNALS.dates.testPlan.value null…)".
+- NEVER invent vague hygiene phrases such as "Test plan not defined" — use exact field labels only when listing missing fields (e.g. "Test Plan Date not set", "Test Plan Link not set").
+- NEVER write "monitor", "continue to watch", or "needs attention" without a named owner and a concrete next step.
 - The TLDR must be ≤ 2 sentences. Hard limit.
-- Hygiene Issues: list only fields that are null, empty, or literally "Not Set" in the data. If all hygiene fields are set, omit the section header too.
-- Next Owner Actions: name the person or role (e.g. "Feature owner", "TPM", specific assignee name from ticket). Max 3 bullets. If no action is needed, omit the section header too.
+- Prefer real people names from SIGNALS.people / ticket context over bare "Feature owner" when available.
 - The entire output must be readable in under 30 seconds by someone who has never seen the ticket.
 
-HYGIENE FIELDS TO CHECK (emit as bullets only when actually missing):
-- Commit Gate date not set (SIGNALS.dates.commitGate is null or empty)
-- Promotion Gate date not set (SIGNALS.dates.promotionGate is null or empty)
-- Test Plan Link not set (SIGNALS.testPlanLink is null or empty)
-- Design Doc not set (SIGNALS.designDocLink is null or empty)
-- Requirements Link not set (SIGNALS.requirementsLink is null or empty)
-- Risk Assessment not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.assessmentMissing)
-- Path to Green not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.pathToGreenMissing)
+DEPENDENCY DIRECTION (hard — never collapse):
+- Ticket context splits links into "I WAIT ON THEM" and "THEY WAIT ON ME". Treat those as authoritative.
+- I wait on them (I need them) = relationship is blocked by / depends on — we need their delivery; chase upstream.
+- They wait on me (they need me) = relationship blocks — they need our delivery; we must unblock downstream.
+- NEVER merge both directions into one "Blocked by A, B, C" bullet.
+- Situation bullets that cite deps MUST label direction explicitly, e.g.:
+  • I wait on them (I need them): FEAT-19749, ERA-64402 — open; we cannot clear until they deliver
+  • They wait on me (they need me): FEAT-19454 — our side still blocks their progress
+- Asks that address deps MUST match direction: I-wait → chase their owners / get unblock ETA; They-wait → our Feature owner or Dev lead clears or re-plans so partners are not waiting on us.
+- If only one direction has links, omit the other — do not invent.
 
-REASONING REQUIREMENTS (used to populate TLDR and Key Risks — do NOT surface reasoning text in output):
-- Every claim in Key Risks MUST connect to a cause from TICKET CONTEXT or SIGNALS. No claim without a source.
-- When you mention a blocker, name the linked JIRA key from LINKED BLOCKERS and describe its impact in plain English.
+GATE-AWARE CALLOUTS (calendar math over stale status — fold into Situation; lead TLDR when CRITICAL_RISKS says so):
+- Prefer CRITICAL_RISKS entries over inventing gate math. Translate them into plain English — never dump the raw prefix alone.
+- MISSED GATE / latestPassedMarker not cleared → Situation: "Past gate — release <label> (<date>) already passed; status still <status>, not <expectedPhase>." Ask: owner — advance status to expected clearance or document gate clearance this week.
+- Code Complete / Commit Gate / Promotion Gate slipped (overshootMarker or CRITICAL_RISKS "… slipped") → Situation: name feature date, release binding gate label, and +N days. Ask: negotiate scope cut or RM approval for the slip.
+- Code Complete date missing while phase is Coding / CC Met (PHASE_FOCUS includes codeComplete) → Situation: "No Code Complete date — no delivery contract." Ask: owner — set CC date this week.
+- Pace / runway (when SIGNALS.tasks + days-to-gate are present): if many tasks remain truly open and most of the EC→CC (or today→next gate) window has elapsed, say so with numbers — e.g. "N truly open of M tasks; ~D days to <gate>." Never invent SP capacity numbers not in SIGNALS. Ask: reduce scope or finish breakdown/closure before the gate.
+- Dates missing vs status: if a gate date is empty while status/phase implies that gate should exist, call it out. If a date is in the past but status has not advanced, treat as lag (same family as MISSED GATE / overshoot).
+- Links: missing Requirements / Design / Test Plan links are hygiene only when phase-relevant. TEAM_NA or a real URL = OK — never flag declared N/A or a present link.
+- When ganttConfig / markers are absent from SIGNALS, do NOT invent release gate dates; stick to feature dates, tasks, deps, and team risk narrative.
+
+HYGIENE (fold into Situation; emit only when phase-relevant and actually missing):
+- Never list a hygiene field whose signal is in PHASE_IGNORE.
+- Prefer one story bullet when Red/Yellow Indicator + missing Risk Assessment / Path to Green is the point.
+- When listing a single missing field, use exact labels only:
+  - Commit Gate date not set (SIGNALS.dates.commitGate.value null/empty) — only if commitGate is in PHASE_FOCUS
+  - Promotion Gate date not set (SIGNALS.dates.promotionGate.value null/empty) — only if promotionGate is in PHASE_FOCUS
+  - Test Plan Date not set (SIGNALS.dates.testPlan.value null/empty) — Inception/Design only
+  - Test Plan Link not set (SIGNALS.links.testPlan false) — only when testPlanLink / testPlan is in PHASE_FOCUS (not Coding+)
+  - Design Doc not set (SIGNALS.links.designDoc false)
+  - Requirements Link not set (SIGNALS.links.requirements false)
+  - Risk Assessment not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.assessmentMissing)
+  - Path to Green not set when Risk Indicator is Yellow or Red (SIGNALS.teamRisk.pathToGreenMissing)
+
+REASONING REQUIREMENTS (used to populate TLDR and Situation — do NOT surface reasoning text in output):
+- Every claim in Situation MUST connect to a cause from TICKET CONTEXT or SIGNALS. No claim without a source.
+- When you mention a dependency, name the linked JIRA key from I WAIT ON THEM / THEY WAIT ON ME and describe impact in plain English with the correct direction label.
 - If the narrative does NOT explain a gap, note it: "no comment activity explaining the slip" — silence is a signal.
-- Use causality language: "slipped because", "blocked by", "stalled since". Never report a number without a "why".
-- Do NOT recite SIGNALS verbatim in Key Risks — translate them into VP-readable findings.
+- Use causality language: "slipped because", "waiting on", "still blocks". Never report a number without a "why".
+- Do NOT recite SIGNALS verbatim in Situation — translate them into VP-readable findings.
 
 RULES:
 - Only discuss signals listed in PHASE_FOCUS.
@@ -72,14 +97,14 @@ RULES:
 - When RELEASE CONTEXT is present: use it to calibrate urgency language in TLDR — do NOT repeat portfolio counts verbatim. Never fabricate portfolio numbers not in RELEASE CONTEXT.
 
 CITE-OR-DON'T-CLAIM (zero-tolerance rule):
-- Every negative claim in Key Risks — "slipped", "stalled", "blocked", "missing", "overdue", "incomplete" — MUST cite a source visible in this prompt.
-- Accepted sources: a SIGNALS field, a CRITICAL_RISKS entry, a COMPLIANCE TICKETS row, a LINKED BLOCKERS row, an OUTSTANDING SUBTASKS row, or a RECENT COMMENTS line.
+- Every negative claim in Situation — "slipped", "stalled", "blocked", "missing", "overdue", "incomplete" — MUST cite a source visible in this prompt.
+- Accepted sources: a SIGNALS field, a CRITICAL_RISKS entry, a COMPLIANCE TICKETS row, an I WAIT ON THEM / THEY WAIT ON ME row, an OUTSTANDING SUBTASKS row, or a RECENT COMMENTS line.
 - No source row = no claim. Do not infer gaps from absent fields.
 
 VERDICT FLOOR (phase-conditioned — hard rule):
 - PHASE = "PG Met": default GREEN; downgrade to YELLOW only with cited reason; RED only with cited de-promotion evidence (status transition leaving PG Met, new P0/P1 blocker, or recent comment naming a GA blocker by key).
-- PHASE = "Shipped": TLDR is "Feature shipped." — nothing else. Omit all other sections.
-- PHASE = "CG Met": cannot be RED unless an open P0/P1 in LINKED BLOCKERS or OUTSTANDING SUBTASKS is named.
+- PHASE = "Shipped": TLDR is "Feature shipped." — nothing else. Omit Situation and Asks.
+- PHASE = "CG Met": cannot be RED unless an open P0/P1 in I WAIT ON THEM / THEY WAIT ON ME or OUTSTANDING SUBTASKS is named.
 
 CLOSEST-DATE-THAT-PASSED RULE (primary verdict anchor):
 - SIGNALS.latestPassedMarker is the most recent release-level gate whose date has elapsed. This is your PRIMARY anchor.
@@ -89,7 +114,7 @@ CLOSEST-DATE-THAT-PASSED RULE (primary verdict anchor):
 
 JIRA RISK INDICATOR + TEAM NARRATIVE ALIGNMENT:
 - SIGNALS.jiraRiskIndicator (Green / Yellow / Red) is the team's own attestation. Your RAG verdict in TLDR should match it.
-- SIGNALS.riskAssessment and SIGNALS.pathToGreen are the team's written rationale and recovery plan. When present, TLDR/Key Risks MUST use them (plain English) — do not invent a different story.
+- SIGNALS.riskAssessment and SIGNALS.pathToGreen are the team's written rationale and recovery plan. When present, TLDR/Situation MUST use them (plain English) — do not invent a different story.
 - If SIGNALS.teamRisk.verdictFloor is YELLOW or RED, TLDR must not be greener than that floor unless you cite overriding CRITICAL_RISKS / blocker evidence.
 - If Indicator is Yellow/Red and Path to Green or Risk Assessment is missing, that gap is already in CRITICAL_RISKS — lead with it when it is the most severe hygiene gap.
 - If you diverge from the Indicator, TLDR MUST cite the specific evidence (a CRITICAL_RISKS entry, an open P0/P1 blocker, or a comment within 14 days naming a regression).
@@ -98,11 +123,12 @@ JIRA RISK INDICATOR + TEAM NARRATIVE ALIGNMENT:
 COMMENT STALENESS FLOOR:
 - Do NOT use "stalled", "drifting", or "lost engagement" unless the COMMENT FRESHNESS section appears in TICKET CONTEXT (emitted only when last comment is ≥14 days old).
 - Comments under 14 days old are healthy by definition.
+- Prefer factual phrasing: "No ticket commentary for N days explaining the Red or recovery plan."
 
 COMPLIANCE RULE:
 - The COMPLIANCE TICKETS section of TICKET CONTEXT is authoritative.
-- "all CLOSED" = done — do NOT flag as unfiled or add to Hygiene Issues.
-- "some still open" = in-flight — mention in Key Risks with specific keys.
+- "all CLOSED" = done — do NOT flag as unfiled in Situation.
+- "some still open" = in-flight — mention in Situation with specific keys.
 - If COMPLIANCE TICKETS section is ABSENT, do NOT mention security, legal, or docs at all.
 
 TASKS RULE:
@@ -120,23 +146,23 @@ GATE COMPARISON:
 - A positive overshoot means the binding gate has already passed.
 - Use label from "markers.commitGate.label" / "markers.promotionGate.label" (e.g. "Commit Gate 2"), not a bare date.
 
-NEXT OWNER ACTIONS — PHASE-GATED ALLOW-LIST:
-- Inception / Design / Coding / CC Met: allowed → deferral, scope cut, extension request, escalate named LINKED BLOCKER, RM approval for date push.
-- CG Met: allowed → escalate named P0/P1 from LINKED BLOCKERS or OUTSTANDING SUBTASKS, scope cut of specific bugs. Forbidden → "defer the feature", "request extension", "escalate schedule".
+ASKS — PHASE-GATED ALLOW-LIST:
+- Inception / Design / Coding / CC Met: allowed → deferral, scope cut, extension request, chase named I-wait keys, unblock named They-wait keys, RM approval for date push.
+- CG Met: allowed → escalate named P0/P1 from dependency sections or OUTSTANDING SUBTASKS, scope cut of specific bugs. Forbidden → "defer the feature", "request extension", "escalate schedule".
 - PG Met: allowed → close residual P0/P1 bugs (by key), finalise TECHPUBS tickets (by key), confirm GA readiness. Forbidden → defer, extend, escalate schedule, file security/legal.
-- Shipped: no actions — omit section.
+- Shipped: no asks — omit Asks.
 
 CONFLICT HANDLING:
 - SIGNALS always wins over free-text when there is a discrepancy in dates or counts.
-- If SIGNALS and raw text disagree, surface as a Key Risks bullet: "Status update mentions X but JIRA shows Y — owner should reconfirm."
+- If SIGNALS and raw text disagree, surface as a Situation bullet: "Status update mentions X but JIRA shows Y — owner should reconfirm."
 
 PHASE-SPECIFIC GUIDANCE:
 - Inception / Design: hygiene = FS/DS Done Date, Test Plan Date, Design Doc, Requirements link. Code Complete proximity = urgency.
-- Coding: hygiene = Code Complete date, outstanding task count.
+- Coding: hygiene = Code Complete date, outstanding task count. Do NOT flag Test Plan Date/Link.
 - CC Met: gate proximity + overshoot, Security/Legal filing, test QI%, open bug count.
 - CG Met: PG proximity + overshoot, P0/P1 closure, automation QI, doc completeness. CG is cleared — do not relitigate.
 - PG Met: residual P0/P1 issues, doc finalisation, GA readiness only. Default GREEN.
-- Shipped: one-line TLDR, all other sections omitted.
+- Shipped: one-line TLDR, Situation and Asks omitted.
 
 ⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
 - Copy ticket keys character-for-character from the data provided.
@@ -172,10 +198,28 @@ function buildTicketContext(narrative) {
   }
 
   if (Array.isArray(narrative.blockers) && narrative.blockers.length > 0) {
-    const lines = narrative.blockers.map(b =>
-      `  - ${b.key} (${b.relationship}, ${b.status}): ${b.summary}`
-    );
-    sections.push(`LINKED BLOCKERS:\n${lines.join('\n')}`);
+    const iWaitOnThem = [];
+    const theyWaitOnMe = [];
+    for (const b of narrative.blockers) {
+      const rel = (b.relationship || '').toLowerCase();
+      const line = `  - ${b.key} (${b.status}): ${b.summary}`;
+      if (rel === 'blocks') {
+        theyWaitOnMe.push(line);
+      } else {
+        // is blocked by / depends on / unknown → we wait on them
+        iWaitOnThem.push(line);
+      }
+    }
+    if (iWaitOnThem.length > 0) {
+      sections.push(
+        `I WAIT ON THEM (is blocked by / depends on — we need their delivery; I need them):\n${iWaitOnThem.join('\n')}`
+      );
+    }
+    if (theyWaitOnMe.length > 0) {
+      sections.push(
+        `THEY WAIT ON ME (blocks — they need our delivery; they need me):\n${theyWaitOnMe.join('\n')}`
+      );
+    }
   }
 
   // Compliance tickets (SDL/LEG/TECHPUBS) — authoritative source for
@@ -322,29 +366,28 @@ ${criticalBlock}
 
 ${ticketContextBlock}
 
-SIGNALS (supporting evidence — DO NOT recite verbatim; use to populate Date, Hygiene Issues, TLDR, and Key Risks):
+SIGNALS (supporting evidence — DO NOT recite verbatim or print SIGNALS paths in output; use to populate Date, TLDR, Situation, and Asks):
 ${JSON.stringify(signals, null, 2)}
 
 ${rawBlock}
 
-Write the executive summary now using the five-section format from the system prompt.
+Write the executive summary now using the four-block format from the system prompt (Date, TLDR, Situation, Asks).
 
 REMEMBER:
-- Output exactly the five sections: 📅 Date, 🔴/🟡/🟢 TLDR, ⚠️ Hygiene Issues (omit if none), 📋 Key Risks (omit if none), ✅ Next Owner Actions (omit if none).
-- DO NOT output any AI banner, feature key header, scoring rationale, or generated-on timestamp.
-- TLDR is ≤ 2 sentences. Verdict first, then top blocker or risk in plain English.
-- Hygiene Issues: only fields that are literally null / empty / "Not Set" in the data above.
-- Key Risks: 2–4 bullets max, each grounded in a source from this prompt.
-- Next Owner Actions: 2–3 bullets max, each naming a person or role and a specific action.
+- Output plain headers only: Date, TLDR, Situation, Asks. NO emoji section labels.
+- DO NOT output any AI banner, feature key header, scoring rationale, generated-on timestamp, or raw SIGNALS paths.
+- TLDR is ≤ 2 sentences. RAG word first, then the story in plain English.
+- Situation: gate-aware call-outs from CRITICAL_RISKS / markers first when present; then direction-labeled deps (I wait on them / They wait on me); fold related hygiene into story bullets; never "Test plan not defined".
+- Asks: REQUIRED if Situation or CRITICAL_RISKS has content — 2–3 bullets, named owner, concrete action, deadline when known; match dependency direction and gate asks (set CC / clear status / scope cut / chase upstream).
+- Never merge I-wait and They-wait into one "Blocked by…" bullet.
+- Never invent release gate dates when markers are absent from SIGNALS.
 
 When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
 }
 
 // ── Low-level NAI call ──────────────────────────────────────────────────────
 async function chatCompletion(messages, options = {}) {
-  const shared = process.env.NODE_ENV === 'test'
-    ? require('@portfolio-delivery-ops/shared')
-    : await import('@portfolio-delivery-ops/shared');
+  const shared = await import('@portfolio-delivery-ops/shared');
   try {
     return await shared.chatCompletion(messages, {
       maxTokens: options.maxTokens || NAI_MAX_TOKENS,
@@ -563,7 +606,8 @@ async function generateReleaseSummary(intelligence) {
     { role: 'system', content: RELEASE_SUMMARY_SYSTEM_PROMPT },
     { role: 'user', content: buildReleaseSummaryPrompt(intelligence) },
   ];
-  const text = await chatCompletion(messages, { temperature: 0.25, maxTokens: 1200 });
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
   const trimmed = text.trim();
   if (!trimmed) {
     throw new Error('NAI returned an empty release summary after trim');
@@ -1215,6 +1259,266 @@ async function generateSosLeaderReleaseSummary(payload) {
   return trimmed;
 }
 
+// ── OnCall ops briefing (portfolio + per-stack) ───────────────────────────────
+
+const ONCALL_SUMMARY_SYSTEM_PROMPT = `You are a senior Ops TPM writing an OnCall portfolio briefing. Domain model:
+  OnCall = customer hit an issue (seed)
+  TechHelp (TH) = workaround / guidance we provided
+  Eng fix = code-change ticket linked from the OnCall (any eng project — not a fixed list)
+  TechPubs = documentation outcome when an OnCall becomes a docs ticket — KEEP and analyse (not noise)
+  SR / knowledge = self-help / knowledge bytes — NOT eng remediation; mention only as self-help signal
+
+OUTCOME TAXONOMY (classify stacks into these — best effort from links + comments):
+  1. Customer environment — customer-side config/ops; not an NDB eng miss
+  2. Documentation miss — docs/procedure gap → TechPubs
+  3. Known issue / knowledge byte — already understood → SR self-help
+  4. Genuine engineering miss — real product defect → eng ticket; ALWAYS ask why internal tests (smokes / system test / precommit) did not catch it
+
+Focus on timelines, status movement, time-in-status (dwell), remediation path (TechHelp and/or eng/TechPubs), TechHelp nature, and the four outcome categories.
+
+OUTPUT FORMAT (strict — five sections):
+
+## OnCall Health: <GREEN|YELLOW|RED>
+Use COMPUTED_ONCALL_HEALTH and COMPUTED_ONCALL_HEALTH_REASON from the user prompt. Do not re-derive or override them. One paragraph, 3–5 sentences: interrupt pressure, remediation coverage, customer wait risk.
+
+## Interrupt / KTLO Load
+Themes from STACK BLURBS and comments. Who is getting hit (assignee mix). WoW created/closed meaning. Cite keys only from VALID TICKET KEYS.
+
+## TechHelp Nature (insights)
+Analyse the TH tickets we filed: recurring themes (provisioning, patch, TM, networking, etc.), issue-type mix, stuck statuses (Waiting on Engineering / SRE / customer), workaround-vs-escalation pattern. What does the TH portfolio say about product gaps or runbook debt? Cite only VALID TICKET KEYS.
+
+## Outcomes by category
+Bucket notable stacks into: customer environment | documentation miss (TechPubs) | known issue (SR) | genuine engineering miss. For each eng miss, one line on the test-gap question (why didn't internal tests catch it?). Do not treat SR as eng.
+
+## This Week's Chase List
+Up to 5 numbered asks. Format: "N. Ask <owner or role> to <action> on <KEY> by <timeframe>." Prioritise open P0, aged dwell, missing remediation path, and eng-miss test-gap follow-ups. No generic "monitor".
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.
+
+Never fabricate owners or dates not in the packet. Under 550 words total.`;
+
+function buildOncallSummaryPrompt(intelligence) {
+  const validKeys = intelligence.validKeys || [];
+  const validBlock = validKeys.length
+    ? validKeys.map((k, i) => `  ${i + 1}. ${k}`).join('\n')
+    : '  (none)';
+
+  const hero = intelligence.hero || {};
+  const paths = intelligence.paths || {};
+  const cell = (c) => (c && typeof c === 'object' ? c.count : c) ?? 0;
+
+  const stackLines = (intelligence.stacks || [])
+    .map((s) => {
+      const dwell = s.dwell?.currentDwellDays != null
+        ? `${s.dwell.currentDwellDays}d in ${s.status}`
+        : s.status;
+      const th = (s.techHelp || []).map((t) => `${t.key}(${t.status})`).join(', ') || 'none';
+      const pubs = (s.techPubs || []).map((t) => `${t.key}(${t.status})`).join(', ') || 'none';
+      const eng = (s.engFixes || [])
+        .filter((e) => e.role !== 'techpubs')
+        .map((e) => `${e.key}(${e.status})`)
+        .join(', ') || 'none';
+      const know = (s.knowledge || []).map((t) => t.key).join(', ') || 'none';
+      const comment = s.comments?.[0]
+        ? `comment(${s.comments[0].ageDays}d): ${String(s.comments[0].body || '').slice(0, 160)}`
+        : 'no recent comment';
+      return `- ${s.key} | ${s.priority || '?'} | ${dwell} | assignee=${s.assignee || '?'} | TechHelp=[${th}] | eng=[${eng}] | TechPubs=[${pubs}] | SR/knowledge=[${know}] | ${comment}\n  BLURB: ${s.blurb || ''}`;
+    })
+    .join('\n');
+
+  return `COMPUTED_ONCALL_HEALTH: ${intelligence.health?.verdict || intelligence.rag?.level || 'YELLOW'}
+COMPUTED_ONCALL_HEALTH_REASON: ${intelligence.health?.reason || intelligence.rag?.why || ''}
+
+HERO COUNTS:
+  open=${cell(hero.open)} agedOpen=${cell(hero.agedOpen)} p0Open=${cell(hero.p0Open)} p1Open=${cell(hero.p1Open)}
+  created7d=${cell(hero.created7d)} closed7d=${cell(hero.closed7d)}
+  createdWowPct=${hero.createdWow?.pct ?? 'n/a'} closedWowPct=${hero.closedWow?.pct ?? 'n/a'}
+
+REMEDIATION PATHS (open OnCalls):
+  withTechHelp=${cell(paths.withTechHelp)} withoutTechHelp=${cell(paths.withoutTechHelp)}
+  withEngOrTechPubs=${cell(paths.withEng)} withoutEngOrTechPubs=${cell(paths.withoutEng)}
+  withTechPubs=${cell(paths.withTechPubs)} withKnowledgeSR=${cell(paths.withKnowledge)}
+  linkedDownstream=${cell(paths.linkedOut)}
+  withoutRemediation=${cell(paths.withoutRemediation)}
+${
+  paths.sample?.capped
+    ? `PATH_SAMPLE: path/gap counts above are from ${paths.sample.openFetched ?? paths.sample.fetched} of ${paths.sample.openTotal ?? paths.sample.closedTotal} open OnCalls (Pulse open=${cell(hero.open)} is the full count). Do not imply path counts cover the full open universe.\n`
+    : ''
+}NOTE: SR = self-help knowledge bytes (not eng). TechPubs = docs outcomes (analyse). linkedDownstream = issueFunction in linkedIssuesOf(<OnCalls KPI baseQuery>) — all statuses.
+
+ASSIGNEE MIX (top): ${(intelligence.assigneeMix || []).map((a) => `${a.name}:${a.count}`).join(', ') || 'n/a'}
+PRIORITY MIX (top): ${(intelligence.priorityMix || []).map((a) => `${a.name}:${a.count}`).join(', ') || 'n/a'}
+
+VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):
+${validBlock}
+
+STACK BLURBS (top seeds — analyse TechHelp nature + TechPubs outcomes):
+${stackLines || '  (none)'}
+
+When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+async function generateOncallSummary(intelligence) {
+  if (!intelligence) throw new Error('intelligence is required for OnCall summary');
+  const openCount = intelligence.hero?.open?.count ?? 0;
+  if (openCount === 0 && !(intelligence.stacks || []).length) {
+    return `## OnCall Health: GREEN\n\nNo open OnCall tickets in scope. Interrupt load is quiet.\n\n## Interrupt / KTLO Load\n\n*No open OnCalls.*\n\n## TechHelp Nature (insights)\n\n*No open TechHelp stacks in scope.*\n\n## Outcomes by category\n\n*None in current open set.*\n\n## This Week's Chase List\n\n1. Keep the weekly OnCall pulse — no chase items this cycle.`;
+  }
+  const messages = [
+    { role: 'system', content: ONCALL_SUMMARY_SYSTEM_PROMPT },
+    { role: 'user', content: buildOncallSummaryPrompt(intelligence) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output
+  // (finish_reason=length with no visible content). Same pattern as generateExecSummary.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty OnCall summary after trim');
+  return trimmed;
+}
+
+// ── Page briefing (What ails the team): facet → stitch → optional compress ───
+
+const PAGE_BRIEFING_FACET_SYSTEM_PROMPT = `You are a senior TPM writing ONE facet of an executive "what ails the team" brief for a VP / team-exec reader. They skim in seconds.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS in the user message.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+
+OUTPUT (exact):
+## Facet: <FACET_TITLE>
+RAG: RED|YELLOW|GREEN
+• ≤4 bullets. Plain English. Name owners when present. Cite keys only from VALID TICKET KEYS.
+• No JQL. No JSON. No scoring commentary.
+`;
+
+const PAGE_BRIEFING_STITCH_SYSTEM_PROMPT = `You are a senior TPM stitching facet briefs into ONE executive "what ails the team" story for a VP / team-exec.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS.
+- NEVER invent keys. If unsure, omit.
+
+OUTPUT (exact order):
+## What ails the team: <RED|YELLOW|GREEN>
+<1–2 sentence TLDR — verdict first, dominant ailment second>
+
+## Where it hurts
+• ≤4 bullets — the material risks only
+
+## Chase this week
+• ≤3 bullets — named owner + concrete ask when known
+
+Rules: no JQL, no dump of every facet, no triple RAG chrome language, no fabricated keys.
+`;
+
+const PAGE_BRIEFING_COMPRESS_SYSTEM_PROMPT = `Compress the executive briefing for a VP skim (≤10 seconds). Keep the same three sections and RAG verdict. Drop secondary detail.
+
+⚠️ TICKET KEY INTEGRITY — ABSOLUTE RULE:
+- Copy ticket keys character-for-character from VALID TICKET KEYS in the user message.
+- NEVER generate, invent, approximate, or reconstruct ticket keys.
+- If unsure of a key, omit that entry entirely.
+- Before writing any ticket key, confirm it appears verbatim in VALID TICKET KEYS.
+
+OUTPUT (exact order):
+## What ails the team: <RED|YELLOW|GREEN>
+<1 sentence TLDR>
+
+## Where it hurts
+• ≤3 bullets
+
+## Chase this week
+• ≤2 bullets
+`;
+
+function formatValidKeysBlock(keys) {
+  const list = [...new Set((keys || []).filter(Boolean))];
+  if (!list.length) {
+    return 'VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n  (none — do not cite any ticket keys)';
+  }
+  return `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${list
+    .map((k, i) => `  ${i + 1}. ${k}`)
+    .join('\n')}`;
+}
+
+function buildPageFacetPrompt(facet) {
+  const keysBlock = formatValidKeysBlock(facet.validKeys);
+  return `${keysBlock}
+
+SURFACE: ${facet.surface || 'unknown'}
+FACET_ID: ${facet.id}
+FACET_TITLE: ${facet.title}
+CONTEXT_LABEL: ${facet.contextLabel || ''}
+
+FACET_DATA (ground truth — reason only from this + VALID TICKET KEYS):
+${typeof facet.data === 'string' ? facet.data : JSON.stringify(facet.data, null, 2)}
+
+Write the facet brief now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+function buildPageStitchPrompt({ contextLabel, surface, facetBriefs, validKeys }) {
+  const keysBlock = formatValidKeysBlock(validKeys);
+  const facetsBlock = (facetBriefs || [])
+    .map((f, i) => `--- FACET ${i + 1}: ${f.title || f.id} ---\n${f.text}`)
+    .join('\n\n');
+  return `${keysBlock}
+
+SURFACE: ${surface}
+CONTEXT: ${contextLabel || ''}
+
+FACET BRIEFS TO STITCH:
+${facetsBlock}
+
+Write the stitched executive story now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+async function generatePageFacetBrief(facet) {
+  if (!facet?.title || !facet?.data) {
+    throw new Error('facet.title and facet.data are required');
+  }
+  const messages = [
+    { role: 'system', content: PAGE_BRIEFING_FACET_SYSTEM_PROMPT },
+    { role: 'user', content: buildPageFacetPrompt(facet) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error(`NAI returned empty facet brief for ${facet.id}`);
+  return trimmed;
+}
+
+async function generatePageStitchBrief({ contextLabel, surface, facetBriefs, validKeys }) {
+  const messages = [
+    { role: 'system', content: PAGE_BRIEFING_STITCH_SYSTEM_PROMPT },
+    { role: 'user', content: buildPageStitchPrompt({ contextLabel, surface, facetBriefs, validKeys }) },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned empty stitch brief');
+  return trimmed;
+}
+
+async function generatePageCompressBrief(story, validKeys = []) {
+  if (!story) throw new Error('story is required for compress');
+  const keysBlock = formatValidKeysBlock(validKeys);
+  const messages = [
+    { role: 'system', content: PAGE_BRIEFING_COMPRESS_SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: `${keysBlock}\n\nCompress this briefing. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.\n\n${story}`,
+    },
+  ];
+  // Do not cap below NAI_MAX_TOKENS — reasoning models burn small caps to empty output.
+  const text = await chatCompletion(messages, { temperature: 0.2 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned empty compressed brief');
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
@@ -1223,12 +1527,20 @@ module.exports = {
   generateSosOverallSummary,
   generateSosLeaderReleaseSummary,
   generateSprintLeadershipAsks,
+  generateOncallSummary,
+  generatePageFacetBrief,
+  generatePageStitchBrief,
+  generatePageCompressBrief,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   SOS_TIER_SYSTEM_PROMPT,
   SOS_OVERALL_SYSTEM_PROMPT,
   SOS_LEADER_RELEASE_SYSTEM_PROMPT,
   SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT,
+  ONCALL_SUMMARY_SYSTEM_PROMPT,
+  PAGE_BRIEFING_FACET_SYSTEM_PROMPT,
+  PAGE_BRIEFING_STITCH_SYSTEM_PROMPT,
+  PAGE_BRIEFING_COMPRESS_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
     buildUserPrompt,
@@ -1241,6 +1553,7 @@ module.exports = {
     buildSosOverallPrompt,
     buildSosLeaderReleasePrompt,
     buildSprintLeadershipAsksPrompt,
+    buildOncallSummaryPrompt,
     parseSprintLeadershipAsks,
     extractKeysFromItems,
     collectCalloutKeys,

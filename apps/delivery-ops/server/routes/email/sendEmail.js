@@ -1,5 +1,6 @@
 /**
  * POST /api/email/send - general email with JIRA content
+ * Auth: validateJiraTokenMiddleware (required) — all authenticated users per product AC.
  */
 
 const { emailLimiter } = require('../../middleware/security');

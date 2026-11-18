@@ -1,5 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import {
+  SlidersHorizontal,
+  Layers,
+  BrainCircuit,
+  Kanban,
+  Timer,
+  BarChart2,
+  Wrench,
+  Users,
+  ChevronRight,
+  Link2,
+} from 'lucide-react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { usePermissions } from '../../auth/hooks/usePermissions';
 import { LogoutButton } from '../../auth/components/LogoutButton';
@@ -7,23 +19,33 @@ import { useNotifications } from '../../shared/services/notificationService';
 import { TAB_PERMISSIONS } from '../../auth/constants/permissions';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 import { TeamSelector } from './TeamSelector';
+import {
+  SIDEBAR_NAV_GROUPS,
+  isNavItemActive,
+  findActiveGroupId,
+} from '../utils/sidebarNavConfig';
 
-/**
- * URL for the bin-packing app. The app is static-served by the backend
-* (Express on 8001 in dev, same-origin in prod) under `/bin-packing/`.
- * In dev the React dev server runs on 8899, so we must point absolutely
- * at the backend's port; otherwise the link would land on the React app
- * and 404. In prod everything is one origin, so a relative path works.
- *
- * No hardcoded `localhost` — host is read from `window.location`.
- */
-function getBinPackingUrl() {
-  if (typeof window === 'undefined') return '/bin-packing/';
-  const isDevReactServer = window.location.port === '8899';
-  if (!isDevReactServer) return '/bin-packing/';
-  const backendPort =
-    process.env.REACT_APP_BACKEND_PORT || '8001';
-  return `${window.location.protocol}//${window.location.hostname}:${backendPort}/bin-packing/`;
+const GROUP_ICONS = {
+  SlidersHorizontal,
+  Layers,
+  BrainCircuit,
+  Kanban,
+  Timer,
+  BarChart2,
+  Wrench,
+  Users,
+};
+
+const ICON_SIZE = 16;
+const OPEN_GROUPS_KEY = 'sidebar-open-groups';
+
+function readOpenGroups() {
+  try {
+    const saved = localStorage.getItem(OPEN_GROUPS_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
 }
 
 export const Sidebar = () => {
@@ -33,7 +55,6 @@ export const Sidebar = () => {
   const { refreshVersionsAndResetDefault } = useSelectedRelease();
   const { success: showSuccess, error: showError } = useNotifications();
 
-  // Sidebar state
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved !== null ? JSON.parse(saved) : false;
@@ -41,164 +62,58 @@ export const Sidebar = () => {
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
-    return saved ? parseInt(saved) : 280;
+    return saved ? parseInt(saved, 10) : 280;
   });
 
   const [isMobile, setIsMobile] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [openGroups, setOpenGroups] = useState(readOpenGroups);
 
-  // Connection testing state
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
 
-  // Navigation items configuration
-  const navigationItems = [
-    {
-      path: '/',
-      label: 'Email Sender',
-      icon: '📧',
-      description: 'Send status update emails'
+  const itemVisible = useCallback(
+    (item) => {
+      if (item.external) return true;
+      const requiredPermissions = TAB_PERMISSIONS[item.path];
+      if (!requiredPermissions || requiredPermissions.length === 0) {
+        return true;
+      }
+      return canAccessTab(item.path);
     },
-    {
-      path: '/project-status',
-      label: 'Project Status',
-      icon: '🚀',
-      description: 'Release picker, payload table, Gantt'
-    },
-    {
-      path: '/release-config',
-      label: 'Release Config',
-      icon: '📅',
-      description: 'Move gate dates, view date history'
-    },
-    {
-      path: '/release-setup',
-      label: 'Release Setup',
-      icon: '⚙️',
-      description: 'Create / rename releases, cleanup filters'
-    },
-    {
-      path: '/release/brief',
-      label: 'Release Brief (new)',
-      icon: '✨',
-      description: 'Live KPI / payload / velocity snapshot (in progress)'
-    },
-    {
-      path: '/feature-dashboard',
-      label: 'Feature Dashboard',
-      icon: '🧭',
-      description: 'Feature payload, gates, reconciliation, and burn'
-    },
-    {
-      path: '/release/retrospective',
-      label: 'Retrospective',
-      icon: '🔍',
-      description: 'Gate compliance and behavior per release'
-    },
-    {
-      path: '/generic-emailer',
-      label: 'JIRA Emailer',
-      icon: '📋',
-      description: 'Send emails from JIRA queries'
-    },
-    {
-      path: '/email-history',
-      label: 'Email History',
-      icon: '📜',
-      description: 'View sent email history'
-    },
-    {
-      path: '/sprint-report',
-      label: 'Sprint Report',
-      icon: '🏃',
-      description: 'Sprint reporting and metrics'
-    },
-    {
-      path: '/sprint-performance',
-      label: 'Sprint Performance',
-      icon: '📈',
-      description: 'Leadership view: say/do by scrum team, leader and manager across the last six sprints'
-    },
-    {
-      path: '/sos-summary',
-      label: 'SoS Summary',
-      icon: '📡',
-      description: 'Scrum of Scrums — live Feature/Initiative status across all active releases'
-    },
-    {
-      path: '/sos-leader-summary',
-      label: 'SoS by Leader',
-      icon: '👥',
-      description: 'TEMP — SoS regrouped by NDB eng leader for layout review'
-    },
-    {
-      path: '/component-report',
-      label: 'Component Report',
-      icon: '📊',
-      description: 'Component health, actionable metrics, deferral trends'
-    },
-    {
-      path: '/dependency-view',
-      label: 'Dependency View',
-      icon: '🔗',
-      description: 'Read-only partnership and companion dependencies (NDB-first)'
-    },
-    {
-      path: '/kpis',
-      label: 'KPIs',
-      icon: '📈',
-      description: 'KPI dashboard'
-    },
-    {
-      path: '/system-test-scale',
-      label: 'System-Test Scale',
-      icon: '🧪',
-      description: 'System-Test bug scale, regressions (cf[13260]), and release trends'
-    },
-    {
-      path: '/chatbot',
-      label: 'AI Chatbot',
-      icon: '💬',
-      description: 'Conversational release and ticket Q&A'
-    },
-    {
-      path: getBinPackingUrl(),
-      label: 'Bin Packing',
-      icon: '📦',
-      description: 'NDB project bin-packing Gantt (opens in new tab)',
-      external: true,
-      newTab: true
-    },
-    {
-      path: '/team-management',
-      label: 'Team Management',
-      icon: '🔧',
-      description: 'Add and edit teams'
-    }
-  ];
+    [canAccessTab]
+  );
 
-  // Filter navigation items based on permissions
-  const visibleItems = navigationItems.filter(item => {
-    const requiredPermissions = TAB_PERMISSIONS[item.path];
-    
-    if (!requiredPermissions || requiredPermissions.length === 0) {
-      return true;
-    }
-    
-    return canAccessTab(item.path);
-  });
+  const visibleGroups = useMemo(
+    () =>
+      SIDEBAR_NAV_GROUPS.map((group) => ({
+        ...group,
+        children: group.children.filter(itemVisible),
+      })).filter((group) => group.children.length > 0),
+    [itemVisible]
+  );
 
-  // Persist sidebar state
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  // Persist sidebar width
   useEffect(() => {
     localStorage.setItem('sidebar-width', sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  // Auto-collapse on mobile and track mobile state
+  useEffect(() => {
+    localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(openGroups));
+  }, [openGroups]);
+
+  // Auto-expand the group that owns the active route
+  useEffect(() => {
+    const activeId = findActiveGroupId(location.pathname, SIDEBAR_NAV_GROUPS);
+    if (!activeId) return;
+    setOpenGroups((prev) =>
+      prev[activeId] ? prev : { ...prev, [activeId]: true }
+    );
+  }, [location.pathname]);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
@@ -217,14 +132,17 @@ export const Sidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
 
-  // Resize functionality
+  const toggleGroup = (groupId) => {
+    setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
   const MIN_WIDTH = 200;
   const MAX_WIDTH = 400;
   const COLLAPSED_WIDTH = 60;
 
   const handleMouseDown = (_e) => {
     if (isCollapsed || isMobile) return;
-    
+
     setIsResizing(true);
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
@@ -246,17 +164,19 @@ export const Sidebar = () => {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Touch support for mobile resize
   const handleTouchStart = (e) => {
     if (isCollapsed || isMobile) return;
-    
+
     setIsResizing(true);
     const startX = e.touches[0].clientX;
     const startWidth = sidebarWidth;
 
-    const handleTouchMove = (e) => {
-      const deltaX = e.touches[0].clientX - startX;
-      const newWidth = Math.min(Math.max(startWidth + deltaX, MIN_WIDTH), MAX_WIDTH);
+    const handleTouchMove = (touchEvent) => {
+      const deltaX = touchEvent.touches[0].clientX - startX;
+      const newWidth = Math.min(
+        Math.max(startWidth + deltaX, MIN_WIDTH),
+        MAX_WIDTH
+      );
       setSidebarWidth(newWidth);
     };
 
@@ -270,29 +190,25 @@ export const Sidebar = () => {
     document.addEventListener('touchend', handleTouchEnd);
   };
 
-  const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
-  };
-
-  // Test JIRA connection — on success, also re-fetches versions and re-picks
-  // the default release using the GA-date logic (clears stale localStorage).
   const testConnection = async () => {
     setTestingConnection(true);
     setConnectionStatus(null);
 
     try {
       const result = await testConnectionAndRefreshPermissions();
-      
+
       if (result.success) {
         setConnectionStatus({
           success: true,
-          message: result.message + (result.permissionsRefreshed ? ' • Permissions refreshed' : '')
+          message:
+            result.message +
+            (result.permissionsRefreshed ? ' • Permissions refreshed' : ''),
         });
-        showSuccess(result.permissionsRefreshed ? 'JIRA connection successful • Permissions updated' : 'JIRA connection successful');
-        // Re-fetch versions and reset the default release to the nearest GA date.
+        showSuccess(
+          result.permissionsRefreshed
+            ? 'JIRA connection successful • Permissions updated'
+            : 'JIRA connection successful'
+        );
         refreshVersionsAndResetDefault().catch(() => {});
       } else {
         throw new Error(result.message || 'Connection test failed');
@@ -301,35 +217,74 @@ export const Sidebar = () => {
       const errorMessage = error.message || 'Connection test failed';
       setConnectionStatus({
         success: false,
-        message: errorMessage
+        message: errorMessage,
       });
       showError(errorMessage);
     } finally {
       setTestingConnection(false);
-      
-      // Clear status after 5 seconds
       setTimeout(() => setConnectionStatus(null), 5000);
     }
   };
 
+  const renderNavItem = (item) => {
+    const active = !item.external && isNavItemActive(location.pathname, item.path);
+    const title = item.description || item.label;
+
+    if (item.external) {
+      return (
+        <a
+          key={item.path}
+          href={item.path}
+          target={item.newTab ? '_blank' : undefined}
+          rel={item.newTab ? 'noopener noreferrer' : undefined}
+          className="nav-item nav-item-child nav-item-external"
+          title={title}
+        >
+          <span className="nav-label">{item.label}</span>
+          {item.newTab && (
+            <span className="nav-newtab-indicator" aria-hidden="true">
+              ↗
+            </span>
+          )}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        className={`nav-item nav-item-child ${active ? 'active' : ''}`}
+        title={title}
+      >
+        <span className="nav-label">{item.label}</span>
+      </Link>
+    );
+  };
+
+  const handleCollapsedGroupClick = (groupId) => {
+    setIsCollapsed(false);
+    setOpenGroups((prev) => ({ ...prev, [groupId]: true }));
+  };
+
   return (
     <>
-      <aside 
+      <aside
         className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
-        style={{ 
-          width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${sidebarWidth}px` 
+        style={{
+          width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${sidebarWidth}px`,
         }}
       >
-        {/* Sidebar Header */}
         <div className="sidebar-header">
-          <button 
+          <button
+            type="button"
             className="sidebar-toggle"
             onClick={toggleSidebar}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <span className="toggle-icon">{isCollapsed ? '»' : '«'}</span>
           </button>
-          
+
           {!isCollapsed && (
             <div className="app-title-section">
               <h1 className="app-title">NDB Status Update Sender</h1>
@@ -348,41 +303,79 @@ export const Sidebar = () => {
           </div>
         )}
 
-        {/* Navigation */}
-        <nav className="sidebar-nav">
-          {visibleItems.map((item) => (
-            item.external ? (
-              <a
-                key={item.path}
-                href={item.path}
-                target={item.newTab ? '_blank' : undefined}
-                rel={item.newTab ? 'noopener noreferrer' : undefined}
-                className="nav-item nav-item-external"
-                title={isCollapsed ? `${item.description}` : item.description}
+        <nav className="sidebar-nav" aria-label="Primary">
+          {visibleGroups.map((group) => {
+            const Icon = GROUP_ICONS[group.icon] || Layers;
+            const isOpen = Boolean(openGroups[group.id]);
+            const groupHasActive = group.children.some(
+              (child) =>
+                !child.external &&
+                isNavItemActive(location.pathname, child.path)
+            );
+
+            const groupTitle = group.wip ? `${group.label} (WIP)` : group.label;
+
+            if (isCollapsed) {
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  className={`nav-group-collapsed ${groupHasActive ? 'has-active' : ''} ${group.wip ? 'is-wip' : ''}`}
+                  title={groupTitle}
+                  onClick={() => handleCollapsedGroupClick(group.id)}
+                  aria-label={`Expand ${groupTitle}`}
+                >
+                  <Icon size={ICON_SIZE} strokeWidth={1.75} aria-hidden="true" />
+                </button>
+              );
+            }
+
+            return (
+              <div
+                key={group.id}
+                className={`nav-group ${isOpen ? 'open' : ''} ${groupHasActive ? 'has-active' : ''} ${group.wip ? 'is-wip' : ''}`}
               >
-                <span className="nav-icon">{item.icon}</span>
-                {!isCollapsed && (
-                  <>
-                    <span className="nav-label">{item.label}</span>
-                    {item.newTab && <span className="nav-newtab-indicator">↗</span>}
-                  </>
+                <button
+                  type="button"
+                  className="nav-group-header"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`nav-group-${group.id}`}
+                >
+                  <Icon
+                    size={ICON_SIZE}
+                    strokeWidth={1.75}
+                    className="nav-group-icon"
+                    aria-hidden="true"
+                  />
+                  <span className="nav-group-label">{group.label}</span>
+                  {group.wip && (
+                    <span className="nav-group-wip-badge" title="Work in progress">
+                      WIP
+                    </span>
+                  )}
+                  <ChevronRight
+                    size={14}
+                    strokeWidth={2}
+                    className={`nav-group-caret ${isOpen ? 'open' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isOpen && (
+                  <div
+                    id={`nav-group-${group.id}`}
+                    className="nav-group-children"
+                    role="group"
+                    aria-label={groupTitle}
+                  >
+                    {group.children.map(renderNavItem)}
+                  </div>
                 )}
-              </a>
-            ) : (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                title={isCollapsed ? `${item.description}` : item.description}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {!isCollapsed && <span className="nav-label">{item.label}</span>}
-              </Link>
-            )
-          ))}
+              </div>
+            );
+          })}
         </nav>
 
-        {/* User Info and Actions */}
         <div className="sidebar-footer">
           {!isCollapsed && user && (
             <div className="user-info">
@@ -399,13 +392,15 @@ export const Sidebar = () => {
               className="test-connection-button"
               title="Test JIRA connection and token validity"
             >
-              <span className="action-icon">🔗</span>
-              {!isCollapsed && <span className="action-label">
-                {testingConnection ? 'Testing...' : 'Test Connection'}
-              </span>}
+              <Link2 size={ICON_SIZE} strokeWidth={1.75} className="action-icon-svg" aria-hidden="true" />
+              {!isCollapsed && (
+                <span className="action-label">
+                  {testingConnection ? 'Testing...' : 'Test Connection'}
+                </span>
+              )}
             </button>
 
-            <LogoutButton 
+            <LogoutButton
               className="logout-button"
               showIcon={true}
               showText={!isCollapsed}
@@ -413,15 +408,16 @@ export const Sidebar = () => {
           </div>
 
           {!isCollapsed && connectionStatus && (
-            <div className={`connection-status ${connectionStatus.success ? 'success' : 'error'}`}>
+            <div
+              className={`connection-status ${connectionStatus.success ? 'success' : 'error'}`}
+            >
               {connectionStatus.message}
             </div>
           )}
         </div>
 
-        {/* Resize Handle */}
         {!isCollapsed && !isMobile && (
-          <div 
+          <div
             className="resize-handle"
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
@@ -430,7 +426,6 @@ export const Sidebar = () => {
         )}
       </aside>
 
-      {/* Mobile Overlay */}
       {!isCollapsed && isMobile && (
         <div className="sidebar-overlay" onClick={() => setIsCollapsed(true)} />
       )}
@@ -453,9 +448,6 @@ export const Sidebar = () => {
           max-width: 400px;
         }
 
-        /* When collapsed, the resize range no longer applies; the inline
-           width is 60px and min/max-width must not fight it, otherwise the
-           sidebar renders wider than the 60px margin reserved by Layout. */
         .sidebar.collapsed {
           min-width: 60px;
           max-width: 60px;
@@ -625,7 +617,7 @@ export const Sidebar = () => {
 
         .sidebar-nav {
           flex: 1;
-          padding: 16px 0;
+          padding: 0.5rem 0;
           overflow-y: auto;
           scrollbar-width: thin;
           scrollbar-color: #6c757d #495057;
@@ -648,24 +640,99 @@ export const Sidebar = () => {
           background: #adb5bd;
         }
 
-        .nav-item {
+        .nav-group {
+          margin-bottom: 0.125rem;
+        }
+
+        .nav-group-header {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          color: #adb5bd;
-          text-decoration: none;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s ease;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          min-height: 2rem;
+          background: none;
+          border: none;
           border-left: 3px solid transparent;
-          min-height: 48px;
+          color: #ced4da;
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+          cursor: pointer;
+          text-align: left;
           box-sizing: border-box;
         }
 
-        .collapsed .nav-item {
-          justify-content: center;
-          padding: 12px;
+        .nav-group-header:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #f8f9fa;
+        }
+
+        .nav-group.has-active > .nav-group-header {
+          color: #87ceeb;
+          border-left-color: rgba(0, 123, 255, 0.5);
+        }
+
+        .nav-group-icon {
+          flex-shrink: 0;
+          opacity: 0.9;
+        }
+
+        .nav-group-label {
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .nav-group-wip-badge {
+          flex-shrink: 0;
+          padding: 0.1rem 0.35rem;
+          border-radius: 0.2rem;
+          font-size: 0.625rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          line-height: 1.2;
+          text-transform: uppercase;
+          color: #212529;
+          background: #ffc107;
+        }
+
+        .nav-group-collapsed.is-wip {
+          color: #ffc107;
+        }
+
+        .nav-group-caret {
+          flex-shrink: 0;
+          opacity: 0.7;
+          transition: transform 0.15s ease;
+        }
+
+        .nav-group-caret.open {
+          transform: rotate(90deg);
+        }
+
+        .nav-group-children {
+          display: flex;
+          flex-direction: column;
+          padding-bottom: 0.25rem;
+        }
+
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.375rem 0.75rem 0.375rem 2.25rem;
+          color: #adb5bd;
+          text-decoration: none;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          transition: background-color 0.15s ease, color 0.15s ease;
+          border-left: 3px solid transparent;
+          min-height: 2rem;
+          box-sizing: border-box;
         }
 
         .nav-item:hover {
@@ -681,13 +748,6 @@ export const Sidebar = () => {
           font-weight: 600;
         }
 
-        .nav-icon {
-          font-size: 18px;
-          flex-shrink: 0;
-          width: 24px;
-          text-align: center;
-        }
-
         .nav-label {
           white-space: nowrap;
           overflow: hidden;
@@ -696,7 +756,7 @@ export const Sidebar = () => {
 
         .nav-newtab-indicator {
           margin-left: auto;
-          font-size: 12px;
+          font-size: 0.75rem;
           color: #6c757d;
           opacity: 0.7;
         }
@@ -704,6 +764,30 @@ export const Sidebar = () => {
         .nav-item-external:hover .nav-newtab-indicator {
           color: #f8f9fa;
           opacity: 1;
+        }
+
+        .nav-group-collapsed {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-height: 2.5rem;
+          padding: 0.5rem;
+          background: none;
+          border: none;
+          border-left: 3px solid transparent;
+          color: #adb5bd;
+          cursor: pointer;
+        }
+
+        .nav-group-collapsed:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #f8f9fa;
+        }
+
+        .nav-group-collapsed.has-active {
+          color: #87ceeb;
+          border-left-color: #007bff;
         }
 
         .sidebar-footer {
@@ -717,17 +801,18 @@ export const Sidebar = () => {
           padding: 12px;
           background: rgba(255, 255, 255, 0.05);
           border-radius: 6px;
+          border: 1px solid #495057;
         }
 
         .user-label {
           display: block;
-          color: #ccc;
           font-size: 12px;
+          color: #adb5bd;
           margin-bottom: 4px;
         }
 
         .username {
-          color: white;
+          color: #f8f9fa;
           font-size: 14px;
         }
 
@@ -743,38 +828,31 @@ export const Sidebar = () => {
 
         .test-connection-button,
         .logout-button {
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 500;
-          transition: background-color 0.2s;
           display: flex;
           align-items: center;
-          gap: 6px;
-          justify-content: center;
-          min-height: 36px;
+          gap: 8px;
+          width: 100%;
+          padding: 0.375rem 0.875rem;
+          min-height: 2rem;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid #6c757d;
+          border-radius: 4px;
+          color: #f8f9fa;
+          font-size: 13px;
+          cursor: pointer;
+          transition: background-color 0.2s;
         }
 
         .collapsed .test-connection-button,
         .collapsed .logout-button {
-          width: 36px;
+          justify-content: center;
+          width: auto;
           padding: 8px;
         }
 
-        .logout-button {
-          background: #dc3545;
-        }
-
-        .test-connection-button:hover:not(:disabled) {
-          background: #0056b3;
-        }
-
+        .test-connection-button:hover:not(:disabled),
         .logout-button:hover {
-          background: #c82333;
+          background: rgba(255, 255, 255, 0.2);
         }
 
         .test-connection-button:disabled {
@@ -782,8 +860,7 @@ export const Sidebar = () => {
           cursor: not-allowed;
         }
 
-        .action-icon {
-          font-size: 14px;
+        .action-icon-svg {
           flex-shrink: 0;
         }
 
@@ -792,12 +869,11 @@ export const Sidebar = () => {
         }
 
         .connection-status {
-          margin-top: 8px;
-          padding: 6px 8px;
+          margin-top: 12px;
+          padding: 8px 12px;
           border-radius: 4px;
-          font-size: 11px;
-          font-weight: 500;
-          text-align: center;
+          font-size: 12px;
+          line-height: 1.4;
         }
 
         .connection-status.success {
@@ -839,7 +915,6 @@ export const Sidebar = () => {
           z-index: 999;
         }
 
-        /* Mobile responsive behavior */
         @media (max-width: 768px) {
           .sidebar {
             transform: translateX(-100%);
@@ -850,7 +925,6 @@ export const Sidebar = () => {
           }
         }
 
-        /* Ensure sidebar doesn't interfere with very small screens */
         @media (max-width: 480px) {
           .sidebar:not(.collapsed) {
             width: 100%;

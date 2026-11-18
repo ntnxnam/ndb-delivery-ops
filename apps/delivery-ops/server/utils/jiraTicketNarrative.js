@@ -75,14 +75,30 @@ function daysAgo(isoDate) {
 // {color}, {panel}, {code}, *bold*, _italic_. Preserves the prose itself.
 function stripWikiMarkup(text) {
   if (!text || typeof text !== 'string') return '';
-  return text
-    .replace(/\{[a-zA-Z]+(?::[^}]*)?\}/g, ' ')      // {color:red}, {panel}, etc.
-    .replace(/\{[a-zA-Z]+\}/g, ' ')                  // closing tags
-    .replace(/\*([^*\n]+)\*/g, '$1')                 // *bold*
-    .replace(/_([^_\n]+)_/g, '$1')                   // _italic_
-    .replace(/\r/g, '')
-    .replace(/\n{3,}/g, '\n\n')                      // collapse blank runs
-    .trim();
+  let s = text;
+  // Mentions / links / images / headings
+  s = s.replace(/\[~[^\]]+\]/g, ''); // [~username]
+  s = s.replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$1'); // [label|url]
+  s = s.replace(/!([^!|\s]+)(?:\|[^!]*)?!/g, '$1'); // !image.png!
+  s = s.replace(/^h[1-6]\.\s*/gim, ''); // h1. Heading
+  s = s.replace(/^[*\-#]+\s+/gm, ''); // bullet / numbered wiki lists (leading)
+  // Nested / broken monospace like @g{{{}name{}}} and {{CODE}}
+  s = s.replace(/\{\{\{([\s\S]*?)\}\}\}/g, '$1');
+  s = s.replace(/\{\{([^}]*)\}\}/g, '$1');
+  // Named macros {color:red} … {color}
+  s = s.replace(/\{[a-zA-Z][\w]*(?::[^}]*)?\}/g, ' ');
+  // Nuke leftover braces from broken wiki ({{{}…{}}})
+  s = s.replace(/[{}]/g, '');
+  // @g{{{name}}} → name (after braces gone, @g sticks to the token)
+  s = s.replace(/@g(?=[A-Za-z0-9_])/gi, '');
+  s = s.replace(/@g\b/gi, '');
+  s = s.replace(/\*([^*\n]+)\*/g, '$1');
+  s = s.replace(/_([^_\n]+)_/g, '$1');
+  s = s.replace(/\r/g, '');
+  s = s.replace(/[ \t]+\n/g, '\n');
+  s = s.replace(/\n{3,}/g, '\n\n');
+  s = s.replace(/[ \t]{2,}/g, ' ');
+  return s.trim();
 }
 
 function truncate(text, max) {

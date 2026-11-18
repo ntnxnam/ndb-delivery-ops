@@ -6,7 +6,9 @@ import {
   formatJiraWikiMarkup, 
   hasCodeCompleteExtensionLabel,
   getExtensionColor,
-  normalizeDateForComparison
+  normalizeDateForComparison,
+  getColumnWidth,
+  getColumnMinWidth,
 } from '../utils/releaseVersionUtils';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import TaskBreakdownCell from './TaskBreakdownCell';
@@ -45,6 +47,213 @@ function renderLinkOrText(value) {
     );
   }
   return text;
+}
+
+function isDriveUrl(url) {
+  return /drive\.google\.com|docs\.google\.com/i.test(url);
+}
+
+function getCollateralLinkLabel(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  return isDriveUrl(url) ? 'Drive' : 'Confluence';
+}
+
+function renderCollateralAnchor(value) {
+  const text = plainFieldText(value);
+  if (!text || text === 'N/A' || text === 'NA' || text === 'Not Set') return renderNotSet();
+  if (/^https?:\/\//i.test(text)) {
+    const label = getCollateralLinkLabel(text);
+    return (
+      <a href={text} target="_blank" rel="noopener noreferrer" style={{ color: '#0065ff', textDecoration: 'none' }}>
+        {label}
+      </a>
+    );
+  }
+  return text;
+}
+
+export function renderAllCollaterals(item) {
+  const collaterals = [
+    { label: 'Requirements', field: 'requirementsLink', value: item.customfield_14463 },
+    { label: 'Design Doc', field: 'designDocLink', value: item.customfield_14464 },
+    { label: 'Test Plan', field: 'testPlanLink', value: item.customfield_14465 },
+    { label: 'CG checklist', field: 'cgChecklistLink', value: item.customfield_55662 },
+    { label: 'PG checklist', field: 'pgChecklistLink', value: item.customfield_55663 },
+  ];
+
+  return (
+    <div style={{ lineHeight: '1.8', fontSize: '11px' }}>
+      {collaterals.map((col, index) => (
+        <div
+          key={col.field}
+          style={{ marginBottom: index < collaterals.length - 1 ? '8px' : '0' }}
+        >
+          <div style={{ fontWeight: 600, color: '#495057', marginBottom: '2px', fontSize: '10px' }}>
+            {col.label}:
+          </div>
+          <div style={{ paddingLeft: '4px' }}>
+            {renderCollateralAnchor(col.value)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function qualityCellValue(qi, run, passed, failed, rate) {
+  return (
+    <div style={{ fontSize: '10px', lineHeight: '1.5' }}>
+      <div>QI {qi != null ? `${qi}%` : '—'}</div>
+      <div>Run {run ?? '—'}</div>
+      <div>Passed {passed ?? '—'}</div>
+      <div>Failed {failed ?? '—'}</div>
+      <div>Rate {rate != null ? `${rate}%` : '—'}</div>
+    </div>
+  );
+}
+
+function renderQualityTable(title, rowData) {
+  const rows = [
+    { label: 'Functional', key: 'functional' },
+    { label: 'System', key: 'system' },
+  ];
+  return (
+    <div style={{ marginBottom: '8px' }}>
+      <div style={{ fontWeight: 700, fontSize: '10px', color: '#2c3e50', marginBottom: '4px', borderBottom: '1px solid #dee2e6', paddingBottom: '2px' }}>{title}</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+        <thead>
+          <tr>
+            <th scope="col" aria-label="Test scope" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'left', fontSize: '9px' }}></th>
+            <th scope="col" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'center', fontSize: '9px' }}>Manual</th>
+            <th scope="col" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'center', fontSize: '9px' }}>Automation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => {
+            // Back-compat: legacy shape had { overall, functional, automation } — map overall -> system fallback
+            const row = rowData?.[r.key] ?? (r.key === 'system' ? rowData?.overall : null);
+            const manual = row?.manual;
+            const auto = row?.automation;
+            return (
+              <tr key={r.key}>
+                <th scope="row" style={{ border: '1px solid #dee2e6', padding: '2px 4px', fontWeight: 600, background: '#f8f9fa', textAlign: 'left' }}>{r.label}</th>
+                <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
+                  {manual ? qualityCellValue(manual.qi, manual.run, manual.passed, manual.failed, manual.rate) : <span style={{ color: '#999', fontStyle: 'italic' }}>Not Set</span>}
+                </td>
+                <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
+                  {auto ? qualityCellValue(auto.qi, auto.run, auto.passed, auto.failed, auto.rate) : <span style={{ color: '#999', fontStyle: 'italic' }}>Not Set</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function renderRiskDetails(item) {
+  // Risk Indicator — reuse color logic from riskIndicator cell
+  const riskIndicator = item.customfield_23560;
+  const riskValue = riskIndicator?.value || riskIndicator || '';
+  const riskColor = riskIndicator?.color || 'transparent';
+  const isRiskNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
+
+  let riskBgColor = 'transparent';
+  let riskTextColor = 'inherit';
+  if (isRiskNotSet) {
+    riskBgColor = '#fff3cd';
+  } else if (riskColor && riskColor !== 'transparent') {
+    riskBgColor = riskColor;
+    riskTextColor = '#ffffff';
+  } else if (typeof riskValue === 'string') {
+    const lower = riskValue.toLowerCase().trim();
+    if (lower.startsWith('deep red')) {
+      riskBgColor = '#8B0000'; riskTextColor = '#ffffff';
+    } else {
+      const colorMatch = riskValue.match(/^(Green|Yellow|Red|Blue|Orange)/i);
+      if (colorMatch) {
+        const colorName = colorMatch[1].toLowerCase();
+        const colorMap = { green: '#00875a', yellow: '#ff8b00', red: '#de350b', blue: '#0052cc', orange: '#ff8b00' };
+        if (colorMap[colorName]) { riskBgColor = colorMap[colorName]; riskTextColor = '#ffffff'; }
+      }
+    }
+  }
+
+  const riskIndicatorContent = isRiskNotSet ? renderNotSet() : (
+    <span style={{
+      display: 'inline-block',
+      backgroundColor: riskBgColor,
+      color: riskTextColor,
+      padding: '2px 8px',
+      borderRadius: '4px',
+      fontWeight: 600,
+      fontSize: '11px',
+      border: riskBgColor === 'transparent' ? '1px solid #dee2e6' : 'none'
+    }}>{riskValue}</span>
+  );
+
+  const fields = [
+    { label: 'Risk Indicator', content: riskIndicatorContent },
+    { label: 'Risk Assessment', content: renderLinkOrText(item.customfield_47780) },
+    { label: 'Path to Green', content: renderLinkOrText(item.customfield_55664) },
+  ];
+
+  return (
+    <div style={{ lineHeight: '1.8', fontSize: '11px' }}>
+      {fields.map((f, index) => (
+        <div key={f.label} style={{ marginBottom: index < fields.length - 1 ? '8px' : '0' }}>
+          <div style={{ fontWeight: 600, color: '#495057', marginBottom: '2px', fontSize: '10px' }}>{f.label}:</div>
+          <div style={{ paddingLeft: '4px', wordBreak: 'break-word' }}>{f.content}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function renderQualityCell(item, selectedVersion) {
+  let q = item.tcmsQuality || item.tcmsQI;
+  if (!q) {
+    return <span style={{ color: '#999', fontStyle: 'italic', fontSize: '11px' }}>Not Set</span>;
+  }
+  // Back-compat: legacy tcmsQI shape is { master:{qi,…}, branch:{qi,…} } -> map to new 4-table shape
+  if (q.master && q.branch && !q.releaseOverall) {
+    const toCell = (src) => {
+      if (!src) return null;
+      if (src.manual || src.automation) return src; // already split
+      return { qi: src.qi ?? src.QI ?? null, run: src.run ?? src.total ?? null, passed: src.passed ?? null, failed: src.failed ?? null, rate: src.qi ?? src.QI ?? src.rate ?? null };
+    };
+    const toManualAuto = (src) => {
+      if (!src) return { manual: null, automation: null };
+      if (src.manual || src.automation) return { manual: toCell(src.manual), automation: toCell(src.automation) };
+      const c = toCell(src);
+      return { manual: c, automation: c };
+    };
+    const branchMA = toManualAuto(q.branch);
+    const masterMA = toManualAuto(q.master);
+    const mkTable = (ma) => ma.manual || ma.automation ? { functional: { manual: ma.manual, automation: ma.automation }, system: { manual: ma.manual, automation: ma.automation } } : null;
+    q = {
+      releaseOverall: mkTable(branchMA),
+      releaseLast3Weeks: null,
+      masterOverall: mkTable(masterMA),
+      masterLast3Weeks: null,
+    };
+  }
+  const tables = [
+    { title: `Release ${selectedVersion || ''} — Overall`, data: q.releaseOverall },
+    { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast3Weeks },
+    { title: 'Master — Overall', data: q.masterOverall },
+    { title: 'Master — Last 4 weeks', data: q.masterLast3Weeks },
+  ];
+  const hasData = (d) => d && (d.functional || d.system || d.overall);
+  const visibleTables = tables.filter(t => hasData(t.data));
+  if (visibleTables.length === 0) return <span style={{ color: '#999', fontStyle: 'italic', fontSize: '11px' }}>Not Set</span>;
+  return (
+    <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
+      {visibleTables.map(t => <div key={t.title}>{renderQualityTable(t.title, t.data)}</div>)}
+      {visibleTables.length < tables.length && <div style={{ color: '#999', fontStyle: 'italic', fontSize: '10px', marginTop: '4px' }}>— No runs in other windows</div>}
+    </div>
+  );
 }
 
 function StatusWithTick({ statusValue, statusesWithTick }) {
@@ -258,7 +467,16 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     return null;
   }
   
-  // Risk Indicator styling
+  // Risk Details — merged Risk Indicator + Risk Assessment + Path to Green
+  if (columnKey === 'riskDetails') {
+    return (
+      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top' }}>
+        {renderRiskDetails(item)}
+      </td>
+    );
+  }
+
+  // Risk Indicator styling (legacy — hidden in UI, kept for backward compat)
   if (columnKey === 'riskIndicator') {
     const riskIndicator = item.customfield_23560;
     const riskValue = riskIndicator?.value || riskIndicator || 'Not Set';
@@ -274,19 +492,24 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
       riskBgColor = riskColor;
       riskTextColor = '#ffffff';
     } else if (typeof riskValue === 'string') {
-      const colorMatch = riskValue.match(/^(Green|Yellow|Red|Blue|Orange)/i);
-      if (colorMatch) {
-        const colorName = colorMatch[1].toLowerCase();
-        const colorMap = {
-          'green': '#00875a',
-          'yellow': '#ff8b00',
-          'red': '#de350b',
-          'blue': '#0052cc',
-          'orange': '#ff8b00'
-        };
-        if (colorMap[colorName]) {
-          riskBgColor = colorMap[colorName];
-          riskTextColor = '#ffffff';
+      const lower = riskValue.toLowerCase().trim();
+      if (lower.startsWith('deep red')) {
+        riskBgColor = '#8B0000'; riskTextColor = '#ffffff';
+      } else {
+        const colorMatch = riskValue.match(/^(Green|Yellow|Red|Blue|Orange)/i);
+        if (colorMatch) {
+          const colorName = colorMatch[1].toLowerCase();
+          const colorMap = {
+            'green': '#00875a',
+            'yellow': '#ff8b00',
+            'red': '#de350b',
+            'blue': '#0052cc',
+            'orange': '#ff8b00'
+          };
+          if (colorMap[colorName]) {
+            riskBgColor = colorMap[colorName];
+            riskTextColor = '#ffffff';
+          }
         }
       }
     }
@@ -590,7 +813,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   // Executive Summary (AI-generated, push to customfield_38460)
   if (columnKey === 'execSummary') {
     return (
-      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top', minWidth: '220px', maxWidth: '280px' }}>
+      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top', minWidth: getColumnMinWidth(columnsConfig, columnKey) || '220px', width: getColumnWidth(columnsConfig, columnKey) || '22%' }}>
         <ExecSummaryCell
           item={item}
           selectedVersion={selectedVersion}
@@ -607,6 +830,24 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     return (
       <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top' }}>
         {renderAllCheckpointDates(item, selectedVersion, checkpointHistory)}
+      </td>
+    );
+  }
+
+  // Collaterals (Requirements, Design Doc, Test Plan, CG/PG checklists)
+  if (columnKey === 'collaterals') {
+    return (
+      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top' }}>
+        {renderAllCollaterals(item)}
+      </td>
+    );
+  }
+
+  // Quality — 4 tables (Release/Master × Overall/Last 4 weeks), each 2×2 (Functional/System × Manual/Automation)
+  if (columnKey === 'quality') {
+    return (
+      <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top' }}>
+        {renderQualityCell(item, selectedVersion)}
       </td>
     );
   }
@@ -810,8 +1051,6 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     const tpmOwner = item.customfield_27764;
     cellContent = (typeof tpmOwner === 'string' ? tpmOwner : (tpmOwner?.displayName || tpmOwner?.name || tpmOwner?.emailAddress || 'N/A'));
   } else if (
-    columnKey === 'cgChecklistLink' ||
-    columnKey === 'pgChecklistLink' ||
     columnKey === 'riskAssessment' ||
     columnKey === 'pathToGreen'
   ) {

@@ -215,6 +215,62 @@ No.
 
 ---
 
+### POST /api/ai/page-briefing
+
+**Purpose**: **"What ails the team"** — exec-audience page briefing. Builds multiple facet intelligence packages, calls NAI **in parallel per facet**, **stitches** into one VP/exec story, then **compresses** again when the stitch exceeds the char budget (~1600).
+
+**Auth**: Required (JIRA Bearer — used for release/oncall JIRA fetches)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `surface` | string | yes | `release` \| `oncall` \| `kpi` \| `feature` |
+  | `version` | string | for release | e.g. `NDB-2.12` |
+  | `teamId` | string | for oncall/kpi | Team id |
+  | `featureKey` | string | for feature | Feature/Initiative key |
+  | `snapshot` | object | for kpi/feature/oncall | Client-built metrics; for oncall = dashboard payload (same asOf as tiles) |
+
+**Server flow**
+`POST /api/ai/page-briefing`
+→ `pageAiBriefingService.buildPageBriefing`
+  → facet packages (deterministic)
+  → parallel `generatePageFacetBrief` (NAI)
+  → `generatePageStitchBrief` (NAI)
+  → optional `generatePageCompressBrief` (NAI)
+→ response
+
+**Response shape**
+```json
+{
+  "summary": "## What ails the team: YELLOW\n...\n## Where it hurts\n...\n## Chase this week\n...",
+  "facets": [{ "id": "blockers", "title": "…", "text": "…" }],
+  "meta": {
+    "surface": "release",
+    "facetCount": 3,
+    "naiCalls": 4,
+    "compressed": false,
+    "durationMs": 12000,
+    "validKeyCount": 8
+  },
+  "intelligence": { "version": "NDB-2.12", "bucketCounts": {} },
+  "generatedAt": "2026-10-17T00:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | Missing `surface` / required fields / `AI_API_KEY` | Fix request or admin config |
+| 502 / 504 | NAI or JIRA failure / timeout | Retry |
+
+**Caching**: No.
+
+**Client gate**: Auto-invoked only when user has `exec_audience` (`execAudienceUsers` in `allowedUsers.json`). Non-exec users keep manual Generate where it already exists.
+
+---
+
 ### POST /api/ai/release-summary
 
 **Purpose**: Generate a full release-level AI briefing — overall health verdict, top blockers with owners, and a 7-day action list — by running `deriveSignals` across every committed feature and calling NAI.
@@ -285,6 +341,59 @@ Unlike the VP report (which counts self-reported JIRA risk indicators), this end
 | `dark` | Status update is ≥14 days stale |
 | `watching` | On track, no critical signals |
 | `clear` | At PG Met or Shipped |
+
+---
+
+### POST /api/ai/weekly-skim
+
+**Purpose**: Multi-release ADHD email skim — outstanding Open tile + P0 / must-fix counts + serial NAI release summaries assembled into THIS WEEK prose, table rows, and ≤3 chase bullets.
+
+**Auth**: Required (JIRA token — outstanding + release intelligence + NAI)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `releases` | string[] | yes | Release names, e.g. `["NDB-2.11","NDB-2.10"]` |
+  | `productId` | string | no | Product id for outstanding tiles; default `ndb` |
+
+**Server flow**
+`POST /api/ai/weekly-skim`
+→ for each release **serially**:
+  → `computeOutstandingCounts` (shared outstandingService — existing JQL)
+  → `buildReleaseIntelligence` → `generateReleaseSummary` (one NAI call)
+→ assemble `thisWeek` + `rows` + `chase`
+
+**Response shape**
+```json
+{
+  "generatedAt": "ISO",
+  "thisWeek": "…",
+  "chase": [{ "text": "…", "release": "NDB-2.11" }],
+  "rows": [
+    {
+      "release": "NDB-2.11",
+      "ga": "2026-03-26",
+      "rag": "YELLOW",
+      "open": { "count": 142, "jql": "…" },
+      "p0": { "count": 2, "jql": "…" },
+      "mustFix": { "count": 5, "jql": "…" },
+      "pulse": "…",
+      "summary": "…",
+      "error": null
+    }
+  ]
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `releases` missing / AI key missing | Fix request / admin |
+| 502 / 504 | NAI or JIRA failure for whole request | Retry |
+
+**Caching**: No. Latency ≈ (2s outstanding + 15–30s NAI) × N releases.
 
 ---
 
@@ -529,3 +638,105 @@ Route → `sosLeaderCoachingService.generateLeaderCoaching` → packet builder �
 
 **Caching**: No — on demand.
 
+
+---
+
+### POST /api/ai/oncall-blurbs
+
+**Purpose**: Lightweight per-OnCall “about” lines + status for path/escalation drill drawers. Narrative fetch first; optional batched NAI one-liners when available.
+
+**Auth**: Required (JIRA token)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `keys` | string[] | yes | OnCall issue keys (capped at 24) |
+  | `teamId` | string | no | Team id for oncall config |
+
+**Server flow**
+`POST /api/ai/oncall-blurbs`
+→ `oncallBlurbService.buildOncallBlurbs`
+  → `ticketNarrativeService.fetchTicketNarrativeBundle` per key
+  → deterministic about (description/summary) + stack blurb
+  → optional batched NAI JSON map key→sentence
+→ response
+
+**Response shape**
+```json
+{
+  "blurbs": {
+    "ONCALL-24955": {
+      "key": "ONCALL-24955",
+      "status": "In Progress",
+      "about": "Customer DB patch restore shows wrong profile version; waiting on eng path.",
+      "comments": [
+        { "author": "pramod.kulkarni", "ageDays": 1, "created": "…", "body": "Restored DB profile version mismatch…" }
+      ],
+      "stack": "[ONCALL-24955] …",
+      "dwellDays": 6,
+      "source": "nai"
+    }
+  },
+  "source": "narrative+nai",
+  "asOf": "2026-10-16T17:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | missing `keys` | Fix request |
+| 502 / 504 | NAI failure after narrative | Show narrative-only if partial; else retry |
+
+**Caching**: Narrative bundles 5 min per key (existing).
+
+---
+
+### POST /api/ai/oncall-summary
+
+**Purpose**: Generate an OnCall portfolio AI briefing (health, interrupt/KTLO load, customer impact, chase list) from deterministic stack graphs (OnCall → TechHelp → eng fix) with status dwell and comments.
+
+**Auth**: Required (JIRA token)
+
+**Request**
+- Method: POST
+- Body (JSON):
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `teamId` | string | no | Team id (default from oncallConfig) |
+  | `dashboard` | object | no | Current OnCalls dashboard payload; when present and teamId matches, skips a second `getDashboard` so AI numbers match on-screen tiles |
+
+**Server flow**
+`POST /api/ai/oncall-summary`
+→ `oncallAiSummaryService.buildIntelligence({ teamId, dashboard? })`
+  → use `dashboard` snapshot when teamId matches; else `oncallService.getDashboard`
+  → `ticketNarrativeService.fetchTicketNarrativeBundle` (top seeds)
+→ `generateOncallSummary(intelligence)` (NAI)
+→ response
+
+**Response shape**
+```json
+{
+  "summary": "## OnCall Health: YELLOW\n...",
+  "intelligence": {
+    "teamId": "ndb",
+    "hero": {},
+    "paths": {},
+    "rag": { "level": "YELLOW", "why": "..." },
+    "health": { "verdict": "YELLOW", "reason": "..." },
+    "stacks": [],
+    "validKeys": ["ONCALL-1"]
+  },
+  "generatedAt": "2026-10-16T09:00:00.000Z"
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|---|---|---|
+| 400 | `AI_API_KEY` not configured | Show config error |
+| 502 / 504 | NAI failure / timeout | Retry; quantitative page still works |
+
+**Caching**: Narrative bundles 5 min per key; briefing itself on demand.

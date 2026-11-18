@@ -1,0 +1,45 @@
+{
+  "defaultTeamId": "ndb",
+  "onCallProject": "OnCall",
+  "techHelpProjects": ["TH", "TechHelp"],
+  "knowledgeProjects": ["SR"],
+  "techPubsProjects": ["TECHPUBS"],
+  "engFixProjects": [],
+  "_learningRef": "agent-pack/context/domain/oncall-outcome-taxonomy.md",
+  "_note_linkedOut": "Portfolio linkedOut is full linkedIssuesOf(OnCalls KPI baseQuery) — no project exclude clause",
+  "outcomeCategories": [
+    "customer_environment",
+    "documentation_miss",
+    "known_issue_knowledge_byte",
+    "genuine_engineering_miss"
+  ],
+  "agedOpenDays": 14,
+  "pastLookbackDays": 30,
+  "openStatusJql": "statusCategory != Done",
+  "doneStatusJql": "statusCategory = Done",
+  "maxOpenIssuesFetch": 200,
+  "maxPastIssuesFetch": 200,
+  "maxSeedsForNarrative": 12,
+  "maxComments": 10,
+  "staleCommentAgeDays": 90,
+  "jiraBaseUrl": "https://jira.nutanix.com",
+  "wowWeeks": 6,
+  "escalation": {
+    "kpiNamePattern": "CFD|CFI",
+    "lookbackDays": 180,
+    "maxOncallsFetch": 300,
+    "maxRows": 40,
+    "clock": "oncall_created_to_linked_resolved"
+  },
+  "rag": {
+    "redOpenP0": 1,
+    "yellowAgedOpen": 8,
+    "yellowCreatedWowPct": 30
+  },
+  "teams": {
+    "ndb": {
+      "onCallProject": "OnCall",
+      "techHelpProjects": ["TH", "TechHelp"]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+---
+description: Never use defensive or self-justifying language in UI copy, docs, chat, or code comments
+alwaysApply: true
+---
+
+# No Defensive Statements
+
+User-facing copy, agent chat, docs, and comments must **state what the thing is**,
+not defend how it was built or reassure the reader that a bad pattern was avoided.
+
+Defensiveness wastes exec attention, sounds insecure, and often hides a real bug
+behind a slogan.
+
+## Hard rule
+
+**Do not** write (or leave in UI) phrases that:
+
+1. Reassure that something is *not* hard-coded / *not* a magic string / *not* a single filter
+2. Apologize for architecture (“we intentionally…”, “for authenticity…”, “to avoid…”)
+3. Advertise compliance with an internal rule instead of describing the product
+4. Dump regexes, config keys, or implementation caveats as the primary user sentence
+
+Say the **outcome** or **source** in plain language. If the mechanism matters,
+name the actual KPIs / window / query result — not what you refused to do.
+
+## Wrong → right
+
+| Defensive (forbidden) | Direct (required) |
+|---|---|
+| “via issue links — not a single hard-coded filter” | “OnCalls that link into Top-CFI, Top-CFD, …” |
+| “config-driven — no hard-coded filter names in service” | “Uses this team’s OnCalls KPI `baseQuery`” |
+| “Matches team KPIs named like CFD/CFI (config pattern)” | “Escalated into Top-CFI · Top-CFD · Non-Top-CFI · Non-Top-CFD” |
+| “Click-through lists match the sample, not the full Open hero” *(as apology)* | Fix the counts so they match, or one line: “Showing N of M open” |
+| “This is intentional per kpi-config-driven.mdc” | Omit — do the work; don’t cite the rule to the user |
+
+## Where it applies
+
+- Dashboard labels, helper text, empty states, tooltips
+- AI briefing intros and section headers
+- Agent answers to the user (chat / reports / email)
+- Page docs under `apps/*/docs/` and `agent-pack/context/`
+- Code comments that will be paraphrased into UI copy
+
+## Allowed (not defensive)
+
+- Naming the real scope: “last 30 days”, “open OnCall seeds”, KPI display names
+- Error text that tells the user what to fix: “No KPIs for this team match …”
+- Short caps notes when sampling is real: “Sampled 12 of 22”
+
+## Agent checklist
+
+Before shipping UI copy or a user-facing sentence, ask:
+
+1. Does this sentence exist mainly to prove we followed a rule? → delete it
+2. Can I replace it with the actual KPI names / dates / counts? → do that
+3. Am I telling the user what we *didn’t* hard-code? → stop; say what we *did* use
+
+## Related
+
+- `persona-aware-output.mdc` — exec density; no IC-process narration
+- `visual-storyteller-ui` — lead with the story, not the plumbing
+- `kpi-config-driven.mdc` — enforce in code; do not advertise in the UI

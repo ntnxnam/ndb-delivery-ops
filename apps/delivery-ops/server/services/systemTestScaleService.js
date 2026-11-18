@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { getJira } = require('../utils/jiraClient');
 const { getTeamById, loadTeamBoardConfig, normalizeTeamId } = require('../utils/teamConfig');
+const { getLabelPattern } = require('../utils/jiraFieldsConfig');
 
 const CONFIG_PATH = path.join(__dirname, '../config/systemTestScaleConfig.json');
 
@@ -22,8 +23,14 @@ function releaseScope(rel) {
   return `filter=${rel}-All`;
 }
 
+// Central taxonomy — thin wrapper for backwards compat
 function deferredLabel(rel) {
-  return `${String(rel || '').toLowerCase()}-deferred`;
+  const raw = String(rel || '').trim();
+  if (!raw) return getLabelPattern('lifecycle.deferred', { prefix: 'ndb', version: '' }) || 'ndb-deferred';
+  const idx = raw.indexOf('-');
+  const prefix = idx > 0 ? raw.slice(0, idx).toLowerCase() : 'ndb';
+  const version = idx > 0 ? raw.slice(idx + 1).toLowerCase() : raw.toLowerCase();
+  return getLabelPattern('lifecycle.deferred', { prefix, version }) || `${raw.toLowerCase()}-deferred`;
 }
 
 /**

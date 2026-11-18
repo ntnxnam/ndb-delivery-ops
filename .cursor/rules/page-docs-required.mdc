@@ -10,7 +10,7 @@ under `apps/delivery-ops/docs/pages/`:
 
 | Doc | Filename pattern | Required sections |
 |---|---|---|
-| Requirements | `{PageName}-requirements.md` | Purpose, Audiences, User Stories, UI Behaviour, Permissions, Edge Cases, Acceptance Criteria |
+| Requirements | `{PageName}-requirements.md` | Purpose, Audiences, User Stories, UI Behaviour (incl. dual-click: count→panel / Open in JIRA→JQL when drills exist), Permissions, Edge Cases, Acceptance Criteria |
 | Data & Middleware | `{PageName}-data-layer.md` | API endpoints called, server route → service → JIRA mapping, data shapes, caching strategy, error handling |
 
 ## Hard rule

@@ -1,36 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { PageLoading } from '../shared/components/PageLoading';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { useSelectedRelease } from '../contexts/SelectedReleaseContext';
+import { useTeam } from '../contexts/TeamContext';
+import { usePermissions } from '../auth/hooks/usePermissions';
+import { useExecPageBriefing } from '../hooks/useExecPageBriefing';
+import ExecPageBriefing from '../components/ExecPageBriefing';
 import { useFeatureDashboard } from './hooks/useFeatureDashboard';
 import { jiraSearchUrl } from './services/featureDashboardService';
 import FeatureOverviewGantt from './FeatureOverviewGantt';
+import { FeatureAnalyticsRow } from './FeatureAnalyticsWidgets';
+import FeatureFlowCharts from './FeatureFlowCharts';
 import './FeatureDashboardPage.css';
 
 const DONE_STATUSES = new Set(['done', 'resolved', 'closed', 'complete', 'fixed']);
 const EPIC_TYPES = new Set(['epic']);
 const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
-
-// Phase labels to scan on bugs — add more here as needed
-const PHASE_LABEL_MAP = [
-  { key: 'regression',   label: 'Regression' },
-  { key: 'system-test',  label: 'System Test' },
-  { key: 'systemtest',   label: 'System Test' },
-  { key: 'longevity',    label: 'Longevity' },
-  { key: 'performance',  label: 'Performance' },
-  { key: 'stress',       label: 'Stress' },
-  { key: 'unit-test',    label: 'Unit Test' },
-];
 
 function renderHeaderValue(value) {
   if (!value) return null;
@@ -61,6 +46,108 @@ function FeatureHeaderExtras({ header }) {
   );
 }
 
+/** Claim text stays plain; JIRA proof is a trailing ↗ (no full-line underline). */
+function ClaimWithJira({ children, href, jql, className = '' }) {
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <span className={className}>
+      {children}
+      {' '}
+      <a
+        className="fd-jira-proof"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={jql || 'Open in JIRA'}
+        aria-label="Open matching JIRA query"
+      >
+        ↗
+      </a>
+    </span>
+  );
+}
+
+/** Planned EC vs real start (first work-item In Progress) + soft fixVersion hygiene. */
+function FeatureTimingStrip({ timing, hygiene, jiraBaseUrl }) {
+  // Always render once dashboard is loaded — empty state is still a signal.
+  if (timing == null && hygiene == null) return null;
+
+  const delta = timing?.deltaDaysVsEc;
+  let deltaNote = null;
+  let deltaClass = 'fd-timing-neutral';
+  if (timing?.realStart && delta != null) {
+    if (delta > 0) {
+      deltaNote = `${delta}d after EC`;
+      deltaClass = 'fd-timing-late';
+    } else if (delta < 0) {
+      deltaNote = `${Math.abs(delta)}d before EC`;
+      deltaClass = 'fd-timing-early';
+    } else {
+      deltaNote = 'on EC day';
+    }
+  }
+
+  const seedUrl =
+    timing?.realStartKey && jiraBaseUrl
+      ? `${jiraBaseUrl.replace(/\/+$/, '')}/browse/${timing.realStartKey}`
+      : '';
+  const hygieneUrl =
+    hygiene?.wrongFixVersionCount > 0 && hygiene?.jql
+      ? jiraSearchUrl(jiraBaseUrl, hygiene.jql)
+      : '';
+
+  return (
+    <div className="fd-timing-strip" data-testid="fd-timing-strip">
+      <div className="fd-timing-title">Start dates</div>
+      <div className="fd-timing-row">
+        <div className="fd-timing-chip">
+          <span className="fd-timing-label">Planned (release EC)</span>
+          <span className="fd-timing-value">{timing?.plannedStart || '—'}</span>
+        </div>
+        <div className={`fd-timing-chip ${deltaClass}`}>
+          <span className="fd-timing-label">Real start</span>
+          {timing?.realStart ? (
+            <span className="fd-timing-value">
+              {seedUrl ? (
+                <a href={seedUrl} target="_blank" rel="noopener noreferrer" title={timing.realStartKey}>
+                  {timing.realStart}
+                </a>
+              ) : (
+                timing.realStart
+              )}
+              {timing.realStartKey ? (
+                <span className="fd-timing-seed">
+                  {' '}
+                  (
+                  {seedUrl ? (
+                    <a href={seedUrl} target="_blank" rel="noopener noreferrer">
+                      {timing.realStartKey}
+                    </a>
+                  ) : (
+                    timing.realStartKey
+                  )}
+                  )
+                </span>
+              ) : null}
+              {deltaNote ? <span className="fd-timing-delta"> · {deltaNote}</span> : null}
+            </span>
+          ) : (
+            <span className="fd-timing-value fd-timing-muted">Not started</span>
+          )}
+        </div>
+      </div>
+      {hygiene?.wrongFixVersionCount > 0 ? (
+        <div className="fd-hygiene-caption">
+          <ClaimWithJira href={hygieneUrl} jql={hygiene.jql}>
+            {hygiene.wrongFixVersionCount} work item{hygiene.wrongFixVersionCount === 1 ? '' : 's'} not on this release fixVersion
+          </ClaimWithJira>
+          <span className="fd-hygiene-hint"> — hygiene only; still in analytics</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function isDone(issue) {
   return DONE_STATUSES.has((issue.status || '').toLowerCase());
 }
@@ -73,8 +160,95 @@ function isPortfolio(issue) {
   return PORTFOLIO_TYPES.has((issue.issueType || '').toLowerCase());
 }
 
+function InferencePanel({ inference, jiraBaseUrl }) {
+  if (!inference) return null;
+  const ragClass =
+    inference.rag === 'Red' ? 'fd-rag-red' : inference.rag === 'Yellow' ? 'fd-rag-yellow' : 'fd-rag-green';
+  const codingHref =
+    inference.codingByPg?.jql ? jiraSearchUrl(jiraBaseUrl, inference.codingByPg.jql) : '';
+  const companionHref =
+    inference.companionByGa?.jql ? jiraSearchUrl(jiraBaseUrl, inference.companionByGa.jql) : '';
+  const codingLabel = `Coding → PG: ${inference.codingByPg?.open ?? '—'}/${inference.codingByPg?.total ?? '—'} open${inference.codingByPg?.onTrack ? ' · on track' : ' · at risk'}`;
+  const companionLabel = `Companion → GA: ${inference.companionByGa?.open ?? '—'}/${inference.companionByGa?.total ?? '—'} open${inference.companionByGa?.onTrack ? ' · on track' : ' · at risk'}`;
+  return (
+    <div className={`fd-inference ${ragClass}`} data-testid="fd-inference">
+      <div className="fd-inference-head">
+        <span className="fd-inference-rag">{inference.rag}</span>
+        <span className="fd-inference-summary">{inference.summary}</span>
+      </div>
+      <div className="fd-inference-lanes">
+        <ClaimWithJira href={codingHref} jql={inference.codingByPg?.jql}>
+          {codingLabel}
+        </ClaimWithJira>
+        <ClaimWithJira href={companionHref} jql={inference.companionByGa?.jql}>
+          {companionLabel}
+        </ClaimWithJira>
+      </div>
+      {(inference.drivers || []).length > 0 && (
+        <ul className="fd-inference-drivers">
+          {inference.drivers.slice(0, 8).map((d) => {
+            const href = d.jql ? jiraSearchUrl(jiraBaseUrl, d.jql) : '';
+            return (
+              <li key={d.id} className={`fd-driver-${d.severity}`}>
+                <ClaimWithJira href={href} jql={d.jql}>
+                  {d.text}
+                </ClaimWithJira>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function KickoffWidget({ kickoff, jiraBaseUrl }) {
+  if (!kickoff) return null;
+  const tone =
+    kickoff.status === 'done_on_time'
+      ? 'ok'
+      : kickoff.status === 'missing' || kickoff.status === 'hygiene'
+        ? 'warn'
+        : kickoff.status === 'done_late' || (kickoff.status === 'incomplete' && kickoff.pastEc)
+          ? 'bad'
+          : 'warn';
+  const url = kickoff.jql ? jiraSearchUrl(jiraBaseUrl, kickoff.jql) : '';
+  const epicBrowse =
+    kickoff.epicKey && jiraBaseUrl
+      ? `${jiraBaseUrl.replace(/\/+$/, '')}/browse/${kickoff.epicKey}`
+      : '';
+  return (
+    <div className={`fd-kickoff fd-kickoff--${tone}`} data-testid="fd-kickoff">
+      <div className="fd-kickoff-title">Kick-off epic</div>
+      <div className="fd-kickoff-msg">
+        <ClaimWithJira href={url} jql={kickoff.jql}>
+          {kickoff.message}
+        </ClaimWithJira>
+      </div>
+      {kickoff.epicKey && (
+        <div className="fd-kickoff-meta">
+          {epicBrowse ? (
+            <a href={epicBrowse} target="_blank" rel="noopener noreferrer">
+              {kickoff.epicKey}
+            </a>
+          ) : (
+            kickoff.epicKey
+          )}
+          {kickoff.doneDate ? ` · done ${kickoff.doneDate}` : ''}
+          {kickoff.ecDate ? ` · EC ${kickoff.ecDate}` : ''}
+          {kickoff.childrenTotal
+            ? ` · ${kickoff.childrenClosed}/${kickoff.childrenTotal} children closed`
+            : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FeatureDashboardPage() {
   const { jiraBaseUrl } = useJiraConfig();
+  const { selectedTeamId } = useTeam();
+  const { isExecAudience } = usePermissions();
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || '';
 
@@ -109,7 +283,13 @@ export default function FeatureDashboardPage() {
     savingReparent,
     error,
     reparentTicket,
-  } = useFeatureDashboard({ release, featureKey: committedFeatureKey, jiraToken, username });
+  } = useFeatureDashboard({
+    release,
+    featureKey: committedFeatureKey,
+    teamId: selectedTeamId || 'ndb',
+    jiraToken,
+    username,
+  });
 
   // Keep local release in sync when context selection changes (e.g. team switch).
   useEffect(() => {
@@ -142,7 +322,6 @@ export default function FeatureDashboardPage() {
     [features]
   );
 
-  const flowPoints = dashboard?.flow?.points || [];
   const statusUpdate20 = dashboard?.statusUpdate20 || [];
   const payload = dashboard?.payload || {};
   const openFeatIdOnly = useMemo(
@@ -153,9 +332,6 @@ export default function FeatureDashboardPage() {
     () => (payload.featNumberOnly || []).filter((i) => !isDone(i)),
     [payload.featNumberOnly]
   );
-  const markers = dashboard?.flow?.markers || {};
-  // Deduplicate marker dates (ccm and ccmException may differ).
-  const markerDays = [...new Set(Object.values(markers).filter(Boolean))];
 
   const handleChooseFeature = useCallback(() => {
     if (pendingFeatureKey) setCommittedFeatureKey(pendingFeatureKey);
@@ -173,6 +349,55 @@ export default function FeatureDashboardPage() {
     await reparentTicket({ ticketKey, newParent: dashboard.header.key, reason });
     setReasonByKey((prev) => ({ ...prev, [ticketKey]: '' }));
   };
+
+  const featureSnapshot = useMemo(() => {
+    if (!dashboard?.header) return null;
+    const h = dashboard.header;
+    const outstanding = [
+      ...(dashboard.payload?.epicChildren || []),
+      ...(dashboard.payload?.directTickets || []),
+    ]
+      .filter((i) => i && !isDone(i))
+      .slice(0, 20)
+      .map((i) => ({ key: i.key, summary: i.summary, status: i.status, issueType: i.issueType }));
+    return {
+      key: h.key,
+      summary: h.summary,
+      status: h.status,
+      riskIndicator: h.riskIndicator,
+      riskAssessment: h.riskAssessment,
+      pathToGreen: h.pathToGreen,
+      cgChecklistLink: h.cgChecklistLink,
+      pgChecklistLink: h.pgChecklistLink,
+      timing: dashboard.timing,
+      hygiene: dashboard.hygiene,
+      burn: dashboard.burn,
+      teamKpiBoxes: dashboard.teamKpiBoxes || dashboard.kpiBoxes || [],
+      outstanding,
+      gates: gates || null,
+      header: h,
+    };
+  }, [dashboard, gates]);
+
+  const featureSnapshotKey = useMemo(() => {
+    if (!featureSnapshot) return '';
+    return `${featureSnapshot.key}|${(featureSnapshot.outstanding || []).length}|${featureSnapshot.status || ''}`;
+  }, [featureSnapshot]);
+
+  const {
+    state: execBriefState,
+    summary: execBriefSummary,
+    meta: execBriefMeta,
+    error: execBriefError,
+    refresh: refreshExecBrief,
+  } = useExecPageBriefing({
+    enabled: isExecAudience,
+    surface: 'feature',
+    featureKey: committedFeatureKey,
+    snapshot: featureSnapshot,
+    snapshotKey: featureSnapshotKey,
+    ready: Boolean(featureSnapshot),
+  });
 
   return (
     <div className="fd-page">
@@ -228,6 +453,18 @@ export default function FeatureDashboardPage() {
         </div>
       </header>
 
+      {error && <div className="fd-error">{error}</div>}
+      {loadingDashboard && <PageLoading message="Loading feature dashboard…" />}
+
+      <ExecPageBriefing
+        state={execBriefState}
+        summary={execBriefSummary}
+        meta={execBriefMeta}
+        error={execBriefError}
+        onRetry={refreshExecBrief}
+        jiraBase={jiraBaseUrl || 'https://jira.nutanix.com'}
+      />
+
       {release && (
         <FeatureOverviewGantt
           release={release}
@@ -238,9 +475,6 @@ export default function FeatureDashboardPage() {
           loading={loadingFeatures}
         />
       )}
-
-      {error && <div className="fd-error">{error}</div>}
-      {loadingDashboard && <div className="fd-loading">Loading feature dashboard...</div>}
 
       {dashboard && (
         <>
@@ -253,6 +487,17 @@ export default function FeatureDashboardPage() {
               <span>Risk: {dashboard.header.riskIndicator?.value || 'N/A'}</span>
             </div>
             <FeatureHeaderExtras header={dashboard.header} />
+            <FeatureTimingStrip
+              timing={dashboard.timing}
+              hygiene={dashboard.hygiene}
+              jiraBaseUrl={jiraBaseUrl}
+            />
+            {dashboard.inference && (
+              <InferencePanel inference={dashboard.inference} jiraBaseUrl={jiraBaseUrl} />
+            )}
+            {dashboard.kickoff && (
+              <KickoffWidget kickoff={dashboard.kickoff} jiraBaseUrl={jiraBaseUrl} />
+            )}
             <div className="fd-gates">
               <GateChip label="EC" planned={dashboard.gates.ec} />
               <GateChip
@@ -269,34 +514,14 @@ export default function FeatureDashboardPage() {
             </div>
           </section>
 
-          {flowPoints.length > 0 && (
-            <section className="fd-section">
-              <h3>Created vs Resolved ({dashboard.flow.startIso} to {dashboard.flow.endIso})</h3>
-              <div className="fd-chart-wrap">
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={flowPoints}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    {markerDays.map((m) => (
-                      <ReferenceLine key={m} x={m} stroke="#999" strokeDasharray="4 4" />
-                    ))}
-                    <Line type="monotone" dataKey="created" stroke="#2563EB" dot={false} />
-                    <Line type="monotone" dataKey="resolved" stroke="#16A34A" dot={false} />
-                    <Line type="monotone" dataKey="open" stroke="#D97706" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          )}
+          <FeatureFlowCharts flow={dashboard.flow} />
 
           <section className="fd-section">
-            <AnalyticsRow
+            <FeatureAnalyticsRow
               issues={payload.canonical || []}
               canonicalJql={dashboard.jql.canonical}
               jiraBaseUrl={jiraBaseUrl}
+              teamKpiBoxes={dashboard.teamKpiBoxes || []}
             />
           </section>
 
@@ -482,229 +707,6 @@ function EpicSection({ epic, children, jiraBaseUrl, isolated = false }) {
         </table>
       )}
     </div>
-  );
-}
-
-// ─── Analytics Widgets ────────────────────────────────────────────────────────
-
-function AnalyticsRow({ issues, canonicalJql, jiraBaseUrl }) {
-  const workItems = useMemo(
-    () => issues.filter((i) => !PORTFOLIO_TYPES.has(i.issueType.toLowerCase())),
-    [issues]
-  );
-  const workItemsJql = `(${canonicalJql}) AND issuetype not in (Feature, Initiative, Epic, "X-FEAT", Capability)`;
-
-  const bugs = useMemo(() => workItems.filter((i) => i.issueType.toLowerCase() === 'bug'), [workItems]);
-  const openBugs = useMemo(() => bugs.filter((b) => !isDone(b)), [bugs]);
-
-  return (
-    <div className="fd-widgets-grid">
-      <BugPhaseWidget bugs={openBugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
-      <PriorityWidget bugs={openBugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
-      <AssigneeWidget issues={workItems} />
-      <BurnWidget issues={workItems} />
-      <StaleWidget issues={workItems} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
-      <QAQueueWidget bugs={bugs} canonicalJql={workItemsJql} jiraBaseUrl={jiraBaseUrl} />
-    </div>
-  );
-}
-
-function WidgetCard({ title, children }) {
-  return (
-    <div className="fd-widget">
-      <div className="fd-widget-title">{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function BugPhaseWidget({ bugs, canonicalJql, jiraBaseUrl }) {
-  const phases = useMemo(() => {
-    const seen = new Set();
-    const buckets = {};
-    for (const bug of bugs) {
-      let matched = false;
-      for (const { key, label } of PHASE_LABEL_MAP) {
-        if (bug.labels.some((l) => l.toLowerCase().includes(key))) {
-          if (!buckets[label]) buckets[label] = 0;
-          buckets[label]++;
-          matched = true;
-        }
-      }
-      if (!matched) {
-        buckets['Other'] = (buckets['Other'] || 0) + 1;
-      }
-    }
-    return Object.entries(buckets).sort((a, b) => b[1] - a[1]);
-  }, [bugs]);
-
-  return (
-    <WidgetCard title="Bugs by Test Phase">
-      {phases.length === 0 ? (
-        <span className="fd-widget-empty">No open bugs</span>
-      ) : (
-        <div className="fd-phase-list">
-          {phases.map(([label, count]) => {
-            const labelKey = PHASE_LABEL_MAP.find((p) => p.label === label)?.key || label.toLowerCase();
-            const jql = `(${canonicalJql}) AND issuetype = Bug AND labels = "${labelKey}" AND statusCategory != Done`;
-            return (
-              <a key={label} href={jiraSearchUrl(jiraBaseUrl, jql)} target="_blank" rel="noreferrer" className="fd-phase-pill">
-                <span className="fd-phase-name">{label}</span>
-                <span className="fd-phase-count">{count}</span>
-              </a>
-            );
-          })}
-        </div>
-      )}
-    </WidgetCard>
-  );
-}
-
-function PriorityWidget({ bugs, canonicalJql, jiraBaseUrl }) {
-  const buckets = useMemo(() => {
-    const map = { P0: 0, P1: 0, P2: 0, P3: 0, Other: 0 };
-    for (const b of bugs) {
-      const p = (b.priority || '').toUpperCase();
-      if (p in map) map[p]++;
-      else map.Other++;
-    }
-    return Object.entries(map).filter(([, v]) => v > 0);
-  }, [bugs]);
-
-  const priorityClass = { P0: 'fd-pri-p0', P1: 'fd-pri-p1', P2: 'fd-pri-p2', P3: 'fd-pri-p3', Other: 'fd-pri-none' };
-
-  return (
-    <WidgetCard title="Open Bugs by Priority">
-      {buckets.length === 0 ? (
-        <span className="fd-widget-empty">No open bugs</span>
-      ) : (
-        <div className="fd-phase-list">
-          {buckets.map(([p, count]) => {
-            const jql = `(${canonicalJql}) AND issuetype = Bug AND priority = "${p}" AND statusCategory != Done`;
-            return (
-              <a key={p} href={jiraSearchUrl(jiraBaseUrl, jql)} target="_blank" rel="noreferrer" className={`fd-phase-pill ${priorityClass[p] || ''}`}>
-                <span className="fd-phase-name">{p}</span>
-                <span className="fd-phase-count">{count}</span>
-              </a>
-            );
-          })}
-        </div>
-      )}
-    </WidgetCard>
-  );
-}
-
-function AssigneeWidget({ issues }) {
-  const rows = useMemo(() => {
-    const open = issues.filter((i) => !isDone(i));
-    const map = {};
-    for (const i of open) {
-      const name = i.assignee || '(Unassigned)';
-      map[name] = (map[name] || 0) + 1;
-    }
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 7);
-  }, [issues]);
-
-  const max = rows[0]?.[1] || 1;
-
-  return (
-    <WidgetCard title="Open by Assignee">
-      {rows.length === 0 ? (
-        <span className="fd-widget-empty">No open tickets</span>
-      ) : (
-        <div className="fd-assignee-list">
-          {rows.map(([name, count]) => (
-            <div key={name} className="fd-assignee-row">
-              <span className="fd-assignee-name" title={name}>{name}</span>
-              <span className="fd-assignee-bar-wrap">
-                <span className="fd-assignee-bar" style={{ width: `${Math.round((count / max) * 100)}%` }} />
-              </span>
-              <span className="fd-assignee-count">{count}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </WidgetCard>
-  );
-}
-
-function BurnWidget({ issues }) {
-  const { thisWeek, lastWeek } = useMemo(() => {
-    const now = Date.now();
-    const d7 = now - 7 * 86400000;
-    const d14 = now - 14 * 86400000;
-    let thisWeek = 0;
-    let lastWeek = 0;
-    for (const i of issues) {
-      if (!i.resolved) continue;
-      const t = new Date(`${i.resolved}T00:00:00.000Z`).getTime();
-      if (t >= d7) thisWeek++;
-      else if (t >= d14) lastWeek++;
-    }
-    return { thisWeek, lastWeek };
-  }, [issues]);
-
-  const delta = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
-
-  return (
-    <WidgetCard title="Weekly Burn Rate">
-      <div className="fd-burn-main">{thisWeek} <span className="fd-burn-label">closed this week</span></div>
-      {delta !== null && (
-        <div className={`fd-burn-delta ${delta >= 0 ? 'fd-burn-up' : 'fd-burn-down'}`}>
-          {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs last week ({lastWeek})
-        </div>
-      )}
-      {delta === null && <div className="fd-widget-empty">{lastWeek} closed last week</div>}
-    </WidgetCard>
-  );
-}
-
-function StaleWidget({ issues, canonicalJql, jiraBaseUrl }) {
-  const staleCount = useMemo(() => {
-    const cutoff = Date.now() - 14 * 86400000;
-    return issues.filter((i) => {
-      if (isDone(i) || !i.updated) return false;
-      return new Date(`${i.updated}T00:00:00.000Z`).getTime() < cutoff;
-    }).length;
-  }, [issues]);
-
-  const jql = `(${canonicalJql}) AND statusCategory != Done AND updated <= -14d`;
-
-  return (
-    <WidgetCard title="Stale > 14 Days">
-      <div className={`fd-burn-main ${staleCount > 0 ? 'fd-stale-warn' : ''}`}>
-        {staleCount}
-        <span className="fd-burn-label"> open, no update</span>
-      </div>
-      {staleCount > 0 && (
-        <a href={jiraSearchUrl(jiraBaseUrl, jql)} target="_blank" rel="noreferrer" className="fd-widget-link">
-          View in JIRA →
-        </a>
-      )}
-    </WidgetCard>
-  );
-}
-
-function QAQueueWidget({ bugs, canonicalJql, jiraBaseUrl }) {
-  const count = useMemo(
-    () => bugs.filter((b) => b.status.toLowerCase() === 'resolved').length,
-    [bugs]
-  );
-
-  const jql = `(${canonicalJql}) AND issuetype = Bug AND status = Resolved`;
-
-  return (
-    <WidgetCard title="QA Verification Queue">
-      <div className={`fd-burn-main ${count > 0 ? 'fd-amber-text' : ''}`}>
-        {count}
-        <span className="fd-burn-label"> bugs awaiting close</span>
-      </div>
-      {count > 0 && (
-        <a href={jiraSearchUrl(jiraBaseUrl, jql)} target="_blank" rel="noreferrer" className="fd-widget-link">
-          View in JIRA →
-        </a>
-      )}
-    </WidgetCard>
   );
 }
 

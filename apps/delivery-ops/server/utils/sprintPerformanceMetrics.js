@@ -29,10 +29,9 @@ function itemWeights(raw) {
 
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : null);
 
-const MAX_JIRA_URL = 2500; // JIRA (Tomcat) rejects requests whose URL + SSO cookies exceed 8 KB
-
 function jiraUrl(base, jql) {
-  if (`${base}/issues/?jql=${encodeURIComponent(jql)}`.length > MAX_JIRA_URL) return null;
+  // 2500: JIRA (Tomcat) rejects requests whose URL + SSO cookies exceed ~8 KB
+  if (`${base}/issues/?jql=${encodeURIComponent(jql)}`.length > 2500) return null;
   return `${base}/issues/?jql=${encodeURIComponent(jql)}`;
 }
 
@@ -235,11 +234,40 @@ function seriesFor(rows, slots, cfg) {
   return slots.map((s) => ({ slot: s.slot, ...agg(bySlot.get(s.slot) || [], cfg) }));
 }
 
+/** Cadence end ISO (UTC date) for a slot meta row. */
+function slotEndIso(slotMeta, sprintDays = 21) {
+  if (!slotMeta?.startIso) return null;
+  return new Date(new Date(`${slotMeta.startIso}T00:00:00Z`).getTime() + ((sprintDays || 21) - 1) * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** True when the slot's last day is strictly before report as-of (same as discipline timeline). */
+function slotIsClosed(slotMeta, generatedAt, sprintDays = 21) {
+  const end = slotEndIso(slotMeta, sprintDays);
+  const asOf = String(generatedAt || new Date().toISOString()).slice(0, 10);
+  return Boolean(end && end < asOf);
+}
+
+/**
+ * Drop in-flight cadence slots from a per-slot series before trend / RAG.
+ * Keeps heatmap cells for ongoing; only scoring windows use the closed subset.
+ */
+function closedSeries(series, slots, generatedAt, sprintDays = 21) {
+  const bySlot = new Map((slots || []).map((s) => [s.slot, s]));
+  return (series || []).filter((x) => {
+    const s = bySlot.get(x.slot);
+    return s ? slotIsClosed(s, generatedAt, sprintDays) : true;
+  });
+}
+
 // Say/do of the last k slots ("recent") vs the k slots before them ("early").
 function halves(series, k = 3) {
   const n = series.length;
-  const w = Math.max(1, Math.min(k, Math.floor(n / 2)));
+  if (!n) return { early: null, recent: null };
+  const w = Math.max(1, Math.min(k, Math.floor(n / 2) || 1));
   const avg = (arr) => {
+    if (!arr.length) return null;
     const p = arr.reduce((a, x) => a + x.planned, 0);
     const d = arr.reduce((a, x) => a + x.donePlanned, 0);
     return pct(d, p);
@@ -281,8 +309,11 @@ function computeSprintPerformance(rawInput, directory, cfg) {
 
   const overallSeries = seriesFor(rows, slots, cfg);
   const window = agg(rows, cfg);
-  const recentSlots = overallSeries.slice(-cfg.trendSlots);
-  const recentSayDo = pct(recentSlots.reduce((a, x) => a + x.donePlanned, 0), recentSlots.reduce((a, x) => a + x.planned, 0));
+  const asOf = raw.generatedAt;
+  const closedOverall = closedSeries(overallSeries, slots, asOf, raw.sprintDays);
+  const overallTrend = halves(closedOverall, cfg.trendSlots);
+  const recentSayDo = overallTrend.recent;
+  const trendOf = (series) => halves(closedSeries(series, slots, asOf, raw.sprintDays), cfg.trendSlots);
 
   const slotSprintIds = Object.fromEntries(slots.map((s) => [s.slot, raw.sprints.filter((x) => x.slot === s.slot).map((x) => x.id)]));
   slots.forEach((s) => { s.url = link(sprintInJql(scope, slotSprintIds[s.slot])); s.sprintCount = slotSprintIds[s.slot].length; });
@@ -295,8 +326,8 @@ function computeSprintPerformance(rawInput, directory, cfg) {
     const leadManager = Object.entries(mgrCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
     const window = agg(tRows, cfg);
     const unmeasurable = window.planned < cfg.minPlannedForRanking;
-    const active = series.slice(-cfg.trendSlots).some((x) => x.committed > 0);
-    return { name, series, window, trend: halves(series, cfg.trendSlots), leadManager, unmeasurable, active, url: link(sprintInJql(scope, ids)), sprintIds: ids };
+    const active = closedSeries(series, slots, asOf, raw.sprintDays).slice(-cfg.trendSlots).some((x) => x.committed > 0);
+    return { name, series, window, trend: trendOf(series), leadManager, unmeasurable, active, url: link(sprintInJql(scope, ids)), sprintIds: ids };
   }).sort((a, b) => a.unmeasurable - b.unmeasurable || (b.window.sayDo ?? -1) - (a.window.sayDo ?? -1));
 
   const summarise = (name, gRows, group, emptyJql) => {
@@ -311,7 +342,7 @@ function computeSprintPerformance(rawInput, directory, cfg) {
       teams: Object.entries(teamCounts).sort((a, b) => b[1] - a[1]).map(([t]) => t),
       series,
       window: agg(gRows, cfg),
-      trend: halves(series, cfg.trendSlots),
+      trend: trendOf(series),
       url: extra ? link(sprintInJql(scope, allIds, extra)) : null,
     };
   };
@@ -382,7 +413,7 @@ function computeSprintPerformance(rawInput, directory, cfg) {
       sprintReportBase: sprintReportUrl(base, raw.team.boardId, ''),
       dataSource: raw.dataSource || 'jira-sprint-report',
     },
-    overall: { series: overallSeries, window, recentSayDo, rag: ragFor(recentSayDo, cfg), trend: halves(overallSeries, cfg.trendSlots) },
+    overall: { series: overallSeries, window, recentSayDo, rag: ragFor(recentSayDo, cfg), trend: overallTrend },
     scrumTeams,
     leaders: majorLeaders,
     otherContributors,
@@ -392,7 +423,9 @@ function computeSprintPerformance(rawInput, directory, cfg) {
     sprints: raw.sprints.map((s) => ({ id: s.id, name: s.name, slot: s.slot, scrumTeam: s.scrumTeam, state: s.state, url: sprintReportUrl(base, raw.team.boardId, s.id) })),
     rows,
   };
-  Object.assign(model, buildNarrative(model, cfg));
+  // Seed for AI asks + noscript fallback metadata only — the HTML UI recomputes
+  // highlights/lowlights live from the embedded blob via renderExecutive.
+  Object.assign(model, buildNarrative(model, cfg, { scopeLabel: 'Org-wide' }));
   return model;
 }
 
@@ -423,18 +456,27 @@ function topChurnRelease(rows, releasePrefix) {
   return out;
 }
 
-function buildNarrative(model, cfg) {
+/**
+ * Rule-based highlights / lowlights / asks.
+ * @param {object} model
+ * @param {object} cfg
+ * @param {{ scopeLabel?: string }} [opts] — who the trend line describes (default Org-wide)
+ */
+function buildNarrative(model, cfg, opts = {}) {
   const highlights = [];
   const lowlights = [];
-  const { overall, scrumTeams, managers, chronic, hygiene } = model;
-  const rankable = scrumTeams.filter((t) => !t.unmeasurable && t.active);
-  const trendTxt = `previous ${cfg.trendSlots} vs last ${cfg.trendSlots} sprints`;
+  const { overall, scrumTeams, managers, chronic } = model;
+  const hygiene = model.hygiene || { staleActive: [], lateClosed: [], startedEmpty: [] };
+  const scopeWho = (opts.scopeLabel && String(opts.scopeLabel).trim()) || 'Org-wide';
+  const rankable = (scrumTeams || []).filter((t) => !t.unmeasurable && t.active);
+  const chronicList = chronic || [];
+  const trendTxt = `previous ${cfg.trendSlots} vs last ${cfg.trendSlots} closed sprints`;
   const cite = (label, url) => ({ label, url });
 
   const d = (overall.trend.recent ?? 0) - (overall.trend.early ?? 0);
   if (overall.trend.recent != null && overall.trend.early != null) {
     (d >= 0 ? highlights : lowlights).push({
-      text: `Org-wide say/do ${d >= 0 ? 'improved' : 'declined'} from ${overall.trend.early}% to ${overall.trend.recent}% (${trendTxt}).`,
+      text: `${scopeWho} say/do ${d >= 0 ? 'improved' : 'declined'} from ${overall.trend.early}% to ${overall.trend.recent}% (${trendTxt}).`,
       cites: [cite(`${model.meta.sprintCount} sprints`, model.meta.allSprintsUrl)],
     });
   }
@@ -449,7 +491,7 @@ function buildNarrative(model, cfg) {
     text: `${t.name} is the most improved: say/do ${t.trend.early}% → ${t.trend.recent}%.`,
     cites: [cite(t.name, t.url)],
   }));
-  const rankedLeaders = model.leaders.filter((l) => l.group && l.window.planned >= cfg.minPlannedForRanking * 3)
+  const rankedLeaders = (model.leaders || []).filter((l) => l.group && l.window.planned >= cfg.minPlannedForRanking * 3)
     .sort((a, b) => (b.window.sayDo ?? 0) - (a.window.sayDo ?? 0));
   if (rankedLeaders.length >= 2) {
     const top = rankedLeaders[0];
@@ -457,7 +499,7 @@ function buildNarrative(model, cfg) {
     highlights.push({ text: `${top.name}'s org has the strongest say/do at ${top.window.sayDo}% (${top.people} people, ${top.window.committed} items).`, cites: [cite(top.name, top.url)] });
     if ((bottom.window.sayDo ?? 0) < cfg.rag.greenSayDoPct) lowlights.push({ text: `${bottom.name}'s org trails at ${bottom.window.sayDo}% say/do (${bottom.people} people, ${bottom.window.committed} items).`, cites: [cite(bottom.name, bottom.url)] });
   }
-  const named = managers.filter((m) => m.group && m.people >= 3 && m.window.planned >= cfg.minPlannedForRanking);
+  const named = (managers || []).filter((m) => m.group && m.people >= 3 && m.window.planned >= cfg.minPlannedForRanking);
   const bestMgr = [...named].sort((a, b) => (b.window.sayDo ?? 0) - (a.window.sayDo ?? 0))[0];
   if (bestMgr) highlights.push({ text: `${bestMgr.name}'s team leads managers on say/do at ${bestMgr.window.sayDo}% (${bestMgr.people} people).`, cites: [cite(bestMgr.name, bestMgr.url)] });
   const lowCreep = rankable.filter((t) => (t.window.scopeCreep ?? 100) <= 5).map((t) => t.name);
@@ -487,9 +529,9 @@ function buildNarrative(model, cfg) {
       cites: creepy.slice(0, 5).map((t) => cite(t.name, t.url)),
     });
   }
-  if (chronic.length) lowlights.push({
-    text: `${chronic.length} open tickets have been planned into ${cfg.chronicCarryoverSprints}+ sprints without closing; worst: ${chronic.slice(0, 3).map((c) => `${c.key} (${c.sprints} sprints)`).join(', ')}.`,
-    cites: chronic.slice(0, 3).map((c) => cite(c.key, c.url)),
+  if (chronicList.length) lowlights.push({
+    text: `${chronicList.length} open tickets have been planned into ${cfg.chronicCarryoverSprints}+ sprints without closing; worst: ${chronicList.slice(0, 3).map((c) => `${c.key} (${c.sprints} sprints)`).join(', ')}.`,
+    cites: chronicList.slice(0, 3).map((c) => cite(c.key, c.url)),
   });
   if (overall.window.pendingQA > 0) lowlights.push({
     text: `${overall.window.pendingQA} sprint items sit in Resolved (awaiting QA verification) right now.`,
@@ -521,8 +563,8 @@ function buildNarrative(model, cfg) {
     text: `Run a QA verification burn-down on the ${overall.window.pendingQA} items sitting in Resolved before the next gate.`,
     owner: 'QA leads',
   });
-  if (chronic.length) asks.push({
-    text: `Re-plan or de-scope the ${Math.min(chronic.length, 20)} oldest chronic carry-overs (planned into ${chronic[0].sprints}+ sprints) — move them to backlog or give them an owner and date.`,
+  if (chronicList.length) asks.push({
+    text: `Re-plan or de-scope the ${Math.min(chronicList.length, 20)} oldest chronic carry-overs (planned into ${chronicList[0].sprints}+ sprints) — move them to backlog or give them an owner and date.`,
     owner: 'EMs',
   });
   if (hygiene.staleActive.length || hygiene.startedEmpty.length) asks.push({
@@ -535,5 +577,7 @@ function buildNarrative(model, cfg) {
 
 module.exports = {
   shippedIn, computeSprintPerformance, sprintReportUrl, loadPerformanceConfig, itemWeights, agg, pct, halves,
-  isDevFinished, statusAtClose, jiraUrl, sprintInJql, UNASSIGNED, UNMAPPED, MANAGER_LEFT,
+  slotEndIso, slotIsClosed, closedSeries,
+  isDevFinished, statusAtClose, jiraUrl, sprintInJql, ragFor, buildNarrative, topChurnRelease,
+  UNASSIGNED, UNMAPPED, MANAGER_LEFT,
 };

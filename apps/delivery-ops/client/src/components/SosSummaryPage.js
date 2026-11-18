@@ -9,6 +9,7 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { PageLoading } from '../shared/components/PageLoading';
 import { useSosItems } from '../hooks/useSosItems';
 import { useEraComponents } from '../hooks/useEraComponents';
 import { useSosHistory } from '../hooks/useSosHistory';
@@ -775,6 +776,7 @@ export function ReleaseSection({
   loadingBreakdowns = false,
   jiraBaseUrl,
   onRefresh,
+  refreshDisabled = false,
   checkpointHistory = {},
   gateData = null,
   tierSummaries = null,
@@ -919,13 +921,16 @@ export function ReleaseSection({
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
             onClick={onRefresh}
+            disabled={refreshDisabled}
             title="Refresh from JIRA"
             style={{
               fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px',
-              background: '#fff', color: '#555', cursor: 'pointer', padding: '3px 8px',
+              background: '#fff', color: '#555', padding: '3px 8px',
+              cursor: refreshDisabled ? 'not-allowed' : 'pointer',
+              opacity: refreshDisabled ? 0.6 : 1,
             }}
           >
-            ↻ Refresh
+            {refreshDisabled ? 'Loading…' : '↻ Refresh'}
           </button>
         </div>
       </div>
@@ -1522,8 +1527,8 @@ function SosSummaryPage() {
           </div>
         </div>
 
-        {loading && <p style={{ color: '#888', fontSize: '13px' }}>Loading SoS items…</p>}
-      {loadingGates && !loading && <p style={{ color: '#888', fontSize: '13px' }}>Loading gate data…</p>}
+        {loading && <PageLoading message="Loading SoS items…" />}
+      {loadingGates && !loading && <PageLoading inline message="Loading gate data…" />}
 
         {!loading && source === 'cache' && (
           <p style={{
@@ -1605,6 +1610,7 @@ function SosSummaryPage() {
             loadingBreakdowns={loadingBreakdowns}
             jiraBaseUrl={jiraBaseUrl}
             onRefresh={() => fetchAll(selectedTeamId)}
+            refreshDisabled={loading}
             checkpointHistory={checkpointHistory}
             gateData={gateDataMap[version] || null}
             tierSummaries={tierSummaries[version] || null}

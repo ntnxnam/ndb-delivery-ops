@@ -51,7 +51,7 @@
         "s1StartIso": "2024-10-23",
         "sprintDays": 21
       },
-      "defaultReleaseVersion": "NDB-2.12",
+      "defaultReleaseVersion": "NDB-3.0",
       "featureComponents": {
         "NDB": [
           "DB Migration",

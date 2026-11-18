@@ -21,9 +21,12 @@ import SprintReportPage from './components/SprintReportPage';
 import SprintPerformancePage from './components/SprintPerformancePage';
 import KPIPage from './components/KPIPage';
 import SystemTestScalePage from './components/SystemTestScalePage';
+import OncallsPage from './components/OncallsPage';
+import CfdCfiPage from './components/CfdCfiPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
 import ReleaseBriefPage from './release/ReleaseBriefPage';
+import WeeklySkimPage from './release/WeeklySkimPage';
 import RetrospectivePage from './release/RetrospectivePage';
 import ChatbotPage from './release/ChatbotPage';
 import FeatureDashboardPage from './feature/FeatureDashboardPage';
@@ -31,6 +34,7 @@ import { ComponentReport } from './components/ComponentReport';
 import SosSummaryPage from './components/SosSummaryPage';
 import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
 import DependencyViewPage from './components/DependencyViewPage';
+import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
 
 import './App.css';
 
@@ -138,7 +142,7 @@ const AuthenticatedApp = () => {
                   path="/project-status"
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>
-                      <Layout>
+                      <Layout fluid>
                         <ReleaseVersionTab />
                       </Layout>
                     </ProtectedRoute>
@@ -237,6 +241,28 @@ const AuthenticatedApp = () => {
                 />
 
                 <Route
+                  path="/oncalls"
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout wide>
+                        <OncallsPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/cfdcfi"
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout wide>
+                        <CfdCfiPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
                   path="/dependency-view"
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>
@@ -246,7 +272,22 @@ const AuthenticatedApp = () => {
                     </ProtectedRoute>
                   }
                 />
-                
+
+                <Route
+                  path="/release-outstanding-work"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout wide>
+                        <ReleaseOutstandingWorkPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/deferral-workbench"
+                  element={<Navigate to="/release-outstanding-work" replace />}
+                />
+
                 <Route
                   path="/team-management"
                   element={
@@ -276,6 +317,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout>
                         <ReleaseBriefPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/release/weekly-skim"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <WeeklySkimPage />
                       </Layout>
                     </ProtectedRoute>
                   }
@@ -381,7 +433,7 @@ const AppRouter = () => {
     return (
       <div className="app-loading">
         <div className="loading-content">
-          <div className="loading-spinner">⏳</div>
+          <div className="loading-spinner" role="status" aria-label="Checking your session" />
           <h2>NDB Status Update Sender</h2>
           <p>Checking your session...</p>
         </div>
@@ -403,9 +455,13 @@ const AppRouter = () => {
           }
           
           .loading-spinner {
-            font-size: 48px;
-            margin-bottom: 24px;
-            animation: pulse 2s ease-in-out infinite;
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 24px;
+            border: 4px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: app-spin 0.8s linear infinite;
           }
           
           .loading-content h2 {
@@ -420,9 +476,8 @@ const AppRouter = () => {
             font-size: 16px;
           }
           
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
+          @keyframes app-spin {
+            to { transform: rotate(360deg); }
           }
         `}</style>
       </div>

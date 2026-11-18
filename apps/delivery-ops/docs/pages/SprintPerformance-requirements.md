@@ -31,9 +31,9 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 
 | ID | Story |
 |----|-------|
-| SP-01 | As a director, I see an org-wide RAG verdict with its rule (say/do thresholds) in one line. |
-| SP-02 | As a director, I see highlights and lowlights. Each one cites the JIRA query behind it. |
-| SP-03 | As a TPM, I can filter by leader, manager, scrum team and work type (Dev/Test), and every tile, chart and table re-computes. |
+| SP-01 | As a director, I see an org-wide RAG verdict with its rule (say/do thresholds) in one line. Verdict % matches Highlights trend (same closed-sprint window). |
+| SP-02 | As a director, I see highlights and lowlights recomputed live from the report blob (not static HTML). Each one cites the JIRA query behind it. After **Regenerate from JIRA**, the summary reflects the new snapshot. |
+| SP-03 | As a TPM, I can filter by leader, manager, scrum team and work type (Dev/Test), and every tile, chart, table **and executive summary** re-computes (copy uses the focus name, not “Org-wide”). |
 | SP-04 | As a TPM, I can click any team or manager name to filter by it, and click it again to clear the filter. |
 | SP-05 | As a TPM, I can click a heatmap cell (team × sprint) to see every ticket in it with its outcome (Done / Carried / Not done / Invalid) and whether it was planned or added mid-sprint. |
 | SP-06 | As an EM, I can search the chronic carry-over list by key, summary, assignee, manager or team. |
@@ -46,6 +46,7 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 | SP-14 | As a TPM, I see say/do in the 2 sprints before, the sprint of, and the 2 sprints after every release gate (CC / CG / PG / GA, optionally EC), and can toggle gate types and superseded dates. |
 | SP-15 | As a director, I see Dev→QA lag: days from Resolved to Closed, plus the current Resolved queue aged since Dev finished — so QA bandwidth waits are visible separate from sprint say/do. |
 | SP-16 | As a director, I see a second scrum-team heatmap where Do = Resolved∪Closed (status at sprint close), same planned membership as JIRA Completed say/do — so Dev finish is not understated by QA close lag. |
+| SP-18 | As a director, an **ongoing** sprint column in the say/do heatmaps is blue-tagged (header + cells) and not RAG-coloured as a final score — so mid-sprint progress does not look like bad performance. |
 | SP-17 | As a director, **Asks of leadership (org-wide)** are drafted by AI from sprint metrics (separate sprint prompt — not the release briefing). On AI failure, rule-based asks remain. |
 | SP-10 | As any user, filter state is kept in the URL hash, so a downloaded file reopens with the same view. |
 
@@ -60,12 +61,12 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
    - a status line showing “Latest · window · updated …”, job progress, or the last error.
 2. **Report iframe** (`srcDoc`, sandboxed `allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads`) fills the remaining height.
 3. **Inside the report:**
-   - **Org-wide (not filtered):** verdict, highlights/lowlights, sprint hygiene, asks of leadership (AI via `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` at regenerate; **AI generated** banner above the table when `asksSource=ai`, else **Rules** banner), appendix.
+   - **Org-wide (not filtered):** live verdict + highlights/lowlights (browser, from blob), sprint hygiene, asks of leadership (AI via `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` at regenerate only; **AI generated** banner when `asksAi` present, else **Rules** banner), appendix.
    - **Filtered (sticky filter bar):**
      - six KPI tiles in a 3×2 grid telling the QA-bandwidth story first: Say/Do (JIRA Completed), Dev finished (Resolved∪Closed), QA bandwidth gap (pts), then QA queue, Scope added, Tickets that slipped;
      - discipline timeline: auto-detected phases on **closed** sprints only (split where JIRA Completed say/do shifts ≥ `phaseMinShiftPts` for ≥ `phaseMinSprints` sprints; in-flight slots charted as provisional), each phase reports Completed + Dev-finished say/do, narrative, dual-line chart with phase bands, one lane per release with gate markers (hollow ◇ = superseded date), and a say/do-around-each-gate table (closed slots only);
      - delivery-trend chart + data table: bars/rows = Say / Added / Removed; solid lines/% = Dev→Resolved (Bug/Imp), QA Closed (Bug/Imp), Closed (other); dotted Delivery progress + dashed Avg of the three type-matched rates (legend above the chart); BI = Bug/Improvement; gates as ◆ markers + chip strip + Gate(s) column; three-velocity-streams chart (axis = sprint-end date);
-     - scrum-team heatmaps (sortable; cells drill down): (1) JIRA Completed say/do, (2) Dev-finished say/do where Do = Resolved∪Closed at sprint close, same planned denominator, (3) completion by type — only when a scrum team is selected: three rows for that team (Dev→Resolved / QA Closed BI / Closed other);
+     - scrum-team heatmaps (sortable; cells drill down): (1) JIRA Completed say/do, (2) Dev-finished say/do where Do = Resolved∪Closed at sprint close, same planned denominator, (3) completion by type — only when a scrum team is selected: three rows for that team (Dev→Resolved / QA Closed BI / Closed other). **Ongoing** cadence slots (end date ≥ report as-of — same rule as the discipline timeline) use blue header + provisional cell style on all three — not green/yellow/red RAG;
      - leader/manager table (sort by items, say/do or decline; sparkline per row);
      - chronic carry-over table: every ticket planned into 3+ sprints (search + tabs for Still open / Resolved — awaiting QA / Closed / All), with live status, resolution, closed date, fix versions and "shipped in"; **paginated 20 rows per page** (Prev/Next) — no endless scroll.
    - **Drill-down:** a side panel that closes with ✕, Esc, or a click on the backdrop.
@@ -94,7 +95,8 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 | Team with fewer than `minPlannedForRanking` planned items | Not scored and excluded from highlight/lowlight rankings. |
 | Assignee with no `Team-*-DirectReports` group | Grouped under "Unmapped (no manager group)"; the ownership-gap lowlight fires at ≥5%. |
 | Matrix org (manager's reports split across leaders) | Manager placed under the majority leader. `managerLeaderOverrides` in config can force placement. |
-| Latest slot still active | Appendix notes the slot is still closing (teams that have not clicked Complete Sprint yet). |
+| Latest slot still active | Appendix notes the slot is still closing (teams that have not clicked Complete Sprint yet). Heatmap **ongoing** (blue provisional) follows cadence end date, same as the discipline timeline — not board-wide JIRA active state. |
+| In-flight cadence slot | Blue **ongoing** header (with days left) + provisional cells; % still shown; tooltips say not a final score. |
 | Mid-sprint regenerate | Window end stays on the sprint that started on the cadence floor (e.g. 7 Oct) until the next start (28 Oct). |
 | Next sprint starts (~3 weeks later) | End rolls forward; regenerate looks back ~18 months from that new end and re-pulls Sprint Reports. |
 | Filter yields no rows | Tables show "No items for this filter." |
@@ -111,3 +113,6 @@ Unlike the Sprint Report page (one sprint, one team), this page covers many team
 - [ ] Filters, sorting and drill-down work inside the iframe and in the downloaded file.
 - [ ] The report contains no `localhost` URLs. All CSS and JS are inline, with no external requests.
 - [ ] RAG verdict follows: green ≥75%, yellow ≥60%, else red (configurable).
+- [ ] Org-wide executive summary is not static HTML; after Regenerate it matches the new blob’s closed-sprint say/do (verdict ≡ highlight trend %).
+- [ ] With a leader/manager/team filter, executive summary copy does not say “Org-wide”.
+- [ ] In-flight cadence slot columns on all three scrum-team heatmaps show blue **ongoing** (header + provisional cells), not green/yellow/red RAG; tooltips say not a final score.

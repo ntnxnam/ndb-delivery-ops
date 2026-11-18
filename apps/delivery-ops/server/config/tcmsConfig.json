@@ -1,0 +1,81 @@
+{
+  "_comment": "TCMS mapping: milestone = release (NDB-2.12), requirements = project key (FEAT-xxxxx). See HAR + tcmsService.js",
+  "baseUrl": "https://tcms.eng.nutanix.com",
+  "auth": {
+    "endpoint": "/api/v1/refresh_auth_token",
+    "method": "POST",
+    "tokenExpiryFallbackDays": 2
+  },
+  "endpoints": {
+    "qualityIndex": {
+      "path": "/api/v1/quality_index",
+      "method": "GET",
+      "description": "Per-FEAT QI (current in-use path)",
+      "query": {
+        "milestone": "{milestone}",
+        "feats": "{featKey}"
+      },
+      "response": "{ date, QI, feats:[{name,QI}], teams:[{name,QI}] }",
+      "qiSelection": "feats[].QI == featKey ? feats[].QI : QI"
+    },
+    "metrics": {
+      "path": "/api/v1/all_test_cases/aggregate/metrics",
+      "method": "GET",
+      "description": "Per-FEAT pass/fail rollup (from your HAR drill-down)",
+      "query": {
+        "aggregation_field": "target_package_type",
+        "time_filter": "all",
+        "target": "{milestone}-qcow2",
+        "feat_type": "all",
+        "filters": "{\"$and\":[{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}"
+      }
+    },
+    "bugTypeMetrics": {
+      "path": "/api/v1/all_test_cases/aggregate/bug_type_metrics",
+      "method": "GET",
+      "description": "Per-FEAT bug breakdown by type",
+      "query": "same filters as metrics"
+    },
+    "milestoneAggregate": {
+      "path": "/api-readonly/v1/milestone_all_test_cases/aggregate",
+      "method": "POST",
+      "description": "Per-FEAT list filtered by milestone + requirements (Jira key) only",
+      "body": "[{\"$match\":{\"$and\":[{\"target_milestone\":\"{milestone}\"},{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}}]",
+      "totalPath": "/api-readonly/v1/milestone_all_test_cases/aggregate/total",
+      "supportedMilestones": { "release": "{milestone}", "masterForNDB": "NDB-master" },
+      "supportedTimeFilters": ["all", "Last 4 Week"]
+    },
+    "testResults": {
+      "path": "/api/v1/test_results",
+      "method": "GET",
+      "description": "Last results for specific test_case.name set (from HAR)",
+      "query": { "raw_query": "{\"$or\":[{\"test_case.name\":...,\"source\":\"{source}\",\"target\":\"{target}\"}],\"status\":{\"$nin\":[\"pending\",\"running\"]}}", "sort": "-start_time", "limit": 50 }
+    },
+    "uiLink": {
+      "template": "{baseUrl}/#/testcases/NDB/{versionNum}/qcow2?search={encodedJSON}&tab=package_type&type=All",
+      "searchJSON": "[{\"field\":\"Requirements\",\"op\":\"$eq\",\"value\":[\"{featKey}\"]}]"
+    }
+  },
+  "fieldMapping": {
+    "milestone": "release / fixVersion  e.g. NDB-2.12  (TCMS target_milestone / milestone param)",
+    "requirements": "project key       e.g. FEAT-18520 (TCMS test_case.metadata.requirements / feats param)",
+    "target": "milestone + package_type e.g. NDB-2.12-qcow2 (TCMS target)",
+    "packageTypes": ["qcow2", "ova"],
+    "sourcePattern": "NDB_Nutest-{milestoneShort}-tar  e.g. NDB_Nutest-2.12-tar"
+  },
+  "defaults": {
+    "branchMilestones": ["{milestone}", "master"],
+    "longTermOnlyMaster": true,
+    "concurrency": 5,
+    "timeoutMs": 15000,
+    "cacheTtlMs": 300000,
+    "errorCacheTtlMs": 60000
+  },
+  "callSequence": [
+    "1. POST {baseUrl}{auth.endpoint} -> { token, token_type, expiry } (refresh JWT; cache until expiry-5m)",
+    "2. For each FEAT key in release: GET {baseUrl}{endpoints.qualityIndex.path}?milestone={milestone}&feats={featKey} [+ repeat with milestone=master] (parallel, max concurrency=5)",
+    "3. Fallback if QI null: POST {baseUrl}{endpoints.milestoneAggregate.path} and {endpoints.milestoneAggregate.totalPath} with body [{\"$match\":{\"$and\":[{\"target_milestone\":\"{milestone}\"},{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}}] -> counts",
+    "4. Assemble { qi, overallQI, featureQI, teams/components, date, master, branch } + build uiLink template -> attach as item.tcmsQI + item.tcmsQueryUrl",
+    "5. (On drill-down) same milestone+requirements POST -> paginated test-cases"
+  ]
+}

@@ -45,7 +45,7 @@ export function useChat() {
   }, [versions]);
 
   const sendMessage = useCallback(
-    async (content) => {
+    async (content, opts = {}) => {
       const text = String(content || '').trim();
       if (!text || loading) return null;
 
@@ -56,7 +56,7 @@ export function useChat() {
       setError('');
 
       try {
-        const response = await authenticatedPost('/api/ai/chat', {
+        const payload = {
           message: text,
           history: nextMessages.slice(0, -1),
           release: selectedRelease || null,
@@ -64,7 +64,13 @@ export function useChat() {
           availableReleases,
           knownTeams,
           sessionId,
-        });
+        };
+        // Slice 3: digging — pass datasetId/jqlHash when chatMode==digging and dataset ready
+        if (opts.datasetId) payload.datasetId = String(opts.datasetId);
+        if (opts.jqlHash) payload.jqlHash = String(opts.jqlHash);
+        // Allow caller to override productId (digging manifest product)
+        if (opts.productId) payload.productId = String(opts.productId);
+        const response = await authenticatedPost('/api/ai/chat', payload);
 
         const data = response?.data || {};
         if (data.sessionId && data.sessionId !== sessionId) {

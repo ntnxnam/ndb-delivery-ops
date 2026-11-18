@@ -71,30 +71,37 @@ export class AiConnectorError extends Error {
  *   apps/delivery-ops/server/config/aiConfig.json
  *
  * The API key is secret and must be set via environment variable:
- *   AI_API_KEY in server/.env  (retrieve from LastPass)
- *
- * Override env vars take precedence over aiConfig.json values:
- *   AI_API_BASE_URL, AI_DEFAULT_MODEL, AI_MAX_TOKENS, AI_REQUEST_TIMEOUT
+ *   NAI_API_KEY in server/.env  (retrieve from tokens.corp.nutanix.com)
+ *   AI_API_KEY is deprecated and no longer accepted — use NAI_API_KEY.
  *
  * No fallback defaults — every required value must be explicitly configured.
+ *
+ * Usage matches the OpenAI-compatible client:
+ *   from openai import OpenAI
+ *   client = OpenAI(
+ *       base_url="https://tokens.corp.nutanix.com/enterpriseai/gateway/v1",
+ *       api_key=os.environ["NAI_API_KEY"],
+ *   )
+ *   Equivalently in Node (this connector):
+ *   completeChat(messages, { model: "ntnx-beam" })  // model defaults to aiConfig.json:defaultModel
  */
 function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
-  const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? '').trim();
+  const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? process.env.NAI_API_BASE_URL ?? '').trim();
   if (!baseUrl) {
     throw new Error(
-      'AI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+      'AI_API_BASE_URL (or NAI_API_BASE_URL) is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
     );
   }
   if (/localhost|127\.0\.0\.1/i.test(baseUrl) && process.env.NODE_ENV === 'production') {
     throw new Error('AI_API_BASE_URL must not be localhost in production');
   }
 
-  const apiKey = (override?.apiKey ?? process.env.AI_API_KEY ?? '').trim();
+  const apiKey = (override?.apiKey ?? process.env.NAI_API_KEY ?? '').trim();
   if (!apiKey) {
-    throw new Error('AI_API_KEY is not set. Retrieve the key from LastPass and set it in server/.env.');
+    throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
   }
 
-  const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? '').trim();
+  const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '').trim();
   if (!defaultModel) {
     throw new Error(
       'AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'

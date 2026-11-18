@@ -21,7 +21,6 @@ export const routeConfig = {
       description: 'Send status update emails',
       permissions: [], // No specific permissions - available to all authenticated users
       showInNav: true,
-      icon: '📧'
     },
     {
       path: '/project-status',
@@ -31,7 +30,6 @@ export const routeConfig = {
       description: 'Release picker, payload table, Gantt',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '🚀'
     },
     {
       path: '/feature-dashboard',
@@ -41,7 +39,6 @@ export const routeConfig = {
       description: 'Feature payload, gates, and reconciliation',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '🧭'
     },
     {
       path: '/release/retrospective',
@@ -51,7 +48,6 @@ export const routeConfig = {
       description: 'Gate compliance and behavioral analysis',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '🔍'
     },
     {
       path: '/release-setup',
@@ -61,7 +57,6 @@ export const routeConfig = {
       description: 'Create / rename releases, cleanup filters',
       permissions: [PERMISSIONS.RELEASE_SETUP_MANAGE],
       showInNav: true,
-      icon: '⚙️'
     },
     {
       path: '/generic-emailer',
@@ -71,7 +66,6 @@ export const routeConfig = {
       description: 'Send emails from JIRA queries',
       permissions: [PERMISSIONS.EMAIL_SEND_GENERIC],
       showInNav: true,
-      icon: '📋'
     },
     {
       path: '/email-history',
@@ -81,7 +75,6 @@ export const routeConfig = {
       description: 'View sent email history',
       permissions: [PERMISSIONS.EMAIL_HISTORY_VIEW],
       showInNav: true,
-      icon: '📜'
     },
     {
       path: '/sprint-report',
@@ -91,7 +84,6 @@ export const routeConfig = {
       description: 'Sprint reporting and metrics',
       permissions: [PERMISSIONS.SPRINT_REPORTS_VIEW],
       showInNav: true,
-      icon: '🏃'
     },
     {
       path: '/sprint-performance',
@@ -101,7 +93,6 @@ export const routeConfig = {
       description: 'Leadership view of sprint say/do by team, leader and manager',
       permissions: [PERMISSIONS.SPRINT_REPORTS_VIEW],
       showInNav: true,
-      icon: '📈'
     },
     {
       path: '/component-report',
@@ -111,17 +102,24 @@ export const routeConfig = {
       description: 'Component health, actionable metrics, deferral trends',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '📊'
     },
     {
       path: '/dependency-view',
       exact: true,
       component: 'DependencyViewPage',
-      title: 'Dependency View',
+      title: 'Post EC dependency view',
       description: 'Read-only partnership and companion dependencies (NDB-first)',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '🔗'
+    },
+    {
+      path: '/release-outstanding-work',
+      exact: true,
+      component: 'ReleaseOutstandingWorkPage',
+      title: 'Release Outstanding Work',
+      description: 'Post-PG deferral process and outstanding Dev / QA / discipline work',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
     },
     {
       path: '/chatbot',
@@ -131,7 +129,6 @@ export const routeConfig = {
       description: 'Conversational release and ticket Q&A',
       permissions: [PERMISSIONS.AI_INSIGHTS_VIEW],
       showInNav: true,
-      icon: '💬'
     },
     {
       path: '/kpis',
@@ -141,7 +138,6 @@ export const routeConfig = {
       description: 'KPI dashboard',
       permissions: [PERMISSIONS.KPI_VIEW],
       showInNav: true,
-      icon: '📈'
     },
     {
       path: '/system-test-scale',
@@ -151,7 +147,24 @@ export const routeConfig = {
       description: 'System-Test bug scale, cf[13260] regressions, and release trends',
       permissions: [PERMISSIONS.KPI_VIEW],
       showInNav: true,
-      icon: '🧪'
+    },
+    {
+      path: '/oncalls',
+      exact: true,
+      component: 'OncallsPage',
+      title: 'OnCalls',
+      description: 'OnCall → TechHelp → eng-fix metrics and AI briefing',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
+    },
+    {
+      path: '/cfdcfi',
+      exact: true,
+      component: 'CfdCfiPage',
+      title: 'CFD / CFI',
+      description: 'CFD and CFI KPI pulse — heroes, trends, open-ticket drill',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
     },
     {
       path: '/sos-summary',
@@ -161,17 +174,15 @@ export const routeConfig = {
       description: 'Scrum of Scrums — live Feature/Initiative status across all active releases',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '📡'
     },
     {
       path: '/sos-leader-summary',
       exact: true,
       component: 'SosLeaderSummaryPage',
       title: 'SoS by Leader',
-      description: 'TEMP — SoS Feature/Initiative status regrouped by NDB eng leader',
+      description: 'SoS Feature/Initiative status regrouped by eng leader',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '👥'
     },
     {
       path: '/release/brief',
@@ -181,7 +192,15 @@ export const routeConfig = {
       description: 'AI health briefing per release',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
       showInNav: true,
-      icon: '🤖'
+    },
+    {
+      path: '/release/weekly-skim',
+      exact: true,
+      component: 'WeeklySkimPage',
+      title: 'Weekly Skim',
+      description: 'Multi-release ADHD email skim with HTML/PDF export',
+      permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],
+      showInNav: true,
     },
     {
       path: '/release/:name/brief',
@@ -200,7 +219,6 @@ export const routeConfig = {
       description: 'Edit release gate dates configuration',
       permissions: [PERMISSIONS.RELEASE_CONFIG_MANAGE],
       showInNav: true,
-      icon: '🗓️'
     },
     {
       path: '/team-management',
@@ -210,7 +228,6 @@ export const routeConfig = {
       description: 'Add and edit teams',
       permissions: [PERMISSIONS.ADMIN_PANEL_ACCESS],
       showInNav: true,
-      icon: '🔧'
     }
   ]
 };

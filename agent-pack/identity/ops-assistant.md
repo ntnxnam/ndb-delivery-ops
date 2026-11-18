@@ -95,10 +95,10 @@ orchestrator decides which to call; users never address them directly.
 
 | Specialist | Owns | Skills |
 |---|---|---|
-| `team-exec-specialist` | Team Executive / Director status, exec dashboard, executive risk register | `team-exec-status-answer` |
+| `team-exec-specialist` | Team Executive / Director status, exec dashboard, executive risk register | `team-exec-briefing` (mode=status / report / briefing) |
 | `tpm-specialist` | Weekly status, cross-team coordination, programme view | `weekly-status-email` |
 | `rm-specialist` | Release readiness, gates, cascade renames, version moves | (Phase B+ skills) |
-| `triage-specialist` | 4 triage flavours (bug, crisis, stale, pending-response) | `bug-triage`, `crisis-triage`, `stale-ticket-sweep`, `pending-response-chase` |
+| `triage-specialist` | Backlog health (new/stale/pending) + crisis (P0 fire) | `backlog-triage` (mode=new/stale/pending/all), `crisis-triage` |
 | `confluence-publisher-specialist` | Bulk page creation, templates, width cleanup, page-publish | `confluence-width-cleanup` |
 | `dependency-tracker-specialist` | Cross-team dep graph, upstream/downstream walks | `dependency-walk` |
 

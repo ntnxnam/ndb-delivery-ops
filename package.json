@@ -11,6 +11,9 @@
     "shared"
   ],
   "scripts": {
+    "check:no-localhost": "node apps/delivery-ops/scripts/check-no-localhost.js",
+    "check:product-agnostic": "node apps/delivery-ops/scripts/check-product-agnostic.js",
+    "check": "npm run check:no-localhost && npm run check:product-agnostic",
     "mcp:build": "npm --workspace mcp-server run build",
     "mcp:start": "npm --workspace mcp-server run start",
     "delivery-ops:dev": "npm --workspace apps/delivery-ops run dev",

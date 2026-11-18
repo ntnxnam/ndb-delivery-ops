@@ -13,8 +13,47 @@ const { tcmsCache } = require('../utils/simpleCache');
 
 const TCMS_API_BASE = 'https://tcms.eng.nutanix.com';
 const TCMS_QI_PATH = '/api/v1/quality_index';
+const TCMS_MILESTONE_AGG = '/api-readonly/v1/milestone_all_test_cases/aggregate';
+const TCMS_MILESTONE_TOTAL = '/api-readonly/v1/milestone_all_test_cases/aggregate/total';
 const CONCURRENCY_LIMIT = 5;
 const TCMS_TIMEOUT_MS = 15000; // Reduced from 30s to 15s
+
+async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all') {
+  try {
+    const filters = JSON.stringify({ $and: [{ 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }] });
+    const resp = await axios.get(`${TCMS_API_BASE}/api/v1/milestone_all_test_cases/aggregate/metrics`, {
+      params: { aggregation_field: 'test_case.metadata.requirements', time_filter: timeFilter, target_milestone: milestone, feat_type: 'all', filters },
+      timeout: TCMS_TIMEOUT_MS,
+    });
+    const row = resp.data?.data?.[0];
+    if (!row) return null;
+    return {
+      qi: row.average_total_op_success_percentage ?? row.average_run_op_success_percentage ?? null,
+      total: row.total ?? null,
+      run: row.run ?? null,
+      passed: row.passed ?? null,
+      failed: row.failed ?? null,
+      manual: { qi: row.average_manual_op_success_percentage ?? null, run: row.manual_run ?? null, passed: row.manual_passed ?? null, failed: row.manual_failed ?? null, rate: row.manual_passed_percentage ?? null },
+      automation: { qi: row.average_automation_op_success_percentage ?? null, run: row.automation_run ?? null, passed: row.automation_passed ?? null, failed: row.automation_failed ?? null, rate: row.automation_passed_percentage ?? null },
+      raw: row,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function fetchMilestoneCount(featKey, milestone) {
+  try {
+    const body = [{ $match: { $and: [{ target_milestone: milestone }, { 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }] } }];
+    const resp = await axios.post(`${TCMS_API_BASE}${TCMS_MILESTONE_TOTAL}`, body, { timeout: TCMS_TIMEOUT_MS, headers: { 'Content-Type': 'application/json' } });
+    if (resp.data && typeof resp.data.total === 'number') {
+      return { total: resp.data.total, qi: null };
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 
 /**
  * Build the TCMS UI link for a given feature key and release version.
@@ -81,28 +120,52 @@ async function fetchFeatureMetrics(featKey, milestone) {
 
     // Use feature-specific QI if available, otherwise fall back to overall QI
     const qi = featureQI !== null ? featureQI : data.QI;
-
-    const result = {
-      qi: qi,
-      total: null, // Not provided by new API
-      passed: null, // Not provided by new API  
-      failed: null, // Not provided by new API
-      components: data.teams || [], // Teams serve as component breakdown
-      date: data.date,
-      overallQI: data.QI,
-      featureQI: featureQI
-    };
-
-    // Cache successful result
-    tcmsCache.set(cacheKey, result);
-    return result;
+    if (qi != null || (data.teams && data.teams.length)) {
+      const result = {
+        qi: qi,
+        total: data.total ?? null,
+        passed: null,
+        failed: null,
+        components: data.teams || [],
+        date: data.date,
+        overallQI: data.QI,
+        featureQI: featureQI
+      };
+      tcmsCache.set(cacheKey, result);
+      return result;
+    }
+    // quality_index has no entry -> fallback to milestone+requirements metrics (milestone_all_test_cases/aggregate/metrics)
+    const m = await fetchMilestoneMetrics(featKey, milestone, 'all');
+    if (m) {
+      const result = { qi: m.qi, total: m.total, run: m.run, passed: m.passed, failed: m.failed, manual: m.manual, automation: m.automation, raw: m.raw, date: data.date || null, overallQI: null, featureQI: null };
+      tcmsCache.set(cacheKey, result);
+      return result;
+    }
+    const fallback = await fetchMilestoneCount(featKey, milestone);
+    if (fallback && fallback.total != null) {
+      const result = { qi: null, total: fallback.total, passed: null, failed: null, components: [], date: data.date || null, overallQI: null, featureQI: null };
+      tcmsCache.set(cacheKey, result);
+      return result;
+    }
+    tcmsCache.set(cacheKey, null, 60000);
+    return null;
   } catch (err) {
+    const m = await fetchMilestoneMetrics(featKey, milestone, 'all');
+    if (m) {
+      const result = { qi: m.qi, total: m.total, run: m.run, passed: m.passed, failed: m.failed, manual: m.manual, automation: m.automation, raw: m.raw, date: null, overallQI: null, featureQI: null };
+      tcmsCache.set(cacheKey, result);
+      return result;
+    }
+    const fallback = await fetchMilestoneCount(featKey, milestone);
+    if (fallback && fallback.total != null) {
+      const result = { qi: null, total: fallback.total, passed: null, failed: null, components: [], date: null, overallQI: null, featureQI: null };
+      tcmsCache.set(cacheKey, result);
+      return result;
+    }
     const isTimeout = err.code === 'ECONNABORTED' || err.message.includes('timeout');
     const errorMsg = isTimeout ? 'Request timeout' : (err?.response?.data || err.message);
     console.warn(`[tcmsService] fetchFeatureMetrics failed for ${featKey}@${milestone}:`, errorMsg);
-    
-    // Cache null result for failed requests to prevent immediate retries
-    tcmsCache.set(cacheKey, null, 60000); // Cache for 1 minute only
+    tcmsCache.set(cacheKey, null, 60000);
     return null;
   }
 }
@@ -116,31 +179,60 @@ async function fetchFeatureMetrics(featKey, milestone) {
  * @param {string}  fixVersion - e.g. "NDB-2.11"
  * @param {boolean} isLongTerm - if true, only fetch master (branch doesn't exist for long-term)
  */
-async function enrichItemWithTCMS(item, fixVersion, isLongTerm = false) {
+async function fetchMergedMetrics(featKey, milestone, timeFilter = 'all') {
+  const [qiRes, mRes] = await Promise.allSettled([fetchFeatureMetrics(featKey, milestone), fetchMilestoneMetrics(featKey, milestone, timeFilter)]);
+  const qi = qiRes.status === 'fulfilled' ? qiRes.value : null;
+  const m = mRes.status === 'fulfilled' ? mRes.value : null;
+  if (!qi && !m) return null;
+  // For time-filtered windows (e.g. Last 4 weeks) don't fall back to overall QI — show empty if no recent runs
+  if (timeFilter !== 'all' && !m) return null;
+  // Merge: prefer metrics manual/automation/run, fall back to qi (only for Overall window)
+  return {
+    qi: m?.qi ?? qi?.qi ?? null,
+    total: m?.total ?? qi?.total ?? null,
+    run: m?.run ?? null,
+    passed: m?.passed ?? null,
+    failed: m?.failed ?? null,
+    manual: m?.manual ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null),
+    automation: m?.automation ?? (qi ? { qi: qi.qi, run: null, passed: null, failed: null, rate: qi.qi } : null),
+    date: qi?.date ?? null,
+    overallQI: qi?.overallQI ?? null,
+    featureQI: qi?.featureQI ?? null,
+  };
+}
+
+async function enrichItemWithQuality(item, fixVersion, isLongTerm = false) {
   try {
     item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion);
-
-    // Keep the full milestone name for the API (e.g. "NDB-2.11")
     const branchMilestone = fixVersion;
-
-    const [masterResult, branchResult] = await Promise.allSettled([
-      fetchFeatureMetrics(item.key, 'master'),
-      isLongTerm ? Promise.resolve(null) : fetchFeatureMetrics(item.key, branchMilestone)
+    const [masterAll, masterLast3, branchAll, branchLast3] = await Promise.all([
+      fetchMergedMetrics(item.key, 'NDB-master', 'all'),
+      fetchMergedMetrics(item.key, 'NDB-master', 'Last 4 Week'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'Last 4 Week'),
     ]);
-
-    const master = masterResult.status === 'fulfilled' ? masterResult.value : null;
-    const branch = branchResult.status === 'fulfilled' ? branchResult.value : null;
-
-    item.tcmsQI = {
-      master: master || null,
-      branch: (!isLongTerm && branch) ? branch : null
+    // TODO(TCMS): functional/system currently share same source metrics until TCMS provides category-filtered aggregates.
+    // When TCMS exposes test_category filter, split fetchMergedMetrics into functionalMetrics vs systemMetrics here.
+    const toTable = (m) => m ? { functional: { manual: m.manual, automation: m.automation }, system: { manual: m.manual, automation: m.automation } } : null;
+    const toLast3Table = toTable;
+    item.tcmsQuality = {
+      releaseOverall: branchAll ? toTable(branchAll) : null,
+      releaseLast3Weeks: branchLast3 ? toLast3Table(branchLast3) : null,
+      masterOverall: masterAll ? toTable(masterAll) : null,
+      masterLast3Weeks: masterLast3 ? toLast3Table(masterLast3) : null,
     };
+    item.tcmsQI = { master: masterAll, branch: branchAll };
   } catch (err) {
-    console.warn(`[tcmsService] enrichItemWithTCMS failed for ${item.key}:`, err.message);
+    console.warn(`[tcmsService] enrichItemWithQuality failed for ${item.key}:`, err.message);
     item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion);
+    item.tcmsQuality = null;
     item.tcmsQI = null;
   }
   return item;
+}
+
+async function enrichItemWithTCMS(item, fixVersion, isLongTerm = false) {
+  return enrichItemWithQuality(item, fixVersion, isLongTerm);
 }
 
 /**
@@ -184,6 +276,7 @@ module.exports = {
   buildTcmsQueryUrl,
   fetchFeatureMetrics,
   enrichItemWithTCMS,
+  enrichItemWithQuality,
   enrichCommitItemsWithQI,
   enrichLongTermItemsWithQI
 };

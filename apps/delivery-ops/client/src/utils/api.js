@@ -89,12 +89,16 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
   if (url.includes('/release-items-history')) timeout = 300000; // 5 min
   else if (url.includes('/sos-items-history')) timeout = 180000; // 3 min (JIRA changelog fetch for multiple items)
   else if (url.includes('/release-items-commit') || url.includes('/release-items-long-term')) timeout = 180000; // 3 min each
+  else if (url.includes('/api/jira/release-items') || url.includes('/api/release-dataset/project-status') || url.includes('/api/release-dataset/per-release')) timeout = 180000; // 3 min — unified release-items + bundle live-fallback
   else if (url.includes('/sprint-report') || url.includes('/sprint-report-trends')) timeout = 300000; // 5 min (matches server)
   else if (url.includes('/api/jira/sprints')) timeout = 90000; // 90s for sprints list (paginated Jira Agile API; cold cache + many sprints)
   else if (url.includes('/inspect-base-filter') || url.includes('/project-scope') || url.includes('/board-calendar')) timeout = 120000;
+  // Weekly skim loops NAI per release — allow up to 10 minutes for multi-release.
+  else if (url.includes('/api/ai/weekly-skim')) timeout = 600000;
   // NAI reasoning models often exceed 30–60s; keep client above AI_REQUEST_TIMEOUT (120s).
   else if (url.includes('/api/ai/')) timeout = 180000;
   else if (url.includes('/system-test-scale')) timeout = 180000;
+  else if (url.includes('/outstanding-report')) timeout = 180000;
   
   const config = {
     ...authHeaders,
@@ -159,6 +163,7 @@ export const authenticatedGet = async (url, params = {}, options = {}, axiosConf
   const authHeaders = getAuthHeaders(jiraToken, username);
   let timeout = 30000;
   if (url.includes('/system-test-scale')) timeout = 180000;
+  else if (url.includes('/release-items') || url.includes('/project-status') || url.includes('/per-release') || url.includes('/release-dataset/synopsis') || url.includes('/release-dataset/outstanding')) timeout = 180000;
 
   return withRequestGate(
     requestKey('GET', url, null, params),

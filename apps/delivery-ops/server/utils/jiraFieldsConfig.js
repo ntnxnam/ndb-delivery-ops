@@ -174,6 +174,81 @@ function getFieldIdsForContext(context) {
   return fieldIds.join(',');
 }
 
+// ── Labels taxonomy helpers (config.labels is source of truth) ───────────────
+
+const DEFAULT_LABEL_PREFIX_FALLBACK = 'ndb';
+
+/**
+ * Resolve a dot-path like "lifecycle.wishlist" or "porExclude" against config.labels.
+ * @param {string} key - dot-separated label key
+ * @returns {Object|null} label config entry or null
+ */
+function getLabelConfig(key) {
+  if (!key || typeof key !== 'string') return null;
+  const config = loadConfig();
+  const labels = config.labels;
+  if (!labels) return null;
+  const parts = key.split('.');
+  let cur = labels;
+  for (const part of parts) {
+    if (!cur || typeof cur !== 'object') return null;
+    cur = cur[part];
+  }
+  return cur && typeof cur === 'object' && (cur.pattern || cur.jql) ? cur : null;
+}
+
+/**
+ * Replace {prefix}/{version}/{train}/{label} placeholders in a string.
+ * Unknown placeholders are left as-is. Prefix defaults to "ndb" if falsy.
+ * @param {string} template
+ * @param {Object} replacements - e.g. { prefix: 'ndb', version: '2.11', train: '...', label: '...' }
+ * @returns {string}
+ */
+function applyLabelPlaceholders(template, replacements = {}) {
+  if (!template || typeof template !== 'string') return template;
+  const prefix = replacements.prefix ? String(replacements.prefix).toLowerCase() : DEFAULT_LABEL_PREFIX_FALLBACK;
+  const map = { ...replacements, prefix };
+  return template.replace(/\{(\w+)\}/g, (_, k) => {
+    if (k in map && map[k] != null) return String(map[k]);
+    if (k === 'prefix') return prefix;
+    return `{${k}}`;
+  });
+}
+
+/**
+ * Get the interpolated label pattern for a taxonomy key.
+ * @param {string} key - dot-path e.g. "lifecycle.wishlist", "porExclude"
+ * @param {Object} [replacements] - placeholder values
+ * @returns {string|null} interpolated pattern or null if key unknown
+ */
+function getLabelPattern(key, replacements = {}) {
+  const entry = getLabelConfig(key);
+  if (!entry || !entry.pattern) return null;
+  return applyLabelPlaceholders(entry.pattern, replacements);
+}
+
+/**
+ * Get the interpolated JQL fragment for a taxonomy key.
+ * Replaces {prefix}/{version}/{train}/{label} in the entry's `jql` field.
+ * Falls back to DEFAULT_LABEL_PREFIX_FALLBACK ("ndb") when prefix missing.
+ * Handles EMPTY wrapping for porExclude via its jql template (labels not in ...).
+ * @param {string} key - dot-path e.g. "lifecycle.wishlist", "porExclude"
+ * @param {Object} [params] - placeholder values plus optional extras
+ * @returns {string|null} JQL string or null if key unknown
+ */
+function getLabelJql(key, params = {}) {
+  const entry = getLabelConfig(key);
+  if (!entry || !entry.jql) return null;
+  // Normalise prefix fallback
+  const normalised = { ...params };
+  if (!normalised.prefix) normalised.prefix = DEFAULT_LABEL_PREFIX_FALLBACK;
+  else normalised.prefix = String(normalised.prefix).toLowerCase();
+  if (normalised.version) normalised.version = String(normalised.version);
+  if (normalised.train) normalised.train = String(normalised.train);
+  if (normalised.label) normalised.label = String(normalised.label);
+  return applyLabelPlaceholders(entry.jql, normalised);
+}
+
 /**
  * Clear the cached config (useful for testing or hot-reloading)
  */
@@ -195,6 +270,10 @@ module.exports = {
   getFieldValue,
   buildFieldIdsString,
   getFieldIdsForContext,
-  clearCache
+  clearCache,
+  getLabelConfig,
+  getLabelPattern,
+  getLabelJql,
+  applyLabelPlaceholders
 };
 

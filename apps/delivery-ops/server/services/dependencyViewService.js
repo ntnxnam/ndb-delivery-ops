@@ -7,6 +7,7 @@ const path = require('path');
 const { runSearchByJql } = require('../utils/jiraSearchByJql');
 const { getJira } = require('../utils/jiraClient');
 const { getTeamById, loadTeamBoardConfig, normalizeTeamId } = require('../utils/teamConfig');
+const { fetchPreviouslyLinked } = require('../utils/previouslyLinkedDeps');
 const jiraFieldsConfig = require('../config/jiraFieldsConfig.json');
 
 const CONFIG_PATH = path.join(__dirname, '../config/dependencyViewConfig.json');
@@ -30,7 +31,13 @@ const SPRINT_FIELD_IDS = [
   'customfield_10360',
 ];
 /** Extra search fields so sprint/CC are always present even if config drifts. */
-const DEPENDENCY_EXTRA_FIELDS = ['issuelinks', ...SPRINT_FIELD_IDS, CODE_COMPLETE_FIELD, 'duedate'];
+const DEPENDENCY_EXTRA_FIELDS = [
+  'issuelinks',
+  'components',
+  ...SPRINT_FIELD_IDS,
+  CODE_COMPLETE_FIELD,
+  'duedate',
+];
 
 /** Wider project type wins when merging inferred signals. */
 const EW_SPAN_RANK = { global_ew: 3, nutanix_ew: 2, ndb_ew: 1, team_internal: 0 };
@@ -596,12 +603,33 @@ function releaseToWishlistSlug(release) {
     .toLowerCase();
 }
 
-function wishlistLabel(releaseSlug, suffix = 'wishlist') {
-  return `ndb-${releaseSlug}-${suffix}`;
+function resolveLabelPrefix(prefix) {
+  if (prefix && String(prefix).trim()) return String(prefix).trim().toLowerCase();
+  // Try productService / teamBoardConfig when available (D1), else default ndb
+  try {
+    // eslint-disable-next-line global-require
+    const { getLabelPrefix } = require('../utils/jiraFieldsConfig'); // fallback check
+    void getLabelPrefix;
+  } catch {}
+  return 'ndb';
 }
 
-function partnerDepLabels(trainSlug, suffixes = ['dependency']) {
-  return (suffixes || ['dependency']).map((s) => `"ndb-${trainSlug}-${s}"`);
+function wishlistLabel(releaseSlug, suffix = 'wishlist', prefix = 'ndb') {
+  const p = resolveLabelPrefix(prefix);
+  // Prefer central taxonomy when available
+  try {
+    // eslint-disable-next-line global-require
+    const { getLabelPattern } = require('../utils/jiraFieldsConfig');
+    const pat = getLabelPattern('lifecycle.wishlist', { prefix: p, version: String(releaseSlug || '').trim() });
+    if (pat) return pat;
+  } catch {}
+  return `${p}-${String(releaseSlug || '').trim()}-${String(suffix || 'wishlist').trim()}`;
+}
+
+function partnerDepLabels(trainSlug, suffixes = ['dependency'], prefix = 'ndb') {
+  const p = resolveLabelPrefix(prefix);
+  const list = (suffixes || ['dependency']);
+  return list.map((s) => `"${p}-${String(trainSlug || '').trim()}-${String(s || '').trim()}"`);
 }
 
 /**
@@ -1115,6 +1143,9 @@ function mapIssue(raw, { direction = null, source = null } = {}, cfg, releaseCtx
   const assignee =
     raw.assignee?.displayName || raw.assignee?.name || raw.assignee?.emailAddress || '';
   const labels = Array.isArray(raw.labels) ? raw.labels : [];
+  const components = (raw.components || [])
+    .map((c) => (typeof c === 'string' ? c : c?.name))
+    .filter(Boolean);
   const fixVersions = (raw.fixVersions || [])
     .map((v) => (typeof v === 'string' ? v : v?.name))
     .filter(Boolean);
@@ -1134,6 +1165,7 @@ function mapIssue(raw, { direction = null, source = null } = {}, cfg, releaseCtx
     project,
     assignee,
     labels,
+    components,
     fixVersions,
     span: spanInfo.id,
     spanInfo,
@@ -1379,13 +1411,24 @@ function resolveAlignedTrain(cfg, release) {
     return {
       train: null,
       trainSlug: null,
+      displayName: null,
       status: 'unknown',
-      notes: 'No aligned train in dependencyViewConfig',
+      statusLabel: 'No aligned train configured',
+      notes: 'Add this release under alignedTrains in dependencyViewConfig.json',
       partnerVersions: [],
       confluenceUrl: null,
+      askLabelHint: null,
     };
   }
-  return { ...row };
+  const trainSlug = row.trainSlug || null;
+  return {
+    ...row,
+    displayName: row.displayName || (row.train ? `${row.train} — platform partner train` : null),
+    statusLabel: row.statusLabel || row.status || null,
+    askLabelHint: trainSlug
+      ? `ndb-${trainSlug}-ask / ndb-${trainSlug}-asks / ndb-${trainSlug}-dependency`
+      : null,
+  };
 }
 
 /**
@@ -1405,8 +1448,11 @@ function listEarlyCallReleases(cfg, selectedRelease) {
       release: r,
       train: train.train || null,
       trainSlug: train.trainSlug || releaseToWishlistSlug(r),
+      displayName: train.displayName || train.train || null,
       status: train.status || null,
+      statusLabel: train.statusLabel || train.status || null,
       notes: train.notes || null,
+      askLabelHint: train.askLabelHint || null,
     });
   });
   return out;
@@ -1479,8 +1525,11 @@ async function fetchEarlyCallBundle(token, early, cfg, jiraBaseUrl, wlCfg, orpha
     release: early.release,
     train: early.train,
     trainSlug,
+    displayName: early.displayName || early.train || null,
     status: early.status,
+    statusLabel: early.statusLabel || early.status || null,
     notes: early.notes,
+    askLabelHint: early.askLabelHint || null,
     releaseSlug,
     wishlistLabel: wishlistLabel(releaseSlug, wlOpts.labelSuffix),
     trainAskLabels: [
@@ -1594,8 +1643,13 @@ async function getOverview({ token, teamId, release } = {}) {
     releaseCtx
   );
 
+  // Partnership roots must be real FEAT/Initiative keys — skip empty / placeholder stubs
   const companionDefs = (cfg.companionRoots || []).filter((r) => {
-    if (!r.rootKey) return false;
+    if (!r?.rootKey) return false;
+    const label = String(r.label || '').toLowerCase();
+    if (label.includes('example') || label.includes('replace in config') || label.includes('placeholder')) {
+      return false;
+    }
     if (!Array.isArray(r.releases) || !r.releases.length) return true;
     return r.releases.includes(effectiveRelease);
   });
@@ -1671,8 +1725,11 @@ async function getOverview({ token, teamId, release } = {}) {
         release: early.release,
         train: early.train,
         trainSlug: early.trainSlug,
+        displayName: early.displayName || early.train || null,
         status: early.status,
+        statusLabel: early.statusLabel || early.status || null,
         notes: early.notes,
+        askLabelHint: early.askLabelHint || null,
         error: err.message || String(err),
         sections: {},
       });
@@ -1696,6 +1753,56 @@ async function getOverview({ token, teamId, release } = {}) {
   await enrichIssuesWithSprintEnds(token, sections);
   await enrichAncestorChains(token, sections, cfg, jiraBaseUrl, releaseCtx);
 
+  const issueIndexByKey = new Map();
+  const indexIssue = (iss) => {
+    if (iss?.key) issueIndexByKey.set(String(iss.key).toUpperCase(), iss);
+  };
+  [
+    partnershipBlockedBy,
+    partnershipBlocks,
+    trainLabels,
+    wishlist,
+    wishlistLinked,
+    wishlistUnlinked,
+    partnerOrphans,
+    chainCtx.waitRoots,
+    chainCtx.blockerHops,
+  ].forEach((sec) => (sec?.issues || []).forEach(indexIssue));
+  (companions || []).forEach((c) => {
+    (c.hierarchy?.issues || []).forEach(indexIssue);
+    (c.external?.issues || []).forEach(indexIssue);
+  });
+  earlyCalls.forEach((bundle) => {
+    Object.values(bundle.sections || {}).forEach((sec) => {
+      (sec?.issues || []).forEach(indexIssue);
+    });
+  });
+
+  let previouslyLinked = {
+    count: 0,
+    jql: null,
+    jiraUrl: null,
+    pairs: [],
+    seedCount: 0,
+  };
+  try {
+    previouslyLinked = await fetchPreviouslyLinked({
+      token,
+      sections,
+      issueIndexByKey,
+      jiraBaseUrl,
+      ecDate: releaseCtx.ecDate,
+      isEraHomeProject,
+      cfg,
+    });
+  } catch (err) {
+    console.warn('[dependencyView] previouslyLinked failed:', err.message || err);
+    previouslyLinked = {
+      ...previouslyLinked,
+      error: err.message || String(err),
+    };
+  }
+
   return {
     teamId: effectiveTeamId,
     teamName: team?.name || effectiveTeamId,
@@ -1713,6 +1820,7 @@ async function getOverview({ token, teamId, release } = {}) {
       partnership: 'FEAT / Initiative → Epic hierarchy (Parent Link)',
     },
     spanTaxonomy: cfg.spanTaxonomy || null,
+    previouslyLinked,
     sections,
     wishlistMeta: {
       releaseSlug,

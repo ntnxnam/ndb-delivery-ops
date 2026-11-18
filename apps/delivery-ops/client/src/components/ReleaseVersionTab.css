@@ -95,7 +95,21 @@
 .release-version-tab {
   padding: 20px;
   width: 100%;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.release-version-table-scroll {
+  max-width: 100%;
+}
+
+/* Nested panels fill the fluid shell without a brittle class* selector */
+.release-version-tab .form-group,
+.release-version-tab .release-version-table-scroll {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .version-checkbox {

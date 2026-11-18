@@ -1,10 +1,24 @@
 {
+  "_comment": "defaultCC = optional leadership checkboxes (off by default). projectTeamFields = always CC'd from fetched jiraData (@nutanix.com only).",
   "defaultCC": [
     "namratha.singh@nutanix.com",
     "bharath@nutanix.com",
     "ashish.kumar@nutanix.com",
-    "ashish.mohindroo@nutanix.com"
+    "ashish.mohindroo@nutanix.com",
+    "karan.singh@nutanix.com"
   ],
-  "defaultTO":[]
+  "defaultTO": [],
+  "projectTeamFields": [
+    { "id": "assignee", "label": "Assignee" },
+    { "id": "customfield_15968", "label": "UX Owner" },
+    { "id": "customfield_10860", "label": "QA Contact" },
+    { "id": "customfield_11065", "label": "Test Lead" },
+    { "id": "customfield_11861", "label": "GUI Lead" },
+    { "id": "customfield_11260", "label": "PM Owner" },
+    { "id": "customfield_27764", "label": "Program Mgr" },
+    { "id": "customfield_51460", "label": "Team Members" },
+    { "id": "reporter", "label": "Reporter" },
+    { "id": "watchers", "label": "Watchers" },
+    { "id": "customfield_19262", "label": "Assignee Manager" }
+  ]
 }
-

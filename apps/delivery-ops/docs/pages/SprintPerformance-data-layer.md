@@ -38,13 +38,20 @@ route (sprint-performance.js)
         → JIRA GET /rest/api/2/user?username=&expand=groups           per assignee (org directory)
         → JIRA POST /rest/api/2/search  key in (…100 keys…)          current status, resolution, resolutiondate, fixVersions (raw.live)
     → orgDirectory.buildOrgDirectory      manager = Team-*-DirectReports, leader = largest Team-*-Org ≤70% share
-    → sprintPerformanceMetrics.computeSprintPerformance   rows, aggregates, narrative (rule-based asks seed)
+    → sprintPerformanceMetrics.computeSprintPerformance   rows, aggregates; rule-based narrative seed (AI only)
     → sprintReleaseGates.releaseGatesForSlots   releaseVersionsEmailConfig.json → releaseGateDates, parsed by
                                                 shared parseReleaseGateTimeline, mapped to slots (meta.releases)
     → sprintLeadershipAsksService.enrichModelAsksWithAi   NAI `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT`
          (fallback: keep rule-based asks; sets model.asksSource = ai|rules)
-    → sprintPerformanceHtml.renderSprintPerformanceHtml   static sections + embedded payload + inline app
-  → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.html
+    → sprintPerformanceHtml.renderSprintPerformanceHtml   shell + embedded blob + inline app
+         (exec summary placeholders empty; browser `renderExecutive` fills them from the blob)
+  → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.json   ← JIRA model (source of truth)
+  → fs  apps/delivery-ops/reports/Sprint-{Team}-S{a}-S{b}-{YYYY-MM-DD}.html  ← cache for download
+```
+
+**Executive summary (live):** Verdict, Highlights, and Lowlights are **not** baked into the HTML. On every paint / filter change, `sprintPerformanceApp` → `renderExecutive` recomputes them from the embedded blob via `buildNarrative(..., { scopeLabel })`. A JIRA **Regenerate** writes a new blob; the next iframe load recomputes org-wide summary from that snapshot. Server `model.highlights` / `lowlights` exist only as the AI asks seed (and are ignored by the visible UI).
+
+**On read** (`GET …/report`): if the matching `.json` exists, HTML is **re-rendered from that model with the current template/JS** (UI fixes apply without a JIRA regenerate). Legacy HTML-only files are re-shelled from the embedded payload when possible.
 ```
 
 On-demand (same prompt, no full regenerate): `POST /api/ai/sprint-leadership-asks` — see [`docs/api/ai.md`](../api/ai.md).

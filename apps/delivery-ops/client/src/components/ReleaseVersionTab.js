@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PageLoading } from '../shared/components/PageLoading';
 import html2canvas from 'html2canvas';
 import { createPortal } from 'react-dom';
 import { authenticatedPost, authenticatedGet } from '../utils/api';
@@ -32,12 +33,16 @@ import { fetchBreakdownsForKeys } from '../services/taskBreakdownService';
 import { useGateTimeline } from '../release/hooks/useGateTimeline';
 import { GateChipStrip } from '../design-system';
 import ReleaseSummaryPanel from './ReleaseSummaryPanel';
+import ExecPageBriefing from './ExecPageBriefing';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
+import { usePermissions } from '../auth/hooks/usePermissions';
+import { useExecPageBriefing } from '../hooks/useExecPageBriefing';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
 function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const { hasTeamSelected, isTransitioning, selectedTeamId } = useTeam();
+  const { isExecAudience } = usePermissions();
   
   // Custom hooks for state management
   const {
@@ -90,8 +95,8 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
 
   const {
     tcmsDataMap,
-    // fetchCommitTcmsData, // Disabled - was causing timeouts
-    // fetchLongTermTcmsData, // Disabled - was causing timeouts  
+    fetchCommitTcmsData,
+    fetchLongTermTcmsData,
     resetTcmsData
   } = useTcmsData();
 
@@ -174,6 +179,20 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   const [briefingSummary, setBriefingSummary] = useState(null);
   const [briefingIntelligence, setBriefingIntelligence] = useState(null);
   const [briefingError, setBriefingError] = useState(null);
+
+  // Exec auto "What ails the team" (multi-facet NAI) — separate from manual ✦ AI Briefing
+  const {
+    state: execBriefState,
+    summary: execBriefSummary,
+    meta: execBriefMeta,
+    error: execBriefError,
+    refresh: refreshExecBrief,
+  } = useExecPageBriefing({
+    enabled: isExecAudience && hasTeamSelected,
+    surface: 'release',
+    version: selectedVersion,
+    ready: Boolean(selectedVersion && !loadingItems && ((items.commit?.length || 0) > 0 || (items.longTermFunded?.length || 0) > 0)),
+  });
 
   // Filter state — client-side, no re-fetch needed
   const [activeFilters, setActiveFilters] = useState({ risk: '', status: '', assignee: '', assigneeManager: '', staleness: '' });
@@ -258,7 +277,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     const enrich = (arr) => arr.map(item => {
       const tcms = tcmsDataMap[item.key];
       if (!tcms) return item;
-      return { ...item, tcmsQI: tcms.tcmsQI };
+      return { ...item, tcmsQI: tcms.tcmsQI, tcmsQuality: tcms.tcmsQuality };
     });
     return {
       commit: enrich(items.commit || []),
@@ -315,13 +334,18 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
         console.warn('[generateReleaseHighlights] Failed to generate content for committed items:', genErr.message);
       }
 
-      // TCMS calls disabled - they were causing timeouts and bombing the system
-      // const commitKeys = items.commit.map(i => i.key).filter(Boolean);
-      // if (commitKeys.length > 0) {
-      //   fetchCommitTcmsData(selectedVersion, commitKeys).catch(tcmsErr => 
-      //     console.warn('[useEffect] Background TCMS fetch for commit items failed:', tcmsErr.message)
-      //   );
-      // }
+      const commitKeys = items.commit.map(i => i.key).filter(Boolean);
+      if (commitKeys.length > 0) {
+        fetchCommitTcmsData(selectedVersion, commitKeys).catch(tcmsErr => 
+          console.warn('[useEffect] Background TCMS fetch for commit items failed:', tcmsErr.message)
+        );
+      }
+      const ltfKeys = items.longTermFunded.map(i => i.key).filter(Boolean);
+      if (ltfKeys.length > 0) {
+        fetchLongTermTcmsData(selectedVersion, ltfKeys).catch(tcmsErr =>
+          console.warn('[useEffect] Background TCMS fetch for long-term items failed:', tcmsErr.message)
+        );
+      }
 
       // Fetch breakdown data for committed items only
       fetchBreakdownData(items, 'commit').catch(breakdownErr => 
@@ -339,7 +363,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
           );
       }
     }
-  }, [items.commit, selectedVersion, jiraBaseUrl, fetchBreakdownData, items, setHighlights, setLowlights, setCallToAction, jiraToken]);
+  }, [items.commit, selectedVersion, jiraBaseUrl, fetchBreakdownData, fetchCommitTcmsData, fetchLongTermTcmsData, items, setHighlights, setLowlights, setCallToAction, jiraToken]);
 
   // Handle long-term items loading completion
   useEffect(() => {
@@ -360,20 +384,19 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
         console.warn('[generateReleaseHighlights] Failed to update content with long-term items:', genErr.message);
       }
 
-      // TCMS calls disabled - they were causing timeouts and bombing the system
-      // const longTermKeys = items.longTermFunded.map(i => i.key).filter(Boolean);
-      // if (longTermKeys.length > 0) {
-      //   fetchLongTermTcmsData(selectedVersion, longTermKeys).catch(tcmsErr => 
-      //     console.warn('[useEffect] Background TCMS fetch for long-term items failed:', tcmsErr.message)
-      //   );
-      // }
+      const longTermKeys = items.longTermFunded.map(i => i.key).filter(Boolean);
+      if (longTermKeys.length > 0) {
+        fetchLongTermTcmsData(selectedVersion, longTermKeys).catch(tcmsErr => 
+          console.warn('[useEffect] Background TCMS fetch for long-term items failed:', tcmsErr.message)
+        );
+      }
 
       // Fetch breakdown data for long-term items only  
       fetchBreakdownData(items, 'longTermFunded').catch(breakdownErr => 
         console.warn('[useEffect] Background breakdown fetch for long-term items failed:', breakdownErr.message)
       );
     }
-  }, [items.longTermFunded, selectedVersion, jiraBaseUrl, fetchBreakdownData, items, setHighlights, setLowlights, setCallToAction]);
+  }, [items.longTermFunded, selectedVersion, jiraBaseUrl, fetchBreakdownData, fetchLongTermTcmsData, items, setHighlights, setLowlights, setCallToAction]);
 
   // Find the refresh button container in the header
   useEffect(() => {
@@ -1097,6 +1120,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     // Use non-greedy matching to handle multiple color blocks and nested content
     formatted = formatted.replace(/\{color:([^}]+)\}(.*?)\{color\}/g, (match, color, content) => {
       const colorMap = {
+        'deep red': '#8B0000',
         'red': '#de350b',
         'green': '#00875a',
         'yellow': '#ff8b00',
@@ -1365,7 +1389,7 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   }
 
   return (
-    <div className="release-version-tab" style={{ padding: '0.5rem', width: '100%', minWidth: '100%', maxWidth: '100%', margin: 0, boxSizing: 'border-box', overflow: 'visible' }}>
+    <div className="release-version-tab" style={{ padding: '0.5rem', width: '100%', minWidth: 0, maxWidth: 'none', margin: 0, boxSizing: 'border-box', overflow: 'visible' }}>
       
       {/* CSS for spinner animation */}
       <style>
@@ -1515,14 +1539,12 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
 
       {loadingItems && (
         <div style={{ backgroundColor: '#f8f9fa', padding: '0.75rem', marginBottom: '0.75rem' }}>
-          <p style={{ margin: 0, fontSize: '0.85rem' }}>
-            Loading committed items... 
-            {sectionMetadata.loadingLongTerm === false && items.commit?.length > 0 && (
-              <span style={{ marginLeft: '10px', color: '#28a745' }}>
-                ✓ Committed items loaded ({items.commit.length} items)
-              </span>
-            )}
-          </p>
+          <PageLoading inline message="Loading committed items…" />
+          {sectionMetadata.loadingLongTerm === false && items.commit?.length > 0 && (
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#28a745' }}>
+              ✓ Committed items loaded ({items.commit.length} items)
+            </p>
+          )}
           {sectionMetadata.loadingLongTerm && (
             <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#6c757d' }}>
               Loading long-term funded items...
@@ -1550,7 +1572,16 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
       {!loadingItems && selectedVersion && ((items.commit?.length || 0) > 0 || (items.longTermFunded?.length || 0) > 0) && (
         <div ref={pdfContentRef} style={{ marginBottom: '0.75rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
-          {/* AI Release Briefing — visible from loading onward */}
+          <ExecPageBriefing
+            state={execBriefState}
+            summary={execBriefSummary}
+            meta={execBriefMeta}
+            error={execBriefError}
+            onRetry={refreshExecBrief}
+            jiraBase={jiraBaseUrl || 'https://jira.nutanix.com'}
+          />
+
+          {/* AI Release Briefing — visible from loading onward (manual toolbar) */}
           {briefingState !== 'idle' && (
             <ReleaseSummaryPanel
               state={briefingState}

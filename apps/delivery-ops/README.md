@@ -24,7 +24,7 @@ A web application for Confluence-based status update emails and JIRA release ver
 
 **Documentation cleanup:**
 
-- All 5 skill files (`team-exec-release-report`, `confluence-width-cleanup`, `fetch-project-tickets`, `sprint-gantt-chart`, `predictive-team-exec-analytics`) normalised to the same 5-section structure: `When to Use`, `Quick Start`, `Core Rules`, `Output Format`, `Quality Validation`.
+- All 5 skill files (`team-exec-release-report`, `confluence-width-cleanup`, `ticket-insights`, `sprint-gantt-chart`, `predictive-team-exec-analytics`) normalised to the same 5-section structure: `When to Use`, `Quick Start`, `Core Rules`, `Output Format`, `Quality Validation`.
 - All 10 existing `reports/*.md` files retrofitted with YAML frontmatter (`report_type`, `product`, `release`, `generated`, `data_source`).
 - `DEVELOPER_GUIDE.md` updated: directory structure, key files table, and new section 13 (Architecture Rules).
 
@@ -267,7 +267,7 @@ npm run dev
 **Release Versions (`/all-status`)**
 1. **Authenticate** with JIRA (token used by backend).
 2. **Select release version** (e.g. NDB-2.11) and fetch items; table shows key, summary, checkpoint dates, etc.
-3. **View history**: Checkpoint date columns can show history where configured.
+3. **View history**: Checkpoint dates show old values struck through. If a date moved, you see "moved 6 times by 42 weeks" — time is how far today is from the very first date set, so moving it back to the original shows 0 weeks (no phantom delay).
 4. **Gantt & email**: Use Gantt chart and release-version email form to send status emails; email history is available via Email History tab.
 
 **Generic Emailer (`/generic-emailer`)**

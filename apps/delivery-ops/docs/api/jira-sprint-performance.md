@@ -51,10 +51,10 @@ No caching. Reads the directory on every call.
 - Query: `download` (`1`, optional). Adds `Content-Disposition: attachment`.
 
 **Server flow**
-Route → `readReport(teamId, file)` → disk. The file name is matched against the listing, so arbitrary paths cannot be read.
+Route → `readReport(teamId, file)` → if sibling `.json` exists, re-render HTML from that model with the current template/JS; else re-shell legacy HTML from its embedded payload when possible; else serve the baked file. Path is matched against the listing (no arbitrary paths).
 
 **Response shape**
-`200 text/html` — the full report document.
+`200 text/html` — the full report document (always current shell when model/payload can be loaded).
 
 **Error responses**
 | HTTP code | When | Client should |
@@ -64,7 +64,7 @@ Route → `readReport(teamId, file)` → disk. The file name is matched against 
 | 404 | No report generated yet (or `file` not found) | Show empty state; offer Generate |
 
 **Caching**
-No caching. The file on disk is the artifact.
+`Cache-Control: no-store`. JIRA data lives in `.json`; HTML is a render of that data + current code. The executive summary (verdict / highlights / lowlights) is computed in the browser from the embedded blob on load — not static HTML. Regenerate writes a new blob so the next load recomputes org-wide summary.
 
 ---
 

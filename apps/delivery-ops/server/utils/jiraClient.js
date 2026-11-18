@@ -8,9 +8,7 @@ let _sharedPromise;
 async function getShared() {
   if (!_sharedPromise) {
     _sharedPromise =
-      process.env.NODE_ENV === 'test'
-        ? Promise.resolve(require('@portfolio-delivery-ops/shared'))
-        : import('@portfolio-delivery-ops/shared');
+      import('@portfolio-delivery-ops/shared');
   }
   return _sharedPromise;
 }

@@ -79,10 +79,13 @@ fixVersion = "{release}" AND issuetype in (Feature, Initiative) AND status not i
 **Auth**: required
 
 **Request**
-- Query: `featKey` (string, required), `release` (string, required), `productId` (string, required)
+- Query:
+  - `featureKey` (string, required) — FEAT / Initiative key
+  - `release` (string, required) — fixVersion name
+  - `teamId` (string, optional) — team whose KPIs to scope into `teamKpiBoxes` (default `ndb`)
 
 **Server flow**  
-`feature.js → featurePayloadService`
+`feature.js` → JiraConnector + `kpiConfig.json` via `getKpisForTeam`
 
 Three JIRA queries run in parallel:
 1. `key = {featKey}` — fetch the FEAT ticket + its gate date customfields
@@ -92,20 +95,37 @@ Three JIRA queries run in parallel:
 **Fields per issue**: `key, summary, status, priority, issuetype, fixVersions, assignee, labels, duedate, customfield_11067, customfield_35863, customfield_35864, customfield_10360, components, resolutiondate`
 
 > ⚠️ Breaking change in 2026-10-07: `data.header` also includes `riskAssessment`, `pathToGreen`, `cgChecklistLink`, and `pgChecklistLink`.
+>
+> Additive 2026-10-16: `data.timing`, `data.hygiene`, `data.flow.daily` (enriched series), `data.kickoff`, `data.inference` (RAG + drivers), `data.teamKpiBoxes` (open counts scoped to feature).
+>
+> **teamKpiBoxes**: every KPI from `kpiConfig.json` for `teamId` (ordered by `order`). No hard cap — new KPIs added on the KPIs page appear here without a code change.
+>
+> **QA verification line** (`flow.daily[].verified`): Bug/Improvement count whose changelog last transitioned **status → Closed** that day (`extractClosedDate`). This is QA sign-off — same signal as sprint Dev vs QA velocity. It is **not** `resolutiondate` (dev resolve / TBV). Resolved series still uses `resolutiondate`.
+>
+> **Click-through authenticity**: every inference driver / coding·companion lane / hygiene count / kick-off message carries a `jql` field. Counts that list tickets use `key in (...)` (or `key = X`) so the JIRA result set size matches the claim. Real-start links to `key = {realStartKey}` (changelog first In Progress is not expressible in JQL).
 
-**Response**
+**Response** (current `/dashboard` shape — see route handler for full payload)
 ```json
 {
   "success": true,
   "data": {
-    "feature": {
-      "key": "ERA-100",
-      "summary": "Storage Write Throughput",
-      "ccDate": "2026-05-15",
-      "cgDate": "2026-06-01",
-      "pgDate": "2026-07-01"
+    "release": "NDB-2.12",
+    "featureKey": "FEAT-19398",
+    "timing": {
+      "plannedStart": "2026-01-15",
+      "realStart": "2026-02-03",
+      "realStartKey": "ERA-62216",
+      "deltaDaysVsEc": 19
     },
-    "children": [ /* issue array */ ]
+    "hygiene": {
+      "wrongFixVersionCount": 3,
+      "jql": "key in (ERA-1,ERA-2,ERA-3)"
+    },
+    "header": { },
+    "gates": { },
+    "payload": { "canonical": [], "featIdOnly": [], "featNumberOnly": [] },
+    "flow": { },
+    "kpis": []
   }
 }
 ```

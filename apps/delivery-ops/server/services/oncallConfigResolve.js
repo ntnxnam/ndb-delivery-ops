@@ -1,0 +1,175 @@
+/**
+ * OnCalls runtime config + JQL helpers (no emitted-JQL changes).
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId } = require('../utils/teamConfig');
+
+const CONFIG_PATH = path.join(__dirname, '../config/oncallConfig.json');
+
+function loadConfig() {
+  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+}
+
+function andParts(...parts) {
+  return parts.filter(Boolean).join(' AND ');
+}
+
+function cell(count, jql) {
+  return { count: count || 0, jql: jql || null };
+}
+
+function keysInJql(keys) {
+  const uniq = [...new Set((keys || []).filter(Boolean))];
+  if (!uniq.length) return null;
+  if (uniq.length === 1) return `key = ${uniq[0]}`;
+  return `key in (${uniq.join(',')})`;
+}
+
+function pushUnique(target, keys) {
+  for (const k of keys || []) {
+    if (k && !target.includes(k)) target.push(k);
+  }
+}
+
+function resolveRuntimeConfig(teamId) {
+  const cfg = loadConfig();
+  const requested = normalizeTeamId(teamId) || normalizeTeamId(cfg.defaultTeamId) || 'ndb';
+  const teamCfg = (cfg.teams && (cfg.teams[requested] || cfg.teams[normalizeTeamId(requested)])) || {};
+
+  let onCallProject = teamCfg.onCallProject || cfg.onCallProject || 'OnCall';
+  // Scope from kpiConfig OnCalls KPI baseQuery only — never hard-code filter names here
+  let baseScopeJql = String(teamCfg.baseScopeJql || cfg.baseScopeJql || '').trim();
+  try {
+    // loadKpiConfigSync() returns the teams map directly (not { teams: ... })
+    const kpiTeams = loadKpiConfigSync();
+    const { kpis } = getKpisForTeam(kpiTeams, requested);
+    const onCallsKpi = (kpis || []).find((k) => /oncalls?/i.test(k.name || ''));
+    if (onCallsKpi?.baseQuery) {
+      baseScopeJql = String(onCallsKpi.baseQuery).trim();
+      // Seed project for stack/escalation classification (OnCall keys), not the full KPI union
+      const m = baseScopeJql.match(/project\s*=\s*([A-Za-z][A-Za-z0-9_]*)/i);
+      if (m && !/TH|TechHelp/i.test(m[1])) onCallProject = m[1];
+    }
+  } catch (_) {
+    // keep config override / empty
+  }
+
+  const esc = { ...(cfg.escalation || {}), ...(teamCfg.escalation || {}) };
+
+  return {
+    ...cfg,
+    ...teamCfg,
+    teamId: requested,
+    onCallProject,
+    baseScopeJql,
+    techHelpProjects: teamCfg.techHelpProjects || cfg.techHelpProjects || ['TH', 'TechHelp'],
+    knowledgeProjects: teamCfg.knowledgeProjects || cfg.knowledgeProjects || ['SR'],
+    techPubsProjects: teamCfg.techPubsProjects || cfg.techPubsProjects || ['TECHPUBS'],
+    engFixProjects: teamCfg.engFixProjects || cfg.engFixProjects || [],
+    agedOpenDays: teamCfg.agedOpenDays || cfg.agedOpenDays || 14,
+    pastLookbackDays: teamCfg.pastLookbackDays || cfg.pastLookbackDays || 30,
+    openStatusJql: teamCfg.openStatusJql || cfg.openStatusJql || 'statusCategory != Done',
+    doneStatusJql: teamCfg.doneStatusJql || cfg.doneStatusJql || 'statusCategory = Done',
+    maxOpenIssuesFetch: cfg.maxOpenIssuesFetch || 200,
+    maxPastIssuesFetch: cfg.maxPastIssuesFetch || 200,
+    jiraBaseUrl: cfg.jiraBaseUrl || 'https://jira.nutanix.com',
+    escalation: {
+      kpiNamePattern: esc.kpiNamePattern || 'CFD|CFI',
+      lookbackDays: esc.lookbackDays || 180,
+      maxOncallsFetch: esc.maxOncallsFetch || 300,
+      maxRows: esc.maxRows || 40,
+      clock: esc.clock || 'oncall_created_to_linked_resolved',
+    },
+  };
+}
+
+function baseJql(cfg) {
+  const scope = String(cfg.baseScopeJql || '').trim();
+  if (scope) return `(${scope})`;
+  return `project = ${cfg.onCallProject}`;
+}
+
+/** OnCall-project seeds only — for stack / CFD escalation (not TH union rows). */
+function oncallSeedJql(cfg) {
+  return andParts(baseJql(cfg), `project = ${cfg.onCallProject}`);
+}
+
+/** Escape inner JQL for ScriptRunner linkedIssuesOf("…"). */
+function escapeLinkedIssuesOfInner(jql) {
+  return String(jql || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+}
+
+/**
+ * Issues in `seedJql` that link into tickets matching `targetInnerJql`.
+ * Shape: (seed) AND issueFunction in linkedIssuesOf("<target>")
+ */
+function linkedIntoJql(seedJql, targetInnerJql) {
+  const seed = String(seedJql || '').trim();
+  const inner = String(targetInnerJql || '').trim();
+  if (!seed || !inner) return null;
+  return andParts(seed, `issueFunction in linkedIssuesOf("${escapeLinkedIssuesOfInner(inner)}")`);
+}
+
+/**
+ * ALL tickets linked from the team OnCalls KPI baseQuery (kpiConfig).
+ * Shape: issueFunction in linkedIssuesOf("<OnCalls KPI baseQuery>")
+ * No open/closed filter — full linked universe.
+ */
+function linkedOutJql(cfg) {
+  const scope = String(cfg.baseScopeJql || '').trim();
+  if (!scope) return null;
+  return `issueFunction in linkedIssuesOf("${escapeLinkedIssuesOfInner(scope)}")`;
+}
+
+function openJql(cfg) {
+  // Pulse "Open" = open OnCall seeds (same universe as path sampling) — not TH union rows
+  return andParts(oncallSeedJql(cfg), cfg.openStatusJql);
+}
+
+/** Recently closed OnCall seeds (past window). */
+function pastClosedJql(cfg) {
+  const days = cfg.pastLookbackDays || 30;
+  return andParts(
+    oncallSeedJql(cfg),
+    cfg.doneStatusJql || 'statusCategory = Done',
+    `resolved >= -${days}d`
+  );
+}
+
+function buildHeroQueries(cfg) {
+  const seed = oncallSeedJql(cfg);
+  const open = openJql(cfg);
+  const aged = cfg.agedOpenDays;
+  return {
+    all: seed,
+    open,
+    closed7d: andParts(seed, 'statusCategory = Done', 'resolved >= -7d'),
+    created7d: andParts(seed, 'created >= -7d'),
+    agedOpen: andParts(open, `created <= -${aged}d`),
+    p0Open: andParts(open, 'priority = "Blocker - P0"'),
+    p1Open: andParts(open, 'priority = "Critical - P1"'),
+    createdPrev7d: andParts(seed, 'created >= -14d', 'created < -7d'),
+    closedPrev7d: andParts(seed, 'statusCategory = Done', 'resolved >= -14d', 'resolved < -7d'),
+  };
+}
+
+module.exports = {
+  loadConfig,
+  andParts,
+  cell,
+  keysInJql,
+  pushUnique,
+  resolveRuntimeConfig,
+  baseJql,
+  oncallSeedJql,
+  escapeLinkedIssuesOfInner,
+  linkedIntoJql,
+  linkedOutJql,
+  openJql,
+  pastClosedJql,
+  buildHeroQueries,
+};

@@ -12,7 +12,7 @@
 import { formatters } from '../shared/utils/formatters';
 
 import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import { jsPDF } from 'jspdf';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

@@ -20,12 +20,17 @@ let _email;
  * Create (or return cached) SMTP connector configured for the
  * Nutanix Secure eMail Relay (STARTTLS on port 587 with AD SMTP service account auth).
  */
+function smtpCredFingerprint(user, pass) {
+  // Detect credential rotation without retaining the password in memory on the connector.
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(`${user || ''}\0${pass || ''}`).digest('hex');
+}
+
 async function getEmailConnector() {
   // Force recreation if credentials changed (for dev/testing)
   if (_email && process.env.NODE_ENV !== 'production') {
-    const currentUser = process.env.SMTP_USER;
-    const currentPass = process.env.SMTP_PASS;
-    if (_email._lastUser !== currentUser || _email._lastPass !== currentPass) {
+    const currentFp = smtpCredFingerprint(process.env.SMTP_USER, process.env.SMTP_PASS);
+    if (_email._lastCredFp !== currentFp) {
       console.log('[EmailService] Credentials changed, recreating transporter');
       _email = null;
     }
@@ -51,20 +56,19 @@ async function getEmailConnector() {
     connectionTimeout: 30000,
     greetingTimeout: 15000,
     socketTimeout: 60000,
-    debug: process.env.NODE_ENV !== 'production', // Reduce debug in production
-    logger: process.env.NODE_ENV !== 'production'
+    debug: false,
+    logger: false
   };
 
   if (user && pass) {
     transportOptions.auth = { user, pass };
   } else if (process.env.NODE_ENV === 'production') {
-    console.error('[EmailService] PRODUCTION: SMTP_USER and/or SMTP_PASS not set in .env. Email will likely fail. Set both in server/.env (see .env.example).');
+    console.error('[EmailService] PRODUCTION: SMTP_USER and/or SMTP_PASS not set. Email will likely fail.');
   }
 
   console.log(`[EmailService] Creating SMTP transporter → ${host}:${port} (STARTTLS, auth=${!!transportOptions.auth})`);
   _email = await createEmailConnector(transportOptions);
-  _email._lastUser = user;
-  _email._lastPass = pass;
+  _email._lastCredFp = smtpCredFingerprint(user, pass);
   return _email;
 }
 
@@ -190,17 +194,8 @@ async function tryFallbackSMTP(mailOptions, originalError) {
       const fallbackEmail = await createEmailConnector(transportConfig);
       const info = await fallbackEmail.send(mailOptions);
       
-      console.log(`[EmailService] ✅ SUCCESS! ${config.name} worked!`);
-      console.log(`[EmailService] Message ID: ${info.messageId}`);
-      console.log(`[EmailService] 💡 PERMANENT FIX: Update your production .env with:`);
-      console.log(`[EmailService]    SMTP_HOST=${config.host}`);
-      console.log(`[EmailService]    SMTP_PORT=${config.port}`);
-      if (config.auth) {
-        console.log(`[EmailService]    SMTP_USER=${config.auth.user}`);
-        console.log(`[EmailService]    SMTP_PASS=<your_password>`);
-      } else {
-        console.log(`[EmailService]    # Remove SMTP_USER and SMTP_PASS for no-auth relay`);
-      }
+      console.log(`[EmailService] Fallback SMTP succeeded: ${config.name}; messageId=${info.messageId}`);
+      console.log(`[EmailService] Consider setting SMTP_HOST=${config.host} SMTP_PORT=${config.port} (do not log passwords).`);
       
       return {
         messageId: info.messageId,

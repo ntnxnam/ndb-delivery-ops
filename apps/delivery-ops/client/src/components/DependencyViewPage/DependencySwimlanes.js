@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import TicketChip, { targetDateMeta } from './TicketChip';
+import PreviouslyLinkedBlock from './PreviouslyLinkedBlock';
 import { browseUrl } from './hygiene';
 
 const EW_LANES = [
@@ -80,22 +81,7 @@ function upstreamKeysFromIssue(issue) {
   return [...new Set(keys)];
 }
 
-/** Keys that wait on this ticket (we block them / they are blocked by us). */
-function downstreamKeysFromIssue(issue) {
-  const keys = [];
-  (issue?.links || []).forEach((link) => {
-    if (!link?.key || !linkLooksLikeBlocks(link)) return;
-    const t = linkTypeText(link);
-    const theyWait =
-      (link.direction === 'outward' &&
-        (isBlocksWording(t) || t.includes('has to be done before') || t.includes('is needed for'))) ||
-      (link.direction === 'inward' && isBlockedByWording(t));
-    if (theyWait) keys.push(link.key);
-  });
-  return [...new Set(keys)];
-}
-
-/** Any dependency-like linked key (direction-agnostic fallback). */
+/** Any dependency-like linked key (direction-agnostic fallback for non-home only). */
 function allDependencyLinkKeys(issue) {
   return [
     ...new Set(
@@ -104,23 +90,6 @@ function allDependencyLinkKeys(issue) {
         .map((l) => l.key)
     ),
   ];
-}
-
-/**
- * Who waits on targetKey — scan every issue's upstream list + target's downstream links.
- */
-function findWaitersOf(targetKey, allIssues) {
-  const waiters = new Set();
-  (allIssues || []).forEach((iss) => {
-    if (!iss?.key || iss.key === targetKey) return;
-    if (upstreamKeysFromIssue(iss).includes(targetKey)) waiters.add(iss.key);
-    // Partner ticket that only has "is blocked by" us in reverse scan
-    if (allDependencyLinkKeys(iss).includes(targetKey) && !isHomeKey(iss.key, iss.project)) {
-      // Non-home issue linked to our home ticket — likely the partner waiting on us
-      if (isHomeKey(targetKey)) waiters.add(iss.key);
-    }
-  });
-  return [...waiters];
 }
 
 function stubFromLink(link) {
@@ -361,9 +330,15 @@ function buildWeWaitTrees(blockers, projects, resolve) {
 
 /**
  * They wait on us: Partner → waits on → [our tickets…] → each may wait on more.
- * Fan-out when one partner waits on multiple of ours.
+ *
+ * Q4 tickets ARE the waiters (“they”). Resolve “us” via directional upstream only.
+ *
+ * Peer NDB rules (avoids ERA-54087 ↔ ERA-68686 showing in both tabs, often inverted):
+ * - Q3 blockers (we-wait “them”) must never be they-wait roots
+ * - Home ↔ home edges belong only in “We wait on them”
  */
-function buildTheyWaitTrees(q4Tickets, resolve, allIssues) {
+function buildTheyWaitTrees(q4Tickets, resolve, weBlockerKeys = null) {
+  const q3Blockers = weBlockerKeys instanceof Set ? weBlockerKeys : new Set(weBlockerKeys || []);
   // partnerKey → Set of our ticket keys
   const partnerToOurs = new Map();
 
@@ -374,32 +349,31 @@ function buildTheyWaitTrees(q4Tickets, resolve, allIssues) {
   };
 
   (q4Tickets || []).forEach((ticket) => {
-    const home = isHomeKey(ticket.key, ticket.project);
+    if (!ticket?.key) return;
 
-    if (!home) {
-      let ourKeys = upstreamKeysFromIssue(ticket).filter((k) => isHomeKey(k));
-      if (!ourKeys.length) ourKeys = allDependencyLinkKeys(ticket).filter((k) => isHomeKey(k));
-      if (!ourKeys.length) {
+    // Already a Q3 blocker (“them” we wait on) — not a they-wait root
+    if (q3Blockers.has(ticket.key)) return;
+
+    // Directional: who does this Q4 ticket wait on that is on our NDB home?
+    let ourKeys = upstreamKeysFromIssue(ticket).filter((k) => isHomeKey(k));
+
+    // Non-home partners only: incomplete wording → any home-key dependency link
+    if (!ourKeys.length && !isHomeKey(ticket.key, ticket.project)) {
+      ourKeys = allDependencyLinkKeys(ticket).filter((k) => isHomeKey(k));
+    }
+
+    // Peer NDB ↔ Peer NDB: “We wait on them” owns these edges exclusively
+    if (isHomeKey(ticket.key, ticket.project)) {
+      ourKeys = ourKeys.filter((ok) => !isHomeKey(ok));
+    }
+
+    if (!ourKeys.length) {
+      if (!isHomeKey(ticket.key, ticket.project)) {
         partnerToOurs.set(ticket.key, new Set());
-        return;
       }
-      ourKeys.forEach((ok) => add(ticket.key, ok));
       return;
     }
-
-    let partnerKeys = downstreamKeysFromIssue(ticket);
-    if (!partnerKeys.length) {
-      partnerKeys = allDependencyLinkKeys(ticket).filter((k) => !isHomeKey(k));
-    }
-    if (!partnerKeys.length) partnerKeys = findWaitersOf(ticket.key, allIssues);
-    if (!partnerKeys.length) {
-      partnerKeys = allDependencyLinkKeys(ticket).filter((k) => k !== ticket.key);
-    }
-    if (!partnerKeys.length) {
-      add(`_solo_${ticket.key}`, ticket.key);
-      return;
-    }
-    partnerKeys.forEach((pKey) => add(pKey, ticket.key));
+    ourKeys.forEach((ok) => add(ticket.key, ok));
   });
 
   const out = [];
@@ -737,6 +711,12 @@ export default function DependencySwimlanes({
   theyWaitJql,
   showIWait = true,
   showTheyWait = true,
+  title = 'Who waits on whom',
+  story = null,
+  legend = null,
+  sectionClassName = '',
+  weWaitHeading = 'We wait on them (and who they wait on)',
+  previouslyLinked = null,
 }) {
   const model = useMemo(() => {
     const lists = [
@@ -745,41 +725,54 @@ export default function DependencySwimlanes({
       projectIssues || [],
       chainExtras || [],
     ];
-    const { resolve, byKey } = indexIssues(lists);
-    const allIssues = [...byKey.values()];
+    const { resolve } = indexIssues(lists);
+    const weBlockerKeys = new Set((iWaitIssues || []).map((i) => i?.key).filter(Boolean));
     const we = buildWeWaitTrees(iWaitIssues, projectIssues, resolve);
-    const they = buildTheyWaitTrees(theyWaitIssues, resolve, allIssues);
+    const they = buildTheyWaitTrees(theyWaitIssues, resolve, weBlockerKeys);
+    // Count only roots that survived Peer NDB / Q3-blocker filtering
+    const theyRootCount = they.length;
     return {
       we,
       they,
       weByEw: groupProjectTreesByEw(we, 'we'),
       theyByEw: groupProjectTreesByEw(they, 'they'),
       iCount: (iWaitIssues || []).length,
-      theyCount: (theyWaitIssues || []).length,
+      theyCount: theyRootCount,
     };
   }, [iWaitIssues, theyWaitIssues, projectIssues, chainExtras]);
 
   if (!showIWait && !showTheyWait) return null;
 
+  const storyText =
+    story ||
+    'Read left → right. If one ticket waits on several, they stack under the same “waits on” arrow (up to ' +
+      MAX_DEPTH +
+      ' hops).';
+  const legendNode = legend || (
+    <>
+      <strong>Project</strong>
+      <span className="dv-edge-arrow-line">→ waits on (N) →</span>
+      <strong>Them…</strong>
+    </>
+  );
+
   return (
-    <section className="dv-swimlanes" aria-label="Who waits on whom">
+    <section
+      className={`dv-swimlanes${sectionClassName ? ` ${sectionClassName}` : ''}`}
+      aria-label={typeof title === 'string' ? title : 'Who waits on whom'}
+    >
       <header className="dv-swim-head">
-        <h2>Who waits on whom</h2>
-        <p className="dv-swim-story">
-          Read left → right. If one ticket waits on several, they stack under the same “waits on”
-          arrow (up to {MAX_DEPTH} hops).
-        </p>
+        <h2>{title}</h2>
+        <p className="dv-swim-story">{storyText}</p>
         <p className="dv-swim-legend" aria-hidden="true">
-          <strong>Project</strong>
-          <span className="dv-edge-arrow-line">→ waits on (N) →</span>
-          <strong>Them…</strong>
+          {legendNode}
         </p>
       </header>
 
       {showIWait ? (
         <div className="dv-edge-section">
           <div className="dv-edge-section-head">
-            <h3>We wait on them (and who they wait on)</h3>
+            <h3>{weWaitHeading}</h3>
             <span className="dv-meta">
               {iWaitJiraUrl ? (
                 <a href={iWaitJiraUrl} target="_blank" rel="noopener noreferrer" title={iWaitJql || ''}>
@@ -805,6 +798,11 @@ export default function DependencySwimlanes({
               />
             ))
           )}
+          <PreviouslyLinkedBlock
+            previouslyLinked={previouslyLinked}
+            jiraBaseUrl={jiraBaseUrl}
+            directionFilter="i_wait_on_them"
+          />
         </div>
       ) : null}
 
@@ -842,6 +840,11 @@ export default function DependencySwimlanes({
               />
             ))
           )}
+          <PreviouslyLinkedBlock
+            previouslyLinked={previouslyLinked}
+            jiraBaseUrl={jiraBaseUrl}
+            directionFilter="they_wait_on_me"
+          />
         </div>
       ) : null}
     </section>

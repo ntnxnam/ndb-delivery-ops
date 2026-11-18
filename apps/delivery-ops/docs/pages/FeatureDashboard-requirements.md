@@ -25,6 +25,7 @@ The Feature Dashboard gives a feature manager a single-feature view: enter a FEA
 | FD-06 | As a user, every count links to the corresponding JIRA query. |
 | FD-07 | As a user, I can switch releases and have the feature key persist so I can compare the same feature across releases. |
 | FD-08 | As a FEAT manager, I can see an overall completion Gantt of every feature in the release — plotted against EC / CC / CG / PG / GA — before I choose a single feature to open. |
+| FD-09 | As a FEAT manager, I see **planned start (release EC)** and **real start** (first non-portfolio ticket entering statusCategory In Progress), with a quiet caption when work items lack the selected fixVersion. |
 
 ---
 

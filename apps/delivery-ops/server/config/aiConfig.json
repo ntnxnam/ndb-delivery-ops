@@ -1,7 +1,7 @@
 {
-  "baseUrl": "https://nai-dre.corp.p10y.ntnxdpro.com/enterpriseai/gateway/v1",
-  "defaultModel": "nemotron3-fp4-uni",
-  "maxTokens": 4096,
+  "baseUrl": "https://tokens.corp.nutanix.com/enterpriseai/gateway/v1",
+  "defaultModel": "beam-1-501b",
+  "maxTokens": 8192,
   "requestTimeoutMs": 120000,
-  "description": "Nutanix Enterprise AI (NAI) endpoint configuration. API key is NOT stored here — set AI_API_KEY in server/.env (retrieve from LastPass)."
+  "description": "Nutanix Enterprise AI (NuTokens) endpoint. API key is NOT stored here — set AI_API_KEY in server/.env (NuToken from tokens.corp / LastPass)."
 }

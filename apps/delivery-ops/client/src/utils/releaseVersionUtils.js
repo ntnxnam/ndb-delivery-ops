@@ -93,6 +93,29 @@ export function getColumnWidth(columnsConfig, columnKey) {
   return columnsConfig?.columns?.[columnKey]?.width || '';
 }
 
+/** Reference width used to turn config % widths into px min-widths for UI tables. */
+const COLUMN_WIDTH_REFERENCE_PX = 1400;
+
+/**
+ * Min-width for a UI table column so % configs don't crush cells.
+ * Percentages are resolved against {@link COLUMN_WIDTH_REFERENCE_PX}; absolute
+ * CSS values pass through. Enables horizontal scroll on narrow viewports while
+ * still letting the table grow on wide screens (`min-width: 100%` on the table).
+ * @param {object} columnsConfig
+ * @param {string} columnKey
+ * @returns {string} CSS length or empty string
+ */
+export function getColumnMinWidth(columnsConfig, columnKey) {
+  const width = getColumnWidth(columnsConfig, columnKey);
+  if (!width) return '';
+  const percentMatch = String(width).trim().match(/^([\d.]+)\s*%$/);
+  if (percentMatch) {
+    const px = Math.round((parseFloat(percentMatch[1]) / 100) * COLUMN_WIDTH_REFERENCE_PX);
+    return `${Math.max(px, 48)}px`;
+  }
+  return width;
+}
+
 /**
  * Format JIRA wiki markup to HTML
  * @param {string} text - JIRA wiki markup text
@@ -206,6 +229,7 @@ export function formatJiraWikiMarkup(text, jiraBaseUrl = 'https://jira.nutanix.c
   // JIRA color markup: {color:#hex}text{color} or {color:red}text{color}
   formatted = formatted.replace(/\{color:([^}]+)\}(.*?)\{color\}/g, (match, color, content) => {
     const colorMap = {
+      'deep red': '#8B0000',
       'red': '#de350b',
       'green': '#00875a',
       'yellow': '#ff8b00',

@@ -37,9 +37,7 @@ const RELEASE_GATE_CONFIG_PATH = path.resolve(
 let _sharedPromise = null;
 async function getShared() {
   if (!_sharedPromise) {
-    _sharedPromise = process.env.NODE_ENV === 'test'
-      ? Promise.resolve(require('@portfolio-delivery-ops/shared'))
-      : import('@portfolio-delivery-ops/shared');
+    _sharedPromise = import('@portfolio-delivery-ops/shared');
   }
   return _sharedPromise;
 }

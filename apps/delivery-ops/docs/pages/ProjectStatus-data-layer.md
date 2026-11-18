@@ -59,7 +59,19 @@ Headers: x-jira-token, x-username
 
 ---
 
-### 3. Fetch gate timeline (Gantt rulers)
+### 3. Checkpoint date history (struck-through old dates)
+
+```
+POST /api/jira/release-items-history
+Body: { fixVersion, teamId }
+Headers: x-jira-token, x-username
+```
+
+Walks JIRA changelog per ticket for `customfield_11067` (CC), `customfield_35863` (CG), `customfield_35864` (PG) + FS/DS, Test Plan etc. Client shows current date bold on top, old dates struck through below, with `moved N times by X weeks` where `X = |current - first ever set|` (a revert to original = 0). Shared helper `client/src/utils/dateHistoryDisplay.js` powers `/project-status`, `/sos-summary`, and `/sos-leader-summary`.
+
+---
+
+### 3b. Fetch gate timeline (Gantt rulers)
 
 ```
 GET /api/release-dataset/gate-timeline?release=NDB-2.11&productId=ndb

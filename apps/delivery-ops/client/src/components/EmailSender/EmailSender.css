@@ -273,3 +273,119 @@
   }
 }
 
+/* Compact Issue Type × Status breakdown */
+.itb-compact {
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.itb-compact-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 4px;
+}
+
+.itb-compact-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.itb-compact-meta {
+  font-size: 12px;
+  color: #374151;
+}
+
+.itb-compact-muted {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.itb-compact-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.itb-compact-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.itb-compact-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.itb-compact-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.itb-compact-table tr + tr td {
+  padding-top: 3px;
+}
+
+.itb-compact-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  padding: 2px 8px 2px 0;
+  vertical-align: middle;
+  width: 1%;
+}
+
+.itb-compact-count {
+  font-size: 12px;
+  color: #374151;
+  text-align: right;
+  padding: 2px 8px;
+  vertical-align: middle;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.itb-compact-bar-cell {
+  width: 100px;
+  min-width: 72px;
+  max-width: 140px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+.itb-compact-bar {
+  display: flex;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.itb-compact-seg {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+
+.itb-compact-counts {
+  font-size: 11px;
+  color: #4b5563;
+  padding: 2px 0 2px 4px;
+  vertical-align: middle;
+  line-height: 1.3;
+}
+

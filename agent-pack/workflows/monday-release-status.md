@@ -37,7 +37,7 @@ Monday by schedule (set up via Cursor hooks separately).
    - Call `say_vs_do` with `{ version }` to attach the SP_said / SP_did line.
 
 4. **Compose the email**
-   - Use the `~/.cursor/skills/team-exec-release-report/` skill for the markdown
+   - Use the `agent-pack/skills/team-exec-briefing/` skill (mode=report) for the markdown
      structure (frontmatter, Executive Summary, Release Health, Risk
      Assessment).
    - Cap at one screen for Team Executive. Two screens max for EM.

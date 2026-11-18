@@ -1,0 +1,11 @@
+{
+  "kpiNamePattern": "CFD|CFI",
+  "jiraBaseUrl": "https://jira.nutanix.com",
+  "openStatusJql": "statusCategory != Done",
+  "maxOpenTickets": 80,
+  "optionalHeroes": {
+    "p0": true,
+    "p1": true,
+    "tbv": true
+  }
+}

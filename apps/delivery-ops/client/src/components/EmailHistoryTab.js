@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authenticatedGet, authenticatedDelete } from '../utils/api';
+import { PageLoading } from '../shared/components/PageLoading';
 import { formatters } from '../shared/utils/formatters';
 
 function EmailHistoryTab() {
@@ -231,7 +232,7 @@ function EmailHistoryTab() {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
+        <PageLoading message="Loading email history…" />
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>

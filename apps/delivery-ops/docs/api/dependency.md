@@ -1,6 +1,6 @@
 # Dependency API
 
-Dependency overview for Dependency View. No JIRA mutates. Local wishlist
+Dependency overview for Post EC dependency view. No JIRA mutates. Local wishlist
 config can be updated via PUT (writes `dependencyViewConfig.json`).
 
 ---
@@ -20,7 +20,7 @@ config can be updated via PUT (writes `dependencyViewConfig.json`).
 - Headers: JIRA auth as used by other `/api/*` routes
 
 **Server flow**
-Route `routes/dependency.js` → `dependencyViewService.getOverview` → `runSearchByJql` (JIRA) + `dependencyViewConfig.json` + `releaseVersionsEmailConfig.json`
+Route `routes/dependency.js` → `dependencyViewService.getOverview` → `runSearchByJql` (JIRA) + `dependencyViewConfig.json` + `releaseVersionsEmailConfig.json` → `previouslyLinkedDeps.fetchPreviouslyLinked` (Link changelog on seed keys; no Q1–Q7 change)
 
 **Response shape**
 
@@ -42,6 +42,23 @@ Route `routes/dependency.js` → `dependencyViewService.getOverview` → `runSea
     "wishlistUnlinked": { "jql": "...", "jiraUrl": "...", "count": 0, "issues": [] },
     "partnerOrphans": { "jql": "...", "jiraUrl": "...", "count": 0, "issues": [] },
     "companions": []
+  },
+  "previouslyLinked": {
+    "count": 0,
+    "jql": "key in (ERA-1, ENG-2)",
+    "jiraUrl": "https://jira.nutanix.com/issues/?jql=...",
+    "seedCount": 0,
+    "pairs": [
+      {
+        "left": { "key": "ERA-1", "summary": "..." },
+        "right": { "key": "ENG-2", "summary": "..." },
+        "direction": "i_wait_on_them",
+        "linkType": "is blocked by",
+        "linkStatus": "removed",
+        "removedAt": "2026-10-10T12:00:00.000+0000",
+        "lastAddedAt": "2026-10-01T10:00:00.000+0000"
+      }
+    ]
   },
   "wishlistMeta": {
     "releaseSlug": "3.1",

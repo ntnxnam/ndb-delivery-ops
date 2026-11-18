@@ -8,6 +8,7 @@ import {
 export function useFeatureDashboard({
   release,
   featureKey,
+  teamId,
   jiraToken,
   username,
 }) {
@@ -51,6 +52,7 @@ export function useFeatureDashboard({
       const data = await fetchFeatureDashboard({
         release,
         featureKey,
+        teamId,
         jiraToken,
         username,
       });
@@ -61,7 +63,7 @@ export function useFeatureDashboard({
     } finally {
       setLoadingDashboard(false);
     }
-  }, [release, featureKey, jiraToken, username]);
+  }, [release, featureKey, teamId, jiraToken, username]);
 
   const reparentTicket = useCallback(
     async ({ ticketKey, newParent, reason }) => {

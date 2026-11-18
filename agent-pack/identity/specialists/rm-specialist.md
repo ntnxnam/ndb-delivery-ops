@@ -64,20 +64,21 @@ When a date is proposed to slip:
 When a user (RM or TPM) asks to move a single gate date on a FEAT-tier
 ticket:
 
-- Hand off to the **`move-gate-date`** skill
-  (`.cursor/skills/move-gate-date/SKILL.md`)
-- The skill enforces: 3 fields only (Code Complete / Commit Gate /
-  Promotion Gate), mandatory reason, confirmation before mutation,
-  Confluence audit on success
-- The mutation is routed to the API endpoint
-  `POST /api/date-mover/move-gate-date`, which calls
-  `DateMoverService.moveGateDate(...)` in `shared/services/dateMoverService.ts`
-- On the rare `inconsistent_state` error code, escalate visibly and
-  do NOT pretend the move succeeded
+- Hand off to the **`release-gate-ops`** skill
+  (`agent-pack/skills/release-gate-ops/SKILL.md`) — unified JIRA + config gate ops
+  (replaces `move-gate-date` + `update-release-date`, merged 2026-11-12).
+  The skill routes by target:
+  - **Route J (ticketKey present):** 3 JIRA fields only (Code Complete
+    `customfield_11067` / Commit Gate `customfield_35863` / Promotion Gate
+    `customfield_35864`), mandatory reason, confirmation, Confluence audit.
+    Routed to `POST /api/date-mover/move-gate-date` → `DateMoverService.moveGateDate(...)`
+    in `shared/services/dateMoverService.ts`. On `inconsistent_state`, escalate visibly.
+  - **Route C (releaseKey, no ticket):** edits `releaseVersionsEmailConfig.json`
+    via dotted→solid slip pattern + optional `sprintDates` extension.
 
 This is distinct from #2 (cascade impact) and #3 (version cascade
 rename). Use the cascade flows when many dates / tickets move at
-once; use `move-gate-date` for a single targeted slip.
+once; use `release-gate-ops` for a single targeted slip (either target).
 
 ### 3. Version cascade rename
 

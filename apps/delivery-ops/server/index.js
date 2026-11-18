@@ -113,6 +113,7 @@ const dateMoverRoutes = require('./routes/dateMover');
 const releaseDatasetRoutes = require('./routes/releaseDataset');
 const releaseSyncRoutes = require('./routes/releaseSync');
 const aiRoutes = require('./routes/ai');
+const jiraDiggingRoutes = require('./routes/jiraDigging');
 const featureRoutes = require('./routes/feature');
 
 // CORS preflight: ensure OPTIONS for all /api paths always succeeds.
@@ -138,11 +139,16 @@ app.use('/api/date-mover', dateMoverRoutes); // D30: gate-date moves w/ Confluen
 app.use('/api/release-dataset', releaseDatasetRoutes); // Phase 3: shared releaseDataset surface
 app.use('/api/release-dataset', releaseSyncRoutes);   // Sync lifecycle: /sync-status, /sync, /bundle
 app.use('/api/ai', aiRoutes); // AI routes: exec summary generation + JIRA push
+app.use('/api/jira-digging', jiraDiggingRoutes); // Slice 2: digging prepare (read-only)
 app.use('/api/feature', featureRoutes); // Feature-level dashboard endpoints
 const componentRoutes = require('./routes/component');
   app.use('/api/component', componentRoutes); // Component report endpoints
   const dependencyRoutes = require('./routes/dependency');
   app.use('/api/dependency', dependencyRoutes); // Dependency View (read-only)
+const releaseOutstandingWorkRoutes = require('./routes/releaseOutstandingWork');
+app.use('/api/release-outstanding-work', releaseOutstandingWorkRoutes);
+// Legacy alias — same router (old clients / bookmarks)
+app.use('/api/deferral-workbench', releaseOutstandingWorkRoutes);
 
 // Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
 // /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,

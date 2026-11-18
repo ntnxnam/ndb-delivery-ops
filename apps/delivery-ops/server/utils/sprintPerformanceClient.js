@@ -80,6 +80,10 @@ function sprintPerformanceApp(D) {
     if (v >= cfg.rag.yellowSayDoPct) return 'background:#fff3bf;color:#7a5800';
     return 'background:#ffe3e3;color:#a51111';
   }
+  /** Provisional cell style — in-flight sprint; not a final RAG score (blue ≠ yellow RAG). */
+  function heatOngoing() {
+    return 'background:#e7f5ff;color:#1864ab;box-shadow:inset 0 0 0 1px #74c0fc';
+  }
   function deltaHtml(e, r, higherIsBetter = true) {
     if (e == null || r == null) return '';
     const d = r - e;
@@ -148,16 +152,191 @@ function sprintPerformanceApp(D) {
     const active = ['leader', 'manager', 'team'].filter((k) => state[k]).map((k) => state[k]);
     if (state.work !== 'all') active.push(state.work === 'dev' ? 'Dev work' : 'Test work');
     $('f-summary').innerHTML = active.length
-      ? `Focused on <b>${esc(active.join(' · '))}</b> — tiles, timeline, teams, people and sprints below are theirs. Highlights / lowlights / asks above stay org-wide.`
-      : 'Showing the whole org. Pick a leader, manager or team — or click any name below — to focus the page on their sprints and people.';
+      ? `Focused on <b>${esc(active.join(' · '))}</b> — executive summary, tiles, timeline, teams and asks all follow this focus.`
+      : 'Showing the whole org. Pick a leader, manager or team — or click any name below — to focus the page (summary included).';
+  }
+
+  /** Rebuild verdict + Highlights/Lowlights + Asks + hygiene from the active filter (never static). */
+  function renderExecutive(rs) {
+    const RAG = { GREEN: ['#2b8a3e', '#ebfbee'], YELLOW: ['#e67700', '#fff9db'], RED: ['#c92a2a', '#fff5f5'] };
+    const focusBits = ['leader', 'manager', 'team'].filter((k) => state[k]).map((k) => state[k]);
+    if (state.work !== 'all') focusBits.push(state.work === 'dev' ? 'Dev work' : 'Test work');
+    if (state.range !== 'all') focusBits.push(`last ${state.range} sprints`);
+    const scopeLabel = focusBits.length ? focusBits.join(' · ') : 'org-wide';
+    const scopeWho = focusBits.length ? scopeLabel : 'Org-wide';
+
+    if (!rs.length) {
+      if ($('verdict')) $('verdict').innerHTML = '';
+      if ($('exec-scope-label')) $('exec-scope-label').textContent = `(${scopeLabel})`;
+      if ($('asks-scope-label')) $('asks-scope-label').textContent = `(${scopeLabel})`;
+      if ($('hyg-scope-label')) $('hyg-scope-label').textContent = `(${scopeLabel})`;
+      if ($('exec-highlights')) $('exec-highlights').innerHTML = '<p class="muted small">No items for this focus.</p>';
+      if ($('exec-lowlights')) $('exec-lowlights').innerHTML = '<p class="muted small">No items for this focus.</p>';
+      if ($('asks-banner')) {
+        $('asks-banner').innerHTML = '<div class="rules-banner" role="status"><span class="rules-pill">Rules</span><div class="ai-body"><b>No asks</b> — no sprint items in this focus.</div></div>';
+      }
+      if ($('asks-body')) $('asks-body').innerHTML = '<tr><td colspan="3" class="muted">No asks for this focus.</td></tr>';
+      if ($('hyg-table')) $('hyg-table').innerHTML = '<p class="muted small">No hygiene issues for this focus.</p>';
+      return;
+    }
+
+    const series = seriesOf(rs);
+    const window = agg(rs, cfg);
+    const closed = seriesClosed(series);
+    const trend = halves(closed, K);
+    // Match halves() recent window exactly so verdict % === highlight trend %.
+    const recentSayDo = trend.recent;
+    const rag = ragFor(recentSayDo, cfg);
+    const [fg, bg] = RAG[rag] || RAG.YELLOW;
+    const dir = (trend.recent ?? 0) >= (trend.early ?? 0) ? 'up' : 'down';
+    if ($('verdict')) {
+      $('verdict').innerHTML = `<div class="verdict" style="border-left:6px solid ${fg};background:${bg}"><span class="rag" style="background:${fg}">${rag}</span><span>${esc(scopeWho)} say/do ${trend.recent == null ? '–' : `${trend.recent}%`} over the last ${K} closed sprints (green ≥${cfg.rag.greenSayDoPct}%, yellow ≥${cfg.rag.yellowSayDoPct}%), ${dir} from ${trend.early == null ? '–' : `${trend.early}%`} in the ${K} before. In-flight sprint excluded.</span></div>`;
+    }
+    if ($('exec-scope-label')) $('exec-scope-label').textContent = `(${scopeLabel})`;
+    if ($('asks-scope-label')) $('asks-scope-label').textContent = `(${scopeLabel})`;
+    if ($('hyg-scope-label')) $('hyg-scope-label').textContent = `(${scopeLabel})`;
+
+    const by = (field) => {
+      const m = new Map();
+      rs.forEach((r) => { if (!m.has(r[field])) m.set(r[field], []); m.get(r[field]).push(r); });
+      return m;
+    };
+    const summariseGroup = (name, gRows, group) => {
+      const gSeries = seriesOf(gRows);
+      return {
+        name,
+        group: group || null,
+        people: new Set(gRows.map((r) => r.assignee)).size,
+        series: gSeries,
+        window: agg(gRows, cfg),
+        trend: halvesClosed(gSeries),
+        url: jiraFor(gRows),
+      };
+    };
+    const scrumTeams = Array.from(by('scrumTeam').entries()).map(([name, tRows]) => {
+      const tSeries = seriesOf(tRows);
+      const w = agg(tRows, cfg);
+      return {
+        name,
+        series: tSeries,
+        window: w,
+        trend: halvesClosed(tSeries),
+        unmeasurable: w.planned < cfg.minPlannedForRanking,
+        active: seriesClosed(tSeries).slice(-K).some((x) => x.committed > 0),
+        url: jiraFor(tRows),
+        sprintIds: Array.from(new Set(tRows.map((r) => r.sprintId))),
+      };
+    }).sort((a, b) => a.unmeasurable - b.unmeasurable || (b.window.sayDo ?? -1) - (a.window.sayDo ?? -1));
+
+    const leaders = Array.from(by('leader').entries()).map(([name, lRows]) => {
+      const group = D.groups.leaders[name] || null;
+      return summariseGroup(name, lRows, group);
+    }).sort((a, b) => b.window.committed - a.window.committed);
+
+    const managers = Array.from(by('manager').entries()).map(([name, mRows]) => {
+      const group = D.groups.managers[name] || null;
+      const leader = mRows[0]?.leader || '';
+      return { ...summariseGroup(name, mRows, group), leader };
+    }).sort((a, b) => b.window.committed - a.window.committed);
+
+    const chronicMap = new Map();
+    rs.filter((r) => !r.removed && r.unresolvedNow && r.sprintCountEver >= cfg.chronicCarryoverSprints)
+      .forEach((r) => { if (!chronicMap.has(r.key)) chronicMap.set(r.key, r); });
+    const chronic = Array.from(chronicMap.values())
+      .sort((a, b) => b.sprintCountEver - a.sprintCountEver)
+      .map((r) => ({
+        key: r.key,
+        summary: '',
+        issuetype: r.issuetype,
+        status: '',
+        assignee: r.assignee,
+        manager: r.manager,
+        scrumTeam: r.scrumTeam,
+        sprints: r.sprintCountEver,
+        url: `${D.meta.jiraBaseUrl}/browse/${r.key}`,
+      }));
+
+    const hygAll = D.hygiene || { staleActive: [], lateClosed: [], startedEmpty: [] };
+    const teamNames = new Set(scrumTeams.map((t) => t.name));
+    const filterHyg = (list) => (!isFocused() ? list : list.filter((s) => {
+      const n = String(s.name || '');
+      return Array.from(teamNames).some((t) => n.includes(t));
+    }));
+    const hygiene = {
+      staleActive: filterHyg(hygAll.staleActive || []),
+      lateClosed: filterHyg(hygAll.lateClosed || []),
+      startedEmpty: filterHyg(hygAll.startedEmpty || []),
+    };
+
+    const narrativeModel = {
+      meta: {
+        ...D.meta,
+        slots,
+        sprintCount: slots.length,
+        allSprintsUrl: jiraFor(rs),
+        unmappedItems: rs.filter((r) => {
+          const u = D.meta.unassignedLabel;
+          return r.manager === u || String(r.manager || '').startsWith('Unmapped');
+        }).length,
+        config: cfg,
+        releasePrefix: D.meta.releasePrefix || '',
+        sprintScope: D.meta.sprintScope,
+        jiraBaseUrl: D.meta.jiraBaseUrl,
+      },
+      overall: { series, window, recentSayDo, rag, trend },
+      scrumTeams,
+      leaders,
+      managers,
+      chronic,
+      hygiene,
+      rows: rs,
+    };
+    const { highlights, lowlights, asks: ruleAsks } = buildNarrative(narrativeModel, cfg, { scopeLabel: scopeWho });
+    const useAi = !isFocused() && state.range === 'all' && state.work === 'all' && Array.isArray(D.asksAi) && D.asksAi.length;
+    const asks = useAi ? D.asksAi : ruleAsks;
+
+    const citeHtml = (cites) => (cites?.length
+      ? ` <span class="cite">${cites.map((c) => (c.url
+        ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.label)}</a>`
+        : esc(c.label))).join(' · ')}</span>`
+      : '');
+    const bullets = (items, cls) => (items.length
+      ? `<ul class="${cls}">${items.map((i) => `<li>${esc(i.text)}${citeHtml(i.cites)}</li>`).join('')}</ul>`
+      : '<p class="muted small">No items for this focus.</p>');
+    if ($('exec-highlights')) $('exec-highlights').innerHTML = bullets(highlights, 'hl');
+    if ($('exec-lowlights')) $('exec-lowlights').innerHTML = bullets(lowlights, 'll');
+
+    if ($('asks-banner')) {
+      $('asks-banner').innerHTML = useAi
+        ? `<div class="ai-banner" role="status"><span class="ai-pill">AI generated</span><div class="ai-body"><b>Asks drafted by AI</b> from this report's JIRA snapshot (regenerate to refresh). Narrowing filters switches to rule-based asks for the focus. Highlights/lowlights always recompute live from the blob.</div></div>`
+        : `<div class="rules-banner" role="status"><span class="rules-pill">Rules</span><div class="ai-body"><b>Rule-based asks</b> for the current focus (recomputed live with the executive summary).</div></div>`;
+    }
+    if ($('asks-body')) {
+      $('asks-body').innerHTML = asks.length
+        ? asks.map((x, i) => `<tr><td class="num">${i + 1}</td><td>${esc(x.text)}</td><td class="muted">${esc(x.owner)}</td></tr>`).join('')
+        : '<tr><td colspan="3" class="muted">No asks for this focus.</td></tr>';
+    }
+
+    const nameLink = (s) => (s.url
+      ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>`
+      : esc(s.name));
+    const hygRows = [
+      ...hygiene.staleActive.map((s) => `<tr><td>${nameLink(s)}</td><td>Still open</td><td>ended ${esc(s.endDate || '')}</td><td class="num warn">${s.daysOverdue}d overdue</td></tr>`),
+      ...hygiene.startedEmpty.map((s) => `<tr><td>${nameLink(s)}</td><td>Started before planning</td><td>≥90% of items added after start</td><td class="num">–</td></tr>`),
+      ...hygiene.lateClosed.map((s) => `<tr><td>${nameLink(s)}</td><td>Closed late</td><td>ended ${esc(s.endDate || '')}, closed ${esc(s.completeDate || '')}</td><td class="num">${s.daysLate}d</td></tr>`),
+    ].join('');
+    if ($('hyg-table')) {
+      $('hyg-table').innerHTML = `<table class="small-table"><thead><tr><th>Sprint</th><th>Issue</th><th>Dates</th><th>Gap</th></tr></thead><tbody>${hygRows || '<tr><td colspan="4">No hygiene issues for this focus.</td></tr>'}</tbody></table>
+        <div class="caption">Hygiene window follows report config; list filtered to the current focus when a team is selected.</div>`;
+    }
   }
 
   function renderTiles(rs) {
     const s = seriesOf(rs);
     const w = agg(rs, cfg);
-    const sayDo = halves(s, K);
-    const devFin = halfAvg(s, 'devFinishedPlanned', 'planned');
-    const creep = halfAvg(s, 'added', 'planned');
+    const sayDo = halvesClosed(s);
+    const devFin = halfAvgClosed(s, 'devFinishedPlanned', 'planned');
+    const creep = halfAvgClosed(s, 'added', 'planned');
     const all = jiraFor(rs);
     const qaUrl = jiraFor(rs, [`status = ${JSON.stringify(cfg.pendingQAStatusName || 'Resolved')}`]);
     const slipped = new Set(rs.filter((r) => r.carried).map((r) => r.key));
@@ -167,11 +346,11 @@ function sprintPerformanceApp(D) {
     const gapEarly = gapPts(devFin.early, sayDo.early);
     // Row 1 = QA-bandwidth story (JIRA Completed vs Dev finished). Row 2 = queue + hygiene.
     const tiles = [
-      ['Say / Do (JIRA)', pctTxt(sayDo.recent), `Completed ÷ planned · last ${K} · target ≥${cfg.rag.greenSayDoPct}% ${deltaHtml(sayDo.early, sayDo.recent)}`, all, ''],
-      ['Dev finished', pctTxt(devFin.recent), `Resolved∪Closed ÷ planned · last ${K} ${deltaHtml(devFin.early, devFin.recent)}`, all, ''],
-      ['QA bandwidth gap', gapRecent == null ? '–' : `${gapRecent} pts`, `Dev finished − JIRA Say/Do · last ${K}${gapEarly != null && gapRecent != null ? ` ${deltaHtml(gapEarly, gapRecent, false)}` : ''} · mainly waiting on QA close`, qaUrl, 'story'],
+      ['Say / Do (JIRA)', pctTxt(sayDo.recent), `Completed ÷ planned · last ${K} closed · target ≥${cfg.rag.greenSayDoPct}% ${deltaHtml(sayDo.early, sayDo.recent)}`, all, ''],
+      ['Dev finished', pctTxt(devFin.recent), `Resolved∪Closed ÷ planned · last ${K} closed ${deltaHtml(devFin.early, devFin.recent)}`, all, ''],
+      ['QA bandwidth gap', gapRecent == null ? '–' : `${gapRecent} pts`, `Dev finished − JIRA Say/Do · last ${K} closed${gapEarly != null && gapRecent != null ? ` ${deltaHtml(gapEarly, gapRecent, false)}` : ''} · mainly waiting on QA close`, qaUrl, 'story'],
       ['QA queue (Resolved)', w.pendingQA.toLocaleString(), 'awaiting verification now · see Dev→QA lag below', qaUrl, ''],
-      ['Scope added mid-sprint', pctTxt(creep.recent), `of planned · last ${K} ${deltaHtml(creep.early, creep.recent, false)}`, all, ''],
+      ['Scope added mid-sprint', pctTxt(creep.recent), `of planned · last ${K} closed ${deltaHtml(creep.early, creep.recent, false)}`, all, ''],
       ['Tickets that slipped', slipped.size.toLocaleString(), `unfinished at sprint end at least once · ${slippedOpen.toLocaleString()} still open today`, all, ''],
     ];
     $('tiles').innerHTML = tiles.map(([label, value, sub, url, cls]) => `<div class="tile${cls ? ` ${cls}` : ''}"><div class="tile-label">${esc(label)}</div>
@@ -282,6 +461,19 @@ function sprintPerformanceApp(D) {
   }
 
   const endIsoOf = (s) => new Date(new Date(`${s.startIso}T00:00:00Z`).getTime() + ((D.meta.sprintDays || 21) - 1) * 86400000).toISOString().slice(0, 10);
+  const asOfIso = String(D.meta.generatedAt || new Date().toISOString()).slice(0, 10);
+  /** Cadence closed when last day is strictly before report as-of (same as discipline timeline). */
+  const slotIsClosed = (s) => endIsoOf(s) < asOfIso;
+  /** In-flight cadence slot — matches discipline timeline provisional band (not board-wide JIRA active). */
+  const slotIsOngoing = (s) => !slotIsClosed(s);
+  const ongoingSlots = () => new Set(slots.filter(slotIsOngoing).map((s) => s.slot));
+  /** Trend / RAG windows — exclude in-flight slots so mid-sprint % does not look like a failure. */
+  const seriesClosed = (series) => series.filter((x) => {
+    const s = slots.find((sl) => sl.slot === x.slot);
+    return !s || slotIsClosed(s);
+  });
+  const halvesClosed = (series) => halves(seriesClosed(series), K);
+  const halfAvgClosed = (series, num, den) => halfAvg(seriesClosed(series), num, den);
   const GATE_SHORT = { EC: 'EC', CCM: 'CC', CG: 'CG', PG: 'PG', GA: 'GA' };
   /** Solid release gates falling in each slot — compact labels for axis sub-lines. */
   const gatesBySlot = () => {
@@ -348,7 +540,7 @@ function sprintPerformanceApp(D) {
         elId: 'heatmap', sortKey: 'heatSort', sortAttr: 'data-heatsort', metric: 'sayDo',
         heatMetric: 'sayDo', rangeLabel: 'Range', notDoneLabel: 'Not done', notDoneSort: 'carried',
         showRetiredToggle: true,
-        trendOf: (series) => halves(series, K),
+        trendOf: (series) => halvesClosed(series),
         cellText: (x) => (x.sayDo == null ? '·' : String(x.sayDo)),
         tip: (x, names) => `${names}\n${x.donePlanned}/${x.planned} planned completed · ${x.added} added · ${x.removed} removed · click for the sprint report`,
       },
@@ -356,7 +548,7 @@ function sprintPerformanceApp(D) {
         elId: 'heatmap-dev', sortKey: 'heatSortDev', sortAttr: 'data-heatsortdev', metric: 'sayDoDevFinished',
         heatMetric: 'sayDoDevFinished', rangeLabel: 'Range', notDoneLabel: 'Not Res/Clo', notDoneSort: 'notDevFinishedPlanned',
         showRetiredToggle: false,
-        trendOf: (series) => halfAvg(series, 'devFinishedPlanned', 'planned'),
+        trendOf: (series) => halfAvgClosed(series, 'devFinishedPlanned', 'planned'),
         cellText: (x) => (x.sayDoDevFinished == null ? '·' : String(x.sayDoDevFinished)),
         tip: (x, names) => `${names}\n${x.devFinishedPlanned}/${x.planned} planned Resolved∪Closed · Sprint Report completed ${x.donePlanned}/${x.planned} · click for lists`,
       },
@@ -364,7 +556,7 @@ function sprintPerformanceApp(D) {
         elId: 'heatmap-completion', sortKey: 'heatSortCompletion', sortAttr: 'data-heatsortcompletion', metric: 'pctResolvedBugImp',
         heatMetric: 'pctResolvedBugImp', rangeLabel: 'Range', notDoneLabel: 'Count', notDoneSort: 'closedBugImp',
         showRetiredToggle: false,
-        trendOf: (series) => halfAvg(series, 'resolvedBugImp', 'sayBugImp'),
+        trendOf: (series) => halfAvgClosed(series, 'resolvedBugImp', 'sayBugImp'),
         lines: [
           { key: 'pctResolvedBugImp', num: 'resolvedBugImp', den: 'sayBugImp', label: 'Dev→Resolved (Bug/Imp)', short: 'Dev→Resolved', trendNum: 'resolvedBugImp', trendDen: 'sayBugImp' },
           { key: 'pctClosedBugImp', num: 'closedBugImp', den: 'sayBugImp', label: 'QA Closed (Bug/Imp)', short: 'QA Closed BI', trendNum: 'closedBugImp', trendDen: 'sayBugImp' },
@@ -384,6 +576,14 @@ function sprintPerformanceApp(D) {
     const sortKey = spec.sortKey;
     const sortAttr = spec.sortAttr;
     const metric = spec.metric;
+    const ongoing = ongoingSlots();
+    const cellStyle = (slot, heatVal, unmeasurable) => {
+      if (ongoing.has(slot)) return heatOngoing();
+      return heat(unmeasurable ? null : heatVal);
+    };
+    const cellTip = (base, slot) => (ongoing.has(slot)
+      ? `${base}\nOngoing sprint — provisional (not a final say/do score)`
+      : base);
 
     const teams = Array.from(groupBy(rs, (r) => r.scrumTeam).entries()).map(([name, tr]) => {
       const series = seriesOf(tr);
@@ -400,17 +600,32 @@ function sprintPerformanceApp(D) {
     const retired = teams.filter((t) => !t.active).length;
     const shownTeams = state.showRetired || state.team ? teams : teams.filter((t) => t.active);
     const th = (k, label) => `<th class="sort${state[sortKey] === k ? ' on' : ''}" ${sortAttr}="${k}">${label}</th>`;
+    const slotEndDdMm = (s) => {
+      const end = endIsoOf(s);
+      return `${end.slice(8, 10)}/${end.slice(5, 7)}`;
+    };
+    const slotTh = (s) => {
+      const endLabel = slotEndDdMm(s);
+      const dateLine = `<span class="slot-end">${esc(endLabel)}</span>`;
+      if (!ongoing.has(s.slot)) {
+        return `<th title="${esc(s.range)} ${esc(s.startIso.slice(0, 4))} · ends ${esc(endLabel)}">${esc(s.name)}${dateLine}</th>`;
+      }
+      const daysLeft = Math.max(0, Math.round((Date.parse(`${endIsoOf(s)}T00:00:00Z`) - Date.parse(`${asOfIso}T00:00:00Z`)) / 86400000));
+      const statusTxt = daysLeft === 0 ? 'ends today' : (daysLeft === 1 ? '1d left' : `${daysLeft}d left`);
+      const tip = `${s.name} ongoing · ends ${endLabel} · ${statusTxt} · ${s.range} ${s.startIso.slice(0, 4)} — provisional mid-sprint progress, not a final say/do score`;
+      return `<th class="ongoing" title="${esc(tip)}">${esc(s.name)}${dateLine}<span class="ongoing-tag">ongoing</span><span class="ongoing-left">${esc(statusTxt)}</span></th>`;
+    };
 
     let body;
     if (mode === 'completion') {
       body = shownTeams.map((t) => spec.lines.map((line, li) => {
-        const lineTrend = halfAvg(t.series, line.trendNum, line.trendDen);
+        const lineTrend = halfAvgClosed(t.series, line.trendNum, line.trendDen);
         const cells = t.series.map((x) => {
-          if (!x.committed) return `<td class="num" style="${heat(null)}"></td>`;
+          if (!x.committed) return `<td class="num${ongoing.has(x.slot) ? ' ongoing' : ''}" style="${ongoing.has(x.slot) ? heatOngoing() : heat(null)}"></td>`;
           const names = t.sprintIds.get(x.slot).map((id) => D.sprints[id]).join(', ');
           const heatVal = x[line.key];
-          const tip = `${names}\n${line.label}: ${pctTxt(heatVal)} (${x[line.num]}/${x[line.den]})\nSay ${x.planned} · Added ${x.added} · Removed ${x.removed} · click for lists`;
-          return `<td class="num cell" style="${heat(t.unmeasurable ? null : heatVal)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(tip)}">${heatVal == null ? '·' : heatVal}</td>`;
+          const tip = cellTip(`${names}\n${line.label}: ${pctTxt(heatVal)} (${x[line.num]}/${x[line.den]})\nSay ${x.planned} · Added ${x.added} · Removed ${x.removed} · click for lists`, x.slot);
+          return `<td class="num cell${ongoing.has(x.slot) ? ' ongoing' : ''}" style="${cellStyle(x.slot, heatVal, t.unmeasurable)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(tip)}">${heatVal == null ? '·' : heatVal}</td>`;
         }).join('');
         const rangeVal = t.window[line.key];
         const rangeCell = t.unmeasurable
@@ -433,10 +648,10 @@ function sprintPerformanceApp(D) {
     } else {
       body = shownTeams.map((t) => {
         const cells = t.series.map((x) => {
-          if (!x.committed) return `<td class="num" style="${heat(null)}"></td>`;
+          if (!x.committed) return `<td class="num${ongoing.has(x.slot) ? ' ongoing' : ''}" style="${ongoing.has(x.slot) ? heatOngoing() : heat(null)}"></td>`;
           const names = t.sprintIds.get(x.slot).map((id) => D.sprints[id]).join(', ');
           const heatVal = x[spec.heatMetric];
-          return `<td class="num cell" style="${heat(t.unmeasurable ? null : heatVal)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(spec.tip(x, names))}">${spec.cellText(x)}</td>`;
+          return `<td class="num cell${ongoing.has(x.slot) ? ' ongoing' : ''}" style="${cellStyle(x.slot, heatVal, t.unmeasurable)}" data-team="${esc(t.name)}" data-slot="${x.slot}" title="${esc(cellTip(spec.tip(x, names), x.slot))}">${spec.cellText(x)}</td>`;
         }).join('');
         const rangeVal = t.window[spec.heatMetric];
         return `<tr${t.unmeasurable || !t.active ? ' class="dim"' : ''}>
@@ -453,8 +668,12 @@ function sprintPerformanceApp(D) {
       ? `${th('name', 'Team')}<th>Metric</th>`
       : th('name', 'Team');
     const colSpan = slots.length + (mode === 'completion' ? 7 : 6);
-    el.innerHTML = `<table class="heat"><thead><tr>${headTeam}${slots.map((s) => `<th title="${esc(s.range)} ${esc(s.startIso.slice(0, 4))}">${s.name}</th>`).join('')}
+    const ongoingNote = ongoing.size
+      ? `<div class="caption" style="margin-top:6px"><span style="color:#1c7ed6;font-weight:700">Ongoing</span> column(s) = blue provisional mid-sprint progress — not a final say/do score (cadence not ended yet, same as the discipline timeline’s in-flight band).</div>`
+      : '';
+    el.innerHTML = `<table class="heat"><thead><tr>${headTeam}${slots.map(slotTh).join('')}
       ${th(metric, spec.rangeLabel)}${th('trend', `Trend (${K} v ${K})`)}${th('committed', 'Items')}${th('scopeCreep', 'Added')}${th(spec.notDoneSort, spec.notDoneLabel)}</tr></thead><tbody>${body || `<tr><td colspan="${colSpan}" class="muted">No items for this filter.</td></tr>`}</tbody></table>
+      ${ongoingNote}
       ${spec.showRetiredToggle && retired && !state.team ? `<button class="btn link" id="retired-toggle">${state.showRetired ? 'Hide' : 'Show'} ${retired} team(s) with no sprint in the last ${K} slots</button>` : ''}`;
   }
 
@@ -463,7 +682,7 @@ function sprintPerformanceApp(D) {
     const teamCounts = {};
     rs.forEach((r) => { teamCounts[r.scrumTeam] = (teamCounts[r.scrumTeam] || 0) + 1; });
     return {
-      name, rows: rs, series, window: agg(rs, cfg), trend: halves(series, K),
+      name, rows: rs, series, window: agg(rs, cfg), trend: halvesClosed(series),
       people: new Set(rs.map((r) => r.assignee)).size,
       teams: Object.entries(teamCounts).sort((a, b) => b[1] - a[1]).map(([t]) => t),
     };
@@ -759,6 +978,7 @@ function sprintPerformanceApp(D) {
     const rs = filtered();
     slots = slotsWithWork(rangeSlots(), rs);
     renderFilters();
+    renderExecutive(rs);
     renderTiles(rs);
     renderQaLag(rs);
     renderTimeline(rs);

@@ -191,6 +191,49 @@ export function generateTableHTMLForEmail(
     return datesHTML;
   };
 
+  // Helper to format merged Risk Details (Risk Indicator + Assessment + Path to Green)
+  const formatRiskDetailsHTML = (item) => {
+    const riskIndicator = item.customfield_23560;
+    const riskValue = riskIndicator?.value || riskIndicator || '';
+    const riskColor = riskIndicator?.color || 'transparent';
+    const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
+    let bg = 'transparent', fg = 'inherit', fw = 'normal';
+    if (isNotSet) { bg = '#fff3cd'; fw = '600'; }
+    else if (riskColor && riskColor !== 'transparent') { bg = riskColor; fg = '#ffffff'; fw = '600'; }
+    else if (typeof riskValue === 'string') {
+      const lowerRisk = String(riskValue).toLowerCase().trim();
+      if (lowerRisk.startsWith('deep red')) { bg = '#8B0000'; fg = '#ffffff'; fw = '600'; }
+      else {
+        const m = String(riskValue).match(/^(Green|Yellow|Red|Blue|Orange)/i);
+        if (m) {
+          const cmap = { green: '#00875a', yellow: '#ff8b00', red: '#de350b', blue: '#0052cc', orange: '#ff8b00' };
+          if (cmap[m[1].toLowerCase()]) { bg = cmap[m[1].toLowerCase()]; fg = '#ffffff'; fw = '600'; }
+        }
+      }
+    }
+    const indicatorHTML = isNotSet
+      ? '<span style="color:#999;font-style:italic;">Not Set</span>'
+      : `<span style="background-color:${bg};color:${fg};font-weight:${fw};padding:2px 8px;border-radius:4px;font-size:11px;display:inline-block;">${escapeHtml(riskValue)}</span>`;
+
+    const toText = (raw) => {
+      if (raw == null) return '';
+      return typeof raw === 'string' ? raw.trim() : String(raw.value || raw.url || raw.name || '').trim();
+    };
+    const linkOrText = (raw) => {
+      const t = toText(raw);
+      if (!t || t === 'N/A' || t === 'NA' || t === 'Not Set') return '<span style="color:#999;font-style:italic;">Not Set</span>';
+      if (/^https?:\/\//i.test(t)) return `<a href="${escapeHtml(t)}" style="color:#0065ff;text-decoration:none;">Link</a>`;
+      return escapeHtml(t);
+    };
+
+    let h = '<div style="line-height:1.8;font-size:11px;">';
+    h += `<div style="margin-bottom:8px;"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Risk Indicator:</div><div style="padding-left:4px;">${indicatorHTML}</div></div>`;
+    h += `<div style="margin-bottom:8px;"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Risk Assessment:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(item.customfield_47780)}</div></div>`;
+    h += `<div><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Path to Green:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(item.customfield_55664)}</div></div>`;
+    h += '</div>';
+    return h;
+  };
+
   // Helper to format cell value based on column type
   const formatCellValue = (item, columnKey) => {
     if (columnKey === 'key') {
@@ -224,8 +267,45 @@ export function generateTableHTMLForEmail(
     if (columnKey === 'checkpointDates') {
       return formatCheckpointDatesHTML(item);
     }
+    if (columnKey === 'quality') {
+      const q = item.tcmsQuality || item.tcmsQI;
+      if (!q) return '<span style="color:#999;font-style:italic;">Not Set</span>';
+      const buildTable = (title, data) => {
+        if (!data) return `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:10px;color:#2c3e50;margin-bottom:4px;border-bottom:1px solid #dee2e6;padding-bottom:2px;">${escapeHtml(title)}</div><span style="color:#999;font-style:italic;">Not Set</span></div>`;
+        const rows = [
+          { label: 'Functional', key: 'functional' },
+          { label: 'System', key: 'system' },
+        ];
+        const cell = (v) => v ? `<div style="font-size:10px;line-height:1.5;">QI ${v.qi != null ? v.qi + '%' : '—'}<br/>Run ${v.run ?? '—'}<br/>Passed ${v.passed ?? '—'}<br/>Failed ${v.failed ?? '—'}<br/>Rate ${v.rate != null ? v.rate + '%' : '—'}</div>` : '<span style="color:#999;font-style:italic;">Not Set</span>';
+        let h = `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:10px;color:#2c3e50;margin-bottom:4px;border-bottom:1px solid #dee2e6;padding-bottom:2px;">${escapeHtml(title)}</div>`;
+        h += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr><th scope="col" aria-label="Test scope" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:left;font-size:9px;"></th><th scope="col" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:center;font-size:9px;">Manual</th><th scope="col" style="border:1px solid #dee2e6;padding:2px 4px;background:#f8f9fa;text-align:center;font-size:9px;">Automation</th></tr></thead><tbody>';
+        rows.forEach(r => {
+          const row = data[r.key] ?? (r.key === 'system' ? data.overall : null);
+          const manual = row?.manual;
+          const auto = row?.automation;
+          h += `<tr><th scope="row" style="border:1px solid #dee2e6;padding:2px 4px;font-weight:600;background:#f8f9fa;text-align:left;">${escapeHtml(r.label)}</th><td style="border:1px solid #dee2e6;padding:2px 4px;vertical-align:top;">${cell(manual)}</td><td style="border:1px solid #dee2e6;padding:2px 4px;vertical-align:top;">${cell(auto)}</td></tr>`;
+        });
+        h += '</tbody></table></div>';
+        return h;
+      };
+      const tables = [
+        { title: `Release ${selectedVersion || ''} — Overall`, data: q.releaseOverall },
+        { title: `Release ${selectedVersion || ''} — Last 4 weeks`, data: q.releaseLast3Weeks },
+        { title: 'Master — Overall', data: q.masterOverall },
+        { title: 'Master — Last 4 weeks', data: q.masterLast3Weeks },
+      ];
+      const hasData = (d) => d && (d.functional || d.system || d.overall);
+      const visible = tables.filter(t => hasData(t.data));
+      if (visible.length === 0) return '<span style="color:#999;font-style:italic;">Not Set</span>';
+      let html = visible.map(t => buildTable(t.title, t.data)).join('');
+      if (visible.length < tables.length) html += '<div style="color:#999;font-style:italic;font-size:10px;margin-top:4px;">— No runs in other windows</div>';
+      return html;
+    }
     if (columnKey === 'statusUpdate') {
       return ''; // Hidden
+    }
+    if (columnKey === 'riskDetails') {
+      return formatRiskDetailsHTML(item);
     }
     if (columnKey === 'riskIndicator') {
       const riskIndicator = item.customfield_23560;
@@ -245,20 +325,25 @@ export function generateTableHTMLForEmail(
         riskTextColor = '#ffffff';
         riskFontWeight = '600';
       } else if (typeof riskValue === 'string') {
-        const colorMatch = String(riskValue).match(/^(Green|Yellow|Red|Blue|Orange)/i);
-        if (colorMatch) {
-          const colorName = colorMatch[1].toLowerCase();
-          const colorMap = {
-            'green': '#00875a',
-            'yellow': '#ff8b00',
-            'red': '#de350b',
-            'blue': '#0052cc',
-            'orange': '#ff8b00'
-          };
-          if (colorMap[colorName]) {
-            riskBgColor = colorMap[colorName];
-            riskTextColor = '#ffffff';
-            riskFontWeight = '600';
+        const lowerRisk = String(riskValue).toLowerCase().trim();
+        if (lowerRisk.startsWith('deep red')) {
+          riskBgColor = '#8B0000'; riskTextColor = '#ffffff'; riskFontWeight = '600';
+        } else {
+          const colorMatch = String(riskValue).match(/^(Green|Yellow|Red|Blue|Orange)/i);
+          if (colorMatch) {
+            const colorName = colorMatch[1].toLowerCase();
+            const colorMap = {
+              'green': '#00875a',
+              'yellow': '#ff8b00',
+              'red': '#de350b',
+              'blue': '#0052cc',
+              'orange': '#ff8b00'
+            };
+            if (colorMap[colorName]) {
+              riskBgColor = colorMap[colorName];
+              riskTextColor = '#ffffff';
+              riskFontWeight = '600';
+            }
           }
         }
       }
@@ -318,9 +403,34 @@ export function generateTableHTMLForEmail(
       }
       return escapeHtml(item.customfield_38460);
     }
+    if (columnKey === 'collaterals') {
+      const collaterals = [
+        { label: 'Requirements', fieldId: 'customfield_14463' },
+        { label: 'Design Doc', fieldId: 'customfield_14464' },
+        { label: 'Test Plan', fieldId: 'customfield_14465' },
+        { label: 'CG checklist', fieldId: 'customfield_55662' },
+        { label: 'PG checklist', fieldId: 'customfield_55663' },
+      ];
+      const isDriveUrl = (url) => /drive\.google\.com|docs\.google\.com/i.test(url);
+      let h = '<div style="line-height:1.8;font-size:11px;">';
+      collaterals.forEach((col, idx) => {
+        const raw = item[col.fieldId];
+        const text = raw == null ? '' : (typeof raw === 'string' ? raw.trim() : String(raw.value || raw.url || raw.name || '').trim());
+        let cellInner;
+        if (!text || text === 'N/A' || text === 'NA' || text === 'Not Set') {
+          cellInner = '<span style="color:#999;font-style:italic;">Not Set</span>';
+        } else if (/^https?:\/\//i.test(text)) {
+          const label = isDriveUrl(text) ? 'Drive' : 'Confluence';
+          cellInner = `<a href="${escapeHtml(text)}" target="_blank" rel="noopener noreferrer" style="color:#0065ff;text-decoration:none;">${label}</a>`;
+        } else {
+          cellInner = escapeHtml(text);
+        }
+        h += `<div style="margin-bottom:${idx < collaterals.length - 1 ? '8px' : '0'};"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">${escapeHtml(col.label)}:</div><div style="padding-left:4px;">${cellInner}</div></div>`;
+      });
+      h += '</div>';
+      return h;
+    }
     if (
-      columnKey === 'cgChecklistLink' ||
-      columnKey === 'pgChecklistLink' ||
       columnKey === 'riskAssessment' ||
       columnKey === 'pathToGreen'
     ) {

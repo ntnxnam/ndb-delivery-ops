@@ -165,7 +165,8 @@ async function generateAiVpReport({ version, jiraToken }) {
   const riskCounts = { red: 0, yellow: 0, green: 0, notSet: 0 };
   const projectDetails = { green: [], yellow: [], red: [] };
   try {
-    const commitJQL = buildCommitItemsJQL(version);
+    const labelPrefix = version ? String(version).split(/[- ]/)[0].toLowerCase() : undefined;
+    const commitJQL = buildCommitItemsJQL(version, labelPrefix ? { labelPrefix } : undefined);
     const fields = `key,summary,status,priority,assignee,${buildFieldIdsString(['riskIndicator','codeComplete','commitGate','promotionGate','statusUpdate','statusUpdateDate','qaContact','testLead','tpmOwner','requirementsLink','tcmsLink'])}`;
     const jira = await getJira(jiraToken);
     const commitResponse = await jira.get(JIRA_API_V2.SEARCH, {

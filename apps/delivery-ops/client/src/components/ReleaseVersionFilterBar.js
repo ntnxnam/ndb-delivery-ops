@@ -108,7 +108,10 @@ const SELECT_STYLE = {
   borderRadius: '3px',
   backgroundColor: '#fff',
   cursor: 'pointer',
-  minWidth: '110px'
+  minWidth: '110px',
+  flex: '1 1 140px',
+  maxWidth: '280px',
+  boxSizing: 'border-box',
 };
 
 const LABEL_STYLE = {
@@ -116,6 +119,15 @@ const LABEL_STYLE = {
   color: '#6c757d',
   whiteSpace: 'nowrap',
   marginRight: '2px'
+};
+
+const FILTER_GROUP_STYLE = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  flex: '0 1 200px',
+  minWidth: 0,
+  maxWidth: '320px',
 };
 
 const RISK_COLORS = {
@@ -216,6 +228,9 @@ function ReleaseVersionFilterBar({
       alignItems: 'center',
       gap: '12px',
       flexWrap: 'wrap',
+      width: '100%',
+      maxWidth: '100%',
+      boxSizing: 'border-box',
       backgroundColor: '#f0f4f8',
       border: '1px solid #d0dce8',
       borderRadius: '4px',
@@ -225,7 +240,7 @@ function ReleaseVersionFilterBar({
     }}>
       {/* Section filter */}
       {showSection && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={FILTER_GROUP_STYLE}>
           <span style={LABEL_STYLE}>Section:</span>
           <select
             style={SELECT_STYLE}
@@ -241,7 +256,7 @@ function ReleaseVersionFilterBar({
 
       {/* Risk filter */}
       {riskOptions.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={FILTER_GROUP_STYLE}>
           <span style={LABEL_STYLE}>Risk:</span>
           <select
             style={{
@@ -265,7 +280,7 @@ function ReleaseVersionFilterBar({
 
       {/* Status filter */}
       {statusOptions.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={FILTER_GROUP_STYLE}>
           <span style={LABEL_STYLE}>Status:</span>
           <select
             style={{
@@ -285,7 +300,7 @@ function ReleaseVersionFilterBar({
 
       {/* Assignee filter */}
       {assigneeOptions.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={FILTER_GROUP_STYLE}>
           <span style={LABEL_STYLE}>Assignee:</span>
           <select
             style={{
@@ -305,7 +320,7 @@ function ReleaseVersionFilterBar({
 
       {/* Assignee Manager filter */}
       {assigneeManagerOptions.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={FILTER_GROUP_STYLE}>
           <span style={LABEL_STYLE}>Assignee Mgr:</span>
           <select
             style={{
@@ -324,7 +339,7 @@ function ReleaseVersionFilterBar({
       )}
 
       {/* Staleness filter */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div style={FILTER_GROUP_STYLE}>
         <span style={LABEL_STYLE}>Status update:</span>
         <select
           style={{

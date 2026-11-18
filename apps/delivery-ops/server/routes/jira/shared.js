@@ -342,7 +342,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         timeout: 60000, // Increased timeout for comprehensive query
         params: {
           jql: jqlQuery,
-          fields: 'key,summary,status,resolution,assignee,duedate,fixVersions,customfield_10860,issuetype,customfield_20363',
+          fields: 'key,summary,status,resolution,resolutiondate,created,updated,assignee,priority,labels,duedate,fixVersions,customfield_10860,issuetype,customfield_20363',
           expand: 'names',
           maxResults: 1000
         }
@@ -359,7 +359,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
           const mainTicketResponse = await jira.get(`${baseUrl}/rest/api/2/issue/${jiraKey}`, {
             timeout: 6000, // Reduced from 30s to 6s
             params: {
-              fields: 'key,summary,status,issuetype,resolution,assignee,duedate,fixVersions,customfield_10860,customfield_20363',
+              fields: 'key,summary,status,issuetype,resolution,assignee,duedate,fixVersions,customfield_10860,customfield_20363,labels,priority,resolutiondate,created,updated',
               expand: 'names'
             }
           });
@@ -731,11 +731,30 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
       
       logger.jira.issueBreakdown(jiraKey, totalFiltered, formattedBreakdown, overallStats);
 
+      // Flat work-item payload for Feature Analytics widgets (Email Sender / Feature Dashboard)
+      const workItems = breakdownIssues.map((issue) => {
+        const f = issue.fields || {};
+        return {
+          key: issue.key,
+          summary: String(f.summary || ''),
+          issueType: (f.issuetype?.name || '').trim(),
+          status: (f.status?.name || '').trim(),
+          assignee: f.assignee?.displayName || null,
+          resolved: typeof f.resolutiondate === 'string' ? f.resolutiondate.slice(0, 10) : null,
+          created: typeof f.created === 'string' ? f.created.slice(0, 10) : null,
+          updated: typeof f.updated === 'string' ? f.updated.slice(0, 10) : null,
+          priority: f.priority?.name || null,
+          labels: Array.isArray(f.labels) ? f.labels : [],
+        };
+      });
+
       res.json({
         success: true,
         epics: formattedFeatures, // Return Features/Initiatives with their Epics
         count: formattedFeatures.length,
-        // Also return breakdown statistics
+        payloadJql: jqlQuery,
+        workItems,
+        // Kept for AI summary context (not rendered in email body)
         issueBreakdown: {
           total: totalFiltered,
           breakdown: formattedBreakdown,
@@ -829,7 +848,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
       const response = await jira.get(apiUrl, {
         timeout: 30000,
         params: {
-          fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_47780,customfield_55664,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_55662,customfield_55663,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
+          fields: 'key,summary,status,issuetype,fixVersions,labels,reporter,assignee,watchers,customfield_11067,customfield_11068,customfield_13860,customfield_13861,customfield_23073,customfield_35863,customfield_35864,customfield_45660,customfield_23560,customfield_47780,customfield_55664,customfield_14463,customfield_31460,customfield_14464,customfield_14465,customfield_55662,customfield_55663,customfield_11260,customfield_10860,customfield_11960,customfield_27764,customfield_38460',
           expand: 'names'
         }
       });
@@ -915,6 +934,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
       const customFields = {
         'customfield_11067': fields.customfield_11067,
         'customfield_11068': fields.customfield_11068,
+        'customfield_13860': fields.customfield_13860,
         'customfield_13861': fields.customfield_13861,
         'customfield_23073': fields.customfield_23073,
         'customfield_35863': fields.customfield_35863,
@@ -1030,6 +1050,10 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
         customfield_11068: {
           name: getFieldName('customfield_11068'),
           value: formatCustomFieldValue(customFields.customfield_11068)
+        },
+        customfield_13860: {
+          name: getFieldName('customfield_13860'),
+          value: formatCustomFieldValue(customFields.customfield_13860)
         },
         customfield_13861: {
           name: getFieldName('customfield_13861'),

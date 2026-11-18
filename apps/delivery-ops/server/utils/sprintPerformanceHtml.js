@@ -1,7 +1,9 @@
 /**
  * Render the Sprint Performance model as a single self-contained, interactive
- * HTML page: static org-wide sections + embedded data + an inline browser app
- * (filters, drill-down, sorting). No external scripts, fonts or styles.
+ * HTML page: shell + embedded blob + inline browser app. Executive summary
+ * (verdict, highlights, lowlights) is recomputed live in the browser from the
+ * blob on every paint / filter change — never baked as static HTML. After a
+ * JIRA regenerate the new blob drives a fresh summary.
  * Audience: director / team-exec.
  */
 
@@ -11,10 +13,7 @@ const { sprintPerformanceApp } = require('./sprintPerformanceClient');
 const timeline = require('./sprintPerformanceTimeline');
 
 const { esc } = svg;
-const RAG = { GREEN: ['#2b8a3e', '#ebfbee'], YELLOW: ['#e67700', '#fff9db'], RED: ['#c92a2a', '#fff5f5'] };
 const FLAGS = ['added', 'removed', 'done', 'carried', 'devDone', 'testDone', 'qaVerified', 'pendingQA', 'unresolvedNow', 'isTest', 'doneElsewhere'];
-
-const a = (url, text) => (url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${text}</a>` : text);
 
 function indexer() {
   const list = [];
@@ -58,34 +57,10 @@ function buildPayload(model) {
     issues,
     versionInfo,
     sprints: Object.fromEntries(model.sprints.map((s) => [s.id, s.name])),
+    hygiene: model.hygiene || { staleActive: [], lateClosed: [], startedEmpty: [] },
+    asksAi: model.asksSource === 'ai' ? (model.asks || []) : null,
     rows,
   };
-}
-
-function verdict(model) {
-  const { rag, trend } = model.overall;
-  const cfg = model.meta.config;
-  const [fg, bg] = RAG[rag];
-  const dir = trend.recent >= trend.early ? 'up' : 'down';
-  const k = cfg.trendSlots;
-  const why = `Org-wide say/do ${trend.recent}% over the last ${k} sprints (green ≥${cfg.rag.greenSayDoPct}%, yellow ≥${cfg.rag.yellowSayDoPct}%), ${dir} from ${trend.early}% in the ${k} before.`;
-  return `<div class="verdict" style="border-left:6px solid ${fg};background:${bg}"><span class="rag" style="background:${fg}">${rag}</span><span>${esc(why)}</span></div>`;
-}
-
-function bulletList(items, cls) {
-  return `<ul class="${cls}">${items.map((i) => `<li>${esc(i.text)}${i.cites?.length ? ` <span class="cite">${i.cites.map((c) => a(c.url, esc(c.label))).join(' · ')}</span>` : ''}</li>`).join('')}</ul>`;
-}
-
-function hygieneTable(model) {
-  const h = model.hygiene;
-  const name = (s) => a(s.url, esc(s.name));
-  const rows = [
-    ...h.staleActive.map((s) => `<tr><td>${name(s)}</td><td>Still open</td><td>ended ${esc(s.endDate)}</td><td class="num warn">${s.daysOverdue}d overdue</td></tr>`),
-    ...h.startedEmpty.map((s) => `<tr><td>${name(s)}</td><td>Started before planning</td><td>≥90% of items added after start</td><td class="num">–</td></tr>`),
-    ...h.lateClosed.map((s) => `<tr><td>${name(s)}</td><td>Closed late</td><td>ended ${esc(s.endDate)}, closed ${esc(s.completeDate)}</td><td class="num">${s.daysLate}d</td></tr>`),
-  ].join('');
-  return `<table class="small-table"><thead><tr><th>Sprint (opens JIRA Sprint Report)</th><th>Issue</th><th>Dates</th><th>Gap</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No hygiene issues.</td></tr>'}</tbody></table>
-  <div class="caption">Last ${model.meta.config.hygieneSlots} sprint slots only.</div>`;
 }
 
 function appendix(model) {
@@ -111,7 +86,7 @@ function appendix(model) {
     <li><b>Chronic carry-over:</b> tickets planned into ${cfg.chronicCarryoverSprints}+ sprints in the window (non-removed appearances). Tabs split Still open / Resolved (awaiting QA) / Closed. <b>Shipped in</b> = earliest released fix version dated on/after the closed date.</li>
     <li><b>Discipline timeline:</b> splits JIRA Completed say/do into phases where the level shifts ≥${cfg.phaseMinShiftPts || 8} pts for ≥${cfg.phaseMinSprints || 3} closed sprints. In-flight slots stay on the chart (grey band, hollow markers) but are excluded from phase averages. Lines: purple = JIRA Completed say/do; blue dashed = Dev-finished (Resolved∪Closed); teal dotted = <b>Delivery progress</b> (Bug/Imp Resolved + Bug/Imp Closed + Test Closed + other Closed) ÷ planned. Release gates from <code>releaseGateDates</code> (CC / CG / PG / GA; hollow ◇ = superseded).</li>
     <li><b>Mid-sprint churn by release:</b> unique mid-sprint-added tickets attributed by current fix version (excludes <code>master</code> / long-lived buckets). Share is of those tickets that have a product fix version.</li>
-    <li><b>Trend</b> = say/do of the last ${cfg.trendSlots} sprints vs the ${cfg.trendSlots} before. Teams with no sprint in the last ${cfg.trendSlots} slots are hidden from rankings unless you show retired teams.</li>
+    <li><b>Trend</b> = say/do of the last ${cfg.trendSlots} <b>closed</b> sprints vs the ${cfg.trendSlots} before (in-flight cadence slot excluded, same rule as discipline phases). Teams with no closed sprint in the last ${cfg.trendSlots} slots are hidden from rankings unless you show retired teams.</li>
     <li><b>Delivery trend chart:</b> membership bars = Say (planned) / Added / Removed. Solid % lines (planned-only, type-matched): Dev→Resolved (Bug/Imp) ÷ planned Bug/Imp; QA Closed (Bug/Imp) ÷ planned Bug/Imp; Closed (other) ÷ planned non-Bug/Imp. Extra overlays: teal <b>dotted Delivery progress</b> (BI Resolved + BI Closed + Test Closed + other Closed) ÷ planned, and black <b>dashed Avg of 3</b> type-matched rates. Legend sits above the chart. <b>BI</b> = Bug / Improvement. Release gates show as ◆ markers + chips + Gate(s) column.</li>
     <li><b>Velocity streams</b> exclude portfolio types (${esc(cfg.portfolioIssueTypes.join(', '))}); headline tiles include every issue type, as the Sprint Report does. <b>QA verification</b> = Bug/Improvement completed and Closed, ×${cfg.qaVerificationRatio} (adjusted count, not story points).</li>
     <li><b>Org roll-up:</b> manager = <code>Team-*-DirectReports</code>. ${cfg.scopeGroups?.length
@@ -124,12 +99,12 @@ function appendix(model) {
 }
 
 function plainText(model) {
+  const first = model.meta.slots[0];
+  const last = model.meta.slots[model.meta.slots.length - 1];
   const lines = [
-    `${model.meta.teamName} Sprint Performance — ${model.meta.slots[0].name}–${model.meta.slots[model.meta.slots.length - 1].name}`,
-    `Verdict: ${model.overall.rag} (say/do ${model.overall.trend.recent}% last 3 sprints)`,
-    'Highlights:', ...model.highlights.map((h) => `+ ${h.text}`),
-    'Lowlights:', ...model.lowlights.map((h) => `- ${h.text}`),
-    'Asks:', ...model.asks.map((x) => `* ${x.text} (${x.owner})`),
+    `${model.meta.teamName} Sprint Performance — ${first.name}–${last.name}`,
+    `Generated ${model.meta.generatedAt || ''}`,
+    'Enable JavaScript to view the live executive summary, charts and filters.',
   ];
   return `<noscript><div style="white-space:pre-wrap">${esc(lines.join('\n'))}</div></noscript>`;
 }
@@ -163,7 +138,13 @@ ul.hl,ul.ll{margin:0;padding-left:18px}ul.hl li,ul.ll li{margin:5px 0}ul.hl li::
 table{border-collapse:collapse;width:100%}th{font-size:11px;text-transform:uppercase;color:#868e96;text-align:left;padding:5px 6px;border-bottom:2px solid #dee2e6;white-space:nowrap}
 th.sort{cursor:pointer}th.sort:hover{color:#1c7ed6}th.sort.on{color:#1c7ed6}th.sort.on::after{content:" ▾"}
 td{padding:4px 6px;border-bottom:1px solid #f1f3f5;vertical-align:middle}td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-table.heat td.num{text-align:center;border:2px solid #fff;border-radius:4px;padding:3px 2px;font-size:11px;min-width:26px}table.heat th{padding:4px 2px;font-size:10px}table.heat td.name,table.heat th:first-child{position:sticky;left:0;background:#fff;z-index:1}table.heat td.cell{cursor:pointer}table.heat td.cell:hover{outline:2px solid #1c7ed6}
+table.heat td.num{text-align:center;border:2px solid #fff;border-radius:4px;padding:3px 2px;font-size:11px;min-width:26px}table.heat th{padding:4px 2px;font-size:10px;vertical-align:bottom}table.heat td.name,table.heat th:first-child{position:sticky;left:0;background:#fff;z-index:1}table.heat td.cell{cursor:pointer}table.heat td.cell:hover{outline:2px solid #1c7ed6}
+table.heat th .slot-end{display:block;font-size:8px;font-weight:500;color:#868e96;line-height:1.1;margin-top:1px;text-transform:none;letter-spacing:0}
+table.heat th.ongoing{background:#e7f5ff;color:#1c7ed6;border-bottom:2px solid #4dabf7}
+table.heat th.ongoing .slot-end{color:#4dabf7}
+table.heat th.ongoing .ongoing-tag{display:block;font-size:9px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:#1c7ed6;line-height:1.1;margin-top:1px}
+table.heat th.ongoing .ongoing-left{display:block;font-size:8px;font-weight:600;color:#1864ab;line-height:1.1;margin-top:1px;text-transform:none;letter-spacing:0}
+table.heat td.ongoing{font-style:italic}
 td.strong{font-weight:700}td.warn,.warn{color:#c92a2a;font-weight:600}td.name{font-weight:600;white-space:nowrap}td.indent{padding-left:22px;font-weight:500}
 tr.leader td{background:#f8f9fa;font-weight:700;border-top:2px solid #dee2e6}tr.dim td{opacity:.6}
 a.pick{color:#212529;border-bottom:1px dashed #adb5bd}a.pick:hover{color:#1c7ed6;text-decoration:none}a.ext{font-size:11px;color:#adb5bd;margin-left:3px}a.ext:hover{color:#1c7ed6}
@@ -188,6 +169,11 @@ function inlineLibs() {
     metrics.statusAtClose.toString(),
     metrics.agg.toString(),
     metrics.halves.toString(),
+    metrics.jiraUrl.toString(),
+    metrics.sprintInJql.toString(),
+    metrics.ragFor.toString(),
+    metrics.topChurnRelease.toString(),
+    metrics.buildNarrative.toString(),
     timeline.segmentPhases.toString(),
     timeline.disciplineChart.toString(),
     timeline.disciplineLegendHtml.toString(),
@@ -196,13 +182,70 @@ function inlineLibs() {
   ].join('\n');
 }
 
-function renderSprintPerformanceHtml(model) {
+function shellModelFromPayload(payload) {
+  const meta = payload.meta || {};
+  const slots = meta.slots || [];
+  return {
+    meta: { ...meta, stillOpenLastSlot: meta.stillOpenLastSlot || [] },
+    overall: { rag: 'YELLOW', trend: { recent: null, early: null }, series: [], window: {}, recentSayDo: null },
+    highlights: [],
+    lowlights: [],
+    asks: payload.asksAi || [],
+    asksSource: payload.asksAi ? 'ai' : 'rules',
+    hygiene: payload.hygiene || { staleActive: [], lateClosed: [], startedEmpty: [] },
+    scrumTeams: [],
+    sprints: Object.entries(payload.sprints || {}).map(([id, name]) => ({ id, name })),
+    rows: [],
+    metaPeople: meta.people,
+  };
+}
+
+/** Extract embedded client payload from a previously baked HTML report. */
+function extractPayloadFromHtml(html) {
+  const marker = 'sprintPerformanceApp(';
+  const start = html.lastIndexOf(marker);
+  if (start < 0) return null;
+  let i = start + marker.length;
+  while (i < html.length && /\s/.test(html[i])) i += 1;
+  if (html[i] !== '{') return null;
+  let depth = 0;
+  let inStr = null;
+  let esc = false;
+  for (let j = i; j < html.length; j += 1) {
+    const ch = html[j];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === inStr) inStr = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { inStr = ch; continue; }
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        try { return JSON.parse(html.slice(i, j + 1)); } catch (e) { return null; }
+      }
+    }
+  }
+  return null;
+}
+
+/** Re-shell a legacy report: current template/JS + saved JIRA payload (no model JSON). */
+function renderSprintPerformanceFromPayload(payload) {
+  return renderSprintPerformanceHtml(shellModelFromPayload(payload), payload);
+}
+
+function renderSprintPerformanceHtml(model, prebuiltPayload) {
   const { meta } = model;
   const first = meta.slots[0];
   const last = meta.slots[meta.slots.length - 1];
   const date = meta.generatedAt.slice(0, 10);
   const title = `${meta.teamName} Sprint Performance Review — ${first.name}–${last.name}`;
-  const data = JSON.stringify(buildPayload(model)).replace(/</g, '\\u003c').replace(/\u2028|\u2029/g, '');
+  const teamCount = (model.scrumTeams && model.scrumTeams.length) || meta.scrumTeamCount || '—';
+  const people = meta.people != null ? meta.people : (model.metaPeople || '—');
+  const uniqueIssues = meta.uniqueIssues != null ? Number(meta.uniqueIssues).toLocaleString() : '—';
+  const data = JSON.stringify(prebuiltPayload || buildPayload(model)).replace(/</g, '\\u003c').replace(/\u2028|\u2029/g, '');
   return `<!DOCTYPE html>
 <!-- Sprint | ${esc(meta.teamName)} | ${first.name}-${last.name} | ${date} -->
 <!-- audience: director -->
@@ -212,15 +255,15 @@ function renderSprintPerformanceHtml(model) {
 ${plainText(model)}
 <header>
   <div><h1>${esc(title)}</h1>
-  <div class="muted">${esc(first.range)} ${first.startIso.slice(0, 4)} → ${esc(last.range)} ${last.startIso.slice(0, 4)} · ${meta.sprintCount} sprints · ${model.scrumTeams.length} scrum teams · ${meta.people} people · ${meta.uniqueIssues.toLocaleString()} tickets</div></div>
+  <div class="muted">${esc(first.range)} ${first.startIso.slice(0, 4)} → ${esc(last.range)} ${last.startIso.slice(0, 4)} · ${meta.sprintCount} sprints · ${teamCount} scrum teams · ${people} people · ${uniqueIssues} tickets</div></div>
   <div>${meta.scopeLabel ? `<span class="badge" title="JIRA groups">Scope: ${esc(meta.scopeLabel)}</span> ` : ''}<span class="badge">Audience: Director / Team Exec</span> <span class="badge">Live JIRA · ${esc(meta.generatedAt.replace('T', ' ').slice(0, 16))} UTC</span></div>
 </header>
-${verdict(model)}
+<div id="verdict"></div>
 
-<h2>Executive summary <span class="muted small">(org-wide)</span></h2>
+<h2>Executive summary <span class="muted small" id="exec-scope-label">(live)</span></h2>
 <div class="grid2">
-  <div class="card"><h3 style="color:#2b8a3e">Highlights</h3>${bulletList(model.highlights, 'hl')}</div>
-  <div class="card"><h3 style="color:#c92a2a">Lowlights</h3>${bulletList(model.lowlights, 'll')}</div>
+  <div class="card"><h3 style="color:#2b8a3e">Highlights</h3><div id="exec-highlights"><p class="muted small">Computing…</p></div></div>
+  <div class="card"><h3 style="color:#c92a2a">Lowlights</h3><div id="exec-lowlights"><p class="muted small">Computing…</p></div></div>
 </div>
 
 <h2>Explore</h2>
@@ -266,11 +309,11 @@ ${verdict(model)}
 
 <h2>Scrum teams</h2>
 <div class="card"><h3>Say/do by sprint</h3><div id="heatmap"></div>
-<div class="caption">Cells show say/do % per sprint (JIRA Sprint Report <b>Completed</b> ÷ planned). Click a cell for Completed / Not Completed / Removed lists · click a team name to filter · click a column header to sort. Quiet teams: use “Show N team(s)…” under this table.</div></div>
+<div class="caption">Cells show say/do % per sprint (JIRA Sprint Report <b>Completed</b> ÷ planned). <b style="color:#1c7ed6">Ongoing</b> columns are blue / provisional mid-sprint progress — not a final score. Click a cell for Completed / Not Completed / Removed lists · click a team name to filter · click a column header to sort. Quiet teams: use “Show N team(s)…” under this table.</div></div>
 <div class="card" style="margin-top:12px"><h3>Say/do by sprint — Dev finished (Resolved ∪ Closed)</h3><div id="heatmap-dev"></div>
-<div class="caption">Same teams, slots, membership and <b>planned</b> denominator as the table above. <b>Do</b> = ticket status at sprint close was <b>Resolved or Closed</b> (Dev done, including waiting on QA). Gap vs the JIRA Completed heatmap is usually QA bandwidth, not “Dev missed the sprint.” Click a cell for the same drill-down lists.</div></div>
+<div class="caption">Same teams, slots, membership and <b>planned</b> denominator as the table above. <b>Do</b> = ticket status at sprint close was <b>Resolved or Closed</b> (Dev done, including waiting on QA). <b style="color:#1c7ed6">Ongoing</b> columns match the table above (blue / provisional). Gap vs the JIRA Completed heatmap is usually QA bandwidth, not “Dev missed the sprint.” Click a cell for the same drill-down lists.</div></div>
 <div class="card" style="margin-top:12px"><h3>Completion by type — Dev→Resolved / QA Closed / Closed other</h3><div id="heatmap-completion"></div>
-<div class="caption">Shown only when a <b>scrum team</b> is selected — three rows for that team only. <b>Dev→Resolved</b> = planned Bug/Imp still Resolved at close ÷ planned Bug/Imp · <b>QA Closed BI</b> = planned Bug/Imp Closed ÷ planned Bug/Imp · <b>Closed other</b> = planned non-Bug/Imp Closed ÷ planned other. Hover for counts · click a cell for sprint lists.</div></div>
+<div class="caption">Shown only when a <b>scrum team</b> is selected — three rows for that team only. <b>Dev→Resolved</b> = planned Bug/Imp still Resolved at close ÷ planned Bug/Imp · <b>QA Closed BI</b> = planned Bug/Imp Closed ÷ planned Bug/Imp · <b>Closed other</b> = planned non-Bug/Imp Closed ÷ planned other. <b style="color:#1c7ed6">Ongoing</b> columns are blue / provisional. Hover for counts · click a cell for sprint lists.</div></div>
 
 <h2 id="org-heading">Organisation</h2>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 id="org-title">By leader and manager</h3>
@@ -287,16 +330,12 @@ ${verdict(model)}
 <h2>Risks</h2>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h3 id="chronic-title">Chronic carry-over</h3>
   <input id="f-q" class="btn" placeholder="Search key, summary, assignee…" style="min-width:260px"></div><div id="chronic"></div></div>
-<div class="card"><h3>Sprint hygiene <span class="muted small">(org-wide)</span></h3>${hygieneTable(model)}</div>
+<div class="card"><h3>Sprint hygiene <span class="muted small" id="hyg-scope-label">(live)</span></h3><div id="hyg-table"></div></div>
 
-<h2>Asks of leadership <span class="muted small">(org-wide)</span></h2>
-<div class="card">
-${model.asksSource === 'ai'
-    ? `<div class="ai-banner" role="status"><span class="ai-pill">AI generated</span><div class="ai-body"><b>The asks in the table below were drafted by AI</b> from org-wide sprint metrics (say/do, Dev-finished gap, QA lag, org rankings, velocity streams, chronic carry-over, hygiene). Review before acting. Ticket keys are limited to keys in the prompt.</div></div>`
-    : `<div class="rules-banner" role="status"><span class="rules-pill">Rules</span><div class="ai-body"><b>The asks below are rule-based</b> (AI unavailable or failed). Same metric signals; not LLM-drafted.</div></div>`}
-<table><thead><tr><th>#</th><th>Ask</th><th>Owner</th></tr></thead><tbody>
-${(model.asks || []).map((x, i) => `<tr><td class="num">${i + 1}</td><td>${esc(x.text)}</td><td class="muted">${esc(x.owner)}</td></tr>`).join('')}
-</tbody></table>
+<h2>Asks of leadership <span class="muted small" id="asks-scope-label">(live)</span></h2>
+<div class="card" id="asks-card">
+  <div id="asks-banner"></div>
+  <table><thead><tr><th>#</th><th>Ask</th><th>Owner</th></tr></thead><tbody id="asks-body"></tbody></table>
 </div>
 
 ${appendix(model)}
@@ -315,4 +354,9 @@ sprintPerformanceApp(${data});
 </body></html>`;
 }
 
-module.exports = { renderSprintPerformanceHtml };
+module.exports = {
+  renderSprintPerformanceHtml,
+  renderSprintPerformanceFromPayload,
+  extractPayloadFromHtml,
+  buildPayload,
+};

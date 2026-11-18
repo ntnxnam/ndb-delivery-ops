@@ -2,6 +2,19 @@
 
 This document defines how deferrals are detected, classified, analyzed, and escalated across Component and Release reports.
 
+## Workbench handoff order
+
+Release Outstanding Work tab order (fixed):
+
+| Step | Owner | Action |
+|---|---|---|
+| 1. Justification | Dev | Fill Deferral Justification after leave |
+| 2. Move | Dev DRI | Change `fixVersion` — decision record |
+| 3. Deferral Label | QA DRI | Add `{release}-deferred` |
+| 4. Must-fix | Dev DRI, QA DRI, or QA | When mustfix label is added; status chase @12h |
+
+**Move `fixVersion` before deferred / mustfix labels.** Adding `{release}-mustfix` clears that release’s `{release}-deferred` only (not other releases). Full rule: `.cursor/rules/release-outstanding-work-order.mdc`.
+
 ## Core Concepts
 
 ### Deferral

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { authenticatedPost } from '../../utils/api';
+import { authenticatedGet, authenticatedPost } from '../../utils/api';
 import { jiraDataToAiItem } from './gateDateUtils';
 
 const DATE_PREFIX_REGEX = /^\[\d{4}-\d{2}-\d{2}\]\s*/;
@@ -7,6 +7,7 @@ const DATE_PREFIX_REGEX = /^\[\d{4}-\d{2}-\d{2}\]\s*/;
 /**
  * AI risk summary for Email Sender — same NAI gateway as Project Status.
  * Parent owns draft state so it can be included in the outbound email.
+ * Loads per-release ganttConfig so gate-aware CRITICAL_RISKS (MISSED GATE / overshoot) can fire.
  */
 function AiSummaryDraft({ jiraData, issueBreakdown, release, draft, onDraftChange }) {
   const [generating, setGenerating] = useState(false);
@@ -27,9 +28,20 @@ function AiSummaryDraft({ jiraData, issueBreakdown, release, draft, onDraftChang
     setGenerating(true);
     setError('');
     try {
+      let ganttConfig = null;
+      if (release) {
+        try {
+          const cfgResp = await authenticatedGet('/api/config/release-versions');
+          ganttConfig = cfgResp.data?.releaseGateDates?.[release] || null;
+        } catch {
+          // Gate markers optional — signals still work from feature dates / breakdown.
+          ganttConfig = null;
+        }
+      }
+
       const resp = await authenticatedPost('/api/ai/exec-summary', {
         item,
-        ganttConfig: null,
+        ganttConfig,
         breakdownData: issueBreakdown || null,
         release: release || null,
         releaseContext: null,

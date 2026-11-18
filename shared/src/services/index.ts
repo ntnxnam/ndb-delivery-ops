@@ -43,3 +43,5 @@ export * from './retroService.js';
 export * from './riskIndicator.js';
 export * from './sprintMetrics.js';
 export * from './releaseIntelligence.js';
+export * from './jiraDiggingAskService.js';
+export * from './jqlBuilder.js';

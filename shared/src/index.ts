@@ -88,7 +88,25 @@ export type {
   ReleasePayloadOptions,
 } from './services/payloadJqlService.js';
 export type { PayloadBucketKey } from './services/payloadJqlService.js';
+
 export {
+  jqlBuilder,
+  stripDoneFromBaseFilter,
+  buildClosedJql,
+  buildTouchedJql,
+  buildWorkloggedJql,
+  buildTimeWindowJql,
+  buildReleaseFeatureJql,
+  buildReleaseInitiativeJql,
+  buildReleaseCommitJql,
+  buildReleaseCommitTotalJql,
+  buildKpiClosedJql,
+  buildFeatureSummaryJql,
+  buildFeatureCountJql,
+  buildInitiativeCountJql,
+  buildTeamOverallJqls,
+} from './services/jqlBuilder.js';
+export type { JqlBuilderParams, JqlBuildResult } from './types/reports.js';export {
   TicketFetchService,
   buildAllTicketsJql,
   buildWorkItemsJql,
@@ -324,6 +342,12 @@ export {
   buildFeatureKpis,
   parseStatusUpdate20,
   FEATURE_DASHBOARD_FIELDS,
+  FEATURE_PORTFOLIO_TYPES,
+  buildStatusCategoryByName,
+  extractFirstInProgressIso,
+  computeFeatureTiming,
+  computeFixVersionHygiene,
+  isFeaturePortfolioType,
 } from './services/featureDashboardService.js';
 export type {
   FeatureListItem,
@@ -332,7 +356,31 @@ export type {
   FeatureFlowPoint,
   FeatureKpiTile,
   StatusUpdateSection,
+  FeatureTiming,
+  FeatureFixVersionHygiene,
+  JiraStatusDescriptor,
+  IssueChangelogSlice,
 } from './services/featureDashboardService.js';
+
+export {
+  buildEnrichedFlowSeries,
+  aggregateFlowWeekly,
+  toCumulativeFlow,
+  transformFlow,
+  findKickoffEpic,
+  evaluateKickoff,
+  inferFeatureConfidence,
+  keysToJql,
+  isCompanionIssue,
+  isCodingWorkItem,
+} from './services/featureEnrichmentService.js';
+export type {
+  EnrichedFlowPoint,
+  FlowMode,
+  KickoffState,
+  InferenceDriver,
+  FeatureInference,
+} from './services/featureEnrichmentService.js';
 
 export {
   loadAgentPack,
@@ -387,6 +435,20 @@ export type {
 } from './services/releaseIntelligence.js';
 
 export {
+  answerDiggingAsk,
+  loadDiggingCache,
+  compactTickets,
+  buildDiggingSystemPrompt,
+  buildDiggingUserPrompt,
+} from './services/jiraDiggingAskService.js';
+export type {
+  DiggingManifest,
+  LoadDiggingResult,
+  AnswerDiggingAskOptions,
+  AnswerDiggingAskResult,
+} from './services/jiraDiggingAskService.js';
+
+export {
   runAgentTurn,
   createPackTools,
   buildBootstrapPrompt,
@@ -410,3 +472,5 @@ export type {
   HitlInbox,
   ProvenanceRecord,
 } from './agentRuntime/index.js';
+export * from './utils/teamProjectUtils.js';
+export type { TeamConfig, TeamId, TeamBoardConfig, TeamNotificationEmails, TeamTcmsConfig, TeamQaEnvConfig, TeamBrandingConfig } from './types/teamConfig.js';

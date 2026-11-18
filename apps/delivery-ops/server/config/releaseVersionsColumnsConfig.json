@@ -1,5 +1,5 @@
 {
-  "defaultReleaseVersion": "NDB-2.12",
+  "defaultReleaseVersion": "NDB-3.0",
   "releaseBaseFilters": {
     "NDB-2.11": "filter=NDB-2.11-All",
     "NDB-2.10": "filter=NDB-2.10-All",
@@ -165,9 +165,39 @@
       "formatType": "full",
       "customField": "customfield_23073"
     },
+    "quality": {
+      "label": "Quality",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 12.8,
+      "width": "18%",
+      "description": "TCMS Quality: 4 tables (Release/Master × Overall/Last 4 weeks), each 2 rows (Functional/System) × 2 cols (Manual/Automation) with QI/Run/Passed/Failed/Rate"
+    },
+    "riskDetails": {
+      "label": "Risk Details",
+      "includeInUI": true,
+      "includeInEmail": true,
+      "order": 13,
+      "width": "20%",
+      "description": "Merged: Risk Indicator (customfield_23560) + Risk Assessment (customfield_47780) + Path to Green (customfield_55664)",
+      "fields": {
+        "riskIndicator": {
+          "label": "Risk Indicator",
+          "customField": "customfield_23560"
+        },
+        "riskAssessment": {
+          "label": "Risk Assessment",
+          "customField": "customfield_47780"
+        },
+        "pathToGreen": {
+          "label": "Path to Green",
+          "customField": "customfield_55664"
+        }
+      }
+    },
     "riskIndicator": {
       "label": "Risk Indicator",
-      "includeInUI": true,
+      "includeInUI": false,
       "includeInEmail": true,
       "order": 13,
       "width": "8%",
@@ -176,7 +206,7 @@
     },
     "riskAssessment": {
       "label": "Risk Assessment",
-      "includeInUI": true,
+      "includeInUI": false,
       "includeInEmail": true,
       "order": 13.1,
       "width": "10%",
@@ -184,27 +214,40 @@
     },
     "pathToGreen": {
       "label": "Path to Green",
-      "includeInUI": true,
+      "includeInUI": false,
       "includeInEmail": true,
       "order": 13.2,
       "width": "10%",
       "customField": "customfield_55664"
     },
-    "cgChecklistLink": {
-      "label": "Link to CG checklist",
+    "collaterals": {
+      "label": "Collaterals",
       "includeInUI": true,
       "includeInEmail": true,
       "order": 13.3,
-      "width": "8%",
-      "customField": "customfield_55662"
-    },
-    "pgChecklistLink": {
-      "label": "Link to PG checklist",
-      "includeInUI": true,
-      "includeInEmail": true,
-      "order": 13.4,
-      "width": "8%",
-      "customField": "customfield_55663"
+      "width": "14%",
+      "collateralFields": {
+        "requirementsLink": {
+          "label": "Requirements",
+          "customField": "customfield_14463"
+        },
+        "designDocLink": {
+          "label": "Design Doc",
+          "customField": "customfield_14464"
+        },
+        "testPlanLink": {
+          "label": "Test Plan",
+          "customField": "customfield_14465"
+        },
+        "cgChecklistLink": {
+          "label": "CG checklist",
+          "customField": "customfield_55662"
+        },
+        "pgChecklistLink": {
+          "label": "PG checklist",
+          "customField": "customfield_55663"
+        }
+      }
     },
     "executiveSummary": {
       "label": "Executive Summary",
@@ -256,11 +299,9 @@
     "summary",
     "teamContacts",
     "checkpointDates",
-    "riskIndicator",
-    "riskAssessment",
-    "pathToGreen",
-    "cgChecklistLink",
-    "pgChecklistLink",
+    "quality",
+    "riskDetails",
+    "collaterals",
     "statusUpdate",
     "taskBreakdown",
     "execSummary",

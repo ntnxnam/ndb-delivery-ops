@@ -34,13 +34,19 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 | UI (top → bottom) | Email body (top → bottom) |
 |---|---|
 | Ticket strip + pulled details (incl. sprint Gantt) | Highlights / Lowlights / Support |
-| Gates chart | AI risk summary |
+| Gates + Actuals charts | AI risk summary |
 | Risk row | Risk context |
-| Subject (header only) · Highlights · AI · Recipients · **Send** | Gates vs dates → JIRA ticket / epics / breakdown → Sprint timeline |
+| Subject (header only) · Highlights · AI · Recipients · **Send** | Gates vs dates (prescription + actuals) → JIRA ticket / epics / breakdown → Sprint timeline |
 
 1. **JIRA key + Fetch** — Feature / Initiative / X-FEAT / Capability.
-2. **Pulled** — strip, collapsed ticket data, sprint Gantt, gates (EC→…→PG), risk (Indicator / Assessment / Path to Green).
-3. **Entry** — Subject (email header only), Highlights (required sections), **AI risk summary (required — emailed)**, Recipients.
+2. **Pulled** — strip, **expanded-by-default** ticket data (still collapsible), sprint Gantt, **one Gates vs Actuals chart** (paired bars: Prescribed vs Actual; CC Prescribed = EC→release gate + ticket CC; CC Actual = first coding start→last coding finish; days from EC), risk (Indicator / Assessment / Path to Green).
+   - Actuals: CC/CG/PG = latest closed in pool (shows progress if some still open); GA = only when everything non-portfolio is closed.
+3. **Entry** — Subject (email header only), Highlights (required sections), **AI risk summary (required — emailed)**, optional **CC checkboxes** (from `emailSenderCCConfig.defaultCC`, unchecked by default), Additional Recipients.
+   - Leadership CC is opt-in only; sender is always CC'd on send.
+   - AI brief format: plain **Date / TLDR / Situation / Asks** (no emoji checklist chrome).
+   - Dependencies must demarcate **I wait on them (I need them)** vs **They wait on me (they need me)**; Asks must match direction.
+   - **Gate-aware call-outs** in Situation when CRITICAL_RISKS / release markers say so (MISSED GATE, overshoot, missing CC, pace vs days-to-gate); Email Sender passes per-release `ganttConfig`.
+   - No raw `SIGNALS.…` dumps; chase-ready named owners when Situation or CRITICAL_RISKS is non-empty. Links: TEAM_NA or real URL = OK.
 4. **Send** + Outlook copy fallback (preview includes AI + sprint timeline).
 
 ---
@@ -69,6 +75,9 @@ The Email Sender is the original and primary feature of the app. It lets an auth
 
 - [ ] Confluence URL produces extracted HTML within 5 seconds on a standard internal page
 - [ ] JIRA release data appears in the body within 3 seconds of release selection
-- [ ] Send action confirms delivery with a success toast or surfaces the SMTP error message verbatim
+- [ ] Send action confirms delivery with a success toast or surfaces a safe SMTP error (no secrets)
 - [ ] Email appears in Email History within 30 seconds of send
 - [ ] Page is fully usable at 1280px viewport width without horizontal scroll
+- [ ] `POST /api/email/send` and `/preview` require a valid JIRA token
+- [ ] Email HTML strips scripts, event handlers, and `javascript:` / `localhost` URLs
+- [ ] API contract documented in `docs/api/email.md`

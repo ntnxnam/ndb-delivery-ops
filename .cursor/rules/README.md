@@ -7,6 +7,10 @@ stage 2 may use `/multi-model-review` without replacing the pipeline;
 `minimal-architecture`, `api-docs-required`, `page-docs-required`,
 `documentation-consistency`, `gerrit-push-for-review`, `concise-comms`).
 
+**Metric dual-click** (`metric-click-dual-action.mdc`, pack + symlink): count →
+in-app drill; Open in JIRA → exact JQL. Extends user-level
+`jira-authenticity-links` §1 for all delivery-ops pages.
+
 Most other rules live at the **user level** so they apply across every
 NDB-Ops repo:
 

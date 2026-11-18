@@ -35,7 +35,7 @@ quarterly".
      interval, top three risk drivers with probability estimates.
 
 3. **Build the long-form report**
-   - Drive the `~/.cursor/skills/team-exec-release-report/` skill.
+   - Drive the `agent-pack/skills/team-exec-briefing/` skill (mode=report).
    - Required sections (per documentation-consistency rule):
      1. Executive Summary
      2. Release Health

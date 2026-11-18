@@ -114,6 +114,44 @@ function saveReleaseDatesConfig(config) {
   }
 }
 
+/** Parse Dev/QA DRI list from UI (comma/semicolon/newline) or array → unique usernames. */
+function normalizeDriList(value) {
+  const parts = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,;\n]+/);
+  const seen = new Set();
+  const out = [];
+  for (const p of parts) {
+    let s = String(p || '').trim().toLowerCase();
+    if (!s) continue;
+    if (s.includes('@')) s = s.split('@')[0];
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+const RELEASE_VERSIONS_CC_CONFIG_PATH = path.join(__dirname, '../config/releaseVersionsCCConfig.json');
+
+/** Keep email versionDRIs in sync with releaseGateDates.devDRIs (emails for CC). */
+function syncVersionDrisFromReleaseConfig(version, devDRIs) {
+  try {
+    delete require.cache[require.resolve(RELEASE_VERSIONS_CC_CONFIG_PATH)];
+    const raw = fs.readFileSync(RELEASE_VERSIONS_CC_CONFIG_PATH, 'utf8');
+    const cc = raw && raw.trim() ? JSON.parse(raw) : { defaultCC: [], versionDRIs: {} };
+    if (!cc.versionDRIs || typeof cc.versionDRIs !== 'object') cc.versionDRIs = {};
+    const emails = (devDRIs || []).map((u) =>
+      String(u).includes('@') ? String(u).toLowerCase() : `${String(u).toLowerCase()}@nutanix.com`
+    );
+    if (emails.length) cc.versionDRIs[version] = emails;
+    else delete cc.versionDRIs[version];
+    fs.writeFileSync(RELEASE_VERSIONS_CC_CONFIG_PATH, JSON.stringify(cc, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('[config] syncVersionDrisFromReleaseConfig failed:', e.message);
+  }
+}
+
 /**
  * Get release versions columns configuration
  * GET /api/config/release-versions-columns
@@ -288,6 +326,26 @@ router.get('/generic-emailer', (req, res) => {
   } catch (error) {
     console.error('Error loading JIRA emailer config:', error);
     res.status(500).json({ error: 'Failed to load JIRA emailer configuration' });
+  }
+});
+
+/**
+ * Get Email Sender optional CC list (defaultCC shown as checkboxes; off by default)
+ * GET /api/config/email-sender
+ */
+router.get('/email-sender', (req, res) => {
+  try {
+    const configPath = path.join(__dirname, '../config/emailSenderCCConfig.json');
+    delete require.cache[require.resolve(configPath)];
+    const config = require(configPath);
+    res.json({
+      defaultCC: Array.isArray(config.defaultCC) ? config.defaultCC : [],
+      defaultTO: Array.isArray(config.defaultTO) ? config.defaultTO : [],
+      projectTeamFields: Array.isArray(config.projectTeamFields) ? config.projectTeamFields : []
+    });
+  } catch (error) {
+    console.error('Error loading Email Sender CC config:', error);
+    res.status(500).json({ error: 'Failed to load Email Sender configuration' });
   }
 });
 
@@ -722,8 +780,21 @@ router.post('/release-dates', express.json(), (req, res) => {
 
     releaseConfig.dateHistory = newDateHistory;
 
+    // Release DRIs (Dev / QA) — main release setup; usernames without domain
+    if (Object.prototype.hasOwnProperty.call(gateFields, 'devDRIs')) {
+      releaseConfig.devDRIs = normalizeDriList(gateFields.devDRIs);
+    } else if (!Array.isArray(releaseConfig.devDRIs)) {
+      releaseConfig.devDRIs = normalizeDriList(previousConfig.devDRIs);
+    }
+    if (Object.prototype.hasOwnProperty.call(gateFields, 'qaDRIs')) {
+      releaseConfig.qaDRIs = normalizeDriList(gateFields.qaDRIs);
+    } else if (!Array.isArray(releaseConfig.qaDRIs)) {
+      releaseConfig.qaDRIs = normalizeDriList(previousConfig.qaDRIs);
+    }
+
     config.releases[version] = releaseConfig;
     saveReleaseDatesConfig(config);
+    syncVersionDrisFromReleaseConfig(version, releaseConfig.devDRIs);
 
     // Detect GA date change and fire side-effects asynchronously
     const oldGaDate = previousConfig.ga1?.date || previousConfig.ga2?.date || null;

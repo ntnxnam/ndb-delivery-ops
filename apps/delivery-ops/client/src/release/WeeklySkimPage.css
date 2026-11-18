@@ -1,0 +1,350 @@
+.ws-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 1.5rem;
+  font-family: 'Segoe UI', Aptos, Calibri, sans-serif;
+  color: #172b4d;
+}
+
+.ws-header {
+  margin-bottom: 0.75rem;
+}
+
+.ws-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.ws-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.ws-sub a {
+  color: #0052cc;
+}
+
+.ws-controls {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ws-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ws-chip {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ws-chip--active {
+  background: #172b4d;
+  color: #fff;
+  border-color: #172b4d;
+}
+
+.ws-select-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.ws-label {
+  font-weight: 600;
+}
+
+.ws-linkish {
+  background: none;
+  border: none;
+  color: #0052cc;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  min-height: auto;
+}
+
+.ws-release-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  max-height: 6.5rem;
+  overflow-y: auto;
+}
+
+.ws-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ws-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ws-btn {
+  min-height: 2rem;
+  padding: 0.35rem 0.875rem;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ws-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ws-btn--primary {
+  background: #0052cc;
+  color: #fff;
+  border-color: #0052cc;
+}
+
+.ws-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ws-preview {
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 1rem;
+  max-width: 1400px;
+}
+
+.ws-export {
+  margin-top: 0.75rem;
+}
+
+.ws-preview-title {
+  font-size: 1.1rem;
+  margin: 0 0 0.15rem;
+  border-bottom: 2px solid #0052cc;
+  padding-bottom: 0.25rem;
+}
+
+.ws-gen {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+}
+
+.ws-rag-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.ws-rag-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 4.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  text-decoration: none;
+  border: 1px solid #d0d7de;
+  background: #f8f9fa;
+  color: inherit;
+}
+
+.ws-rag-card__rag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.ws-rag-card__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ws-rag-card--red {
+  background: #fcebea;
+  border-color: #f5c6c2;
+}
+
+.ws-rag-card--red .ws-rag-card__rag {
+  color: #c9372c;
+}
+
+.ws-rag-card--yellow {
+  background: #fff8e6;
+  border-color: #f0d78c;
+}
+
+.ws-rag-card--yellow .ws-rag-card__rag {
+  color: #b38600;
+}
+
+.ws-rag-card--green {
+  background: #e3fcef;
+  border-color: #abf5d1;
+}
+
+.ws-rag-card--green .ws-rag-card__rag {
+  color: #1f7a1f;
+}
+
+.ws-this-week {
+  background: #e8f4fd;
+  border: 1px solid #0052cc;
+  border-radius: 4px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.ws-this-week p {
+  margin: 0;
+  line-height: 1.4;
+  font-size: 0.95rem;
+}
+
+.ws-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #0052cc;
+  margin-bottom: 0.25rem;
+}
+
+.ws-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.ws-table th,
+.ws-table td {
+  border: 1px solid #d0d7de;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ws-table th {
+  background: #172b4d;
+  color: #fff;
+  font-weight: 600;
+}
+
+.ws-table a {
+  color: #0052cc;
+  font-weight: 600;
+}
+
+.ws-key-content {
+  max-width: 14rem;
+  line-height: 1.35;
+}
+
+.ws-risks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ws-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.ws-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  text-decoration: none;
+  border: 1px solid #d0d7de;
+  background: #f4f5f7;
+  color: #172b4d;
+}
+
+.ws-pill--danger {
+  background: #fcebea;
+  border-color: #f5c6c2;
+  color: #c9372c;
+}
+
+.ws-pill--warn {
+  background: #fff8e6;
+  border-color: #f0d78c;
+  color: #b38600;
+}
+
+.ws-pulse-line {
+  font-size: 0.8rem;
+  color: #42526e;
+  line-height: 1.35;
+}
+
+.ws-rag {
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.ws-rag--red {
+  color: #c9372c;
+}
+
+.ws-rag--yellow {
+  color: #b38600;
+}
+
+.ws-rag--green {
+  color: #1f7a1f;
+}
+
+.ws-chase ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.ws-chase li {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.ws-muted {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.ws-error {
+  color: #c9372c;
+  font-size: 0.85rem;
+}

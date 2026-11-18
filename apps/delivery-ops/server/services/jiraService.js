@@ -35,7 +35,9 @@ function formatRiskIndicator(value) {
   const firstPart = valueStr.split('-')[0].trim().toLowerCase();
 
   let color = 'transparent';
-  if (firstPart.includes('red') || valueLower.includes('red') || valueLower.includes('high') || valueLower.includes('critical')) {
+  if (valueLower.includes('deep red') || firstPart.includes('deep red')) {
+    color = '#8B0000';
+  } else if (firstPart.includes('red') || valueLower.includes('red') || valueLower.includes('high') || valueLower.includes('critical')) {
     color = '#dc3545';
   } else if (firstPart.includes('yellow') || valueLower.includes('yellow') || valueLower.includes('medium') || valueLower.includes('moderate') || valueLower.includes('at risk')) {
     color = '#ffc107';
@@ -55,6 +57,7 @@ function getRiskIndicatorPriority(riskIndicator) {
   if (!color || color === 'transparent') {
     if (typeof value === 'string') {
       const valueLower = value.toLowerCase();
+      if (valueLower.includes('deep red')) return 0;
       if (valueLower.includes('red') || valueLower.includes('high') || valueLower.includes('critical')) {
         return 0;
       }
@@ -68,6 +71,7 @@ function getRiskIndicatorPriority(riskIndicator) {
     return 3;
   }
 
+  if (color === '#8b0000' || color === '#8B0000') return 0;
   if (color === '#dc3545' || color === 'red' || color === '#de350b') return 0;
   if (color === '#ffc107' || color === 'yellow' || color === '#ff8b00') return 1;
   if (color === '#28a745' || color === 'green' || color === '#00875a') return 2;

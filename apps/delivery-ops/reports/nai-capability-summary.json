@@ -1,0 +1,144 @@
+{
+  "overall": "In the last year, NDB delivered 68 features and initiatives across NDB-2.10, NDB-2.11, and NDB-2.12. These span provisioning, HA/DR, backup/restore, security, migration, platform, storage, observability, integration, and networking.",
+  "groups": [
+    {
+      "name": "Provisioning",
+      "count": 3,
+      "capabilities": [
+        "MongoDB provisioning on-prem and Azure",
+        "MySQL HA provisioning UI",
+        "SQL provisioning from backup"
+      ]
+    },
+    {
+      "name": "HA/DR",
+      "count": 9,
+      "capabilities": [
+        "PostgreSQL HA WAL handling",
+        "SQL node add and remove",
+        "PostgreSQL node add and remove",
+        "MongoDB sharded scale-out",
+        "PostgreSQL disaster recovery",
+        "PostgreSQL DR reinitialization",
+        "MySQL HA clone refresh",
+        "Active and read replica support",
+        "Oracle Data Guard standby creation"
+      ]
+    },
+    {
+      "name": "Backup/Restore",
+      "count": 4,
+      "capabilities": [
+        "MongoDB point-in-time recovery",
+        "MongoDB sharded backup and restore",
+        "MySQL backup and restore",
+        "Backward-compatible backups"
+      ]
+    },
+    {
+      "name": "Security",
+      "count": 9,
+      "capabilities": [
+        "MongoDB TDE with KMS",
+        "RBAC fixes",
+        "Prism Central IAM integration",
+        "Audit logging",
+        "MongoDB transparent data encryption",
+        "MySQL transparent data encryption",
+        "EDB transparent data encryption",
+        "MySQL TDE certificate rotation",
+        "EDB TDE key rotation"
+      ]
+    },
+    {
+      "name": "Migration/Upgrade",
+      "count": 6,
+      "capabilities": [
+        "PostgreSQL 18 discovery",
+        "PostgreSQL 17 upgrade",
+        "MSSQL fitment assessment",
+        "Control plane upgrade readiness",
+        "SQL migration assistant",
+        "Control plane PostgreSQL upgrade"
+      ]
+    },
+    {
+      "name": "Platform",
+      "count": 16,
+      "capabilities": [
+        "Accessible workflow improvements",
+        "Deferred items handling",
+        "Single protection domain on Linux",
+        "Single protection domain open source",
+        "Agent command-line interface",
+        "NC2 on GCP support",
+        "Accessibility improvements Janus",
+        "Rocky Linux 9 support",
+        "RHEL 10 support",
+        "Windows AgentVM removal",
+        "Hybrid cloud validations",
+        "SQL best practices guidance",
+        "Linux package manager Postgres",
+        "Python 3.12 support",
+        "Oracle 26ai support",
+        "UI automation"
+      ]
+    },
+    {
+      "name": "Storage",
+      "count": 7,
+      "capabilities": [
+        "Oracle writable file support",
+        "MSSQL drive letter management",
+        "Optimized bucket storage",
+        "Extend storage capacity",
+        "Storage Spaces support",
+        "Default volume group",
+        "MySQL storage extension"
+      ]
+    },
+    {
+      "name": "Observability",
+      "count": 4,
+      "capabilities": [
+        "Supportability log collection",
+        "Log pruning automation",
+        "Diagnostic bundle generation",
+        "SQL restore state visibility"
+      ]
+    },
+    {
+      "name": "Integration",
+      "count": 4,
+      "capabilities": [
+        "Prism Central and Objects integration",
+        "Objects GA APIs",
+        "Entity sharing across clusters",
+        "Terraform provider"
+      ]
+    },
+    {
+      "name": "Networking",
+      "count": 6,
+      "capabilities": [
+        "OVN VLAN networking support",
+        "SQL Server IP and port config",
+        "NetworkManager integration",
+        "Oracle Data Guard IP config",
+        "Prism proxy support",
+        "Multicluster port support"
+      ]
+    }
+  ],
+  "perRelease": {
+    "NDB-2.10": {
+      "summary": "In NDB-2.10, we expanded MongoDB and platform support, improved provisioning, backup/restore, security, storage, networking, and observability."
+    },
+    "NDB-2.11": {
+      "summary": "In NDB-2.11, we added multi-cloud and OS support, stronger HA/DR, security, storage, and migration readiness."
+    },
+    "NDB-2.12": {
+      "summary": "In NDB-2.12, we advanced DR, Terraform automation, TDE rotation, storage extension, migration tooling, and platform upgrades."
+    }
+  }
+}

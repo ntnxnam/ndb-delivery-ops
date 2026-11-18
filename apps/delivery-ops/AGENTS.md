@@ -111,7 +111,7 @@ The user-level skills under `~/.cursor/skills/` are all directly useful here:
 
 - `team-exec-release-report` — when the user asks for a Team Executive-style release summary
 - `sprint-gantt-chart` — when building a Gantt visualization
-- `fetch-project-tickets` — when gathering ticket data using the NDB JIRA hierarchy
+- `ticket-insights` — when gathering ticket data using the NDB JIRA hierarchy (fetch + 6-group breakdown)
 - `confluence-width-cleanup` — when fixing Confluence HTML pasted into descriptions
 - `predictive-team-exec-analytics` — when predictive/forecasting analysis is requested
 

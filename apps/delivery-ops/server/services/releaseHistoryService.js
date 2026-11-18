@@ -152,6 +152,7 @@ async function getTcmsForItems(_jiraToken, { fixVersion, itemKeys, isLongTerm = 
     result[item.key] = {
       tcmsQueryUrl: item.tcmsQueryUrl || null,
       tcmsQI: item.tcmsQI || null,
+      tcmsQuality: item.tcmsQuality || null,
     };
   }
   return result;

@@ -46,7 +46,7 @@ export function useDependencyView(teamId, release) {
       } catch (err) {
         if (seq !== loadSeq.current) return;
         setError(
-          err.response?.data?.error || err.message || 'Failed to load Dependency View'
+          err.response?.data?.error || err.message || 'Failed to load Post EC dependency view'
         );
       } finally {
         if (seq === loadSeq.current) {

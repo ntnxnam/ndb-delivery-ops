@@ -53,7 +53,7 @@ function JiraConnectivityBanner() {
   );
 }
 
-export const Layout = ({ children, wide = false }) => {
+export const Layout = ({ children, wide = false, fluid = false }) => {
   const { selectedTeamId, teamEpoch } = useTeam();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -87,12 +87,18 @@ export const Layout = ({ children, wide = false }) => {
     };
   }, []);
 
+  const widthClass = fluid
+    ? ' main-content-fluid'
+    : wide
+      ? ' main-content-wide'
+      : '';
+
   return (
     <div className="app-layout">
       <Sidebar />
       
       <main 
-        className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}${wide ? ' main-content-wide' : ''}`}
+        className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}${widthClass}`}
         style={{
           marginLeft: sidebarCollapsed ? '60px' : `${sidebarWidth}px`
         }}
@@ -117,6 +123,7 @@ export const Layout = ({ children, wide = false }) => {
 
         .main-content {
           flex: 1;
+          min-width: 0;
           padding: 24px;
           transition: margin-left 0.3s ease;
           min-height: 100vh;
@@ -135,6 +142,13 @@ export const Layout = ({ children, wide = false }) => {
 
         .main-content.main-content-wide > * {
           max-width: 1400px;
+        }
+
+        /* Fluid: full main-pane width with a soft cap (ui-density exception for dense tables) */
+        .main-content.main-content-fluid > * {
+          max-width: min(100%, 1800px);
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .main-content > *:last-child {

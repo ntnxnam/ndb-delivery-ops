@@ -1,7 +1,7 @@
 /**
  * ticketFetchService — the 8-clause portfolio-children JQL primitive.
  *
- * Ports `~/.cursor/skills/fetch-project-tickets/SKILL.md` (CONSOLIDATION.md
+ * Ports `agent-pack/skills/ticket-insights/SKILL.md` (merged from fetch-project-tickets, CONSOLIDATION.md
  * #17) into a callable TS service. This is the JQL primitive that
  * expands a FEAT/X-FEAT/Capability key into the full transitive set of
  * tickets descending from it — Features, Initiatives, Epics, sub-tickets,

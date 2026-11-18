@@ -121,9 +121,9 @@ Truncated: no (actualDepth=2, maxDepth=5)
   caching contract
 - Auto-creating JIRA links for inferred deps (forbidden, D18)
 
-## UI naming (Dependency View)
+## UI naming (Post EC dependency view)
 
-The Dependency View page uses user-facing wait language; map to this skill:
+The Post EC dependency view page uses user-facing wait language; map to this skill:
 
 | UI label | Skill / D18 | Link |
 |---|---|---|
@@ -134,7 +134,7 @@ Release-level list queries (Q1–Q5 + Q7) live in
 `agent-pack/context/domain/cross-team-dependencies.md` and
 `dependencyViewService`. Naming / hygiene SoT:
 `agent-pack/context/domain/dependency_rule.md`.
-This skill remains the **ticket graph walk** (Mode Dependency links).
+This skill remains the **ticket graph walk** (Mode Dependency **live** `issuelinks`). Dependency View may also show **Previously linked** (removed links via changelog) — do not treat those as live walk edges unless the caller asks for history.
 
 ## Cross-references
 

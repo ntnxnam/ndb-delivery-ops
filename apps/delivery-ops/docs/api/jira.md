@@ -481,11 +481,13 @@ Per-KPI `error` strings are returned inline; a failing KPI does not fail the bat
 
 ### POST /api/jira/release-items-history
 
-**Purpose**: Fetch the history of which items were added/removed from a release payload over time.
+**Purpose**: Checkpoint date history for Project Status — walks JIRA changelog per ticket for Code Complete / Commit Gate / Promotion Gate (and FS/DS, Test Plan, Status Update Date). Powers the struck-through old dates and `moved N times by X weeks` label on `/project-status` (also used by `/sos-summary` via `/sos-items-history`).
+
+**Duration rule** (fixed 2026-11): `weeks = |current - first ever set|`, not `max - min`. A revert to the original date shows `0 weeks` (a spike-then-revert no longer shows phantom delay). Count stays `distinct values - 1`.
 
 **Auth**: required + `releaseVersions` permission
 
-**Request** — Body: `{ release: string, productId: string }`
+**Request** — Body: `{ fixVersion: string, teamId?: string }` — server resolves item keys via the same JQL as `/release-items`, then `fetchFieldHistoryForMultiple` per key.
 
 ---
 
@@ -679,6 +681,114 @@ Same as GET `/api/jira/system-test-scale`.
 | 400 | Team not configured for System-Test | Show configure message |
 | 403 | No KPI view | Show access denied |
 | 500 | Refresh failed | Show error + retry |
+
+**Caching**
+No.
+
+---
+
+## KPI Pulse (shared kit — service contract)
+
+**Not a standalone route.** Page APIs (OnCalls, System-Test Scale, future KPI pages) call `kpiPulseService.buildPulse` and attach the result as `pulse` on their response. UI mounts `client/src/components/KpiPulse/KpiPulseBand`.
+
+**Purpose**: Reusable last-2-Nutanix-Q analytics — exec heroes, weekly created vs resolved, MTTR, status dwell, product-impact shell. Only `baseJql` changes per page.
+
+**Service**: `server/services/kpiPulseService.js` → `buildPulse({ token, baseJql, quarterCount?, agedOpenDays?, sampleCap?, optionalHeroes?, productImpact? })`
+
+**Quarters**: `server/utils/nutanixQuarters.js` — Q1 starts 01-Aug; default window = last 2 quarters through today.
+
+**Skill / rule**: `agent-pack/skills/kpi-pulse-analytics/SKILL.md`, `.cursor/rules/kpi-pulse-analytics.mdc`
+
+**Response shape (`pulse`)**
+```json
+{
+  "window": { "start": "2026-05-01", "end": "2026-10-16", "label": "Last 2 Nutanix Qs (…)", "quarters": ["Q4 FY25", "Q1 FY26"] },
+  "story": "Falling behind — created 148 vs resolved 136 (net -12). Typical wait 4.2d. …",
+  "seriesCaption": "Created ahead of resolved in 12 of 24 weeks.",
+  "heroes": {
+    "openNow": { "count": 12, "jql": "…" },
+    "createdWindow": { "count": 148, "jql": "…" },
+    "resolvedWindow": { "count": 136, "jql": "…" },
+    "netBurn": { "count": -12, "createdCount": 148, "resolvedCount": 136, "jql": null, "label": "-12" },
+    "mttrMedian": { "count": 4.2, "unit": "days", "jql": "…", "sampleSize": 80, "truncated": false },
+    "mttrP90": { "count": 18, "unit": "days", "jql": "…", "sampleSize": 80, "truncated": false },
+    "agedOpen": { "count": 9, "jql": "…" },
+    "topDwellStatus": { "status": "Waiting for customer", "count": 6, "unit": "days", "jql": null }
+  },
+  "series": [{ "weekStart": "2026-05-04", "created": { "count": 3, "jql": "…" }, "resolved": { "count": 2, "jql": "…" } }],
+  "mttr": { "medianDays": 4.2, "p90Days": 18, "sampleSize": 80, "truncated": false, "jql": "…" },
+  "statusDwell": [{ "status": "Waiting for customer", "medianDays": 6, "sampleSize": 20, "jql": null }],
+  "productImpact": { "summary": null, "generatedAt": null, "citations": [] },
+  "asOf": "2026-10-16T12:00:00.000Z",
+  "baseJql": "(…)"
+}
+```
+
+**Caching**: No durable cache — computed on each page dashboard load / Pull.
+
+**JQL**: Composes date/status clauses onto the caller’s `baseJql` only; does not edit `kpiConfig` baseQuery strings.
+
+---
+
+## OnCalls
+
+### GET /api/jira/oncalls
+
+**Purpose**: Live OnCalls quantitative dashboard — KPI Pulse (`buildPulse` on OnCalls KPI `baseQuery`), path/portfolio chips, escalation to CFD/CFI, assignee/priority mix, deterministic RAG.
+
+**Auth**: required · KPI view authorization (`kpi_view`)
+
+**Request**
+- Method + path: `GET /api/jira/oncalls`
+- Query params:
+  - `teamId` (string, optional) — team board id (e.g. `ndb`)
+- Required headers: JIRA token (middleware)
+
+**Server flow**
+Route handler → `checkKpiViewAuthorization` → `oncallService.getDashboard` → counts + stacks + `buildPulse({ baseJql: baseScopeJql })` (soft-fail) + escalation → respond
+
+**Response shape**
+```json
+{
+  "success": true,
+  "teamId": "ndb",
+  "onCallProject": "OnCall",
+  "baseScopeJql": "filter = NDB-OnCalls",
+  "asOf": "2026-10-16T09:00:00.000Z",
+  "pulse": { "window": {}, "story": "...", "heroes": {}, "series": [] },
+  "hero": { "open": { "count": 12, "jql": "..." } },
+  "paths": { "withTechHelp": { "count": 4, "jql": "key in (...)" } },
+  "escalation": { "cells": {}, "rows": [] },
+  "rag": { "level": "YELLOW", "why": "..." },
+  "stacksPreview": [],
+  "assigneeMix": [],
+  "priorityMix": []
+}
+```
+
+`pulse` follows `kpiPulseService.buildPulse` (see KPI Pulse kit section). If pulse fails, `pulse` is `null` and `errors.pulse` is set; path/escalation still return.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 403 | No KPI view | Show access denied |
+| 500 | Dashboard failed | Show error + retry |
+
+**Caching**
+No — live on load / Pull.
+
+### POST /api/jira/oncalls/refresh
+
+**Purpose**: Explicit Pull from JIRA — same payload as GET.
+
+**Auth**: required · `kpi_view`
+
+**Request**
+- Method + path: `POST /api/jira/oncalls/refresh`
+- Body: `{ "teamId": "ndb" }` (optional)
+
+**Response shape**
+Same as GET `/api/jira/oncalls`.
 
 **Caching**
 No.

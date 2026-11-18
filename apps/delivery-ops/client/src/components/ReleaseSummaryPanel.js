@@ -143,6 +143,9 @@ export default function ReleaseSummaryPanel({ state, summary, intelligence, erro
   return (
     <div style={{
       margin: '0 0 12px',
+      width: '100%',
+      maxWidth: '100%',
+      boxSizing: 'border-box',
       border: '1px solid #dee2e6',
       borderRadius: 8,
       background: '#fff',

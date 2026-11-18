@@ -24,6 +24,7 @@
 | `domain/ai-prompt-inventory.md` | Which production prompt lives where |
 | `domain/dependency_rule.md` | **SoT** — 3-axis matrix, Modes, labels, hygiene (no Companionship) |
 | `domain/cross-team-dependencies.md` | Dependency View JQL Q1–Q7; defers naming to dependency_rule.md |
+| `domain/oncall-outcome-taxonomy.md` | OnCall outcomes: env / docs / knowledge(SR) / eng miss + test-gap ask |
 
 ## 3. Page briefs (one per surface)
 
@@ -42,12 +43,14 @@
 | `pages/chatbot.md` | `/chatbot` |
 | `pages/kpis.md` | `/kpis` |
 | `pages/system-test-scale.md` | `/system-test-scale` |
+| `pages/oncalls.md` | `/oncalls` |
+| `pages/cfdcfi.md` | `/cfdcfi` |
 | `pages/sos-summary.md` | `/sos-summary` |
 | `pages/sos-leader.md` | `/sos-leader-summary` |
 | `pages/release-brief.md` | `/release/brief` |
 | `pages/release-config.md` | `/release-config` |
 | `pages/admin.md` | `/team-management` |
-| `pages/dependency-view.md` | `/dependency-view` |
+| `pages/dependency-view.md` | `/dependency-view` (Post EC dependency view) |
 
 ## 4. Prompts
 

@@ -18,7 +18,7 @@
     "jovan.cukalovic",
     "alexander.minic",
     "srikanth.cg",
-    "saurabh.srvastava",
+    "saurabh.srivastava",
     "aleksandar.minic",
     "shyam",
     "tanya.smirnov",
@@ -63,5 +63,14 @@
     "ndb": [
       "namratha.singh"
     ]
-  }
+  },
+  "execAudienceUsers": [
+    "namratha.singh",
+    "sneha.kulkarni",
+    "bharath",
+    "ashish.kumar",
+    "shyam",
+    "anil.madan",
+    "tanya.smirnov"
+  ]
 }

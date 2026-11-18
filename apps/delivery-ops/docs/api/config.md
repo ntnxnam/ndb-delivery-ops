@@ -130,3 +130,46 @@ Write invalidates the in-process teamBoardConfig cache immediately. Client shoul
 
 **Caching**
 No server TTL — file re-read each request. Client may hold in component state for the page session.
+
+---
+
+### GET /api/config/email-sender
+
+**Purpose**: Return optional CC / To lists for the Email Sender page (`emailSenderCCConfig.json`). Client shows `defaultCC` as checkboxes (unchecked by default).
+
+**Auth**: not required (read-only config)
+
+**Request**
+- Method + path: `GET /api/config/email-sender`
+- Query params: none
+- Body: none
+- Required headers: none
+
+**Server flow**
+`config.js` → read `server/config/emailSenderCCConfig.json` (require cache cleared per request)
+
+**Response shape**
+```json
+{
+  "defaultCC": [
+    "namratha.singh@nutanix.com",
+    "bharath@nutanix.com",
+    "ashish.kumar@nutanix.com",
+    "ashish.mohindroo@nutanix.com",
+    "karan.singh@nutanix.com"
+  ],
+  "defaultTO": [],
+  "projectTeamFields": [
+    { "id": "assignee", "label": "Assignee" },
+    { "id": "customfield_10860", "label": "QA Contact" }
+  ]
+}
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 500 | Config file unreadable | Hide optional CC section / allow send without leadership CC |
+
+**Caching**
+No server TTL — file re-read each request. Client holds via `useEmailSenderCCConfig`.

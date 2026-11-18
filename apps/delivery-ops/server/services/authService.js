@@ -306,6 +306,24 @@ function checkFeatureAccess(username, feature, options = {}) {
       };
     }
 
+    case 'execAudience': {
+      // "What ails the team" auto page briefing — execAudienceUsers allowlist only
+      // (not default-on). Super Admin always allowed.
+      const config = getConfig();
+      const allowed = getAllowlist(config, 'execAudienceUsers', 'execAudienceOnly');
+      const authorized =
+        role.isSuperAdmin ||
+        (allowed.length > 0 && isInList(username, allowed));
+      return {
+        authorized,
+        normalizedUsername,
+        userEmail,
+        error: authorized
+          ? undefined
+          : 'Executive page briefing is limited to the exec audience allowlist.',
+      };
+    }
+
     default:
       return { authorized: false, normalizedUsername, error: 'Unknown feature.' };
   }

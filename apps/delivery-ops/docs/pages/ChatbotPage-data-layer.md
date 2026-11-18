@@ -59,6 +59,24 @@ Pack tools (`read`): `list_skills`, `read_skill`, `read_specialist`.
 
 ---
 
+### 4. `POST /api/jira-digging/prepare` (Slice 2 — digging)
+
+**Purpose**: Live JIRA count + sample for Custom JQL Digging drawer. No cache in Slice 2; full dataset + history/comments in Slice 2b.
+
+**When called**: User clicks Fetch & Index in digging mode.
+
+**Body**: `{ jql, productId? }` (jql max 4000, productId defaults `ndb`).
+
+**Auth**: JIRA token via `authenticatedPost`; forwarded per-request to `JiraConnector`.
+
+**Server flow**: `routes/jiraDigging.js` → `JiraConnector(searchCount)` → cap 10000 → `searchAll(DIGGING_FIELDS, pageSize 100)` → `datasetId/ticketCount/sampleKeys/fetchedAt`.
+
+**Response shape**: `{ datasetId, jql, productId, ticketCount, sampleKeys[10], fetchedAt, fields, truncated, mode: "live-sample" }` (see `docs/api/jira-digging.md`).
+
+**Error handling**: 400 missing/over-cap, 401 no PAT, 500 JIRA failure; client shows `diggingError` banner and does not create dataset.
+
+---
+
 ## Other data
 
-Release list and selected product come from `SelectedReleaseContext` (same as other release pages — versions are the selected team's fixVersions). Team names from `TeamContext` for intent extraction only. Client keeps `sessionId` in `sessionStorage` (`agentChatSessionId`).
+Release list and selected product come from `SelectedReleaseContext` (same as other release pages — versions are the selected team's fixVersions). Team names from `TeamContext` for intent extraction only. Client keeps `sessionId` in `sessionStorage` (`agentChatSessionId`). Digging drawer keeps local `jql/dataset` in `ChatbotPage.js` state; future `AGENT_RUNTIME_DIR` cache mirrors `releaseDatasetCache.ts:297`.

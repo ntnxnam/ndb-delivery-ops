@@ -11,7 +11,8 @@ audience: tpm, rm, portfolio_mgr, feat
 Invoked by `ops-assistant` for any cross-team dependency question. Per
 **D18**, the platform canonicalises dependency tracking on JIRA
 `blocks` / `is blocked by` links, while reading from Confluence and Slack
-sources to surface untracked dependencies.
+sources to surface untracked dependencies. Dependency View **Previously linked**
+is changelog-backed (removed links); do not invent historical-link JQL.
 
 ## When the orchestrator delegates to me
 

@@ -4,13 +4,7 @@
  */
 
 const { requireAuth } = require('../../middleware/authMiddleware');
-
-/** Required section headers that must appear in Highlights and Lowlights (must match client) */
-const HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS = [
-  'Highlights',
-  'Lowlights',
-  'Support needed from leaders'
-];
+const { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } = require('../../utils/emailHighlights');
 
 function checkReleaseVersionsAuthorization(req, res, next) {
   return requireAuth('releaseVersions')(req, res, next);

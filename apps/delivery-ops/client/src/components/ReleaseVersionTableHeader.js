@@ -1,5 +1,10 @@
 import React from 'react';
-import { getUIColumnOrder, getColumnLabel, getColumnWidth } from '../utils/releaseVersionUtils';
+import {
+  getUIColumnOrder,
+  getColumnLabel,
+  getColumnWidth,
+  getColumnMinWidth,
+} from '../utils/releaseVersionUtils';
 
 /**
  * ReleaseVersionTableHeader Component
@@ -18,7 +23,9 @@ function ReleaseVersionTableHeader({ columnsConfig }) {
     <thead>
       <tr style={{ backgroundColor: '#e9ecef' }}>
         {columnOrder.map(columnKey => {
+          // % width → columns grow with the fluid shell; minWidth → scroll instead of crush
           const width = getColumnWidth(columnsConfig, columnKey);
+          const minWidth = getColumnMinWidth(columnsConfig, columnKey);
           return (
             <th 
               key={columnKey}
@@ -27,8 +34,9 @@ function ReleaseVersionTableHeader({ columnsConfig }) {
                 border: '1px solid #dee2e6', 
                 textAlign: 'left', 
                 whiteSpace: 'normal', 
-                wordWrap: 'break-word', 
+                wordWrap: 'break-word',
                 width: width || 'auto',
+                minWidth: minWidth || undefined,
                 backgroundColor: '#e9ecef', // Ensure background color for sticky header
                 position: 'sticky',
                 top: 0,

@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "description": "Dependency View — Modes: Dependency (links) | Partnership (hierarchy). Project type via *-ew. Rules: agent-pack/context/domain/dependency_rule.md. Legacy section keys partnership*/companion* until renamed.",
+  "description": "Post EC dependency view — Modes: Dependency (links) | Partnership (hierarchy). Project type via *-ew. Rules: agent-pack/context/domain/dependency_rule.md. Legacy section keys partnership*/companion* until renamed.",
   "defaultTeamId": "ndb",
   "defaultRelease": "NDB-3.0",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",
@@ -28,67 +28,65 @@
     "NDB-2.11": {
       "train": "Janus",
       "trainSlug": "janus",
+      "displayName": "Janus — platform partner train (historical)",
       "status": "aligned",
-      "notes": "Historical",
+      "statusLabel": "Historically aligned",
+      "notes": "Past NDB-2.11 ↔ Janus pairing. Ask labels used ndb-janus-ask / ndb-janus-dependency.",
       "partnerVersions": [],
       "confluenceUrl": null
     },
     "NDB-2.12": {
       "train": "Kronos",
       "trainSlug": "kronos",
+      "displayName": "Kronos — platform partner train (alignment broken)",
       "status": "broken",
-      "notes": "Was Kronos; Kronos slipped — alignment broken / reassess",
+      "statusLabel": "Alignment broken — reassess",
+      "notes": "NDB-2.12 was intended to ship with Kronos; the train slipped. Do not treat Kronos ask labels as locked to this release until re-aligned. Labels: ndb-kronos-ask / ndb-kronos-dependency.",
       "partnerVersions": [],
       "confluenceUrl": null
     },
     "NDB-3.0": {
       "train": "Kronos.1",
       "trainSlug": "kronos.1",
+      "displayName": "Kronos.1 — current platform partner train",
       "status": "aligned",
-      "notes": "Current intended align",
+      "statusLabel": "Currently aligned",
+      "notes": "Active NDB-3.0 ↔ Kronos.1 alignment for Dependency links and train asks. Partner ask labels: ndb-kronos.1-ask / ndb-kronos.1-dependency. Our wishlist: ndb-3.0-wishlist.",
       "partnerVersions": [],
       "confluenceUrl": null
     },
     "NDB-3.1": {
       "train": "Leto",
       "trainSlug": "leto",
+      "displayName": "Leto — next platform partner train (early calls)",
       "status": "planned",
-      "notes": "Planned",
+      "statusLabel": "Planned — early calls only (pre-CC/EC)",
+      "notes": "Not yet in fixVersion partnership mode. Use Early calls for label-based asks (ndb-leto-ask / ndb-leto-dependency) and wishlist (ndb-3.1-wishlist) before CC/EC.",
       "partnerVersions": [],
       "confluenceUrl": null
     }
   },
-  "companionRoots": [
-    {
-      "rootKey": "ERA-67841",
-      "label": "Example companion root (replace in config)",
-      "releases": [
-        "NDB-2.12",
-        "NDB-3.0",
-        "NDB-3.1"
-      ]
-    }
-  ],
+  "companionRoots": [],
   "partnerCatalog": [
     {
       "id": "eng",
-      "label": "ENG + component",
-      "notes": "Stub — Confluence SoT later"
+      "label": "ENG (engineering components outside NDB)",
+      "notes": "Catalog entry — Confluence partner SoT not wired yet"
     },
     {
       "id": "ncm",
-      "label": "NCM",
-      "notes": "Stub"
+      "label": "NCM (Nutanix Cloud Manager)",
+      "notes": "Catalog entry — Confluence partner SoT not wired yet"
     },
     {
       "id": "ncn",
-      "label": "NCN",
-      "notes": "Stub"
+      "label": "NCN (Nutanix Cloud Native)",
+      "notes": "Catalog entry — Confluence partner SoT not wired yet"
     },
     {
       "id": "era-ndb",
-      "label": "ERA / NDB-* unarchived",
-      "notes": "Stub"
+      "label": "ERA / peer NDB projects",
+      "notes": "Catalog entry — peer NDB surfaces (ndb-ew)"
     }
   ],
   "modesOfOperation": {

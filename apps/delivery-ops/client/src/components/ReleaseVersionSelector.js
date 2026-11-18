@@ -118,7 +118,7 @@ function ReleaseVersionSelector({
               onChange={onVersionChange}
               disabled={loadingItems}
               className="text-input"
-              style={{ flex: '0 1 auto', minWidth: '200px', maxWidth: '300px', padding: '0.4rem', fontSize: '0.85rem' }}
+              style={{ flex: '1 1 200px', minWidth: '160px', maxWidth: '280px', padding: '0.4rem', fontSize: '0.85rem', boxSizing: 'border-box' }}
             >
               <option value="">-- Select --</option>
               {activeVersions.map((v) => {
@@ -143,9 +143,10 @@ function ReleaseVersionSelector({
               disabled={loadingItems}
               className="text-input"
               style={{
-                flex: '0 1 auto', minWidth: '200px', maxWidth: '300px',
+                flex: '1 1 200px', minWidth: '160px', maxWidth: '280px',
                 padding: '0.4rem', fontSize: '0.85rem',
-                backgroundColor: '#f8f9fa', cursor: 'not-allowed'
+                backgroundColor: '#f8f9fa', cursor: 'not-allowed',
+                boxSizing: 'border-box',
               }}
               placeholder="Default release version"
             />

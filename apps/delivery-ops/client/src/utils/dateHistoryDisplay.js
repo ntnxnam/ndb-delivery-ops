@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { renderNotSet, formatDate } from './releaseVersionUtils';
-import { getAllUniqueDates, getHistoryForField } from './dateHistoryProcessing';
+import { getAllUniqueDates, getHistoryForField, getFirstSetDate } from './dateHistoryProcessing';
+import { normalizeDateStr, parseLocalDate } from './dateNormalization';
 
 function buildDateHistoryModel(itemKey, fieldName, currentDate, checkpointHistory) {
   const history = getHistoryForField(itemKey, fieldName, checkpointHistory);
@@ -15,13 +16,14 @@ function buildDateHistoryModel(itemKey, fieldName, currentDate, checkpointHistor
     return { sortedDates, differenceText: '', isDelayed: false, movedForward: false };
   }
 
-  const latestDate = sortedDates[0];
-  const oldestDate = sortedDates[sortedDates.length - 1];
-  const isDelayed = latestDate > oldestDate;
-  const movedForward = latestDate < oldestDate;
+  // Duration = current vs first-ever set date (not max-min). Fixes revert-to-original showing phantom delay.
+  const currentObj = parseLocalDate(normalizeDateStr(currentDate)) || sortedDates[0];
+  const firstObj = getFirstSetDate(history) || sortedDates[sortedDates.length - 1];
+  const isDelayed = currentObj > firstObj;
+  const movedForward = currentObj < firstObj;
 
   let differenceText = '';
-  const diffDays = Math.floor(Math.abs(latestDate.getTime() - oldestDate.getTime()) / 86400000);
+  const diffDays = Math.floor(Math.abs(currentObj.getTime() - firstObj.getTime()) / 86400000);
 
   if (diffDays <= 3) {
     differenceText = isDelayed

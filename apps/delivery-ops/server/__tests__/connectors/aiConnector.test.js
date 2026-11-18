@@ -2,7 +2,7 @@
  * Unit tests for the aiConnector / readConfig changes.
  *
  * Coverage:
- *   UT-AICFG-*   aiConfig.json has the new DRE endpoint + Nemotron model, no key
+ *   UT-AICFG-*   aiConfig.json has NuTokens + beam-1-501b, max tokens, no key
  *   UT-ENVEX-*   .env.example is updated; old values are gone
  *   UT-NAISVC-*  shared.chatCompletion delegation happy + error paths
  *   UT-AICNX-*   readConfig throws descriptive errors for each missing var (no fallbacks)
@@ -29,19 +29,19 @@ jest.mock('@portfolio-delivery-ops/shared', () => ({
 describe('aiConfig.json — canonical values', () => {
   const aiConfig = require('../../config/aiConfig.json');
 
-  test('UT-AICFG-001: baseUrl is the new DRE endpoint', () => {
+  test('UT-AICFG-001: baseUrl is the NuTokens gateway', () => {
     expect(aiConfig.baseUrl).toBe(
-      'https://nai-dre.corp.p10y.ntnxdpro.com/enterpriseai/gateway/v1'
+      'https://tokens.corp.nutanix.com/enterpriseai/gateway/v1'
     );
   });
 
-  test('UT-AICFG-002: defaultModel is nemotron3-fp4-uni', () => {
-    expect(aiConfig.defaultModel).toBe('nemotron3-fp4-uni');
+  test('UT-AICFG-002: defaultModel is beam-1-501b', () => {
+    expect(aiConfig.defaultModel).toBe('beam-1-501b');
   });
 
-  test('UT-AICFG-003: maxTokens is a positive number', () => {
+  test('UT-AICFG-003: maxTokens is max (8192)', () => {
     expect(typeof aiConfig.maxTokens).toBe('number');
-    expect(aiConfig.maxTokens).toBeGreaterThan(0);
+    expect(aiConfig.maxTokens).toBe(8192);
   });
 
   test('UT-AICFG-004: requestTimeoutMs is a positive number', () => {
@@ -63,6 +63,12 @@ describe('aiConfig.json — canonical values', () => {
   test('UT-AICFG-007: old eng-pool-05 model is gone', () => {
     expect(JSON.stringify(aiConfig)).not.toContain('eng-pool-05');
   });
+
+  test('UT-AICFG-008: old DRE nemotron endpoint/model are gone', () => {
+    const raw = JSON.stringify(aiConfig);
+    expect(raw).not.toContain('nai-dre.corp');
+    expect(raw).not.toContain('nemotron3-fp4-uni');
+  });
 });
 
 // ── .env.example ───────────────────────────────────────────────────────────
@@ -75,26 +81,28 @@ describe('.env.example — updated values', () => {
     'utf8'
   );
 
-  test('UT-ENVEX-001: AI_API_BASE_URL points to new DRE endpoint', () => {
+  test('UT-ENVEX-001: AI_API_BASE_URL points to NuTokens gateway', () => {
     expect(envExample).toContain(
-      'AI_API_BASE_URL=https://nai-dre.corp.p10y.ntnxdpro.com/enterpriseai/gateway/v1'
+      'AI_API_BASE_URL=https://tokens.corp.nutanix.com/enterpriseai/gateway/v1'
     );
   });
 
-  test('UT-ENVEX-002: AI_DEFAULT_MODEL is nemotron3-fp4-uni', () => {
-    expect(envExample).toContain('AI_DEFAULT_MODEL=nemotron3-fp4-uni');
+  test('UT-ENVEX-002: AI_DEFAULT_MODEL is beam-1-501b', () => {
+    expect(envExample).toContain('AI_DEFAULT_MODEL=beam-1-501b');
   });
 
   test('UT-ENVEX-003: old dpro-nai endpoint is gone', () => {
     expect(envExample).not.toContain('dpro-nai');
   });
 
-  test('UT-ENVEX-004: old eng-pool-05 model is gone', () => {
+  test('UT-ENVEX-004: old eng-pool-05 / DRE nemotron are gone', () => {
     expect(envExample).not.toContain('eng-pool-05');
+    expect(envExample).not.toContain('nai-dre.corp');
+    expect(envExample).not.toContain('nemotron3-fp4-uni');
   });
 
-  test('UT-ENVEX-005: AI_MAX_TOKENS is present', () => {
-    expect(envExample).toMatch(/AI_MAX_TOKENS=\d+/);
+  test('UT-ENVEX-005: AI_MAX_TOKENS is max (8192)', () => {
+    expect(envExample).toContain('AI_MAX_TOKENS=8192');
   });
 
   test('UT-ENVEX-006: AI_REQUEST_TIMEOUT is present', () => {

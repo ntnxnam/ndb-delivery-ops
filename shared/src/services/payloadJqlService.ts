@@ -163,13 +163,13 @@ function jqlWorkTowardProject(release: string): string {
 }
 
 function jqlStandaloneEpics(release: string): string {
-  return `type = Epic AND fixVersion = ${q(release)} AND "Parent Link" is EMPTY`;
+  return `issuetype = Epic AND fixVersion = ${q(release)} AND "Parent Link" is EMPTY`;
 }
 
 function jqlWorkTowardStandaloneEpic(release: string): string {
   // release is inside issuesInEpics("...") — must use single-quotes.
   return (
-    `issueFunction in issuesInEpics("type = Epic AND fixVersion = ${qInner(release)} ` +
+    `issueFunction in issuesInEpics("issuetype = Epic AND fixVersion = ${qInner(release)} ` +
     `AND \\"Parent Link\\" is EMPTY")`
   );
 }
@@ -185,7 +185,7 @@ function jqlWorkTowardStandaloneEpic(release: string): string {
  */
 function jqlWorkTowardStandaloneEpicCatchAll(release: string): string {
   return (
-    `issueFunction in issuesInEpics("type = Epic AND fixVersion = ${qInner(release)} ` +
+    `issueFunction in issuesInEpics("issuetype = Epic AND fixVersion = ${qInner(release)} ` +
     `AND \\"Parent Link\\" is EMPTY") AND updated >= startOfYear(-1)`
   );
 }
@@ -406,6 +406,13 @@ export function buildReleasePayloadJql(
 }
 
 // ── Sidecars (wishlist + deferred — NOT in the 5-bucket union) ─────────────
+// Source of truth for label taxonomy: apps/delivery-ops/server/config/jiraFieldsConfig.json
+// (labels.porExclude, labels.lifecycle.{deferred,mustfix,wishlist,longTermFunded,extension},
+//  labels.dependency.trainAsk, labels.testType). The helpers below derive
+//  release suffixes and JQL to stay aligned with that config; shared consumers
+//  should treat deriveReleaseSuffix / get*Query as re-exported wrappers.
+//  TODO(shared/labelsTaxonomy): centralise pattern interpolation in a shared
+//  labels service that loads jiraFieldsConfig.json directly.
 
 export interface SidecarOptions {
   /**
@@ -421,7 +428,8 @@ export interface SidecarOptions {
   labelPrefix: string;
 }
 
-function deriveReleaseSuffix(release: string, labelPrefix: string): string {
+/** Derive release suffix for label patterns — mirrors jiraFieldsConfig.json {prefix}/{version} interpolation. */
+export function deriveReleaseSuffix(release: string, labelPrefix: string): string {
   const lower = release.toLowerCase();
   const stripped = lower.startsWith(`${labelPrefix.toLowerCase()}-`)
     ? lower.slice(labelPrefix.length + 1)

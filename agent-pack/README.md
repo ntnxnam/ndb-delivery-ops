@@ -50,7 +50,7 @@ import { loadAgentPack, extractSystemPromptBody } from '@portfolio-delivery-ops/
 
 const pack = loadAgentPack(); // or loadAgentPack('/path/to/agent-pack')
 pack.identity.orchestrator.body;
-pack.skills.get('team-exec-status-answer');
+pack.skills.get('team-exec-briefing'); // mode=status | report | briefing
 pack.constitutionalRules.map((r) => r.body);
 pack.context.get('sos-leader')?.body;
 const sys = extractSystemPromptBody(pack.prompts.get('release-health-briefing')!);

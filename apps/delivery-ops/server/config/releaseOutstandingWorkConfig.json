@@ -1,0 +1,16 @@
+{
+  "mustFixOrgMap": {
+    "QA": [],
+    "Serv": [],
+    "PM": []
+  },
+  "mustFixOrgHints": {
+    "QA": ["qa", "quality"],
+    "Serv": ["serv", "services", "pse", "cse"],
+    "PM": ["pm", "product"]
+  },
+  "mustFixStatusStaleHours": 12,
+  "commentAlwaysCc": [
+    "namratha.singh"
+  ]
+}

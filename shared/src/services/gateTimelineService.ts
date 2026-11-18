@@ -8,7 +8,7 @@
  *
  * NDB has historically tracked these gates per release:
  *
- *   EC      Early Commitment (single date)
+ *   EC      Execute Commit (single date) — per user clarification 2026-11-13, not Early Commitment
  *   CC1..n  Code Complete cycles  (Streamlit colour: red,    #de350b)
  *   CG1..n  Commit Gate cycles    (Streamlit colour: orange, #ff9800)
  *   PG1..n  Promotion Gate cycles (Streamlit colour: purple, #9c27b0)
@@ -94,7 +94,7 @@ const CANONICAL_COLOR: Record<GateKind, string> = {
 };
 
 const KIND_LABELS: Record<GateKind, string> = {
-  EC: 'Early Commit',
+  EC: 'Execute Commit', // correction 2026-11-13 per user: EC = Execute Commit (not Early Commitment)
   CCM: 'Code Complete Met',
   CG: 'Commit Gate',
   PG: 'Promotion Gate',
@@ -137,7 +137,7 @@ export function parseReleaseGateTimeline(
     if (typeof ec === 'string' && isIsoDate(ec)) {
       gates.push({
         kind: 'EC',
-        label: 'Early Commitment',
+        label: 'Execute Commit', // correction 2026-11-13: EC = Execute Commit
         iso: ec.slice(0, 10),
         color: CANONICAL_COLOR.EC,
         style: 'solid',

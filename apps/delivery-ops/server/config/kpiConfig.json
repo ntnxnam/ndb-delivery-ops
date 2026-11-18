@@ -46,7 +46,7 @@
       {
         "id": "kpi_mltqw1zl_35j6oo0k",
         "name": "OnCalls",
-        "baseQuery": "project=OnCall",
+        "baseQuery": "filter=NDB-OnCalls",
         "displayType": "count",
         "order": 6
       },
@@ -84,6 +84,13 @@
         "baseQuery": "filter=ndb-deferred-tickets",
         "displayType": "count",
         "order": 11
+      },
+      {
+        "id": "kpi_mvanq8ci_6lgab084",
+        "name": "Bugs Out of SLA",
+        "baseQuery": "filter=NDB-Bugs-OutOfSLA",
+        "displayType": "count",
+        "order": 12
       }
     ],
     "datalens": [

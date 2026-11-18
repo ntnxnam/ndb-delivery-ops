@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { PageLoading } from '../shared/components/PageLoading';
 import { useSystemTestScale } from '../hooks/useSystemTestScale';
 import { useTeam } from '../contexts/TeamContext';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
+import { usePermissions } from '../auth/hooks/usePermissions';
+import { useExecPageBriefing } from '../hooks/useExecPageBriefing';
+import ExecPageBriefing from './ExecPageBriefing';
 import { selectReleaseView } from '../utils/systemTestScaleView';
 import SystemTestScaleTrends from './SystemTestScale/SystemTestScaleTrends';
 import SystemTestScaleHeatmap from './SystemTestScale/SystemTestScaleHeatmap';
@@ -45,6 +49,7 @@ export default function SystemTestScalePage() {
     changeTeam,
     isTransitioning,
   } = useTeam();
+  const { isExecAudience } = usePermissions();
 
   const [currentRelease, setCurrentRelease] = useState('');
   const [compareRelease, setCompareRelease] = useState('');
@@ -127,6 +132,43 @@ export default function SystemTestScalePage() {
   const teamCode = data?.teamCode || selectedTeam?.releasePrefix?.replace(/-+$/, '') || (selectedTeam?.name || '').toUpperCase() || '—';
   const kpiFilter = data?.kpiFilter || (teamCode !== '—' ? `filter=${teamCode}-System-Test` : 'filter={teamCode}-System-Test');
 
+  const stsSnapshot = useMemo(() => {
+    if (!stPulse) return null;
+    return {
+      label: `System-Test · ${selectedTeamId || ''}`,
+      kpis: stPulseHeroes.map((h) => ({
+        id: h.k,
+        name: h.k,
+        count: h.cell?.count ?? 0,
+      })),
+      pulse: {
+        openNow: stPulse.open,
+        heroes: { openNow: stPulse.open, created: stPulse.all },
+      },
+      story: rag ? `${rag.level}: ${rag.why || ''}` : null,
+    };
+  }, [stPulse, stPulseHeroes, selectedTeamId, rag]);
+
+  const stsSnapshotKey = useMemo(
+    () => (stsSnapshot ? stsSnapshot.kpis.map((k) => `${k.id}:${k.count}`).join(',') : ''),
+    [stsSnapshot]
+  );
+
+  const {
+    state: execBriefState,
+    summary: execBriefSummary,
+    meta: execBriefMeta,
+    error: execBriefError,
+    refresh: refreshExecBrief,
+  } = useExecPageBriefing({
+    enabled: isExecAudience,
+    surface: 'kpi',
+    teamId: selectedTeamId,
+    snapshot: stsSnapshot,
+    snapshotKey: `sts|${activeCurrent || ''}|${stsSnapshotKey}`,
+    ready: Boolean(stsSnapshot),
+  });
+
   const stLabelHeroes = useMemo(() => {
     if (!stPulse?.byLabel?.length) return [];
     return stPulse.byLabel.map((row) => ({
@@ -204,7 +246,16 @@ export default function SystemTestScalePage() {
       </div>
 
       {error ? <div className="sts-error">{error}</div> : null}
-      {loading && !data ? <p className="sts-muted">Loading System-Test counts from JIRA…</p> : null}
+      {loading && !data ? <PageLoading message="Loading System-Test counts from JIRA…" /> : null}
+
+      <ExecPageBriefing
+        state={execBriefState}
+        summary={execBriefSummary}
+        meta={execBriefMeta}
+        error={execBriefError}
+        onRetry={refreshExecBrief}
+        jiraBase={jiraBaseUrl}
+      />
 
       {data ? (
         <>

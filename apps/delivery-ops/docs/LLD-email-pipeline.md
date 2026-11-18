@@ -28,10 +28,11 @@ All three use `mailrelay.dyn.nutanix.com:25` (no auth). SMTP is Nutanix-internal
 |---|---|
 | `server/routes/email/` | Route handlers per email type |
 | `server/services/emailService.js` | Nodemailer transport + core send logic (**sacred — do not modify without approval**) |
-| `server/utils/sanitize.js` | HTML sanitization before SMTP (**sacred**) |
+| `server/utils/emailHtmlSanitize.js` | Allowlist HTML sanitization before SMTP (Status Sender) |
+| `server/utils/sanitize.js` | Generic JSON-body escaping (not the Status Sender HTML path) |
 | `client/src/components/ReleaseVersionTab.js` | Generates `tableHTML` for release email |
 
-**Sacred path:** `emailService.js`, send handler, `sanitize.js` must not be changed without explicit user approval. Several past commits on `origin/main` are SMTP fixes; rebasing or squashing them out breaks email.
+**Sacred path:** `emailService.js` SMTP transport (relay host/auth/From) must not be changed without explicit user approval. HTML hardening lives in `emailHtmlSanitize.js` / `statusEmailHtmlService.js`.
 
 ---
 
@@ -65,7 +66,7 @@ function normalizeRecipients(input) {
 }
 ```
 
-`namratha.singh@nutanix.com` is unconditionally added to CC on every outbound email. This cannot be removed at runtime.
+Sender is always CC'd on Email Sender status mail. Project team from `jiraData` (`emailSenderCCConfig.projectTeamFields`: assignee, QA, PM, watchers, etc.) is CC'd by default (@nutanix.com only). Leadership addresses in `emailSenderCCConfig.defaultCC` are optional checkboxes (off by default); only checked addresses are CC'd via `selectedCCRecipients` (intersected with the allowlist).
 
 ---
 
@@ -79,6 +80,7 @@ POST /api/email/send
   "additionalDetails": "HTML string (from ReactQuill) — Highlights/Lowlights/Support",
   "aiSummary": "string — NAI risk brief (client-required before send)",
   "emailRecipients": "a@nutanix.com; b@nutanix.com",
+  "selectedCCRecipients": ["karan.singh@nutanix.com"],
   "emailSubject": "optional string",
   "jiraKey": "FEAT-16821 (optional)",
   "jiraData": { ...ticket fields },
@@ -95,7 +97,7 @@ POST /api/email/send
 ```
 1. Validate: additionalDetails + required Highlights sections → 400 if missing
 2. Normalize recipients via normalizeRecipients()
-3. CC sender + emailSenderCCConfig.defaultCC (@nutanix.com only)
+3. CC sender + project team from jiraData (projectTeamFields) + selectedCCRecipients ∩ emailSenderCCConfig.defaultCC (@nutanix.com only)
 4. Format HTML body:
    a. Highlights and Lowlights (sanitized Quill HTML)
    b. AI risk summary (if aiSummary provided)

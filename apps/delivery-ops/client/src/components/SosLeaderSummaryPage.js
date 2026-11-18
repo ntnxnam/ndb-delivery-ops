@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageLoading } from '../shared/components/PageLoading';
 import { useSosItems } from '../hooks/useSosItems';
 import { useSosHistory } from '../hooks/useSosHistory';
 import { useSosTierSummary } from '../hooks/useSosTierSummary';
@@ -129,6 +130,7 @@ function LeaderBucket({
     loadingBreakdowns,
     jiraBaseUrl,
     onRefresh,
+    refreshing,
     checkpointHistory,
     gateDataMap,
     projectStatusByRelease,
@@ -195,6 +197,7 @@ function LeaderBucket({
                   loadingBreakdowns={loadingBreakdowns}
                   jiraBaseUrl={jiraBaseUrl}
                   onRefresh={onRefresh}
+                  refreshDisabled={refreshing}
                   checkpointHistory={checkpointHistory}
                   gateData={gateDataMap[version] || null}
                   projectStatus={projectStatusByRelease[version] || null}
@@ -512,6 +515,7 @@ export default function SosLeaderSummaryPage() {
     loadingBreakdowns,
     jiraBaseUrl,
     onRefresh: handleRefresh,
+    refreshing: loading,
     checkpointHistory,
     gateDataMap,
     projectStatusByRelease,
@@ -527,6 +531,7 @@ export default function SosLeaderSummaryPage() {
     loadingBreakdowns,
     jiraBaseUrl,
     handleRefresh,
+    loading,
     checkpointHistory,
     gateDataMap,
     projectStatusByRelease,
@@ -611,7 +616,7 @@ export default function SosLeaderSummaryPage() {
       )}
 
       {(loading || orgLoading) && !grouped && (
-        <p style={{ color: '#888', fontSize: 13 }}>Loading SoS items and org map…</p>
+        <PageLoading message="Loading SoS items and org map…" />
       )}
 
       {/* ── Overall ── */}

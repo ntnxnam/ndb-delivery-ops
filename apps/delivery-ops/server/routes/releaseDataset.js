@@ -24,6 +24,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const { apiLimiter } = require('../middleware/security');
+const { jiraTimeout } = require('../middleware/timeout');
 const { validateJiraTokenMiddleware, extractToken } = require('../middleware/auth/jira');
 const { getFieldId } = require('../utils/jiraFieldsConfig');
 const syncLocking = require('../utils/syncLocking');
@@ -82,12 +83,7 @@ const SYNC_LOCK_TTL_MS = 10 * 60 * 1000;
 let _sharedPromise = null;
 async function getShared() {
   if (!_sharedPromise) {
-    // In Jest/CJS tests we need require() so jest.mock() can intercept.
-    if (process.env.NODE_ENV === 'test') {
-      _sharedPromise = Promise.resolve(require('@portfolio-delivery-ops/shared'));
-    } else {
-      _sharedPromise = import('@portfolio-delivery-ops/shared');
-    }
+    _sharedPromise = import('@portfolio-delivery-ops/shared');
   }
   return _sharedPromise;
 }
@@ -223,7 +219,7 @@ router.get('/releases', auth, async (req, res) => {
  *
  * Live fetchReleaseData wrapped with the team's baseFilter.
  */
-router.get('/per-release/:release', auth, async (req, res) => {
+router.get('/per-release/:release', auth, jiraTimeout, async (req, res) => {
   try {
     const productId = (req.query.productId || '').toString();
     const release = (req.params.release || '').toString().trim();
@@ -1012,7 +1008,7 @@ router.post('/component-counts', auth, async (req, res) => {
   }
 });
 
-router.get('/project-status', auth, async (req, res) => {
+router.get('/project-status', auth, jiraTimeout, async (req, res) => {
   try {
     const productId = (req.query.productId || '').toString();
     const release = (req.query.release || '').toString().trim();

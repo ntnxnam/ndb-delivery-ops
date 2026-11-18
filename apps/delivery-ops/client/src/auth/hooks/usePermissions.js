@@ -74,6 +74,9 @@ export const usePermissions = () => {
     isReleaseManager: userRoles?.includes('release_manager') || false,
     isEmailSender: userRoles?.includes('email_sender') || false,
     isSprintManager: userRoles?.includes('sprint_manager') || false,
-    isKpiManager: userRoles?.includes('kpi_manager') || false
+    isKpiManager: userRoles?.includes('kpi_manager') || false,
+    isExecAudience:
+      (userRoles?.includes('team_exec') || false) ||
+      (userPermissions?.includes('exec_audience') || false),
   };
 };

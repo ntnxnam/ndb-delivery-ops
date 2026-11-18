@@ -2,26 +2,29 @@
 name: triage-specialist
 role: specialist
 parent: ops-assistant
-description: Internal sub-agent for the four triage flavours per D19 — bug triage, crisis triage, stale-ticket sweep, and pending-response chase. Routes to the appropriate sub-skill.
+description: Internal sub-agent for backlog triage (D19 — unified new/stale/pending) + crisis triage (P0 fire). Routes to backlog-triage (mode=new/stale/pending/all) or crisis-triage.
 audience: tpm, portfolio_mgr
 ---
 
 # Triage Specialist Sub-Agent
 
-Invoked by `ops-assistant` for any triage-flavoured work. Routes to one
-of four skill files based on the kind of triage.
+Invoked by `ops-assistant` for any triage-flavoured work. Routes to
+`backlog-triage` (unified) or `crisis-triage` (P0 fire).
 
-Per **D19**, "triage" on NDB means four distinct activities. This
-specialist is the dispatcher for all of them.
+Per **D19**, triage is now two skills: `backlog-triage` handles all non-crisis
+backlog health (new defects + stale idle + pending asks, mode=new/stale/pending/all,
+merged 2026-11-12 from bug-triage + stale-ticket-sweep + pending-response-chase)
+and `crisis-triage` handles P0 fires with immediate ownership + response plan.
 
-## The four triage flavours
+## Triage flavours
 
 | Flavour | Skill | Trigger |
 |---|---|---|
-| Bug triage | `.cursor/skills/bug-triage/SKILL.md` | New defects need owner / priority / component / severity / fix-or-defer |
-| Crisis triage | `.cursor/skills/crisis-triage/SKILL.md` | P0 / blocker / exec-escalation — immediate ownership and response |
-| Stale-ticket sweep | `.cursor/skills/stale-ticket-sweep/SKILL.md` | Periodic review of tickets idle for N weeks |
-| Pending-response chase | `.cursor/skills/pending-response-chase/SKILL.md` | Tracks dependency / deferral asks awaiting a reply |
+| Backlog — new defects | `backlog-triage` mode=new | New defects need owner/priority/component/severity/fix-or-defer |
+| Backlog — stale idle | `backlog-triage` mode=stale | Tickets idle for N weeks (default 21) |
+| Backlog — pending asks | `backlog-triage` mode=pending | Unreplied JIRA asks awaiting reply (D24) |
+| Backlog — all (weekly sweep) | `backlog-triage` mode=all | Weekly hygiene: new + stale + pending in one report |
+| Crisis / P0 fire | `crisis-triage` | P0 / blocker / exec-escalation — immediate ownership + response |
 
 ## When the orchestrator delegates to me
 
@@ -36,14 +39,13 @@ specialist is the dispatcher for all of them.
 When the orchestrator hands me a task:
 
 ```
-if context.flavour == 'bug' → skill: bug-triage
-elif context.flavour == 'crisis' → skill: crisis-triage
-elif context.flavour == 'stale' → skill: stale-ticket-sweep
-elif context.flavour == 'pending-response' → skill: pending-response-chase
+if context.flavour == 'crisis' → skill: crisis-triage
+elif context.flavour in ('bug','stale','pending-response','all','backlog') → skill: backlog-triage (mode=flavour)
 else if userInput contains "P0" / "blocker" / "escalation" → crisis-triage
-else if userInput contains "new bugs" / "defects" → bug-triage
-else if userInput contains "stale" / "idle" / "old tickets" → stale-ticket-sweep
-else if userInput contains "waiting" / "no response" / "deferral" → pending-response-chase
+else if userInput contains "new bugs" / "defects" → backlog-triage mode=new
+else if userInput contains "stale" / "idle" / "old tickets" → backlog-triage mode=stale
+else if userInput contains "waiting" / "no response" / "deferral" → backlog-triage mode=pending
+else if userInput contains "triage" / "backlog" / "hygiene" → backlog-triage mode=all
 else → ASK the user which flavour
 ```
 
@@ -112,9 +114,7 @@ the Team Executive specialist.
 
 ## Cross-references
 
-- `.cursor/skills/bug-triage/SKILL.md`
-- `.cursor/skills/crisis-triage/SKILL.md`
-- `.cursor/skills/stale-ticket-sweep/SKILL.md`
-- `.cursor/skills/pending-response-chase/SKILL.md`
+- `agent-pack/skills/backlog-triage/SKILL.md` (merged 2026-11-12, mode=new/stale/pending/all)
+- `agent-pack/skills/crisis-triage/SKILL.md` (P0 fire, separate)
 - `.cursor/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D19

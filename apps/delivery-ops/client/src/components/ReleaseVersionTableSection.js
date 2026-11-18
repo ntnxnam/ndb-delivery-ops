@@ -178,16 +178,18 @@ function ReleaseVersionTableSection({
         {description}
       </p>
       {itemCount > 0 ? (
-        <div style={{ 
+        <div
+          className="release-version-table-scroll"
+          style={{ 
           width: '100%', 
           maxWidth: '100%', 
           border: '1px solid #dee2e6', 
           boxSizing: 'border-box', 
-          overflowX: 'auto' // Only horizontal scrolling, vertical scrolling handled by page
+          overflowX: 'auto', // Scroll when column min-widths exceed the viewport
+          WebkitOverflowScrolling: 'touch',
         }}>
           <table style={{ 
-            width: '100%', 
-            maxWidth: '100%', 
+            width: '100%',
             borderCollapse: 'collapse', 
             fontSize: '12px', 
             tableLayout: 'auto' 

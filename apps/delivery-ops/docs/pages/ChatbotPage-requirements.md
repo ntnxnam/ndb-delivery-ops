@@ -29,11 +29,15 @@ Secondary: `rm`, `portfolio_mgr`, `team-exec` (same data; denser or shorter pros
 | CH-07 | As a user, I see a provenance id on each assistant reply (audit, not a RAG colour). |
 | CH-08 | As a user, a queued mutate shows Approve / Reject; Approve does not write to JIRA (D26 open → `blocked_d26`). |
 | CH-09 | As a user, prefixing `remember:` persists a correction for later turns in that session. |
+| CH-10 | As a user, I can switch to Custom JQL Digging mode, enter JQL, and Fetch & Index a live JIRA set (Slice 2) with ticket count and sample keys. |
+| CH-11 | As a user, JQL autocomplete suggests fields/operators/values (local scrub of `jiraFieldsConfig.json` + ScriptRunner templates) behind a feature flag `REACT_APP_ENABLE_JQL_AUTOCOMPLETE` (default on; Slice 1.5a). |
 
 ## UI Behaviour
 
-- Header: title, short description, release select (team-scoped fixVersions from `SelectedReleaseContext`), Clear.
-- Scope chip after the first successful turn (`intent`, releases, keys).
+- Header: title, short description, mode toggle `Active Releases | Custom JQL Digging` (Slice 1), release select (active mode) or `Show JQL/Hide JQL` (digging mode), Clear.
+- Digging drawer (Slice 1 + 1.5a): JQL textarea with ghost + dropdown autocomplete (local `jqlAutocompleteLogic.js` scrub of `jiraFieldsConfig` 30 fields + 43 customfield IDs + ScriptRunner `portfolioChildrenOf` etc., flag `REACT_APP_ENABLE_JQL_AUTOCOMPLETE`), presets, Fetch & Index.
+- Dataset card after fetch: `Live dataset · N tickets · Sample: KEY-…` from `POST /api/jira-digging/prepare` (Slice 2), or error banner.
+- Scope chip: active mode shows `intent/releases/keys`; digging mode shows `Dataset: jql · tickets · fetched` with Clear dataset.
 - Message list: user vs assistant; assistant may show a compact tool trace and a provenance chip.
 - HITL cards when `pendingApprovals` is non-empty (Approve / Reject).
 - Loading line while a turn is in flight; send disabled.
@@ -56,3 +60,6 @@ Secondary: `rm`, `portfolio_mgr`, `team-exec` (same data; denser or shorter pros
 - [ ] Trace chips render when `trace` is non-empty.
 - [ ] Approve on a pending mutate does not call JIRA; response `executed: false`.
 - [ ] No `localhost` in client fetch URLs (relative `/api/ai/chat`).
+- [ ] Slice 1: mode toggle renders; digging drawer opens/closes; presets fill JQL.
+- [ ] Slice 1.5a: autocomplete ghost + dropdown for fields/operators/values; Tab/Enter/↑↓/Esc work; flag off hides it.
+- [ ] Slice 2: `POST /api/jira-digging/prepare` returns `ticketCount` + `sampleKeys` for valid JQL; 400 on missing/over-cap JQL; card shows live count.

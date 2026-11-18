@@ -18,11 +18,7 @@ const RELEASE_LOCK_TTL_MS = 10 * 60 * 1000;
 let _sharedPromise = null;
 async function getShared() {
   if (!_sharedPromise) {
-    if (process.env.NODE_ENV === 'test') {
-      _sharedPromise = Promise.resolve(require('@portfolio-delivery-ops/shared'));
-    } else {
-      _sharedPromise = import('@portfolio-delivery-ops/shared');
-    }
+    _sharedPromise = import('@portfolio-delivery-ops/shared');
   }
   return _sharedPromise;
 }

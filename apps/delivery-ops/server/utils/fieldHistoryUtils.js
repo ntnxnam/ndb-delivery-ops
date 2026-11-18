@@ -179,19 +179,20 @@ function formatDate(date) {
 }
 
 /**
- * Process and deduplicate date array
- * @param {string[]} dates - Array of date strings
- * @returns {string[]} Sorted unique dates (oldest first)
+ * De-duplicate preserving chronological insertion order (changelog oldest→newest, current last).
+ * Sorting by date value would turn a revert-to-original into max-min phantom delay.
+ * @param {string[]} dates - Array of date strings in chronological order
+ * @returns {string[]} Unique dates in chronological order
  */
 function processDates(dates) {
-  const uniqueDates = [...new Set(dates)].filter(d => d !== null && d !== undefined);
-  uniqueDates.sort((a, b) => {
-    const dateA = parseDate(a);
-    const dateB = parseDate(b);
-    if (!dateA || !dateB) return 0;
-    return dateA - dateB;
-  });
-  return uniqueDates;
+  const seen = new Set();
+  const unique = [];
+  for (const d of dates) {
+    if (d == null || d === undefined || seen.has(d)) continue;
+    seen.add(d);
+    unique.push(d);
+  }
+  return unique;
 }
 
 /**
@@ -218,13 +219,16 @@ function calculateDateStatistics(dates) {
     };
   }
   
-  // Count unique date changes (excluding the first date)
+  // Count = distinct values - 1 (a revert still counts as a move)
   const numberOfTimesMoved = processedDates.length - 1;
-  
-  // Calculate weeks difference between oldest and latest
-  const oldestDate = parseDate(processedDates[0]);
-  const latestDate = parseDate(processedDates[processedDates.length - 1]);
-  const weeksDiff = calculateWeeksDifference(oldestDate, latestDate);
+
+  // Duration = current vs first-ever set (chronological, not max-min). Use original insertion order
+  // so a revert-to-original (e.g. 30-Sep-2026 → 30-Sep-2027 → 30-Sep-2026) yields 0, not max-min.
+  const firstRaw = dates.find(d => d != null && d !== '' && d !== 'null') || processedDates[0];
+  const lastRaw = [...dates].reverse().find(d => d != null && d !== '' && d !== 'null') || processedDates[processedDates.length - 1];
+  const firstDate = parseDate(firstRaw);
+  const currentDate = parseDate(lastRaw);
+  const weeksDiff = calculateWeeksDifference(firstDate, currentDate);
   
   return {
     dates: processedDates,

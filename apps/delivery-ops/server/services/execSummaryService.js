@@ -165,7 +165,8 @@ async function fetchP0BugsCount(token, version) {
 }
 
 async function fetchCommitItems(token, version) {
-  const commitJQL = buildCommitItemsJQL(version);
+  const labelPrefix = version ? String(version).split(/[- ]/)[0].toLowerCase() : undefined;
+  const commitJQL = buildCommitItemsJQL(version, labelPrefix ? { labelPrefix } : undefined);
   const customFields = buildFieldIdsString(EXEC_FIELD_KEYS);
   const fields = `key,summary,status,priority,assignee,${customFields}`;
   const jira = await getJira(token);

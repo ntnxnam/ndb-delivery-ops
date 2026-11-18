@@ -1,36 +1,102 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { PageLoading } from '../../shared/components/PageLoading';
 import { useDependencyView } from '../../hooks/useDependencyView';
 import { useTeam } from '../../contexts/TeamContext';
 import { TeamRequiredGate } from '../../layout/components/TeamRequiredGate';
 import DirectionColumn from './DirectionColumn';
 import DependencySwimlanes from './DependencySwimlanes';
+import EarlyCallBundle from './EarlyCallBundle';
 import TicketChip from './TicketChip';
 import { buildHygieneItems } from './hygiene';
 import './DependencyView.css';
 
-const SHOW_OPTIONS = [
-  { id: 'everything', label: 'Everything for this release' },
-  { id: 'i_wait', label: 'Work we are blocked on' },
-  { id: 'they_wait', label: 'Work that is blocked on us' },
+/** Sub-tabs — one slice at a time (no stacked “everything”). */
+const TABS = [
+  {
+    id: 'i_wait',
+    label: 'We wait on them',
+    hint: 'Our projects blocked by partners (is blocked by)',
+  },
+  {
+    id: 'they_wait',
+    label: 'They wait on us',
+    hint: 'Outside-NDB partners blocked by us — Peer NDB pairs are under We wait',
+  },
+  {
+    id: 'hygiene',
+    label: 'What to fix',
+    hint: 'Missing labels / links / commit hygiene',
+  },
+  {
+    id: 'wishlist',
+    label: 'Wishlist',
+    hint: 'Projects we wish into this NDB release',
+  },
   {
     id: 'train_asks',
-    label: 'Asks we labeled on partner tickets (train labels)',
+    label: 'Train asks',
+    hint: 'Ask labels on partner tickets',
   },
-  { id: 'wishlist', label: 'Projects we wish into this NDB release' },
   {
     id: 'early_calls',
-    label: 'Early calls on upcoming trains (e.g. Leto / NDB-3.1)',
+    label: 'Early calls',
+    hint: 'Upcoming planned trains before CC/EC (label-based asks + wishlist)',
   },
-  { id: 'partnership', label: 'Shared project delivery (one hierarchy)' },
+  {
+    id: 'partnership',
+    label: 'Partnership',
+    hint: 'Shared FEAT → Epic delivery roots (configured in companionRoots)',
+  },
 ];
 
-/** When sidebar team is NDB: ndb-ew = peer NDB teams (still NDB), not “other teams”. */
-const PROJECT_TYPE_OPTIONS = [
-  { id: 'all', label: 'Any partner type' },
-  { id: 'global_ew', label: 'Global engineering work' },
-  { id: 'nutanix_ew', label: 'Nutanix teams outside NDB' },
-  { id: 'ndb_ew', label: 'Peer NDB teams (still NDB)' },
-  { id: 'team_internal', label: 'Same squad / no EW label (FYI only)' },
+function trainDisplayName(train) {
+  if (!train) return null;
+  return train.displayName || train.train || null;
+}
+
+function trainStatusLabel(train) {
+  if (!train) return null;
+  return train.statusLabel || train.status || null;
+}
+
+/**
+ * EW scope under wait tabs.
+ * They wait: Outside NDB + FYI only — Peer NDB↔Peer NDB lives under We wait.
+ */
+const EW_SCOPES_WE = [
+  {
+    id: 'outside',
+    label: 'Outside NDB',
+    hint: 'global-ew + nutanix-ew (partners outside NDB)',
+    spans: ['global_ew', 'nutanix_ew'],
+  },
+  {
+    id: 'ndb_peer',
+    label: 'Peer NDB',
+    hint: 'ndb-ew — peer NDB teams (still NDB). Shown only under We wait on them.',
+    spans: ['ndb_ew'],
+  },
+  {
+    id: 'fyi',
+    label: 'FYI / unparked',
+    hint: 'No EW label — awareness only, not matrix Dependency',
+    spans: ['team_internal'],
+  },
+];
+
+const EW_SCOPES_THEY = [
+  {
+    id: 'outside',
+    label: 'Outside NDB',
+    hint: 'Partners outside NDB waiting on our tickets (global-ew + nutanix-ew)',
+    spans: ['global_ew', 'nutanix_ew'],
+  },
+  {
+    id: 'fyi',
+    label: 'FYI / unparked',
+    hint: 'Unlabeled partner tickets waiting on us',
+    spans: ['team_internal'],
+  },
 ];
 
 function issueTypeId(iss) {
@@ -39,9 +105,60 @@ function issueTypeId(iss) {
   return 'team_internal';
 }
 
-function filterByProjectType(issues, projectType) {
-  if (!projectType || projectType === 'all') return issues || [];
-  return (issues || []).filter((iss) => issueTypeId(iss) === String(projectType));
+function filterByEwScope(issues, ewScopeId, scopes) {
+  if (!ewScopeId || ewScopeId === 'all') return issues || [];
+  const scope = (scopes || EW_SCOPES_WE).find((s) => s.id === ewScopeId);
+  // Unknown scope for this tab (e.g. ndb_peer on They wait) → empty, not “all”
+  if (!scope) return [];
+  const allowed = new Set(scope.spans);
+  return (issues || []).filter((iss) => allowed.has(issueTypeId(iss)));
+}
+
+/** Match JIRA component name on partner tickets — any project. */
+function filterByComponent(issues, componentName) {
+  if (!componentName) return issues || [];
+  return (issues || []).filter((iss) =>
+    (iss.components || []).some((c) => c === componentName)
+  );
+}
+
+function uniqueComponentNames(issues) {
+  const names = new Set();
+  (issues || []).forEach((iss) => {
+    (iss.components || []).forEach((c) => {
+      if (c) names.add(c);
+    });
+  });
+  return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function withComponentClause(jql, componentName) {
+  if (!jql || !componentName) return jql || '';
+  const escaped = String(componentName).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `(${jql}) AND component = "${escaped}"`;
+}
+
+function jiraUrlForJql(baseUrl, jql) {
+  if (!baseUrl || !jql) return '';
+  return `${String(baseUrl).replace(/\/+$/, '')}/issues/?jql=${encodeURIComponent(jql)}`;
+}
+
+function countByEwScope(issues, { excludeNdbHome = false } = {}) {
+  const counts = { outside: 0, ndb_peer: 0, fyi: 0 };
+  (issues || []).forEach((iss) => {
+    if (excludeNdbHome && isNdbHomeIssue(iss)) return;
+    const id = issueTypeId(iss);
+    if (id === 'global_ew' || id === 'nutanix_ew') counts.outside += 1;
+    else if (id === 'ndb_ew') counts.ndb_peer += 1;
+    else counts.fyi += 1;
+  });
+  return counts;
+}
+
+/** ERA / FEAT / NDB* — Peer NDB home; Peer↔Peer deps belong on We wait only. */
+function isNdbHomeIssue(iss) {
+  const pk = String(iss?.project || String(iss?.key || '').split('-')[0] || '').toUpperCase();
+  return pk === 'ERA' || pk === 'FEAT' || pk.startsWith('NDB');
 }
 
 function Metric({ section, label }) {
@@ -72,8 +189,10 @@ function Metric({ section, label }) {
 export default function DependencyViewPage() {
   const { selectedTeamId, selectedTeam, hasTeamSelected } = useTeam();
   const [release, setRelease] = useState('');
-  const [show, setShow] = useState('everything');
-  const [projectType, setProjectType] = useState('all');
+  const [tab, setTab] = useState('i_wait');
+  const [ewScope, setEwScope] = useState('outside');
+  /** Partner component name; '' = all components (any project). */
+  const [componentFilter, setComponentFilter] = useState('');
 
   const { data, loading, refreshing, error, refresh } = useDependencyView(
     selectedTeamId,
@@ -98,22 +217,76 @@ export default function DependencyViewPage() {
     Boolean(loading || refreshing) ||
     Boolean(selectedRelease && data?.release && data.release !== selectedRelease);
 
+  /** Unfiltered direction lists — main tab badges use these. */
+  const iWaitAll = useMemo(
+    () => sections.partnershipBlockedBy?.issues || [],
+    [sections.partnershipBlockedBy]
+  );
+  const theyWaitAll = useMemo(
+    () => sections.partnershipBlocks?.issues || [],
+    [sections.partnershipBlocks]
+  );
+
+  /** EW-scoped before component filter — drives component dropdown options. */
+  const iWaitByEw = useMemo(
+    () => filterByEwScope(iWaitAll, ewScope, EW_SCOPES_WE),
+    [iWaitAll, ewScope]
+  );
+  /** They wait EW scope: never list NDB-home tickets (those are We-wait / Peer NDB). */
+  const theyWaitByEw = useMemo(() => {
+    const scoped = filterByEwScope(theyWaitAll, ewScope, EW_SCOPES_THEY);
+    return scoped.filter((t) => !isNdbHomeIssue(t));
+  }, [theyWaitAll, ewScope]);
+
+  /** EW + component — used inside We wait / They wait panels. */
   const iWait = useMemo(
-    () => filterByProjectType(sections.partnershipBlockedBy?.issues, projectType),
-    [sections.partnershipBlockedBy, projectType]
+    () => filterByComponent(iWaitByEw, componentFilter),
+    [iWaitByEw, componentFilter]
   );
   const theyWait = useMemo(
-    () => filterByProjectType(sections.partnershipBlocks?.issues, projectType),
-    [sections.partnershipBlocks, projectType]
+    () => filterByComponent(theyWaitByEw, componentFilter),
+    [theyWaitByEw, componentFilter]
   );
+
+  const componentOptions = useMemo(
+    () => uniqueComponentNames(tab === 'they_wait' ? theyWaitByEw : iWaitByEw),
+    [tab, iWaitByEw, theyWaitByEw]
+  );
+
+  const iWaitJql = useMemo(
+    () => withComponentClause(sections.partnershipBlockedBy?.jql, componentFilter),
+    [sections.partnershipBlockedBy?.jql, componentFilter]
+  );
+  const iWaitJiraUrl = useMemo(
+    () =>
+      componentFilter
+        ? jiraUrlForJql(jiraBaseUrl, iWaitJql)
+        : sections.partnershipBlockedBy?.jiraUrl || '',
+    [componentFilter, jiraBaseUrl, iWaitJql, sections.partnershipBlockedBy?.jiraUrl]
+  );
+  const theyWaitJql = useMemo(
+    () => withComponentClause(sections.partnershipBlocks?.jql, componentFilter),
+    [sections.partnershipBlocks?.jql, componentFilter]
+  );
+  const theyWaitJiraUrl = useMemo(
+    () =>
+      componentFilter
+        ? jiraUrlForJql(jiraBaseUrl, theyWaitJql)
+        : sections.partnershipBlocks?.jiraUrl || '',
+    [componentFilter, jiraBaseUrl, theyWaitJql, sections.partnershipBlocks?.jiraUrl]
+  );
+
+  // Drop stale component selection when EW scope / tab options change
+  useEffect(() => {
+    if (!componentFilter) return;
+    if (!componentOptions.includes(componentFilter)) setComponentFilter('');
+  }, [componentFilter, componentOptions]);
+
   const trainAsks = useMemo(
-    () => filterByProjectType(sections.trainLabels?.issues, projectType),
-    [sections.trainLabels, projectType]
+    () => sections.trainLabels?.issues || [],
+    [sections.trainLabels]
   );
-  const wishlist = useMemo(
-    () => filterByProjectType(sections.wishlist?.issues, projectType),
-    [sections.wishlist, projectType]
-  );
+  const wishlist = useMemo(() => sections.wishlist?.issues || [], [sections.wishlist]);
   /**
    * NDB-side *wait roots* (Project column) — not the FEAT/ENG blockers themselves.
    * Includes wishlist + server waitRoots (e.g. ERA-49565) + home keys linked from blockers.
@@ -165,20 +338,13 @@ export default function DependencyViewPage() {
     [sections.blockerHops, sections.waitRoots]
   );
   const wishlistUnlinked = useMemo(
-    () => filterByProjectType(sections.wishlistUnlinked?.issues, projectType),
-    [sections.wishlistUnlinked, projectType]
+    () => sections.wishlistUnlinked?.issues || [],
+    [sections.wishlistUnlinked]
   );
   const orphans = useMemo(
-    () => filterByProjectType(sections.partnerOrphans?.issues, projectType),
-    [sections.partnerOrphans, projectType]
+    () => sections.partnerOrphans?.issues || [],
+    [sections.partnerOrphans]
   );
-
-  const showIWait = show === 'everything' || show === 'i_wait';
-  const showTheyWait = show === 'everything' || show === 'they_wait';
-  const showTrain = show === 'everything' || show === 'train_asks';
-  const showWishlist = show === 'everything' || show === 'wishlist';
-  const showEarlyCalls = show === 'everything' || show === 'early_calls';
-  const showPartnership = show === 'everything' || show === 'partnership';
 
   const earlyCalls = useMemo(() => {
     const raw = data?.earlyCalls || sections.earlyCalls || [];
@@ -186,19 +352,19 @@ export default function DependencyViewPage() {
       const s = bundle.sections || {};
       return {
         ...bundle,
-        trainAsks: filterByProjectType(s.trainLabels?.issues, projectType),
-        wishlistItems: filterByProjectType(s.wishlist?.issues, projectType),
-        wishlistUnlinkedItems: filterByProjectType(s.wishlistUnlinked?.issues, projectType),
-        orphanAsks: filterByProjectType(s.partnerOrphans?.issues, projectType),
+        trainAsks: s.trainLabels?.issues || [],
+        wishlistItems: s.wishlist?.issues || [],
+        wishlistUnlinkedItems: s.wishlistUnlinked?.issues || [],
+        orphanAsks: s.partnerOrphans?.issues || [],
       };
     });
-  }, [data?.earlyCalls, sections.earlyCalls, projectType]);
+  }, [data?.earlyCalls, sections.earlyCalls]);
 
   const hygiene = useMemo(
     () =>
       buildHygieneItems({
-        iWaitIssues: iWait,
-        theyWaitIssues: theyWait,
+        iWaitIssues: iWaitAll,
+        theyWaitIssues: theyWaitAll,
         wishlistCount: wishlist.length,
         wishlistUnlinked,
         partnerOrphans: orphans,
@@ -207,8 +373,8 @@ export default function DependencyViewPage() {
         trainName: train.train,
       }),
     [
-      iWait,
-      theyWait,
+      iWaitAll,
+      theyWaitAll,
       wishlist.length,
       wishlistUnlinked,
       orphans,
@@ -220,10 +386,69 @@ export default function DependencyViewPage() {
 
   const companions = sections.companions || [];
 
+  const theyWaitOutsideCount = useMemo(
+    () => theyWaitAll.filter((t) => !isNdbHomeIssue(t)).length,
+    [theyWaitAll]
+  );
+
+  const tabCounts = useMemo(
+    () => ({
+      i_wait: iWaitAll.length,
+      they_wait: theyWaitOutsideCount,
+      hygiene: hygiene.length,
+      wishlist: wishlist.length,
+      train_asks: trainAsks.length,
+      early_calls: earlyCalls.reduce(
+        (n, b) => n + (b.trainAsks?.length || 0) + (b.wishlistItems?.length || 0),
+        0
+      ),
+      partnership: companions.length,
+    }),
+    [
+      iWaitAll.length,
+      theyWaitOutsideCount,
+      hygiene.length,
+      wishlist.length,
+      trainAsks.length,
+      earlyCalls,
+      companions.length,
+    ]
+  );
+
+  const showIWait = tab === 'i_wait';
+  const showTheyWait = tab === 'they_wait';
+  const showHygiene = tab === 'hygiene';
+  const showTrain = tab === 'train_asks';
+  const showWishlist = tab === 'wishlist';
+  const showEarlyCalls = tab === 'early_calls';
+  const showPartnership = tab === 'partnership';
+  const showEwScopes = showIWait || showTheyWait;
+  const ewScopesForTab = showTheyWait ? EW_SCOPES_THEY : EW_SCOPES_WE;
+  const activeTabMeta = TABS.find((t) => t.id === tab) || TABS[0];
+  const activeEwMeta =
+    ewScopesForTab.find((s) => s.id === ewScope) || ewScopesForTab[0];
+
+  // They wait has no Peer NDB subtab — always leave ndb_peer
+  useEffect(() => {
+    if (!showTheyWait) return;
+    if (ewScope === 'ndb_peer' || !EW_SCOPES_THEY.some((s) => s.id === ewScope)) {
+      setEwScope('outside');
+    }
+  }, [showTheyWait, ewScope]);
+
+  const ewScopeCounts = useMemo(() => {
+    // They wait: Outside + FYI only; never surface a Peer NDB “1” from ERA home tickets
+    if (showTheyWait) {
+      const c = countByEwScope(theyWaitAll, { excludeNdbHome: true });
+      return { outside: c.outside, fyi: c.fyi };
+    }
+    return countByEwScope(iWaitAll);
+  }, [showTheyWait, iWaitAll, theyWaitAll]);
+
   if (!hasTeamSelected) {
     return (
       <TeamRequiredGate
-        title="Dependency View"
+        title="Post EC dependency view"
         description="Select a team in the sidebar to load cross-team dependencies."
       />
     );
@@ -232,7 +457,7 @@ export default function DependencyViewPage() {
   return (
     <div className="dv-page">
       <header className="dv-header">
-        <h1>Dependency View</h1>
+        <h1>Post EC dependency view</h1>
         <span className="dv-badge">read-only</span>
         {selectedTeam?.name ? (
           <span className="dv-meta">{selectedTeam.name}</span>
@@ -242,7 +467,7 @@ export default function DependencyViewPage() {
         ) : null}
       </header>
 
-      <div className="dv-filters">
+      <div className="dv-filters dv-filters--release">
         <label>
           Release
           <select
@@ -254,30 +479,6 @@ export default function DependencyViewPage() {
             {releases.map((r) => (
               <option key={r} value={r}>
                 {r}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          What do you want to look at?
-          <select value={show} onChange={(e) => setShow(e.target.value)} aria-label="Show">
-            {SHOW_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Partner type
-          <select
-            value={projectType}
-            onChange={(e) => setProjectType(e.target.value)}
-            aria-label="Partner type"
-          >
-            {PROJECT_TYPE_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
               </option>
             ))}
           </select>
@@ -294,21 +495,33 @@ export default function DependencyViewPage() {
 
       {train.train || train.status ? (
         <div className="dv-train">
-          This NDB release (<strong>{selectedRelease || '—'}</strong>) is meant to ship with
-          partner train <strong>{train.train || 'unaligned / reassess'}</strong>
-          {train.status ? ` (${train.status})` : ''}
-          {train.notes ? ` — ${train.notes}` : ''}. Partner asks use labels for that train (for
-          example ndb-leto-ask) — including peer NDB teams and partners outside NDB.
+          <div>
+            <strong>{selectedRelease || '—'}</strong>
+            {' ↔ '}
+            <strong>{trainDisplayName(train) || 'No partner train configured'}</strong>
+            {trainStatusLabel(train) ? (
+              <span className="dv-badge" style={{ marginLeft: '0.35rem' }}>
+                {trainStatusLabel(train)}
+              </span>
+            ) : null}
+          </div>
+          {train.notes ? <p className="dv-col-sub">{train.notes}</p> : null}
+          {train.askLabelHint ? (
+            <p className="dv-col-sub">
+              Partner ask labels on their tickets:{' '}
+              <code className="dv-code">{train.askLabelHint}</code>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      <div className="dv-header" style={{ gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="dv-metrics" aria-label="Release snapshot">
         <Metric
-          section={{ ...sections.partnershipBlockedBy, count: iWait.length }}
+          section={{ ...sections.partnershipBlockedBy, count: iWaitAll.length }}
           label="We wait on partners"
         />
         <Metric
-          section={{ ...sections.partnershipBlocks, count: theyWait.length }}
+          section={{ ...sections.partnershipBlocks, count: theyWaitAll.length }}
           label="Partners wait on us"
         />
         <Metric
@@ -321,238 +534,324 @@ export default function DependencyViewPage() {
         />
       </div>
 
-      {(showIWait || showTheyWait) && data ? (
-        <DependencySwimlanes
-          iWaitIssues={iWait}
-          theyWaitIssues={theyWait}
-          projectIssues={projectIssues}
-          chainExtras={chainExtras}
-          jiraBaseUrl={jiraBaseUrl}
-          iWaitJiraUrl={sections.partnershipBlockedBy?.jiraUrl}
-          iWaitJql={sections.partnershipBlockedBy?.jql}
-          theyWaitJiraUrl={sections.partnershipBlocks?.jiraUrl}
-          theyWaitJql={sections.partnershipBlocks?.jql}
-          showIWait={showIWait}
-          showTheyWait={showTheyWait}
-        />
-      ) : null}
+      <div className="dv-tabs" role="tablist" aria-label="Dependency view sections">
+        {TABS.map((t) => {
+          const count = tabCounts[t.id];
+          const selected = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`dv-tab-${t.id}`}
+              aria-selected={selected}
+              aria-controls={`dv-panel-${t.id}`}
+              className={`dv-tab${selected ? ' dv-tab--active' : ''}`}
+              onClick={() => setTab(t.id)}
+              title={t.hint}
+            >
+              <span className="dv-tab-label">{t.label}</span>
+              {typeof count === 'number' ? (
+                <span className="dv-tab-count">{count}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      <p className="dv-tab-hint">{activeTabMeta.hint}</p>
 
-      {hygiene.length > 0 ? (
-        <section className="dv-hygiene" aria-label="What to fix">
-          <h2>What to fix (whose fault)</h2>
-          <ul>
-            {hygiene.map((h) => (
-              <li key={h.id} className={`owner-${h.owner}`}>
-                <strong>
-                  {h.owner === 'ndb' ? 'Our fault (NDB process)' : 'Partner fault (ticket owner)'}
-                </strong>
-                {' — '}
-                {h.jiraUrl ? (
-                  <a href={h.jiraUrl} target="_blank" rel="noopener noreferrer" title={h.jql || ''}>
-                    {h.title}
-                  </a>
-                ) : (
-                  <span>{h.title}</span>
-                )}
-                <span className="dv-meta"> ({h.count})</span>
-                {h.detail ? <div className="dv-hygiene-detail">{h.detail}</div> : null}
-                <div className="dv-hygiene-examples">
-                  {(h.examples || []).map((ex) => (
-                    <a key={ex.key} href={ex.href} target="_blank" rel="noopener noreferrer">
-                      {ex.summary}
-                      {ex.fixVersion ? (
-                        <span className="dv-meta"> · {ex.fixVersion}</span>
-                      ) : null}
-                    </a>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : data && !fetching ? (
-        <section className="dv-hygiene">
-          <h2>What to fix</h2>
-          <p className="dv-empty">Nothing to chase for the current filters.</p>
-        </section>
-      ) : null}
-
-      {(showIWait || showTheyWait) && data ? (
-        <details className="dv-drill">
-          <summary>Full ticket lists (drill-in)</summary>
-          <div className="dv-cols">
-            {showIWait ? (
-              <DirectionColumn
-                title="We are waiting on a partner"
-                subtitle="JIRA “is blocked by” — partners can be peer NDB teams (ndb-ew) or teams outside NDB"
-                issues={iWait}
-                jiraBaseUrl={jiraBaseUrl}
-                jiraUrl={sections.partnershipBlockedBy?.jiraUrl}
-                jql={sections.partnershipBlockedBy?.jql}
-                emptyHint="No tickets are blocking us via a Dependency link."
-              />
-            ) : null}
-            {showTheyWait ? (
-              <DirectionColumn
-                title="A partner is waiting on us"
-                subtitle="JIRA “blocks” — includes peer NDB teams; they often create only the link and skip ask labels (see hygiene above)"
-                issues={theyWait}
-                jiraBaseUrl={jiraBaseUrl}
-                jiraUrl={sections.partnershipBlocks?.jiraUrl}
-                jql={sections.partnershipBlocks?.jql}
-                emptyHint="No partner is waiting on us via a Dependency link."
-              />
+      {showEwScopes ? (
+        <>
+          <div
+            className="dv-subtabs"
+            role="tablist"
+            aria-label="Partner EW type for this wait direction"
+          >
+            {ewScopesForTab.map((s) => {
+              const count = ewScopeCounts[s.id] ?? 0;
+              const selected = ewScope === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  id={`dv-ew-${s.id}`}
+                  aria-selected={selected}
+                  className={`dv-subtab${selected ? ' dv-subtab--active' : ''}`}
+                  onClick={() => setEwScope(s.id)}
+                  title={s.hint}
+                >
+                  <span>{s.label}</span>
+                  <span className="dv-tab-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="dv-tab-hint">{activeEwMeta.hint}</p>
+          <div className="dv-component-filter">
+            <label>
+              Component
+              <select
+                value={componentFilter}
+                onChange={(e) => setComponentFilter(e.target.value)}
+                aria-label="Filter by partner component"
+              >
+                <option value="">All components</option>
+                {componentOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {componentFilter ? (
+              <p className="dv-tab-hint">
+                {showIWait
+                  ? `NDB waits on partners with component ${componentFilter}`
+                  : `Partners with component ${componentFilter} waiting on NDB`}
+              </p>
             ) : null}
           </div>
-        </details>
-      ) : null}
-
-      {showEarlyCalls && data && earlyCalls.length > 0 ? (
-        <section className="dv-section dv-early" aria-label="Early calls on upcoming trains">
-          <h2>Early calls — upcoming trains</h2>
-          <p className="dv-col-sub">
-            Releases where CC / EC (and often fixVersion) are not in play yet — e.g.{' '}
-            <strong>NDB-3.1 ↔ Leto</strong>. These are label-based calls you are already making:
-            train asks on partner tickets + wishlist on our NDB side. Not driven by{' '}
-            {selectedRelease || 'current'} fixVersion links.
-          </p>
-          {earlyCalls.map((bundle) => {
-            const s = bundle.sections || {};
-            const askCount = bundle.trainAsks?.length ?? 0;
-            const wlCount = bundle.wishlistItems?.length ?? 0;
-            const unlinkedCount = bundle.wishlistUnlinkedItems?.length ?? 0;
-            const orphanCount = bundle.orphanAsks?.length ?? 0;
-            return (
-              <details
-                key={bundle.release}
-                className="dv-early-bundle"
-                open={show === 'early_calls' || askCount + wlCount > 0}
+          {showTheyWait ? (
+            <p className="dv-tab-hint">
+              Peer NDB ↔ Peer NDB (e.g. ERA epic blocked by ERA bug) is under{' '}
+              <button
+                type="button"
+                className="dv-text-btn"
+                onClick={() => {
+                  setTab('i_wait');
+                  setEwScope('ndb_peer');
+                }}
               >
-                <summary>
-                  <strong>
-                    {bundle.release}
-                    {bundle.train ? ` ↔ ${bundle.train}` : ''}
-                  </strong>
-                  {bundle.status ? (
-                    <span className="dv-badge dv-badge--planned">{bundle.status}</span>
-                  ) : null}
-                  <span className="dv-meta">
-                    {' '}
-                    · ask labels {askCount} · wishlist {wlCount}
-                    {unlinkedCount ? ` · wishlist unlinked ${unlinkedCount}` : ''}
-                    {orphanCount ? ` · orphan asks ${orphanCount}` : ''}
-                  </span>
-                  {bundle.notes ? (
-                    <span className="dv-meta"> — {bundle.notes}</span>
-                  ) : null}
-                </summary>
-                {bundle.error ? (
-                  <p className="dv-error">{bundle.error}</p>
-                ) : (
-                  <div className="dv-early-cols">
-                    <div>
-                      <h3>Ask labels on partner tickets</h3>
-                      <p className="dv-col-sub">
-                        {(bundle.trainAskLabels || []).join(', ') || `ndb-${bundle.trainSlug}-*`}
-                      </p>
-                      <Metric
-                        section={{ ...s.trainLabels, count: askCount }}
-                        label="Partner tickets with ask label"
-                      />
-                      <div className="dv-col-body">
-                        {askCount === 0 ? (
-                          <p className="dv-empty">No train ask labels yet for this release.</p>
-                        ) : (
-                          bundle.trainAsks.map((iss) => (
-                            <TicketChip
-                              key={iss.key}
-                              issue={iss}
-                              jiraBaseUrl={jiraBaseUrl}
-                              showAskFlags={false}
-                            />
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <h3>Wishlist into {bundle.release}</h3>
-                      <p className="dv-col-sub">
-                        {bundle.wishlistLabel || `ndb-${bundle.releaseSlug}-wishlist`} on our NDB
-                        projects
-                      </p>
-                      <Metric
-                        section={{ ...s.wishlist, count: wlCount }}
-                        label="Wishlist projects"
-                      />
-                      {' · '}
-                      <Metric
-                        section={{ ...s.wishlistUnlinked, count: unlinkedCount }}
-                        label="Wishlist with no link"
-                      />
-                      <div className="dv-col-body">
-                        {wlCount === 0 ? (
-                          <p className="dv-empty">No wishlist items for this release yet.</p>
-                        ) : (
-                          bundle.wishlistItems.map((iss) => (
-                            <TicketChip
-                              key={iss.key}
-                              issue={iss}
-                              jiraBaseUrl={jiraBaseUrl}
-                              showAskFlags={false}
-                            />
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    {orphanCount > 0 ? (
-                      <div>
-                        <h3>Orphan partner asks</h3>
-                        <p className="dv-col-sub">
-                          Train-dep label present but not linked to any {bundle.release} wishlist
-                          item.
-                        </p>
-                        <Metric
-                          section={{ ...s.partnerOrphans, count: orphanCount }}
-                          label="Orphan asks"
-                        />
-                        <div className="dv-col-body">
-                          {bundle.orphanAsks.map((iss) => (
-                            <TicketChip
-                              key={iss.key}
-                              issue={iss}
-                              jiraBaseUrl={jiraBaseUrl}
-                              showAskFlags={false}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </details>
-            );
-          })}
-        </section>
+                We wait on them → Peer NDB
+              </button>
+              .
+            </p>
+          ) : null}
+        </>
       ) : null}
 
-      {showEarlyCalls && data && earlyCalls.length === 0 && show === 'early_calls' ? (
-        <section className="dv-section dv-early">
-          <h2>Early calls — upcoming trains</h2>
-          <p className="dv-empty">
-            No planned / later releases after {selectedRelease || 'this release'} in config.
-          </p>
-        </section>
+      {showIWait && data ? (
+        <div
+          role="tabpanel"
+          id="dv-panel-i_wait"
+          aria-labelledby="dv-tab-i_wait"
+          className="dv-tab-panel"
+        >
+          <DependencySwimlanes
+            iWaitIssues={iWait}
+            theyWaitIssues={[]}
+            projectIssues={projectIssues}
+            chainExtras={chainExtras}
+            jiraBaseUrl={jiraBaseUrl}
+            iWaitJiraUrl={iWaitJiraUrl}
+            iWaitJql={iWaitJql}
+            showIWait
+            showTheyWait={false}
+            title={`We wait on them — ${activeEwMeta.label}${
+              componentFilter ? ` · ${componentFilter}` : ''
+            }`}
+            weWaitHeading="Our project → waits on → partner"
+            previouslyLinked={data.previouslyLinked}
+          />
+          <details className="dv-drill">
+            <summary>Full ticket list (drill-in) — {activeEwMeta.label}</summary>
+            <DirectionColumn
+              title={`We wait on them (${activeEwMeta.label}${
+                componentFilter ? ` · ${componentFilter}` : ''
+              })`}
+              subtitle={
+                componentFilter
+                  ? `Partner tickets with component ${componentFilter}`
+                  : activeEwMeta.hint
+              }
+              issues={iWait}
+              jiraBaseUrl={jiraBaseUrl}
+              jiraUrl={iWaitJiraUrl}
+              jql={iWaitJql}
+              emptyHint={`No “we wait on them” tickets in ${activeEwMeta.label} for current filters.`}
+            />
+          </details>
+        </div>
+      ) : null}
+
+      {showTheyWait && data ? (
+        <div
+          role="tabpanel"
+          id="dv-panel-they_wait"
+          aria-labelledby="dv-tab-they_wait"
+          className="dv-tab-panel"
+        >
+          <DependencySwimlanes
+            iWaitIssues={iWaitAll}
+            theyWaitIssues={theyWait}
+            projectIssues={projectIssues}
+            chainExtras={chainExtras}
+            jiraBaseUrl={jiraBaseUrl}
+            theyWaitJiraUrl={theyWaitJiraUrl}
+            theyWaitJql={theyWaitJql}
+            showIWait={false}
+            showTheyWait
+            title={`They wait on us — ${activeEwMeta.label}${
+              componentFilter ? ` · ${componentFilter}` : ''
+            }`}
+            previouslyLinked={data.previouslyLinked}
+            story={
+              <>
+                Outside partners waiting on our NDB tickets. Read left → right:{' '}
+                <strong>Partner</strong>
+                <span className="dv-edge-arrow-line"> → waits on → </span>
+                <strong>Our ticket</strong>. Peer NDB pairs are not listed here.
+                {componentFilter ? (
+                  <>
+                    {' '}
+                    Showing component <strong>{componentFilter}</strong>.
+                  </>
+                ) : null}
+              </>
+            }
+            legend={
+              <>
+                <strong>Partner (outside NDB)</strong>
+                <span className="dv-edge-arrow-line">→ waits on →</span>
+                <strong>Our ticket</strong>
+              </>
+            }
+          />
+          {theyWait.length > 0 ? (
+            <details className="dv-drill">
+              <summary>Full ticket list (drill-in) — {activeEwMeta.label}</summary>
+              <DirectionColumn
+                title={`They wait on us (${activeEwMeta.label}${
+                  componentFilter ? ` · ${componentFilter}` : ''
+                })`}
+                subtitle={
+                  componentFilter
+                    ? `Partner tickets with component ${componentFilter}`
+                    : activeEwMeta.hint
+                }
+                issues={theyWait}
+                jiraBaseUrl={jiraBaseUrl}
+                jiraUrl={theyWaitJiraUrl}
+                jql={theyWaitJql}
+                emptyHint="None for this filter."
+                hideEmptyBuckets
+              />
+            </details>
+          ) : (
+            <p className="dv-empty">
+              {componentFilter
+                ? `No partners with component ${componentFilter} waiting on us in ${activeEwMeta.label}.`
+                : `No outside-NDB partners waiting on us in ${activeEwMeta.label}. For ERA↔ERA (Peer NDB) deps, open We wait on them → Peer NDB.`}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {showHygiene ? (
+        <div
+          role="tabpanel"
+          id="dv-panel-hygiene"
+          aria-labelledby="dv-tab-hygiene"
+          className="dv-tab-panel"
+        >
+          {hygiene.length > 0 ? (
+            <section className="dv-hygiene" aria-label="What to fix">
+              <h2>What to fix (whose fault)</h2>
+              <ul>
+                {hygiene.map((h) => (
+                  <li key={h.id} className={`owner-${h.owner}`}>
+                    <strong>
+                      {h.owner === 'ndb'
+                        ? 'Our fault (NDB process)'
+                        : 'Partner fault (ticket owner)'}
+                    </strong>
+                    {' — '}
+                    {h.jiraUrl ? (
+                      <a
+                        href={h.jiraUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={h.jql || ''}
+                      >
+                        {h.title}
+                      </a>
+                    ) : (
+                      <span>{h.title}</span>
+                    )}
+                    <span className="dv-meta"> ({h.count})</span>
+                    {h.detail ? <div className="dv-hygiene-detail">{h.detail}</div> : null}
+                    <div className="dv-hygiene-examples">
+                      {(h.examples || []).map((ex) => (
+                        <a key={ex.key} href={ex.href} target="_blank" rel="noopener noreferrer">
+                          {ex.summary}
+                          {ex.fixVersion ? (
+                            <span className="dv-meta"> · {ex.fixVersion}</span>
+                          ) : null}
+                        </a>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : data && !fetching ? (
+            <section className="dv-hygiene">
+              <h2>What to fix</h2>
+              <p className="dv-empty">Nothing to chase for the current filters.</p>
+            </section>
+          ) : (
+            <PageLoading inline message="Loading hygiene…" />
+          )}
+        </div>
+      ) : null}
+
+      {showEarlyCalls && data ? (
+        <div
+          role="tabpanel"
+          id="dv-panel-early_calls"
+          aria-labelledby="dv-tab-early_calls"
+          className="dv-tab-panel"
+        >
+          <section className="dv-section dv-early" aria-label="Early calls on upcoming trains">
+            <h2>Early calls — upcoming trains</h2>
+            <p className="dv-col-sub">
+              Releases where CC / EC (and often fixVersion) are not in play yet. Each train shows{' '}
+              <strong>our wishlist → waits on → partner asks</strong>. Missing Mode Dependency
+              links are under “Missing arrows.”
+            </p>
+            {earlyCalls.length > 0 ? (
+              earlyCalls.map((bundle) => (
+                <EarlyCallBundle
+                  key={bundle.release}
+                  bundle={bundle}
+                  jiraBaseUrl={jiraBaseUrl}
+                  defaultOpen
+                />
+              ))
+            ) : (
+              <p className="dv-empty">
+                No planned / later releases after {selectedRelease || 'this release'} in config.
+              </p>
+            )}
+          </section>
+        </div>
       ) : null}
 
       {showWishlist && data ? (
-        <section className="dv-section">
-          <h2>Projects we wish into this NDB release</h2>
-          <p className="dv-col-sub">
-            Wishlist labels live on <strong>our</strong> NDB projects — “I wish this project lands
-            in {selectedRelease || 'this release'}.”
-          </p>
-          <details open={show === 'wishlist'}>
-            <summary>
+        <div
+          role="tabpanel"
+          id="dv-panel-wishlist"
+          aria-labelledby="dv-tab-wishlist"
+          className="dv-tab-panel"
+        >
+          <section className="dv-section">
+            <h2>Projects we wish into this NDB release</h2>
+            <p className="dv-col-sub">
+              Wishlist labels live on <strong>our</strong> NDB projects — “I wish this project lands
+              in {selectedRelease || 'this release'}.”
+            </p>
+            <div className="dv-meta" style={{ marginBottom: '0.35rem' }}>
               <Metric
                 section={{ ...sections.wishlist, count: wishlist.length }}
                 label="Wishlist projects"
@@ -562,7 +861,7 @@ export default function DependencyViewPage() {
                 section={{ ...sections.wishlistUnlinked, count: wishlistUnlinked.length }}
                 label="Wishlist with no link yet"
               />
-            </summary>
+            </div>
             <div className="dv-col-body">
               {wishlist.length === 0 ? (
                 <p className="dv-empty">No wishlist items.</p>
@@ -577,32 +876,41 @@ export default function DependencyViewPage() {
                 ))
               )}
             </div>
-          </details>
-        </section>
+          </section>
+        </div>
       ) : null}
 
       {showTrain && data ? (
-        <section className="dv-section">
-          <h2>
-            Asks we labeled on partner tickets
-            {train.train ? ` (for ${train.train})` : ''}
-          </h2>
-          <p className="dv-col-sub">
-            Labels sit on the <strong>partner’s</strong> ticket (peer NDB or outside NDB) so the ask
-            for the train is visible — not the same as a wishlist on our NDB project.
-          </p>
-          <details open={show === 'train_asks'}>
-            <summary>
+        <div
+          role="tabpanel"
+          id="dv-panel-train_asks"
+          aria-labelledby="dv-tab-train_asks"
+          className="dv-tab-panel"
+        >
+          <section className="dv-section">
+            <h2>
+              Asks we labeled on partner tickets
+              {trainDisplayName(train) ? ` — ${trainDisplayName(train)}` : ''}
+            </h2>
+            <p className="dv-col-sub">
+              Labels sit on the <strong>partner’s</strong> ticket for this release’s train
+              {train.askLabelHint ? (
+                <>
+                  {' '}
+                  (<code className="dv-code">{train.askLabelHint}</code>)
+                </>
+              ) : null}
+              — not the same as a wishlist on our NDB project.
+            </p>
+            <div className="dv-meta" style={{ marginBottom: '0.35rem' }}>
               <Metric
                 section={{ ...sections.trainLabels, count: trainAsks.length }}
                 label="Partner tickets with an ask label"
               />
-            </summary>
+            </div>
             <div className="dv-col-body">
               {trainAsks.length === 0 ? (
-                <p className="dv-empty">
-                  No ask labels found on partner tickets for this train.
-                </p>
+                <p className="dv-empty">No ask labels found on partner tickets for this train.</p>
               ) : (
                 trainAsks.map((iss) => (
                   <TicketChip
@@ -614,61 +922,72 @@ export default function DependencyViewPage() {
                 ))
               )}
             </div>
-          </details>
-        </section>
+          </section>
+        </div>
       ) : null}
 
       {showPartnership && data ? (
-        <section className="dv-section">
-          <h2>Shared project delivery (Partnership)</h2>
-          <p className="dv-col-sub">
-            Multiple teams delivering as one project under a FEAT / Initiative → Epic hierarchy —
-            not a blocks/blocked-by Dependency link.
-          </p>
-          {!companions.length ? (
-            <p className="dv-empty">
-              No shared-project roots are configured for this release yet.
+        <div
+          role="tabpanel"
+          id="dv-panel-partnership"
+          aria-labelledby="dv-tab-partnership"
+          className="dv-tab-panel"
+        >
+          <section className="dv-section">
+            <h2>Shared project delivery (Partnership)</h2>
+            <p className="dv-col-sub">
+              Multiple teams delivering as <strong>one project</strong> under a FEAT / Initiative →
+              Epic hierarchy — not a blocks/blocked-by Dependency link. Roots come from{' '}
+              <code className="dv-code">companionRoots</code> in dependency view config (real FEAT /
+              Initiative keys only).
             </p>
-          ) : (
-            companions.map((c) => (
-              <details key={c.rootKey} open={show === 'partnership'}>
-                <summary>
-                  {c.label || c.rootKey}{' '}
-                  <span className="dv-meta">
-                    external work {c.external?.count ?? 0} · full hierarchy{' '}
-                    {c.hierarchy?.count ?? 0}
-                  </span>
-                  {c.external?.jiraUrl ? (
-                    <>
-                      {' · '}
-                      <a
-                        href={c.external.jiraUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={c.external.jql || ''}
-                      >
-                        JIRA
-                      </a>
-                    </>
-                  ) : null}
-                </summary>
-                <div className="dv-col-body">
-                  {(c.external?.issues || []).slice(0, 20).map((iss) => (
-                    <TicketChip
-                      key={iss.key}
-                      issue={iss}
-                      jiraBaseUrl={jiraBaseUrl}
-                      showAskFlags={false}
-                    />
-                  ))}
-                </div>
-              </details>
-            ))
-          )}
-        </section>
+            {!companions.length ? (
+              <p className="dv-empty">
+                No partnership roots configured for {selectedRelease || 'this release'}. Add real
+                FEAT / Initiative keys to <code className="dv-code">companionRoots</code> when a
+                shared-delivery project should appear here — do not use placeholder tickets.
+              </p>
+            ) : (
+              companions.map((c) => (
+                <details key={c.rootKey} open>
+                  <summary>
+                    {c.label || c.rootKey}{' '}
+                    <span className="dv-meta">
+                      external work {c.external?.count ?? 0} · full hierarchy{' '}
+                      {c.hierarchy?.count ?? 0}
+                    </span>
+                    {c.external?.jiraUrl ? (
+                      <>
+                        {' · '}
+                        <a
+                          href={c.external.jiraUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={c.external.jql || ''}
+                        >
+                          JIRA
+                        </a>
+                      </>
+                    ) : null}
+                  </summary>
+                  <div className="dv-col-body">
+                    {(c.external?.issues || []).slice(0, 20).map((iss) => (
+                      <TicketChip
+                        key={iss.key}
+                        issue={iss}
+                        jiraBaseUrl={jiraBaseUrl}
+                        showAskFlags={false}
+                      />
+                    ))}
+                  </div>
+                </details>
+              ))
+            )}
+          </section>
+        </div>
       ) : null}
 
-      {!data && loading ? <p className="dv-empty">Loading…</p> : null}
+      {!data && loading ? <PageLoading message="Loading dependencies…" /> : null}
     </div>
   );
 }

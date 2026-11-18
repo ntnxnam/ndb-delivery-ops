@@ -160,6 +160,13 @@ labels in ("ndb-{trainSlug}-dependency") AND issueFunction not in linkedIssuesOf
 
 ---
 
+## Previously linked (not a Q*)
+
+Removed `blocks` / `is blocked by` pairs are reconstructed **after** Q1–Q7 via JIRA
+**Link** changelog (`previouslyLinkedDeps.js`). Seeds = home wait-roots / wishlist plus
+live-chain partners (so partner-side removals surface). Click-through uses `key in (...)`
+only — do **not** invent a historical-link JQL or edit Q1–Q7 for this.
+
 ## Project type (runtime classification)
 
 Widest EW label wins: `global-ew` > `nutanix-ew` > `ndb-ew`; else `team_internal` (FYI).  

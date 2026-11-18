@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { PageLoading } from '../shared/components/PageLoading';
 import { useTeam } from '../contexts/TeamContext';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { useReleaseData } from '../contexts/ReleaseDataContext';
@@ -320,7 +321,7 @@ export default function RetrospectivePage() {
             subtitle={`EC, CCM, CG, PG, GA${bootstrap?.parentCount ? ` · ${bootstrap.parentCount} projects` : ''}`}
           >
             {loadingBootstrap ? (
-              <div className="rb-empty">Loading bootstrap...</div>
+              <PageLoading message="Loading gate timeline…" />
             ) : (
               <GateTimelineRuler gateTimeline={bootstrap?.gateTimeline} />
             )}
@@ -391,13 +392,9 @@ export default function RetrospectivePage() {
           )}
 
           {loadingBootstrap ? (
-            <div className="rb-empty" style={{ textAlign: 'center', marginTop: 8 }}>
-              Loading release gate checks…
-            </div>
+            <PageLoading message="Loading release gate checks…" />
           ) : loadingDetail ? (
-            <div className="rb-empty" style={{ textAlign: 'center', marginTop: 8 }}>
-              Loading project detail…
-            </div>
+            <PageLoading message="Loading project detail…" />
           ) : null}
 
           {retroFallback ? <NaughtyListTable naughtyList={naughtyWithUrls} /> : null}

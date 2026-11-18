@@ -4,7 +4,7 @@ route: /dependency-view
 audience: tpm, rm, portfolio_mgr, feat
 ---
 
-# Dependency View
+# Post EC dependency view
 
 **Route**: `/dependency-view`  
 **Audience**: `tpm, rm, portfolio_mgr, feat`  
@@ -30,10 +30,12 @@ Full ticket lists are drill-in under the swimlanes. Include NDB↔NDB (`ndb-ew`)
 
 | Control | Question | Options |
 |---|---|---|
-| **Show** | What do I want to look at? | Everything · I wait on them · They wait on me · Train asks · Wishlist · Early calls (planned trains) · Partnership hierarchy |
+| **Sub-tabs** | What do I want to look at? | We wait on them · They wait on us · What to fix · Wishlist · Train asks · Early calls · Partnership |
+| **EW scope** (under wait tabs) | Which partner surface? | Outside NDB (`global-ew`+`nutanix-ew`) · Peer NDB (`ndb-ew`) · FYI / unparked |
 
-**Early calls:** While viewing a current release (e.g. NDB-3.0), also surfaces planned trains from `alignedTrains` with `status: planned` (e.g. NDB-3.1 ↔ Leto) via existing Q5 train labels + Q7 wishlist — for pre-CC/EC label-based asks before fixVersion partnership fills in.
-| **Project type** | Which EW surface? | Any · Global / Nutanix / NDB EW · Team (FYI) |
+**Early calls:** While viewing a current release (e.g. NDB-3.0), also surfaces planned trains from `alignedTrains` with `status: planned` (e.g. NDB-3.1 → Leto) via existing Q5 train labels + Q7 wishlist — for pre-CC/EC label-based asks before fixVersion partnership fills in. UI shows direction explicitly: **our wishlist → waits on → partner asks**, plus “Missing arrows” for unlinked wishlist / orphan asks.
+
+**Previously linked:** Under wait tabs, flat pairs for Mode Dependency links that were **removed** (JIRA Link changelog on home + live-chain partner seeds). Muted connector — **no** wait arrow. Distinct from **Missing arrows** (never linked). Not a new Q*; Q1–Q7 unchanged. See `dependency_rule.md` §6b.
 
 Never mix train ask/wishlist labels with Project type (`*-ew`).
 

@@ -136,7 +136,7 @@ function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownD
   const buttonLabel = generating ? '⏳ Generating…' : hasExisting ? '↺ Regenerate' : '✨ Generate';
 
   return (
-    <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '200px' }}>
+    <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
       {/* ── Existing summary from JIRA ── */}
       {displaySummary && !generatedSummary && (

@@ -1,19 +1,54 @@
 /**
  * Shared JQL query utilities for release version endpoints
- * Single source of truth for query logic
+ * Single source of truth for query logic — label JQL delegated to jiraFieldsConfig.json taxonomy.
  */
 
+const { getLabelJql } = require('./jiraFieldsConfig');
+
+const DEFAULT_LABEL_PREFIX = 'ndb';
+
+function resolveLabelPrefix(arg) {
+  if (!arg) return DEFAULT_LABEL_PREFIX;
+  if (typeof arg === 'string') {
+    const v = arg.trim().toLowerCase();
+    return v || DEFAULT_LABEL_PREFIX;
+  }
+  if (typeof arg === 'object') {
+    if (typeof arg.labelPrefix === 'string' && arg.labelPrefix.trim()) return arg.labelPrefix.trim().toLowerCase();
+    // productId or team.id — try to resolve via teamBoardConfig labelPrefix
+    const pid = arg.productId || arg.id;
+    if (typeof pid === 'string' && pid.trim()) {
+      try {
+        const cfg = require('../config/teamBoardConfig.json');
+        const t = (cfg.teams || []).find((x) => x.id === pid.trim().toLowerCase());
+        if (t && typeof t.labelPrefix === 'string' && t.labelPrefix.trim()) return t.labelPrefix.trim().toLowerCase();
+      } catch {}
+      return pid.trim().toLowerCase();
+    }
+  }
+  return DEFAULT_LABEL_PREFIX;
+}
+
 /**
- * Build JQL query for commit items
+ * Build JQL query for commit items — product-agnostic (D1).
  * @param {string} fixVersion - Release version (e.g., "NDB-2.11")
- * @param {Object} teamConfig - Team configuration object (optional, not used in current implementation)
- * @returns {string} JQL query string - fixVersion="..." AND issuetype in (Feature, Initiative) AND status != Cancelled AND (labels is EMPTY OR labels != "ndb-not-por")
+ * @param {string|Object} [teamConfigOrOpts] - labelPrefix string, {labelPrefix}, {productId}, or legacy teamConfig {labelPrefix|id}
+ * @returns {string} JQL query string - fixVersion="..." AND issuetype in (Feature, Initiative) AND status != Cancelled AND labels not in ("<prefix>-not-por")
  */
-function buildCommitItemsJQL(fixVersion, teamConfig = null) {
-  // Updated to use the correct query logic as specified
-  const baseJQL = `fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled AND labels not in ("ndb-not-por")`;
-  
-  return baseJQL;
+function buildCommitItemsJQL(fixVersion, teamConfigOrOpts = null) {
+  const labelPrefix = resolveLabelPrefix(teamConfigOrOpts);
+  const porJql = getLabelJql('porExclude', { prefix: labelPrefix });
+  // porExclude jql is `labels not in ("{prefix}-not-por")`; fallback to inline if config missing
+  const porClause = porJql || `labels not in ("${labelPrefix}-not-por")`;
+  return `fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled AND ${porClause}`;
+}
+
+// Derive version suffix without duplicated prefix (e.g. NDB-2.11 with prefix ndb → 2.11)
+function deriveVersionSuffix(fixVersion, labelPrefix) {
+  const lower = fixVersion.toLowerCase();
+  const pre = labelPrefix.toLowerCase();
+  if (lower.startsWith(`${pre}-`)) return lower.slice(pre.length + 1);
+  return lower;
 }
 
 /**
@@ -23,9 +58,10 @@ function buildCommitItemsJQL(fixVersion, teamConfig = null) {
  * @returns {string} JQL query string - labels="ndb-2.11-long-term-funded" AND issuetype in (Feature, Initiative) AND status != Cancelled
  */
 function buildLongTermItemsJQL(fixVersion, teamConfig = null) {
-  const versionLabel = fixVersion.toLowerCase();
-  const baseJQL = `labels = "${versionLabel}-long-term-funded" AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
-  
+  const labelPrefix = resolveLabelPrefix(teamConfig);
+  const version = deriveVersionSuffix(fixVersion, labelPrefix);
+  const jql = getLabelJql('lifecycle.longTermFunded', { prefix: labelPrefix, version });
+  const baseJQL = `${jql || `labels = "${fixVersion.toLowerCase()}-long-term-funded"`} AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
   return baseJQL;
 }
 
@@ -36,9 +72,11 @@ function buildLongTermItemsJQL(fixVersion, teamConfig = null) {
  * @returns {string} JQL query string - labels="ndb-2.11-code-complete-extention-recieved" AND issuetype in (Feature, Initiative) AND status != Cancelled
  */
 function buildExtensionItemsJQL(fixVersion, teamConfig = null) {
-  const versionLabel = fixVersion.toLowerCase();
-  const baseJQL = `labels = "${versionLabel}-code-complete-extention-recieved" AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
-  
+  const labelPrefix = resolveLabelPrefix(teamConfig);
+  const version = deriveVersionSuffix(fixVersion, labelPrefix);
+  // lifecycle.extension jql covers both spellings via `labels in ("...recieved", "...extention-recieved")`
+  const jql = getLabelJql('lifecycle.extension', { prefix: labelPrefix, version });
+  const baseJQL = `${jql || `labels = "${fixVersion.toLowerCase()}-code-complete-extention-recieved"`} AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
   return baseJQL;
 }
 
