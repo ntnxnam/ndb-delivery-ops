@@ -16,7 +16,7 @@ import { authenticatedGet, getApiBase } from '../utils/api';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import './ReleaseVersionTab.css';
 
-const API_BASE = getApiBase();
+const API_BASE = (typeof getApiBase === 'function' ? getApiBase() : '') || '';
 
 const INCLUSION_MODES = [
   { value: 'closed', label: 'Closed (resolved in window)' },
@@ -54,7 +54,6 @@ export default function TeamOverallReportPage() {
   const [inclusionMode, setInclusionMode] = useState('closed');
   const [groupBy, setGroupBy] = useState('issuetype');
   const [includeCompanions, setIncludeCompanions] = useState(true);
-  const [drillOpen, setDrillOpen] = useState(false);
 
   // Data
   const [report, setReport] = useState(null);
@@ -257,8 +256,8 @@ export default function TeamOverallReportPage() {
             <KpiCard label="Avg Cycle Time (days)" value={report?.kpis?.avgCycleTimeDays ?? '—'} />
             <KpiCard label="Throughput / Week" value={report?.kpis?.throughputPerWeek ?? 0} />
             <KpiCard label="Work Types" value={report?.aggregation?.totalGroups ?? 0} />
-            {report.meta.multiProjectEnabled && (
-              <KpiCard label="Companion Issues" value={report.meta.companionIssueCount} />
+            {report.meta?.multiProjectEnabled && (
+              <KpiCard label="Companion Issues" value={report.meta?.companionIssueCount} />
             )}
           </div>
 
@@ -300,17 +299,17 @@ export default function TeamOverallReportPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <span style={{ fontSize: '12px', fontWeight: 600 }}>JQL Executed</span>
               <button aria-label="Copy JQL"
-                onClick={() => navigator.clipboard?.writeText(report.meta.jqlExecuted)}
+                onClick={() => navigator.clipboard?.writeText(report.meta?.jqlExecuted)}
                 style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
               >
                 Copy
               </button>
             </div>
-            <code style={{ fontSize: '11px', wordBreak: 'break-all', color: '#374151' }}>{report.meta.jqlExecuted}</code>
+            <code style={{ fontSize: '11px', wordBreak: 'break-all', color: '#374151' }}>{report.meta?.jqlExecuted}</code>
             <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-              Generated: {new Date(report.meta.generatedAt).toLocaleString()} | Issues: {report.meta.issueCount}
-              {report.meta.companionProjects && report.meta.companionProjects.length > 0 && (
-                <span> | Companions: {report.meta.companionProjects.join(', ')}</span>
+              Generated: {new Date(report.meta?.generatedAt).toLocaleString()} | Issues: {report.meta?.issueCount}
+              {report.meta?.companionProjects && report.meta?.companionProjects.length > 0 && (
+                <span> | Companions: {report.meta?.companionProjects.join(', ')}</span>
               )}
             </div>
           </div>
@@ -350,42 +349,11 @@ export default function TeamOverallReportPage() {
           </div>
 
 
-          {/* In-app drill panel (metric dual-action: count -> panel) */}
-          {drillOpen && (
-            <div role="dialog" aria-label="Issues drill-down" style={{ position: 'fixed', top: '10%', left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: '900px', maxHeight: '70vh', overflow: 'auto', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 1000 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px' }}>Issues Drill-Down ({report.issuesSample.length})</h4>
-                <button aria-label="Close drill-down" onClick={() => setDrillOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px' }}>×</button>
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {report.issuesSample.map(issue => (
-                  <li key={issue.key} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: '13px' }}>
-                    <a href={issue.url} target="_blank" rel="noreferrer" style={{ color: '#4F46E5', fontWeight: 600, marginRight: '8px' }}>{issue.key}</a>
-                    <span>{issue.summary}</span>
-                    <span style={{ color: '#6b7280', marginLeft: '8px', fontSize: '11px' }}>({issue.issuetype} · {issue.status})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* NAI Summaries placeholder */}
-          {report.naiSummaries && report.naiSummaries.length > 0 && (
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>NAI Summaries</h4>
-              {report.naiSummaries.map((s, idx) => (
-                <div key={idx} style={{ marginBottom: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px' }}>
-                  <strong>{s.groupKey || s.workType || 'Unknown'}</strong>: {s.summary || 'No summary'}
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Open in JIRA link */}
-          {report.meta.jqlExecuted && (
+          {report.meta?.jqlExecuted && (
             <div style={{ textAlign: 'right', marginBottom: '16px' }}>
               <a
-                href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(report.meta.jqlExecuted)}`}
+                href={`${report.meta?.jiraBaseUrl || 'https://jira.nutanix.com'}/issues/?jql=${encodeURIComponent(report.meta?.jqlExecuted)}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{ fontSize: '12px', color: '#4F46E5', textDecoration: 'none' }}
