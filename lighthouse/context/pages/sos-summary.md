@@ -20,7 +20,7 @@ Cross-release Feature/Initiative SoS with tier AI + email snapshot.
 
 ## Engineering docs
 
-`Documentation/pages/` → SosSummary-requirements.md, SosSummary-data-layer.md
+`lighthouse/docs/pages/` → SosSummary-requirements.md, SosSummary-data-layer.md
 
 ## Agent notes
 

@@ -6,7 +6,7 @@ This is **not** Cursor-only. Any host (Cursor, web chat, Slack, vendor agent)
 loads these files via `loadAgentPack()` or by reading this directory.
 
 Page **requirements / data-layer** docs stay under
-`Documentation/pages/` (engineering contracts). Context files here
+`lighthouse/docs/pages/` (engineering contracts). Context files here
 are the **agent-facing brief**: what the surface is for, which prompts apply,
 which signals matter, and what not to invent.
 

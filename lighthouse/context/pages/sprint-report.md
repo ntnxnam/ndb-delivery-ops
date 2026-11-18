@@ -19,7 +19,7 @@ Sprint reporting and metrics.
 
 ## Engineering docs
 
-`Documentation/pages/` → SprintReport-requirements.md, SprintReport-data-layer.md
+`lighthouse/docs/pages/` → SprintReport-requirements.md, SprintReport-data-layer.md
 
 ## Agent notes
 

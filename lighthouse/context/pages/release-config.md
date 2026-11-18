@@ -19,7 +19,7 @@ Edit release gate dates configuration.
 
 ## Engineering docs
 
-`Documentation/pages/` → (ReleaseConfig page; config API)
+`lighthouse/docs/pages/` → (ReleaseConfig page; config API)
 
 ## Agent notes
 

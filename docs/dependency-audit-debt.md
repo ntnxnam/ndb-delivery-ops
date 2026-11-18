@@ -7,9 +7,10 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 
 | Workspace | Critical | High | Notes |
 |-----------|---------:|-----:|-------|
-| Server (`ndb-status-sender-server`) | 0 | **0** | Remaining = Jest/nodemon moderate/low (dev) |
-| MCP (`@ndb-delivery-ops/mcp-server`) | 0 | **0** | Clean |
-| Client (CRA) | 0 | 4 | Dev-toolchain only — see below |
+| Server (`lighthouse/app/server`) | 0 | **0** | Remaining = Jest/nodemon moderate/low (dev) |
+| MCP Lighthouse (`@portfolio-delivery-ops/mcp-lighthouse`) | 0 | **0** | Clean |
+| MCP Loom (`@portfolio-delivery-ops/mcp-loom`) | 0 | **0** | Clean |
+| Client (`lighthouse/app/client` via CRA) | 0 | 4 | Dev-toolchain only — see below |
 | Monorepo root | 0 | 4 | Same 4 CRA findings |
 
 ## Fixed in this pass
@@ -31,7 +32,7 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 
 ### CRA / `react-scripts` client tree — **4 remaining highs**
 
-- Location: `apps/delivery-ops/client` via `react-scripts@5.0.1`
+- Location: `lighthouse/app/client` via `react-scripts@5.0.1`
 - Packages: `@svgr/plugin-svgo`, `svgo`, `webpack-dev-middleware`, `webpack-dev-server`
 - Why deferred: only fixed by leaving Create React App (Vite or equivalent)
 - Impact: **local `npm start` / webpack-dev-server**, not production Nginx static assets
@@ -39,7 +40,7 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 
 ### Jest / nodemon (devDependencies)
 
-- Location: `apps/delivery-ops/server`
+- Location: `lighthouse/app/server`
 - Severity often moderate; not shipped in production `node index.js`
 - Resolution path: Jest major upgrade when convenient
 
@@ -52,10 +53,11 @@ Updated 2026-11-04 after production-path remediation. Do **not** run
 
 ```bash
 cd ndb-delivery-ops
-npm audit --workspace ndb-status-sender-server
-npm audit --workspace @ndb-delivery-ops/mcp-server
-npm audit --workspace ndb-status-sender-client
-npm ls body-parser follow-redirects undici zod --workspace ndb-status-sender-server
+npm audit --workspace lighthouse/app/server
+npm audit --workspace @portfolio-delivery-ops/mcp-lighthouse
+npm audit --workspace @portfolio-delivery-ops/mcp-loom
+npm audit --workspace lighthouse/app/client
+npm ls body-parser follow-redirects undici zod --workspace lighthouse/app/server
 ```
 
 Expect: server/MCP **0 high**; client only the four CRA toolchain findings above.

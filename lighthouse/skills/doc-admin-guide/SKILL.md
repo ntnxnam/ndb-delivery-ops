@@ -16,7 +16,7 @@ audience: architect, team_mgr, portfolio_mgr
 
 ```
 Input: { infraArea, releaseName }
-Output: Documentation/guides/ADMIN_GUIDE.md
+Output: lighthouse/docs/guides/ADMIN_GUIDE.md
 ```
 
 Procedure:

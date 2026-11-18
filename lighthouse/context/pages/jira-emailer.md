@@ -19,7 +19,7 @@ Send emails from arbitrary JIRA queries.
 
 ## Engineering docs
 
-`Documentation/pages/` → JiraEmailer-requirements.md, JiraEmailer-data-layer.md
+`lighthouse/docs/pages/` → JiraEmailer-requirements.md, JiraEmailer-data-layer.md
 
 ## Agent notes
 

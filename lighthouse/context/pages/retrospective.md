@@ -19,7 +19,7 @@ Gate compliance and behavioral analysis vs contracts.
 
 ## Engineering docs
 
-`Documentation/pages/` → Retrospective-requirements.md, Retrospective-data-layer.md
+`lighthouse/docs/pages/` → Retrospective-requirements.md, Retrospective-data-layer.md
 
 ## Agent notes
 

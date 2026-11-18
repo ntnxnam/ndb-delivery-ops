@@ -15,7 +15,7 @@ audience: team_mgr, tpm, portfolio_mgr, team-exec, director
 
 ```
 Input: { productId, releaseName, fromVersion, toVersion }
-Output: Documentation/release-notes/RELEASE_NOTES.md (rolling) + Documentation/release-notes/<release>.md (versioned)
+Output: lighthouse/docs/product/RELEASE_NOTES.md (rolling) + lighthouse/docs/product/<release>.md (versioned)
 ```
 
 Procedure:

@@ -58,7 +58,7 @@ See `../prompts/INDEX.md`.
 
 ## 5. Engineering contracts (not duplicated here)
 
-- Page requirements / data layer: `Documentation/pages/`
-- API contracts: `Documentation/api/`
-- AI LLD: `Documentation/technical/LLD-ai-layer.md`
+- Page requirements / data layer: `lighthouse/docs/pages/`
+- API contracts: `lighthouse/docs/api/`
+- AI LLD: `lighthouse/docs/technical/LLD-ai-layer.md`
 - Architecture: repo root `ARCHITECTURE.md`, `DECISIONS.md`, `FEATURE_CATALOG.md`

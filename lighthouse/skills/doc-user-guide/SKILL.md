@@ -15,7 +15,7 @@ audience: ic, team_lead, tpm, feat, qa_lead
 
 ```
 Input: { featureArea, releaseName }
-Output: Documentation/guides/USER_GUIDE.md
+Output: lighthouse/docs/guides/USER_GUIDE.md
 ```
 
 Procedure:

@@ -19,7 +19,7 @@ Audit of sent emails.
 
 ## Engineering docs
 
-`Documentation/pages/` → EmailHistory-requirements.md, EmailHistory-data-layer.md
+`lighthouse/docs/pages/` → EmailHistory-requirements.md, EmailHistory-data-layer.md
 
 ## Agent notes
 

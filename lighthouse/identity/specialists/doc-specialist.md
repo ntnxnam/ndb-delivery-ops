@@ -21,11 +21,11 @@ Invoked by `ops-assistant`. Owns the five doc surfaces that ship with every rele
 
 | Skill | Path | Output |
 |---|---|---|
-| `doc-known-issues` | `agent-pack/skills/doc-known-issues/SKILL.md` | `Documentation/known-issues/KNOWN_ISSUES.md` (or versioned `Documentation/known-issues/<release>.md`) |
-| `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `Documentation/release-notes/RELEASE_NOTES.md` + per-release `Documentation/release-notes/<release>.md` |
-| `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `Documentation/guides/USER_GUIDE.md` |
-| `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `Documentation/guides/ADMIN_GUIDE.md` |
-| `doc-tech-guide` | `agent-pack/skills/doc-tech-guide/SKILL.md` | `Documentation/technical/` (HLD/LLD/TECH_DESIGN) |
+| `doc-known-issues` | `agent-pack/skills/doc-known-issues/SKILL.md` | `lighthouse/docs/guides/KNOWN_ISSUES.md` (or versioned `lighthouse/docs/guides/<release>.md`) |
+| `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `lighthouse/docs/product/RELEASE_NOTES.md` + per-release `lighthouse/docs/product/<release>.md` |
+| `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `lighthouse/docs/guides/USER_GUIDE.md` |
+| `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `lighthouse/docs/guides/ADMIN_GUIDE.md` |
+| `doc-tech-guide` | `agent-pack/skills/doc-tech-guide/SKILL.md` | `lighthouse/docs/technical/` (HLD/LLD/TECH_DESIGN) |
 
 All five are `toolClass: draft` — I produce markdown, never mutate without user approval. Merge stage (10) commits only after user ok.
 

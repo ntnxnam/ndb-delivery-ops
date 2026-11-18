@@ -19,7 +19,7 @@ Add/edit teams, RBAC surfaces.
 
 ## Engineering docs
 
-`Documentation/pages/` → Admin-requirements.md, Admin-data-layer.md
+`lighthouse/docs/pages/` → Admin-requirements.md, Admin-data-layer.md
 
 ## Agent notes
 

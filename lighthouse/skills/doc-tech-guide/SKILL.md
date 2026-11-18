@@ -13,7 +13,7 @@ audience: architect, team_mgr, portfolio_mgr
 ## Quick Start
 ```
 Input: { techArea, releaseName }
-Output: Documentation/technical/<doc>.md
+Output: lighthouse/docs/technical/<doc>.md
 ```
 
 Procedure:

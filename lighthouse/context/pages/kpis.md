@@ -19,7 +19,7 @@ Configured KPI dashboard chips with JIRA deep-links.
 
 ## Engineering docs
 
-`Documentation/pages/` → KPIPage-requirements.md, KPIPage-data-layer.md
+`lighthouse/docs/pages/` → KPIPage-requirements.md, KPIPage-data-layer.md
 
 ## Agent notes
 

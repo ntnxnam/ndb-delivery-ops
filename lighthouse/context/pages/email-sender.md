@@ -19,7 +19,7 @@ Compose and send release status emails with charts, AI draft cells, gate dates.
 
 ## Engineering docs
 
-`Documentation/pages/` → EmailSender-requirements.md, EmailSender-data-layer.md
+`lighthouse/docs/pages/` → EmailSender-requirements.md, EmailSender-data-layer.md
 
 ## Agent notes
 

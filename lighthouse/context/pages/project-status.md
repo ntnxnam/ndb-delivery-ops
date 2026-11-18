@@ -19,7 +19,7 @@ Release picker, FEAT/Initiative table, Gantt, exec summary, task breakdown.
 
 ## Engineering docs
 
-`Documentation/pages/` → ProjectStatus-requirements.md, ProjectStatus-data-layer.md
+`lighthouse/docs/pages/` → ProjectStatus-requirements.md, ProjectStatus-data-layer.md
 
 ## Agent notes
 

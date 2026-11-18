@@ -19,7 +19,7 @@ Create / rename releases, cleanup filters.
 
 ## Engineering docs
 
-`Documentation/pages/` → ReleaseSetup-requirements.md, ReleaseSetup-data-layer.md
+`lighthouse/docs/pages/` → ReleaseSetup-requirements.md, ReleaseSetup-data-layer.md
 
 ## Agent notes
 

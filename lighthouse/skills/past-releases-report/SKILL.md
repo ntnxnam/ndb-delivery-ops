@@ -27,7 +27,7 @@ Input: {
   productId: "ndb",                // per D5, from productService
   releases: ["NDB-2.10","NDB-2.11","NDB-2.12"],  // any length, ordered old→new
   jiraToken: "Bearer <PAT>",       // from Authorization header or server/.env JIRA_PAT
-  outputDir: "Documentation/reports",      // slide-deck files per release
+  outputDir: "lighthouse/docs/archive",      // slide-deck files per release
   useIntegratedVersion: true,       // D4b correction: KPIs use "Integrated Version" cf11360
   includeGantt: true,
   includeNaiSummary: true,         // NAI beam-1-501b grouped capabilities

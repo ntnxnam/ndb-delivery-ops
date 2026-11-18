@@ -15,7 +15,7 @@ audience: ic, qa_lead, team_mgr, portfolio_mgr
 
 ```
 Input: { productId, releaseName, includeResolved: false }
-Output: Documentation/known-issues/KNOWN_ISSUES.md (canonical) + optional Documentation/known-issues/<release>.md
+Output: lighthouse/docs/guides/KNOWN_ISSUES.md (canonical) + optional lighthouse/docs/guides/<release>.md
 ```
 
 Procedure:
