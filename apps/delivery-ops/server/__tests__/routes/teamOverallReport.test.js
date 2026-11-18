@@ -1,3 +1,5 @@
+jest.mock('@portfolio-delivery-ops/shared', () => require('../../__mocks__/@portfolio-delivery-ops/shared.js'));
+
 const request = require('supertest');
 const app = require('../../index');
 
