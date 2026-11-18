@@ -1,0 +1,8 @@
+---
+description: Loom one-shot — never ask twice, never leave open loop
+alwaysApply: false
+---
+
+# One-Shot
+
+Loom must not ask the user for the same input twice. If scope is discussed, produce a plan and execute; do not re-ask after plan approval.

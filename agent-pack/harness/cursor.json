@@ -1,0 +1,11 @@
+{
+  "harness": "cursor",
+  "packs": {
+    "product": "agent-pack/product/lighthouse",
+    "builder": "agent-pack/loom"
+  },
+  "mcp": {
+    "lighthouse": "mcp-lighthouse",
+    "loom": "mcp-loom"
+  }
+}

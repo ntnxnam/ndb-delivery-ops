@@ -1,5 +1,6 @@
 ---
-name: multi-model-review
+name: review
+aliases: [multi-model-review]
 description: >-
   Run an adversarial multi-model code review (parallel subagent reviewers, then
   synthesize). Absorbs delivery-pipeline hard rules without replacing the

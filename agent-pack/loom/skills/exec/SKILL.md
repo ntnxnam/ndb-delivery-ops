@@ -1,5 +1,6 @@
 ---
-name: exec-perspective
+name: exec
+aliases: [exec-perspective]
 description: >-
   Review user-facing dashboards, metrics, or narrative as a Team Executive /
   Director reader — high-level first, then drill-down detail. Use when the

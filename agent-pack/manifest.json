@@ -2,67 +2,67 @@
   "name": "portfolio-delivery-ops",
   "version": "1.0.0",
   "decision": "D38",
-  "description": "Portable agent cookbook. Hosts are adapters; this pack is the source of truth for identity, skills, workflows, rules, context, and prompts (D38).",
+  "description": "Root shim - proxies to product/lighthouse until AGENT_PACK_ROOT migration complete",
   "orchestrator": "ops-assistant",
   "identity": {
     "orchestrator": "identity/ops-assistant.md",
     "specialistsDir": "identity/specialists"
   },
   "constitutionalRules": [
-    "rules/ai-ticket-key-integrity.mdc",
-    "rules/citation-first-output.mdc",
-    "rules/confluence-cleanup-clarification.mdc",
-    "rules/jira-date-hierarchy.mdc",
-    "rules/metric-click-dual-action.mdc",
-    "rules/ndb-gate-status-semantics.mdc",
-    "rules/no-defensive-statements.mdc",
-    "rules/no-localhost.mdc",
-    "rules/persona-aware-output.mdc",
-    "rules/product-agnostic.mdc",
-    "rules/program-management-pov.mdc",
-    "rules/release-gate-aware-reasoning.mdc"
+    "product/lighthouse/rules/ai-ticket-key-integrity.mdc",
+    "product/lighthouse/rules/citation-first-output.mdc",
+    "product/lighthouse/rules/confluence-cleanup-clarification.mdc",
+    "product/lighthouse/rules/jira-date-hierarchy.mdc",
+    "product/lighthouse/rules/metric-click-dual-action.mdc",
+    "product/lighthouse/rules/ndb-gate-status-semantics.mdc",
+    "product/lighthouse/rules/no-defensive-statements.mdc",
+    "product/lighthouse/rules/no-localhost.mdc",
+    "product/lighthouse/rules/persona-aware-output.mdc",
+    "product/lighthouse/rules/product-agnostic.mdc",
+    "product/lighthouse/rules/program-management-pov.mdc",
+    "product/lighthouse/rules/release-gate-aware-reasoning.mdc"
   ],
-  "memorySchema": "memory/schema.json",
+  "memorySchema": "product/lighthouse/memory/schema.json",
   "identities": [
     {
       "name": "ops-assistant",
       "role": "orchestrator",
-      "path": "identity/ops-assistant.md"
+      "path": "product/lighthouse/identity/ops-assistant.md"
     },
     {
       "name": "team-exec-specialist",
       "role": "specialist",
-      "path": "identity/specialists/team-exec-specialist.md"
+      "path": "product/lighthouse/identity/specialists/team-exec-specialist.md"
     },
     {
       "name": "tpm-specialist",
       "role": "specialist",
-      "path": "identity/specialists/tpm-specialist.md"
+      "path": "product/lighthouse/identity/specialists/tpm-specialist.md"
     },
     {
       "name": "rm-specialist",
       "role": "specialist",
-      "path": "identity/specialists/rm-specialist.md"
+      "path": "product/lighthouse/identity/specialists/rm-specialist.md"
     },
     {
       "name": "triage-specialist",
       "role": "specialist",
-      "path": "identity/specialists/triage-specialist.md"
+      "path": "product/lighthouse/identity/specialists/triage-specialist.md"
     },
     {
       "name": "confluence-publisher-specialist",
       "role": "specialist",
-      "path": "identity/specialists/confluence-publisher-specialist.md"
+      "path": "product/lighthouse/identity/specialists/confluence-publisher-specialist.md"
     },
     {
       "name": "dependency-tracker-specialist",
       "role": "specialist",
-      "path": "identity/specialists/dependency-tracker-specialist.md"
+      "path": "product/lighthouse/identity/specialists/dependency-tracker-specialist.md"
     },
     {
       "name": "doc-specialist",
       "role": "specialist",
-      "path": "identity/specialists/doc-specialist.md"
+      "path": "product/lighthouse/identity/specialists/doc-specialist.md"
     }
   ],
   "skills": [
@@ -71,7 +71,7 @@
       "capabilityType": "agentic",
       "toolClass": "draft",
       "owner": "team-exec-specialist",
-      "path": "skills/team-exec-briefing/SKILL.md",
+      "path": "product/lighthouse/skills/team-exec-briefing/SKILL.md",
       "notes": "Merged 2026-11-12: replaces team-exec-status-answer (compound Q + risk register) + team-exec-release-report (6 sections, dense bullets, escalation ladder) + release-ai-briefing (RAG + blockers + 7-day). Keep predictive-team-exec-analytics (Monte Carlo) + release-retrospective (gates) + weekly-status-email (TPM 3-tier) separate."
     },
     {
@@ -79,28 +79,28 @@
       "capabilityType": "generative",
       "toolClass": "read",
       "owner": "team-exec-specialist",
-      "path": "skills/predictive-team-exec-analytics/SKILL.md"
+      "path": "product/lighthouse/skills/predictive-team-exec-analytics/SKILL.md"
     },
     {
       "name": "weekly-status-email",
       "capabilityType": "agentic",
       "toolClass": "draft",
       "owner": "tpm-specialist",
-      "path": "skills/weekly-status-email/SKILL.md"
+      "path": "product/lighthouse/skills/weekly-status-email/SKILL.md"
     },
     {
       "name": "release-retrospective",
       "capabilityType": "generative",
       "toolClass": "read",
       "owner": "tpm-specialist",
-      "path": "skills/release-retrospective/SKILL.md"
+      "path": "product/lighthouse/skills/release-retrospective/SKILL.md"
     },
     {
       "name": "ticket-insights",
       "capabilityType": "deterministic",
       "toolClass": "read",
       "owner": "tpm-specialist",
-      "path": "skills/ticket-insights/SKILL.md",
+      "path": "product/lighthouse/skills/ticket-insights/SKILL.md",
       "notes": "Merged 2026-11-12: replaces fetch-project-tickets (8-clause JQL) + issue-type-breakdown (6-group/Dev-QA/status). Keep release-dataset-sync separate (full sync pipeline)."
     },
     {
@@ -108,21 +108,21 @@
       "capabilityType": "deterministic",
       "toolClass": "read",
       "owner": "tpm-specialist",
-      "path": "skills/kpi-pulse-analytics/SKILL.md"
+      "path": "product/lighthouse/skills/kpi-pulse-analytics/SKILL.md"
     },
     {
       "name": "sprint-gantt-chart",
       "capabilityType": "deterministic",
       "toolClass": "read",
       "owner": "tpm-specialist",
-      "path": "skills/sprint-gantt-chart/SKILL.md"
+      "path": "product/lighthouse/skills/sprint-gantt-chart/SKILL.md"
     },
     {
       "name": "backlog-triage",
       "capabilityType": "agentic",
       "toolClass": "draft",
       "owner": "triage-specialist",
-      "path": "skills/backlog-triage/SKILL.md",
+      "path": "product/lighthouse/skills/backlog-triage/SKILL.md",
       "notes": "Merged 2026-11-12: replaces bug-triage (new defects) + stale-ticket-sweep (idle N weeks) + pending-response-chase (D24 unreplied comments). Keep crisis-triage separate (P0 fire)."
     },
     {
@@ -130,21 +130,21 @@
       "capabilityType": "agent",
       "toolClass": "draft",
       "owner": "triage-specialist",
-      "path": "skills/crisis-triage/SKILL.md"
+      "path": "product/lighthouse/skills/crisis-triage/SKILL.md"
     },
     {
       "name": "dependency-walk",
       "capabilityType": "agent",
       "toolClass": "read",
       "owner": "dependency-tracker-specialist",
-      "path": "skills/dependency-walk/SKILL.md"
+      "path": "product/lighthouse/skills/dependency-walk/SKILL.md"
     },
     {
       "name": "release-gate-ops",
       "capabilityType": "deterministic",
       "toolClass": "mutate",
       "owner": "rm-specialist",
-      "path": "skills/release-gate-ops/SKILL.md",
+      "path": "product/lighthouse/skills/release-gate-ops/SKILL.md",
       "notes": "Merged 2026-11-12: replaces move-gate-date (D30 JIRA) + update-release-date (config slip). Routes by target."
     },
     {
@@ -152,58 +152,49 @@
       "capabilityType": "deterministic",
       "toolClass": "draft",
       "owner": "confluence-publisher-specialist",
-      "path": "skills/confluence-width-cleanup/SKILL.md"
+      "path": "product/lighthouse/skills/confluence-width-cleanup/SKILL.md"
     },
     {
       "name": "release-dataset-sync",
       "capabilityType": "deterministic",
       "toolClass": "read",
       "owner": "rm-specialist",
-      "path": "skills/release-dataset-sync/SKILL.md"
-    },
-    {
-      "name": "multi-model-review",
-      "capabilityType": "agentic",
-      "toolClass": "read",
-      "owner": "ops-assistant",
-      "path": "skills/multi-model-review/SKILL.md",
-      "notes": "Builder pipeline stage 2 enhancer; host-agnostic SoT"
-    },
-    {
-      "name": "exec-perspective",
-      "capabilityType": "agent",
-      "toolClass": "read",
-      "owner": "ops-assistant",
-      "path": "skills/exec-perspective/SKILL.md",
-      "notes": "Builder pipeline stage 5 Exec sign-off; high-level then drill-down"
+      "path": "product/lighthouse/skills/release-dataset-sync/SKILL.md"
     },
     {
       "name": "doc-known-issues",
       "capabilityType": "deterministic",
       "toolClass": "draft",
       "owner": "doc-specialist",
-      "path": "skills/doc-known-issues/SKILL.md"
+      "path": "product/lighthouse/skills/doc-known-issues/SKILL.md"
     },
     {
       "name": "doc-release-notes",
       "capabilityType": "deterministic",
       "toolClass": "draft",
       "owner": "doc-specialist",
-      "path": "skills/doc-release-notes/SKILL.md"
+      "path": "product/lighthouse/skills/doc-release-notes/SKILL.md"
     },
     {
       "name": "doc-user-guide",
       "capabilityType": "deterministic",
       "toolClass": "draft",
       "owner": "doc-specialist",
-      "path": "skills/doc-user-guide/SKILL.md"
+      "path": "product/lighthouse/skills/doc-user-guide/SKILL.md"
     },
     {
       "name": "doc-admin-guide",
       "capabilityType": "deterministic",
       "toolClass": "draft",
       "owner": "doc-specialist",
-      "path": "skills/doc-admin-guide/SKILL.md"
+      "path": "product/lighthouse/skills/doc-admin-guide/SKILL.md"
+    },
+    {
+      "name": "doc-tech-guide",
+      "capabilityType": "deterministic",
+      "toolClass": "draft",
+      "owner": "doc-specialist",
+      "path": "product/lighthouse/skills/doc-tech-guide/SKILL.md"
     }
   ],
   "workflows": [
@@ -211,208 +202,208 @@
       "name": "monday-release-status",
       "capabilityType": "agentic",
       "toolClass": "draft",
-      "path": "workflows/monday-release-status.md"
+      "path": "product/lighthouse/workflows/monday-release-status.md"
     },
     {
       "name": "quarterly-team-exec-report",
       "capabilityType": "agentic",
       "toolClass": "draft",
-      "path": "workflows/quarterly-team-exec-report.md"
+      "path": "product/lighthouse/workflows/quarterly-team-exec-report.md"
     },
     {
       "name": "release-cascade-rename",
       "capabilityType": "deterministic",
       "toolClass": "mutate",
-      "path": "workflows/release-cascade-rename.md"
+      "path": "product/lighthouse/workflows/release-cascade-rename.md"
     }
   ],
   "context": [
     {
       "name": "index",
-      "path": "context/INDEX.md",
+      "path": "product/lighthouse/context/INDEX.md",
       "kind": "index"
     },
     {
       "name": "app-surface-map",
-      "path": "context/domain/app-surface-map.md",
+      "path": "product/lighthouse/context/domain/app-surface-map.md",
       "kind": "domain"
     },
     {
       "name": "release-gates",
-      "path": "context/domain/release-gates.md",
+      "path": "product/lighthouse/context/domain/release-gates.md",
       "kind": "domain"
     },
     {
       "name": "jira-workflows-and-resolutions",
-      "path": "context/domain/jira-workflows-and-resolutions.md",
+      "path": "product/lighthouse/context/domain/jira-workflows-and-resolutions.md",
       "kind": "domain"
     },
     {
       "name": "jira-hygiene-and-collaterals",
-      "path": "context/domain/jira-hygiene-and-collaterals.md",
+      "path": "product/lighthouse/context/domain/jira-hygiene-and-collaterals.md",
       "kind": "domain"
     },
     {
       "name": "deferral-tracking",
-      "path": "context/domain/deferral-tracking.md",
+      "path": "product/lighthouse/context/domain/deferral-tracking.md",
       "kind": "domain"
     },
     {
       "name": "velocity-and-sprints",
-      "path": "context/domain/velocity-and-sprints.md",
+      "path": "product/lighthouse/context/domain/velocity-and-sprints.md",
       "kind": "domain"
     },
     {
       "name": "leader-org",
-      "path": "context/domain/leader-org.md",
+      "path": "product/lighthouse/context/domain/leader-org.md",
       "kind": "domain"
     },
     {
       "name": "ai-prompt-inventory",
-      "path": "context/domain/ai-prompt-inventory.md",
+      "path": "product/lighthouse/context/domain/ai-prompt-inventory.md",
       "kind": "domain"
     },
     {
       "name": "cross-team-dependencies",
-      "path": "context/domain/cross-team-dependencies.md",
+      "path": "product/lighthouse/context/domain/cross-team-dependencies.md",
       "kind": "domain"
     },
     {
       "name": "email-sender",
-      "path": "context/pages/email-sender.md",
+      "path": "product/lighthouse/context/pages/email-sender.md",
       "kind": "page"
     },
     {
       "name": "project-status",
-      "path": "context/pages/project-status.md",
+      "path": "product/lighthouse/context/pages/project-status.md",
       "kind": "page"
     },
     {
       "name": "feature-dashboard",
-      "path": "context/pages/feature-dashboard.md",
+      "path": "product/lighthouse/context/pages/feature-dashboard.md",
       "kind": "page"
     },
     {
       "name": "retrospective",
-      "path": "context/pages/retrospective.md",
+      "path": "product/lighthouse/context/pages/retrospective.md",
       "kind": "page"
     },
     {
       "name": "release-setup",
-      "path": "context/pages/release-setup.md",
+      "path": "product/lighthouse/context/pages/release-setup.md",
       "kind": "page"
     },
     {
       "name": "jira-emailer",
-      "path": "context/pages/jira-emailer.md",
+      "path": "product/lighthouse/context/pages/jira-emailer.md",
       "kind": "page"
     },
     {
       "name": "email-history",
-      "path": "context/pages/email-history.md",
+      "path": "product/lighthouse/context/pages/email-history.md",
       "kind": "page"
     },
     {
       "name": "sprint-report",
-      "path": "context/pages/sprint-report.md",
+      "path": "product/lighthouse/context/pages/sprint-report.md",
       "kind": "page"
     },
     {
       "name": "sprint-performance",
-      "path": "context/pages/sprint-performance.md",
+      "path": "product/lighthouse/context/pages/sprint-performance.md",
       "kind": "page"
     },
     {
       "name": "component-report",
-      "path": "context/pages/component-report.md",
+      "path": "product/lighthouse/context/pages/component-report.md",
       "kind": "page"
     },
     {
       "name": "chatbot",
-      "path": "context/pages/chatbot.md",
+      "path": "product/lighthouse/context/pages/chatbot.md",
       "kind": "page"
     },
     {
       "name": "kpis",
-      "path": "context/pages/kpis.md",
+      "path": "product/lighthouse/context/pages/kpis.md",
       "kind": "page"
     },
     {
       "name": "system-test-scale",
-      "path": "context/pages/system-test-scale.md",
+      "path": "product/lighthouse/context/pages/system-test-scale.md",
       "kind": "page"
     },
     {
       "name": "sos-summary",
-      "path": "context/pages/sos-summary.md",
+      "path": "product/lighthouse/context/pages/sos-summary.md",
       "kind": "page"
     },
     {
       "name": "sos-leader",
-      "path": "context/pages/sos-leader.md",
+      "path": "product/lighthouse/context/pages/sos-leader.md",
       "kind": "page"
     },
     {
       "name": "release-brief",
-      "path": "context/pages/release-brief.md",
+      "path": "product/lighthouse/context/pages/release-brief.md",
       "kind": "page"
     },
     {
       "name": "release-config",
-      "path": "context/pages/release-config.md",
+      "path": "product/lighthouse/context/pages/release-config.md",
       "kind": "page"
     },
     {
       "name": "admin",
-      "path": "context/pages/admin.md",
+      "path": "product/lighthouse/context/pages/admin.md",
       "kind": "page"
     },
     {
       "name": "dependency-view",
-      "path": "context/pages/dependency-view.md",
+      "path": "product/lighthouse/context/pages/dependency-view.md",
       "kind": "page"
     }
   ],
   "prompts": [
     {
       "name": "feature-exec-summary",
-      "path": "prompts/production/feature-exec-summary.md",
+      "path": "product/lighthouse/prompts/production/feature-exec-summary.md",
       "status": "production",
       "area": "project-status,sos-summary,feature-dashboard"
     },
     {
       "name": "release-health-briefing",
-      "path": "prompts/production/release-health-briefing.md",
+      "path": "product/lighthouse/prompts/production/release-health-briefing.md",
       "status": "production",
       "area": "release-brief"
     },
     {
       "name": "sos-tier-briefing",
-      "path": "prompts/production/sos-tier-briefing.md",
+      "path": "product/lighthouse/prompts/production/sos-tier-briefing.md",
       "status": "production",
       "area": "sos-summary"
     },
     {
       "name": "sprint-leadership-asks",
-      "path": "prompts/production/sprint-leadership-asks.md",
+      "path": "product/lighthouse/prompts/production/sprint-leadership-asks.md",
       "status": "production",
       "area": "sprint-performance"
     },
     {
       "name": "team-exec-report",
-      "path": "prompts/production/team-exec-report.md",
+      "path": "product/lighthouse/prompts/production/team-exec-report.md",
       "status": "production",
       "area": "reports"
     },
     {
       "name": "sos-leader-coaching",
-      "path": "prompts/production/sos-leader-coaching.md",
+      "path": "product/lighthouse/prompts/production/sos-leader-coaching.md",
       "status": "production",
       "area": "sos-leader"
     },
     {
       "name": "component-report-narrative",
-      "path": "prompts/draft/component-report-narrative.md",
+      "path": "product/lighthouse/prompts/draft/component-report-narrative.md",
       "status": "draft",
       "area": "component-report"
     }

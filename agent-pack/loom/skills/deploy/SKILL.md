@@ -1,5 +1,6 @@
 ---
-name: ndb-delivery-ops-deploy
+name: deploy
+aliases: [ndb-delivery-ops-deploy]
 description: Deploy the NDB Delivery Ops (portfolio-delivery-ops) monorepo to the production Rocky/Nginx+PM2 server. Use when the user says deploy delivery-ops, ship OnCalls/KPI changes to production, run the ndb deployment agent, redeploy, or push to santhosh-s / production box.
 ---
 

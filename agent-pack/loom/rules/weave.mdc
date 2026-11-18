@@ -1,6 +1,7 @@
 ---
 description: Primary delivery-ops pipeline — goal-derived KPIs per agent (incl. PM); Dev → Code Review → QA → UX → PM → Exec → JIRA → fix → security → merge → back to user loop until KPIs met; Code Review may use /multi-model-review
 alwaysApply: true
+aliases: [multi-agent-delivery-pipeline]
 ---
 
 # Multi-Agent Delivery Pipeline (Primary)
@@ -257,7 +258,7 @@ When spawning Code Review (Bugbot, multi-model, or Task), always include:
 1. Full repo path and whether the diff is uncommitted or branch-scoped
 2. Short change description (files + intent)
 3. The **Goal KPI Card** for this ask (Code Review KPIs + DONE WHEN)
-4. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost`, `jql-edit-approval` (flag only — no silent JQL edits)
+4. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost` (grep `localhost|127\.0\.0\.1` in `client/src` → Blocking; use relative `/Documentation/` + dev proxy `client/src/setupProxy.js`, never `http://localhost:8001` in JSX), `jql-edit-approval` (flag only — no silent JQL edits)
 5. Instruction: **FAIL** unless findings are listed **and** KPI VERDICT is returned; no rubber stamps; prove clean only with MET KPIs + empty Blocking/High
 
 ## Agent/model selection (mandatory)

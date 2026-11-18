@@ -117,7 +117,8 @@ export async function runAgentTurn(
   input: AgentTurnInput,
   pack?: AgentPack
 ): Promise<AgentTurnResult> {
-  const loaded = pack ?? loadAgentPack();
+  const envPackRoot = process.env.AGENT_PACK_ROOT?.trim() || undefined;
+  const loaded = pack ?? loadAgentPack(envPackRoot);
   const hostTools = input.tools || [];
   const tools = [...createPackTools(loaded), ...hostTools];
   const byName = new Map(tools.map((t) => [t.name, t]));

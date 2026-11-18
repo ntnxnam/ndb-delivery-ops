@@ -1,5 +1,6 @@
 ---
-name: era-csv-jira-import
+name: csv-import
+aliases: [era-csv-jira-import]
 description: >-
   Import CSV/Excel rows into Nutanix JIRA (ERA) as Epics and child Tasks with
   Epic Link, labels, components, and idempotent logging. Fail-fast on missing

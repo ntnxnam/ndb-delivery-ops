@@ -1,5 +1,5 @@
 ---
-description: Never use defensive or self-justifying language in UI copy, docs, chat, or code comments
+description: Never use defensive, self-justifying, or tall-claim language in UI copy, docs, chat, rules, or code comments
 alwaysApply: true
 ---
 
@@ -19,6 +19,8 @@ behind a slogan.
 2. Apologize for architecture (“we intentionally…”, “for authenticity…”, “to avoid…”)
 3. Advertise compliance with an internal rule instead of describing the product
 4. Dump regexes, config keys, or implementation caveats as the primary user sentence
+5. Make tall claims or show-off language (“world-class”, “best-in-class”, “comprehensive”, “revolutionary”, “unparalleled”, “cutting-edge”, “state-of-the-art”, “seamlessly”, “powerful”, “robust” as self-praise, “industry-leading”) — state facts, not marketing
+6. Use defensive self-justification when creating or updating docs/rules (“this is necessary because…”, “to ensure hygiene we had to…”, “as requested, we correctly…”) — do the work without narrating why it was needed
 
 Say the **outcome** or **source** in plain language. If the mechanism matters,
 name the actual KPIs / window / query result — not what you refused to do.
@@ -38,7 +40,8 @@ name the actual KPIs / window / query result — not what you refused to do.
 - Dashboard labels, helper text, empty states, tooltips
 - AI briefing intros and section headers
 - Agent answers to the user (chat / reports / email)
-- Page docs under `apps/*/docs/` and `agent-pack/context/`
+- Page docs under `Documentation/` and `agent-pack/context/`
+- Every new rule, skill, doc, or guide an agent creates — no exceptions for scaffolding
 - Code comments that will be paraphrased into UI copy
 
 ## Allowed (not defensive)

@@ -1,0 +1,100 @@
+{
+  "name": "loom",
+  "version": "1.0.0",
+  "orchestrator": "loom",
+  "identities": [
+    {
+      "name": "loom",
+      "role": "orchestrator",
+      "path": "identity/loom.md"
+    },
+    {
+      "name": "frontend-dev",
+      "role": "specialist",
+      "path": "identity/specialists/frontend-dev.md"
+    },
+    {
+      "name": "backend-dev",
+      "role": "specialist",
+      "path": "identity/specialists/backend-dev.md"
+    },
+    {
+      "name": "connector-dev",
+      "role": "specialist",
+      "path": "identity/specialists/connector-dev.md"
+    }
+  ],
+  "constitutionalRules": [
+    "rules/weave.mdc",
+    "rules/no-localhost.mdc",
+    "rules/one-shot.mdc",
+    "rules/minimal-architecture.mdc",
+    "rules/gerrit-push-for-review.mdc"
+  ],
+  "skills": [
+    {
+      "name": "weave",
+      "capabilityType": "agentic",
+      "toolClass": "mutate",
+      "owner": "loom",
+      "path": "skills/weave/SKILL.md"
+    },
+    {
+      "name": "review",
+      "capabilityType": "agentic",
+      "toolClass": "read",
+      "owner": "loom",
+      "path": "skills/review/SKILL.md",
+      "aliases": [
+        "multi-model-review"
+      ]
+    },
+    {
+      "name": "exec",
+      "capabilityType": "agent",
+      "toolClass": "read",
+      "owner": "loom",
+      "path": "skills/exec/SKILL.md",
+      "aliases": [
+        "exec-perspective"
+      ]
+    },
+    {
+      "name": "csv-import",
+      "capabilityType": "deterministic",
+      "toolClass": "mutate",
+      "owner": "loom",
+      "path": "skills/csv-import/SKILL.md",
+      "aliases": [
+        "era-csv-jira-import"
+      ]
+    },
+    {
+      "name": "deploy",
+      "capabilityType": "deterministic",
+      "toolClass": "mutate",
+      "owner": "loom",
+      "path": "skills/deploy/SKILL.md",
+      "aliases": [
+        "ndb-delivery-ops-deploy"
+      ]
+    }
+  ],
+  "workflows": [],
+  "context": [
+    {
+      "name": "architecture",
+      "path": "context/architecture.md",
+      "kind": "domain"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "builder",
+      "path": "prompts/builder.md",
+      "status": "production",
+      "area": "loom"
+    }
+  ],
+  "memorySchema": "../product/lighthouse/memory/schema.json"
+}
