@@ -19,8 +19,10 @@ adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Arch
 |---|---|---|
 | `apps/delivery-ops/` | Node/Express + React | Web app — release versions, sprint reports, KPIs, exec dashboard, status emailer, embedded chat panel (D7). |
 | `apps/tpm-confluence-tools/` | Python / Streamlit (Phase F: rewrite in React) | Bulk Confluence pages, templates, Release Gates Checklist (D20). |
-| `mcp-server/` | TypeScript, `@modelcontextprotocol/sdk` | MCP server exposing every capability as a tool. |
-| `shared/` | TypeScript | Connectors (5 per D3), domain models, services consumed across workspaces. |
+| `mcp/lighthouse/` | TypeScript, `@modelcontextprotocol/sdk` | Product MCP server — bin `lighthouse-mcp`, 2 product-only tools + 8 shared tools (D44, D45). |
+| `mcp/loom/` | TypeScript, `@modelcontextprotocol/sdk` | Builder MCP server — bin `loom-mcp`, 8 shared tools only (D44). |
+| `mcp/shared/` | TypeScript | Deduplicated tool source — 8 tools + env + glossary imported by both MCP servers (D44). |
+| `shared/` | TypeScript | Connectors (5 per D3), domain models, services consumed across workspaces (`@portfolio-delivery-ops/shared`). |
 
 ## Architecture — see `ARCHITECTURE.md`
 
@@ -43,11 +45,9 @@ adjacent personas (Team Executive, Director, TPM, RM, EM, FEAT Mgr, IC, QA, Arch
 
 ## AI layer — orchestrator-workers pattern (D16)
 
-**One user-facing orchestrator agent**: `agent-pack/identity/ops-assistant.md`
-(D38). Every host — Cursor, web chat, future Slack — loads this pack.
-Specialists are internal sub-agents the orchestrator delegates to.
+**One user-facing orchestrator agent**: `agent-pack/lighthouse/identity/ops-assistant.md` (D38, D44). Every host — Cursor, web chat, future Slack — loads this pack. Builder hosts may also load `agent-pack/loom/identity/loom.md`.
 
-**Specialist sub-agents** (in `agent-pack/identity/specialists/`, D38):
+**Specialist sub-agents** (in `agent-pack/lighthouse/identity/specialists/` + `agent-pack/loom/identity/specialists/`, D38, D44):
 
 - `team-exec-specialist` — Team Executive protocol (D15: compound question, risk register, citations)
 - `tpm-specialist` — weekly status (D17), cross-team deps (D18), 4 triage flavours (D19)
@@ -55,6 +55,7 @@ Specialists are internal sub-agents the orchestrator delegates to.
 - `triage-specialist` — bug / crisis / stale-ticket / pending-response (D19)
 - `confluence-publisher-specialist` — bulk pages, templates, width cleanup
 - `dependency-tracker-specialist` — cross-team dep graph (D18)
+- *(Loom)* `frontend-dev`, `backend-dev`, `connector-dev` — builder specialists (D44)
 
 The orchestrator decides delegation; users never address a specialist by name.
 
@@ -64,20 +65,13 @@ is HITL-queued and never executed while D26 is open.
 
 Domain derives (signals, briefing buckets, sprint rates, bundle-first page math) live in `shared/` (D41). Pages and routes fetch and render.
 
-## Context + prompts (`agent-pack/context/`, `agent-pack/prompts/`)
+## Context + prompts (`agent-pack/lighthouse/context/`, `agent-pack/lighthouse/prompts/`)
 
-Host-agnostic domain briefs and canonical LLM system prompts. Start at
-`agent-pack/context/INDEX.md` and `agent-pack/prompts/INDEX.md`. Loaded by
-`loadAgentPack()` as `pack.context` / `pack.prompts`. Cursor stubs under
-`.cursor/context/` point here — do not fork long-form context only for Cursor.
+Host-agnostic domain briefs and canonical LLM system prompts. Start at `agent-pack/lighthouse/context/INDEX.md` and `agent-pack/lighthouse/prompts/INDEX.md` (product pack; builder pack in `agent-pack/loom/`). Loaded by `loadAgentPack('lighthouse'|'loom')` as `pack.context` / `pack.prompts`. Cursor stubs under `.cursor/context/` point here via `agent-pack/harness/` — do not fork long-form context only for Cursor.
 
-## Skills (`agent-pack/skills/`)
+## Skills (`agent-pack/lighthouse/skills/` + `agent-pack/loom/skills/`)
 
-Reusable capabilities the agent reads on demand. Each one is task-specific
-and references the specialist that owns it. Hosts discover the same pack via
-`.cursor/skills`, `.claude/skills`, `.codex/skills`, `.agents/skills`
-(symlinks — D38). Builder pipeline skills: `multi-model-review`,
-`exec-perspective`.
+Reusable capabilities the agent reads on demand. Each one is task-specific and references the specialist that owns it. Hosts discover the same pack via `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.agents/skills` (symlinks via `agent-pack/harness/` — D38, D44). Product skills: `team-exec-status-answer` etc.; Builder pipeline skills: `weave`, `multi-model-review`, `exec-perspective`.
 
 - `team-exec-status-answer/` — D15 protocol
 - `weekly-status-email/` — D17 3-tier structure
@@ -121,7 +115,7 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 - **Web chat panel** (D7) is the agent surface for non-IDE users
 - **Agent pack is portable** (D38) — cookbook in `agent-pack/`; Cursor is one adapter
 
-## Phase plan (see `DECISIONS.md` → Round 6)
+## Phase plan (see `DECISIONS.md` → Round 4)
 
 | Phase | Scope |
 |---|---|
@@ -140,6 +134,6 @@ team_lead | team_mgr | ic | qa_lead | architect`.
 2. Read `DECISIONS.md` — every architectural decision has an ID
 3. Read `ARCHITECTURE.md` for layer model
 4. Read `~/.cursor/context/audience.md` for persona detail
-5. Pick the workspace (`apps/*`, `mcp-server`, `shared`)
-6. Identify the right layer (Connector, Domain Model, Service, API/MCP, UI/AI)
+5. Pick the workspace (`apps/*`, `mcp/*`, `shared`)
+6. Identify the right layer (Connector, Domain Model, Service, API/MCP, UI/AI) — product code in `mcp/lighthouse` + `agent-pack/lighthouse`, builder tooling in `mcp/loom` + `agent-pack/loom`, deduplicated tools in `mcp/shared` (D44)
 7. Follow rules — never duplicate existing services or connectors
