@@ -4,7 +4,18 @@
  * No hardcoded product/team strings — all derived from config.
  */
 
-export type TeamId = 'ndb' | 'prism-infra' | 'ncn' | 'cerebro-dr' | string;
+export type TeamId = string;
+
+export interface TeamSprintCalendar {
+  s1StartIso: string;
+  sprintDays: number;
+}
+
+export interface TeamCompanionDiscipline {
+  projectKey: string;
+  label: string;
+  hardGate: string;
+}
 
 export interface TeamNotificationEmails {
   exec: string;
@@ -31,7 +42,7 @@ export interface TeamBrandingConfig {
 export interface TeamConfig {
   id: TeamId;
   name: string;
-  displayName: string;
+  displayName?: string;
   projectKey: string;
   homeProjects: string[];
   baseFilter: string;
@@ -44,9 +55,9 @@ export interface TeamConfig {
     train?: string;
     [key: string]: string | undefined;
   };
-  sprintCalendar: string;
+  sprintCalendar: TeamSprintCalendar;
   boardId: number;
-  companionDisciplines: string[];
+  companionDisciplines: TeamCompanionDiscipline[];
   notificationEmails: TeamNotificationEmails;
   tcms: TeamTcmsConfig;
   qaEnv: TeamQaEnvConfig;

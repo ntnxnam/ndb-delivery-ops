@@ -30,8 +30,11 @@ export function getReleasePrefixes(cfg: TeamConfig): string[] {
   return Array.isArray(cfg.releasePrefixes) ? cfg.releasePrefixes : [];
 }
 
-/** Get release regexes for a team. */
+/** Get release regexes for a team. Prefer config-provided releaseRegexes; fall back to prefix-derived. */
 export function getReleaseRegexes(cfg: TeamConfig): RegExp[] {
+  if (Array.isArray(cfg.releaseRegexes) && cfg.releaseRegexes.length > 0) {
+    return cfg.releaseRegexes.map(r => new RegExp(r));
+  }
   const prefixes = getReleasePrefixes(cfg);
   return prefixes.map(p => new RegExp('^' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\d'));
 }
@@ -47,13 +50,13 @@ export function getLabelPrefix(cfg: TeamConfig): string {
   return cfg.labelPrefix || '';
 }
 
-/** Get a labeled value (e.g., 'notPor' -> 'ndb-not-por'). */
+/** Get a labeled value (e.g., notPor -> '{labelPrefix}not-por'). */
 export function getLabel(cfg: TeamConfig, key: string): string {
   const prefix = getLabelPrefix(cfg);
   const labelKey = cfg.labels?.[key];
   if (labelKey) return labelKey;
-  // default: prefix + '-' + key
-  return `${prefix}-${key}`;
+  // default: prefix already ends with '-', so just append key
+  return prefix.endsWith('-') ? `${prefix}${key}` : `${prefix}-${key}`;
 }
 
 /** Get notification emails for a team. */

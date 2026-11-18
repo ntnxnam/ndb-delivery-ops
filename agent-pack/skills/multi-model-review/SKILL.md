@@ -141,6 +141,33 @@ list, open asks, and which pipeline stages remain (if applicable).
 - Treat a shallow LGTM from any model as a pass
 - Fork this skill into a Cursor-only / Claude-only / Codex-only copy
 
+## 8) New lessons — Phase 1 shared helpers + config v2
+
+When reviewing changes in this area, enforce these lessons (add new ones
+here as they are learned):
+
+1. **No hardcoded team/product strings in shared helpers.** `shared/src/utils/teamProjectUtils.ts`
+   must pass `grep -n "NDB\|ndb-\|ERA\|FEAT"` with zero hits outside comments.
+   All values come from `TeamConfig`.
+2. **Config v2 completeness.** Every team entry in `teamBoardConfig.json` must
+   include `releasePrefixes`, `labelPrefix`, `homeProjects`, `notificationEmails`,
+   `tcms`, `qaEnv`, `branding`, `defaultRelease`, and `storyPointsField`.
+   Reviewers should fail PRs that add a team without these fields.
+3. **Single config entry onboarding.** A new team must be onboardable with one
+   config entry and zero code change — verify by adding a dummy team, exercising
+   the helpers, then removing the dummy (no code diff).
+4. **Pure helpers + ≥95% coverage.** `teamProjectUtils` helpers are pure
+   functions of `TeamConfig`; new helpers need unit tests covering all branches
+   including fallback (`|| ''`, `|| []`) paths. Target ≥95% line and branch.
+5. **Export surface.** New shared helpers must be re-exported from
+   `shared/src/index.ts` (already done via `export * from './utils/teamProjectUtils.js'`).
+6. **Schema version.** `_schema_version` must remain `2.0-team-agnostic`; do not
+   revert to legacy `4.0-multi-team`.
+7. **Do not weaken product-agnostic checks.** `npm run check:product-agnostic`
+   must stay green; grandfathered `customfield_NNNNN` warnings are tracked
+   separately and are not a license for new hardcodes.
+
+
 ## Related pipeline skills
 
 - Stage 5 Exec sign-off → `agent-pack/skills/exec-perspective/`

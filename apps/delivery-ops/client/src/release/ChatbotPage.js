@@ -267,7 +267,7 @@ export default function ChatbotPage() {
           {diggingError && <div className="chatbot-error">{diggingError}</div>}
           {diggingDataset && (
             <div className="chatbot-digging-card">
-              <strong>{diggingDataset.status === 'cached' ? 'Cached dataset' : diggingDataset.status === 'live' ? 'Live dataset' : 'Mock dataset'}</strong> · <span onClick={() => { /* panel drill: scroll to Ask, history/comments visible in cached set */ }} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="In-app: ask about this set">{diggingDataset.ticketCount} tickets</span> · fetched {new Date(diggingDataset.fetchedAt).toLocaleTimeString()} · <a href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(diggingDataset.jql)}`} target="_blank" rel="noreferrer">Open in JIRA ({diggingDataset.ticketCount})</a>
+              <strong>{diggingDataset.status === 'cached' ? 'Cached dataset' : diggingDataset.status === 'live' ? 'Live dataset' : 'Mock dataset'}</strong> · <span onClick={() => promptRef.current?.focus()} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Ask about this set">{diggingDataset.ticketCount} tickets</span> · fetched {new Date(diggingDataset.fetchedAt).toLocaleTimeString()} · <a href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(diggingDataset.jql)}`} target="_blank" rel="noreferrer">Open in JIRA ({diggingDataset.ticketCount})</a>
               <div className="chatbot-digging-jql">{diggingDataset.jql}</div>
               {diggingDataset.sampleKeys?.length > 0 && (
                 <div className="chatbot-digging-sample">Sample: {diggingDataset.sampleKeys.map((k, i) => <span key={k}>{i > 0 ? ', ' : ''}<a href={`https://jira.nutanix.com/browse/${k}`} target="_blank" rel="noreferrer">{k}</a></span>)}{diggingDataset.truncated ? '…' : ''}</div>
@@ -357,6 +357,7 @@ export default function ChatbotPage() {
 
       <form className="chatbot-input-row" onSubmit={onSubmit}>
         <input
+          ref={promptRef}
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

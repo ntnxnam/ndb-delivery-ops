@@ -118,7 +118,8 @@
         "shortName": "NDB"
       },
       "defaultRelease": "NDB-3.0",
-      "storyPointsField": "customfield_10002"
+      "storyPointsField": "customfield_10002",
+      "displayName": "NDB"
     },
     {
       "id": "prism-infra",
@@ -204,7 +205,8 @@
       },
       "defaultRelease": "AOS 5.11",
       "storyPointsField": "customfield_10002",
-      "companionDisciplines": []
+      "companionDisciplines": [],
+      "displayName": "Prism Infra"
     },
     {
       "id": "ncn",
@@ -269,7 +271,8 @@
       },
       "defaultRelease": "NCN-2025.1",
       "storyPointsField": "customfield_10002",
-      "companionDisciplines": []
+      "companionDisciplines": [],
+      "displayName": "Nutanix Cloud Native"
     },
     {
       "id": "cerebro-dr",
@@ -321,7 +324,8 @@
       },
       "defaultRelease": "AOS 5.11",
       "storyPointsField": "customfield_10002",
-      "companionDisciplines": []
+      "companionDisciplines": [],
+      "displayName": "Cerebro / DR"
     }
   ],
   "defaultTeamId": "ndb"
