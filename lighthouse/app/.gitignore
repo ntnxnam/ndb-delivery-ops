@@ -49,3 +49,8 @@ jira-changelog-data.json
 server/data/*.json
 !server/data/.gitkeep
 
+
+# Generated reports — historical samples committed, future generated reports ignored
+reports/*.html
+reports/*.json
+!reports/CORRECTIONS.md
