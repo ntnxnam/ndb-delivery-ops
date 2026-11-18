@@ -56,7 +56,7 @@ npm run mcp:build
 <p><strong>What you get:</strong> the full delivery-ops React app (release versions, sprint reports, KPIs, exec dashboards, chatbot, email sender), the docs hub at <code>/docs/</code>, and the MCP surfaces if your host is wired (see §6). Bin-packing is served at <code>/bin-packing/</code> (new tab).</p>
 <hr>
 <h2>1 — Where Things Live</h2>
-<p>Monorepo root is <code>~/NDB-Ops-Tools/ndb-delivery-ops/</code> (future <code>portfolio-delivery-ops</code> per <a href="../../DECISIONS.md#d2--rename-to-portfolio-delivery-ops">D2</a>). The legacy name <code>ndb-status-update-sender</code> no longer exists as a directory — any doc still referencing it is stale.</p>
+<p>Monorepo root is <code>~/NDB-Ops-Tools/ndb-delivery-ops/</code> (future <code>portfolio-delivery-ops</code> per <a href="../../DECISIONS.md#d2--rename-to-portfolio-delivery-ops">D2</a>). Previous location was <code>ndb-status-update-sender/</code>; update any remaining references to <code>apps/delivery-ops/</code>.</p>
 <pre><code>ndb-delivery-ops/
 ├── AGENTS.md                          # project persona — read second after ~/.cursor/AGENTS.md
 ├── ARCHITECTURE.md                    # 5-layer model (this guide&#39;s source of truth)
@@ -923,7 +923,7 @@ bash scripts/docs-verify.sh
 <tbody><tr>
 <td><code>ECONNREFUSED</code> on 8899 or 8001</td>
 <td>Port in use or wrong port in doc/config</td>
-<td><code>lsof -i :8899 -i :8001</code>; fixed ports are <strong>8899/8001</strong> — no fallback. Old docs said 6100/6001 — stale.</td>
+<td><code>lsof -i :8899 -i :8001</code>; fixed ports are <strong>8899/8001</strong> — no fallback. Previous ports were 6100/6001.</td>
 </tr>
 <tr>
 <td><code>401 Unauthorized</code> from JIRA proxy</td>

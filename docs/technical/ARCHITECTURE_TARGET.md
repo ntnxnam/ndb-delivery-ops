@@ -26,7 +26,7 @@ into the other:
   landing forecast, burn trajectory, insights engine, NAI chatbot.
 
 For every analytics surface, check the per-surface fusion map in
-[`STREAMLIT_PARITY.md`](./STREAMLIT_PARITY.md) — it lists what each side
+[`STREAMLIT_PARITY.md`](../../generated/handover/STREAMLIT_PARITY.md) — it lists what each side
 contributes and what the fused result should be. Surfaces aren't "done" until
 the fused result is in place. If something is intentionally dropped from
 either side, log it in the doc's "What we deliberately drop" table — never

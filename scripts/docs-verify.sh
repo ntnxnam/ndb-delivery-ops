@@ -23,11 +23,16 @@ if [ -d "$ROOT/docs" ]; then
     # skip http links and empty
     echo "$link" | grep -q "^http" && continue
     [ -z "$link" ] && continue
-    # links are relative to their file; we do shallow check for basename existence
+    # skip glob/wildcard placeholders like *.md
+    echo "$link" | grep -q '\*' && continue
     base=$(basename "$link")
     [ -z "$base" ] && continue
-    if ! find "$ROOT/docs" -name "$base" -print -quit | grep -q .; then
-      echo "WARN: possible broken link -> $link ($base not found)"
+    # check basename exists anywhere in repo (docs + repo-root + agent-pack)
+    if ! find "$ROOT/docs" "$ROOT/AGENTS.md" "$ROOT/ARCHITECTURE.md" "$ROOT/DECISIONS.md" "$ROOT/agent-pack" -name "$base" -print -quit 2>/dev/null | grep -q .; then
+      # fallback: search whole repo excluding node_modules/.git
+      if ! find "$ROOT" -name "$base" -not -path "*/node_modules/*" -not -path "*/.git/*" -print -quit 2>/dev/null | grep -q .; then
+        echo "WARN: possible broken link -> $link ($base not found)"
+      fi
     fi
   done
 fi

@@ -69,7 +69,7 @@ npm run mcp:build
 
 ## 1 — Where Things Live
 
-Monorepo root is `~/NDB-Ops-Tools/ndb-delivery-ops/` (future `portfolio-delivery-ops` per [D2](../../DECISIONS.md#d2--rename-to-portfolio-delivery-ops)). The legacy name `ndb-status-update-sender` no longer exists as a directory — any doc still referencing it is stale.
+Monorepo root is `~/NDB-Ops-Tools/ndb-delivery-ops/` (future `portfolio-delivery-ops` per [D2](../../DECISIONS.md#d2--rename-to-portfolio-delivery-ops)). Previous location was `ndb-status-update-sender/`; update any remaining references to `apps/delivery-ops/`.
 
 ```
 ndb-delivery-ops/
@@ -494,7 +494,7 @@ Rules: use relative `/docs/guides/DEVELOPER_GUIDE.html` links in app code — ne
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `ECONNREFUSED` on 8899 or 8001 | Port in use or wrong port in doc/config | `lsof -i :8899 -i :8001`; fixed ports are **8899/8001** — no fallback. Old docs said 6100/6001 — stale. |
+| `ECONNREFUSED` on 8899 or 8001 | Port in use or wrong port in doc/config | `lsof -i :8899 -i :8001`; fixed ports are **8899/8001** — no fallback. Previous ports were 6100/6001. |
 | `401 Unauthorized` from JIRA proxy | Missing/invalid PAT | Set `JIRA_PAT` in `server/.env`; client stores same token in `localStorage.jiraToken` and sends `Authorization: Bearer <pat>`. Validate via `POST /api/jira/validate` → `/rest/api/2/myself`. |
 | `JIRA_PAT is required` on boot | `shared/loadEnv({ requirePat: true })` in batch/MCP without env | Set `JIRA_PAT` in shell/env; HTTP routes use `requirePat: false` and override per-request. |
 | CORS blocked in prod | `ALLOWED_ORIGINS` not set | Set `ALLOWED_ORIGINS` to comma-separated allowed origins in `server/.env`; dev allows all. |
