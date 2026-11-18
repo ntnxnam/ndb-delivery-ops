@@ -136,6 +136,10 @@ Release-level list queries (Q1–Q5 + Q7) live in
 `agent-pack/context/domain/dependency_rule.md`.
 This skill remains the **ticket graph walk** (Mode Dependency **live** `issuelinks`). Dependency View may also show **Previously linked** (removed links via changelog) — do not treat those as live walk edges unless the caller asks for history.
 
+
+## Delegation
+
+Owner: `dependency-tracker-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.
 ## Cross-references
 
 - `agent-pack/identity/specialists/dependency-tracker-specialist.md`

@@ -6,3 +6,23 @@ alwaysApply: false
 # One-Shot
 
 Loom must not ask the user for the same input twice. If scope is discussed, produce a plan and execute; do not re-ask after plan approval.
+
+## When this applies
+
+- User asked: scoping, clarification, or goal question — you asked **once** and they answered.
+- User answered: you now own the next step; produce a plan and **execute** the `weave` pipeline (stages 1 → 11) for that goal.
+
+## Hard rule
+
+> **Ask at most once.** After the user answers, produce and execute — do not loop back with another scoping question unless new ambiguity was **introduced by their answer**.
+
+## Concretely
+
+- Clarify **at most once** per `weave.mdc` Goal → KPI gate.
+- Then produce a Goal KPI Card, derive per-agent KPIs, and execute stages 1 → 11; no open loops.
+- If downstream ambiguity surfaces (new file, new gate date), handle it inside the pipeline stage that owns it — not as a top-level re-ask.
+
+## Cross-reference
+
+- `weave.mdc` — the pipeline this rule feeds into (Goal → KPI → pipeline → merge).
+- `mcp-tenancy.mdc` — Loom is builder tenancy; `one-shot` shapes builder scoping, not product chat.

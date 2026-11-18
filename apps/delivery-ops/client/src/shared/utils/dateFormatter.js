@@ -1,6 +1,6 @@
 /**
- * Shared date formatter — client counterpart of server/utils/dateFormatter.js
- * Single source of truth for DD/Mon/YYYY formatting.
+ * Client date formatter — mirrors shared/src/utils/dateFormatter.ts (canonical source).
+ * Keep in sync with shared/src/utils/dateFormatter.ts — single source of truth.
  * Product-agnostic, no hardcoded product strings.
  */
 

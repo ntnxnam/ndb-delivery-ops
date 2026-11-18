@@ -26,6 +26,17 @@ Specific triggers:
 - A user opens a JIRA-related question without specifying a tool
 - A scheduled trigger (Monday status job, etc.) needs an agent answer
 
+## Tenancy — D44 / D45
+
+This repo houses two packs per **D44 / D45**:
+
+| Pack | MCP server | Bin | Tools | Audience |
+|---|---|---|---|---|
+| `agent-pack/lighthouse/` — product (this pack) | `mcp/lighthouse/` | `lighthouse-mcp` | 10 product tools (8 shared + 2 product-only) | Portfolio Manager surfaces |
+| `agent-pack/loom/` — builder | `mcp/loom/` | `loom-mcp` | 8 shared tools | Weaver / feature work |
+
+Shared tool source lives in `mcp/shared/tools/` and is imported by both servers (D44). All canonical skill/rule/identity paths below are `agent-pack/lighthouse/...` for this pack; host adapters (`.cursor/skills`, `.claude/skills`, `.codex/skills`, `.agents/skills`) are generated symlinks via `agent-pack/harness/` — never treat a host path as a separate source of truth (D38).
+
 ## Session bootstrap
 
 When a session starts, before answering anything, the Ops Assistant
@@ -97,7 +108,7 @@ orchestrator decides which to call; users never address them directly.
 |---|---|---|
 | `team-exec-specialist` | Team Executive / Director status, exec dashboard, executive risk register | `team-exec-briefing` (mode=status / report / briefing) |
 | `tpm-specialist` | Weekly status, cross-team coordination, programme view | `weekly-status-email` |
-| `rm-specialist` | Release readiness, gates, cascade renames, version moves | (Phase B+ skills) |
+| `rm-specialist` | Release readiness, gates, cascade renames, version moves | `release-gate-ops` (+ `release-dataset-sync` where applicable) |
 | `triage-specialist` | Backlog health (new/stale/pending) + crisis (P0 fire) | `backlog-triage` (mode=new/stale/pending/all), `crisis-triage` |
 | `confluence-publisher-specialist` | Bulk page creation, templates, width cleanup, page-publish | `confluence-width-cleanup` |
 | `dependency-tracker-specialist` | Cross-team dep graph, upstream/downstream walks | `dependency-walk` |
@@ -105,7 +116,7 @@ orchestrator decides which to call; users never address them directly.
 
 ## Tools the orchestrator can call
 
-These come from the MCP server (`mcp/shared/tools (+ mcp/lighthouse/src/tools product-only)/`) and services:
+These come from the MCP servers (`mcp/shared/tools/` shared + `mcp/lighthouse/src/tools/` product-only, D44) and services. Builder hosts (`mcp/loom/`) expose the shared 8 only; see `mcp/lighthouse/src/index.ts` (`lighthouse-mcp`) and `mcp/loom/src/index.ts` (`loom-mcp`) for the registered sets; `mcp/shared/tools/` is the deduplicated source (D44):
 
 **Read-only MCP tools** (always safe):
 - `getReleaseStatus(productId, releaseName)`
@@ -193,9 +204,9 @@ Never fabricate. Never hallucinate ticket keys. Never invent owner names.
 
 ## Cross-references
 
-- `DECISIONS.md` — D4, D6, D8, D10, D11, D12, D13, D15, D16, D17, D18, D19
+- `DECISIONS.md` — D4, D6, D8, D10, D11, D12, D13, D15, D16, D17, D18, D19, D38, D44, D45
 - `agent-pack/lighthouse/rules/persona-aware-output.mdc`
 - `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `agent-pack/lighthouse/rules/product-agnostic.mdc`
-- `~/.cursor/context/audience.md`
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror)
 - `ARCHITECTURE.md` — service layer + connector layer

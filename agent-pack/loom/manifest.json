@@ -32,7 +32,12 @@
     "rules/no-broken-links.mdc",
     "rules/one-shot.mdc",
     "rules/minimal-architecture.mdc",
-    "rules/gerrit-push-for-review.mdc"
+    "rules/gerrit-push-for-review.mdc",
+    "rules/mcp-tenancy.mdc",
+    "rules/port-and-env-contracts.mdc",
+    "rules/documentation-consistency.mdc",
+    "rules/api-docs-required.mdc",
+    "rules/page-docs-required.mdc"
   ],
   "skills": [
     {

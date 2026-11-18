@@ -147,3 +147,7 @@ NAI:
 - [ ] Exhaustive tests pass: tests/past-release-report.test.js 18/18 — headers, id, rows, Integrated Version OR fixVersion, issuetype, target blank, totals match verify
 - [ ] No secrets/PAT in HTML (footer says "JIRA PAT-verified" not raw token), no localhost, file sizes <30K per detail, no type= JQL
 
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

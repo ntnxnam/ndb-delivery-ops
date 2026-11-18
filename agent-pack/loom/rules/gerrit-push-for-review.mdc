@@ -11,3 +11,21 @@ alwaysApply: true
   (e.g. `git push <remote> HEAD:refs/for/main` or your target branch).
 - Use the project's documented remote and branch naming; the pattern is
   always `refs/for/<target-branch>` for review, not a direct branch push.
+
+## Example
+
+```bash
+git push origin HEAD:refs/for/main
+git push origin HEAD:refs/for/release/ndb-3.0
+```
+
+## Cross-reference
+
+- `weave.mdc` §10 Merge — merge gate that precedes push.
+- `ARCHITECTURE.md` § Delivery — where Gerrit vs GitHub hosting is chosen.
+- `mcp-tenancy.mdc` — this rule is builder-owned (delivery process), not product.
+
+## Never do
+
+- Push directly to `refs/heads/*` to bypass review when Gerrit hosts the branch.
+- Invent a non-`refs/for/` ref for review (e.g. `refs/review/`, `refs/drafts/`).

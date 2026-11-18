@@ -20,6 +20,20 @@
   flex: 1;
 }
 
+.fd-plan-count-link {
+  color: #1a1a1a;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.fd-plan-count-link:hover {
+  color: #2563eb;
+}
+
+.fd-plan-count-value {
+  font-weight: 600;
+}
+
 .fd-plan-jira-link {
   font-size: 12px;
   color: #2563eb;
@@ -47,7 +61,12 @@
 
 .fd-epic-row:hover { background: #f9fafb; }
 
-.fd-epic-toggle { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
+.fd-epic-row:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.fd-epic-toggle { font-size: 10px; color: #6b7280; flex-shrink: 0; }
 .fd-epic-key { font-weight: 600; color: #2563eb; flex-shrink: 0; }
 .fd-epic-summary { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -73,8 +92,16 @@
 
 .fd-progress-pct { font-size: 11px; color: #9ca3af; flex-shrink: 0; width: 30px; text-align: right; }
 
+/* Scroll wrapper for wide tables — 9-col Email Sender needs horizontal scroll on narrow viewports */
+.fd-plan-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
 .fd-plan-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   margin-bottom: 4px;
 }
@@ -119,3 +146,9 @@
 .fd-pri-p2 { color: #d97706; }
 .fd-pri-p3 { color: #4b5563; }
 .fd-pri-none { color: #9ca3af; }
+
+.fd-empty {
+  color: #6b7280;
+  font-size: 13px;
+  padding: 8px 4px;
+}

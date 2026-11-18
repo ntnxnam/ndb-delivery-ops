@@ -166,3 +166,7 @@ For exec surfaces, render the 6-group table as the hero; status detail collapses
 - [ ] Status breakdown per group in stable order; no silent drops
 - [ ] Source traceability (JQL/tag) present; product-agnostic wording (D1)
 - [ ] No `project = ERA` scoping; no hardcoded host (D40, no-localhost)
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

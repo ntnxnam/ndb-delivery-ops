@@ -3,11 +3,13 @@ module.exports = {
   roots: ['<rootDir>/server'],
   testPathIgnorePatterns: [
     '/node_modules/',
+    '/\\.claude/worktrees/',
     // All client/src tests use JSX/ESM (import syntax, @testing-library/react, etc.)
     // and must be run via `cd client && npm test` (react-scripts, Babel+JSX transform).
     // The top-level Jest config is CJS-only and cannot handle these files.
     'client/src'
   ],
+  modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
   testMatch: [
     '**/__tests__/**/*.js',
     '**/?(*.)+(spec|test).js'

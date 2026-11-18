@@ -2,6 +2,7 @@
 description: Never use defensive, self-justifying, or tall-claim language in UI copy, docs, chat, rules, or code comments
 alwaysApply: true
 ---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/no-defensive-statements.mdc -->
 
 # No Defensive Statements
 

@@ -1,0 +1,4 @@
+S.No,Issue Name,Title,Points,Dev Cost,Sizing,Depends
+1,FEAT-300,Search indexing infra,8,3,M (3-5 months),
+2,FEAT-301,Search UI,5,2,S (1-3 months),1
+3,FEAT-302,Search QA harnass,3,1,XS (1 month),"1, 2 (dev-blocker)"

@@ -124,5 +124,5 @@ via `confluence-publisher-specialist`).
 
 - `agent-pack/lighthouse/skills/weekly-status-email/SKILL.md`
 - `agent-pack/lighthouse/skills/dependency-walk/SKILL.md` (delegated to dependency specialist)
-- `~/.cursor/context/audience.md` — `tpm` audience
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror) — `tpm` audience
 - `DECISIONS.md` — D17, D18, D19, D20

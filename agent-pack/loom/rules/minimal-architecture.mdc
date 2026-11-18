@@ -11,7 +11,21 @@ Once a file crosses ~600 lines, every subsequent edit becomes harder and
 riskier. These rules stop that from happening again.
 
 Layer model: see `ARCHITECTURE.md`. Five layers — Connectors / Domain Models /
-Services / API+MCP / UI. **One feature, one place** (per D1, D3).
+Services / API+MCP / UI & AI Surfaces. **One feature, one place** (per D1, D3).
+
+> **See also:** `ARCHITECTURE.md` § The five layers (layer model),
+> `mcp-tenancy.mdc` (where new services/tools live across Lighthouse/Loom).
+
+**Five connectors (D3)** — `shared/connectors/` owns one TS module per external system:
+
+| Connector | Purpose |
+|---|---|
+| `jiraConnector` | JIRA Data Center REST + Agile — `Authorization: Bearer` PAT only (D40) |
+| `confluenceConnector` | Confluence REST — storage XML, audit rows (D30) |
+| `githubConnector` | GitHub commits/PRs/repos/CI signals |
+| `slackConnector` | Slack reads/posts/DMs (deferred) |
+| `emailConnector` | Email digests + optional inbox reads |
+| *(+ `aiConnector`)* | LLM transport (`NAI_API_KEY`, D39) — not a D3 connector but same layer |
 
 ## The Four Hard Lines
 
@@ -125,6 +139,11 @@ project already has:
   pick one per call site
 - Shared logic should live server-side in `shared/connectors/` per D3 — the
   client asks the server, not external systems directly
+
+## Cross-reference
+
+- Do not duplicate connector logic — one module per external system in `shared/connectors/` only (D3, `ARCHITECTURE.md` layer 1).
+- `port-and-env-contracts.mdc` — fixed ports and env keys that also gate this rule.
 
 ## Never Do
 

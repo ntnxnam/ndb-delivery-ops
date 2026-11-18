@@ -129,6 +129,10 @@ Procedure:
 - Pushing the Confluence variant without running width-cleanup
 - Sending without preview when not pre-authorised
 
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.
 ## Cross-references
 
 - `.cursor/agents/specialists/tpm-specialist.md`

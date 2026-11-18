@@ -187,10 +187,11 @@ const fetchEpics = async (opts = {}) => {
   setFetchingEpics(true);
   setEpics(null);
 
-  const releaseHint = (freshJiraData?.fixVersions || '')
-    .split(',')
-    .map((s) => s.trim())
-    .find((s) => s && s !== 'N/A');
+  const rawFixVersions = freshJiraData?.fixVersions;
+  const releaseParts = Array.isArray(rawFixVersions)
+    ? rawFixVersions.map((s) => String(s).trim())
+    : String(rawFixVersions || '').split(',').map((s) => s.trim());
+  const releaseHint = releaseParts.find((s) => s && s !== 'N/A');
 
   // Canonical-first: try Feature Dashboard payload when release is known; fall back to legacy otherwise.
   const tryLegacyFetch = async () => {
@@ -251,7 +252,6 @@ const fetchEpics = async (opts = {}) => {
         setWorkItems(Array.isArray(data?.payload?.canonical) ? data.payload.canonical : null);
         setPayloadJql(data?.jql?.canonical || '');
         setFetchingBreakdown(false);
-        setFetchingEpics(false);
         return;
       }
       // Canonical returned no usable epics — fall back to legacy

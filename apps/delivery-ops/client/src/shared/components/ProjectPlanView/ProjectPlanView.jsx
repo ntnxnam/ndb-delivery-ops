@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { formatDate } from '../../utils/dateFormatter';
 import './ProjectPlanView.css';
 
@@ -18,7 +18,7 @@ const COLUMN_DEFS = {
   status: {
     header: 'Status',
     cell: (row) => (
-      <span className={`fd-status-chip fd-priority-${(row.status || '').toLowerCase().replace(/\s+/g, '-')}`}>
+      <span className="fd-status-chip">
         {row.status || '—'}
       </span>
     ),
@@ -43,7 +43,7 @@ const COLUMN_DEFS = {
         return <span title="Portfolio types track gate dates, not Due Date">—</span>;
       }
       const v = row.duedate;
-      if (!v) return 'Not Set';
+      if (!v || v === 'Not Set') return 'Not Set';
       // epics payload already formats duedate as DD/Mon/YYYY — pass through;
       // canonical payload carries ISO YYYY-MM-DD — format via shared formatter.
       if (/^\d{2}\/[A-Za-z]{3}\/\d{4}$/.test(v)) return v;
@@ -110,7 +110,8 @@ export function ProjectPlanView({
   groupBy = 'epicLink',
 }) {
   // Groups mode: render directly from pre-grouped data (Email Sender path)
-  if (groups) {
+  // `groups` being defined (even as empty array) signals caller intent for groups mode.
+  if (groups !== undefined) {
     return (
       <GroupsPlanView
         groups={groups}
@@ -192,14 +193,15 @@ function IssuesPlanView({ issues, canonicalJql, jiraBaseUrl, columns, title, gro
 
 /** Pre-grouped mode — Email Sender: Feature → Epics grouping */
 function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
+  const safeGroups = Array.isArray(groups) ? groups : [];
   const totalCount = useMemo(
-    () => groups.reduce((sum, g) => sum + (g.childItems?.length || g.childEpics?.length || 0), 0),
-    [groups]
+    () => safeGroups.reduce((sum, g) => sum + (g.childItems?.length || g.childEpics?.length || 0), 0),
+    [safeGroups]
   );
   // Build exact-set JQL for clickthrough authenticity
   const totalJql = useMemo(() => {
     const keys = [];
-    for (const g of groups) {
+    for (const g of safeGroups) {
       const items = g.childItems || g.childEpics || [];
       for (const e of items) {
         const k = String(e?.key || '').trim();
@@ -207,10 +209,8 @@ function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
       }
     }
     return keys.length ? `key in (${keys.join(', ')})` : null;
-  }, [groups]);
+  }, [safeGroups]);
   const totalUrl = totalJql ? jiraSearchUrl(jiraBaseUrl, totalJql) : '';
-
-  if (!groups || groups.length === 0) return null;
 
   return (
     <div>
@@ -219,11 +219,11 @@ function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
         <span className="fd-plan-counts">
           Total Epics:{' '}
           {totalUrl ? (
-            <a href={totalUrl} target="_blank" rel="noopener noreferrer" title={totalJql} style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}>
+            <a href={totalUrl} target="_blank" rel="noopener noreferrer" title={totalJql} className="fd-plan-count-link">
               {totalCount}
             </a>
           ) : (
-            <span style={{ fontWeight: 600 }}>{totalCount}</span>
+            <span className="fd-plan-count-value">{totalCount}</span>
           )}
         </span>
         {canonicalJql && jiraBaseUrl && (
@@ -233,18 +233,22 @@ function GroupsPlanView({ groups, canonicalJql, jiraBaseUrl, columns, title }) {
         )}
       </div>
 
-      {groups.map((group) => {
-        const childItems = group.childItems || group.childEpics || [];
-        return (
-          <EpicSection
-            key={group.key}
-            epic={group}
-            children={childItems}
-            jiraBaseUrl={jiraBaseUrl}
-            columns={columns}
-          />
-        );
-      })}
+      {safeGroups.length === 0 ? (
+        <div className="fd-empty">No epics in this payload.</div>
+      ) : (
+        safeGroups.map((group) => {
+          const childItems = group.childItems || group.childEpics || [];
+          return (
+            <EpicSection
+              key={group.key}
+              epic={group}
+              children={childItems}
+              jiraBaseUrl={jiraBaseUrl}
+              columns={columns}
+            />
+          );
+        })
+      )}
     </div>
   );
 }
@@ -255,13 +259,23 @@ function EpicSection({ epic, children, jiraBaseUrl, columns = DEFAULT_COLUMNS, i
   const pct = children.length > 0 ? Math.round(((children.length - openChildren.length) / children.length) * 100) : 0;
   const [expanded, setExpanded] = useState(!allDone);
   const toggle = useCallback(() => setExpanded((v) => !v), []);
+  // Sync expanded when allDone flips after data refresh (e.g. task marked Done)
+  useEffect(() => {
+    if (allDone) setExpanded(false);
+  }, [allDone]);
 
   const activeDefs = columns.map((k) => COLUMN_DEFS[k]).filter(Boolean);
 
   return (
     <div className="fd-epic-section">
-      <button type="button" className="fd-epic-row" onClick={toggle}>
-        <span className="fd-epic-toggle">{expanded ? '▼' : '▶'}</span>
+      <button
+        type="button"
+        className="fd-epic-row"
+        onClick={toggle}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${epic.key !== '__isolated__' ? epic.key : 'isolated'}`}
+      >
+        <span className="fd-epic-toggle" aria-hidden="true">{expanded ? '▼' : '▶'}</span>
         {!isolated && <span className="fd-epic-key">{epic.key}</span>}
         <span className="fd-epic-summary">{epic.summary}</span>
         {!isolated && epic.status ? <span className="fd-epic-status fd-status-chip">{epic.status}</span> : null}
@@ -283,31 +297,33 @@ function EpicSection({ epic, children, jiraBaseUrl, columns = DEFAULT_COLUMNS, i
       </button>
 
       {expanded && openChildren.length > 0 && (
-        <table className="fd-plan-table">
-          <thead>
-            <tr>
-              {activeDefs.map((def) => (
-                <th key={def.header}>{def.header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {openChildren.map((row) => (
-              <tr key={row.key}>
-                {columns.map((colKey) => {
-                  const def = COLUMN_DEFS[colKey];
-                  if (!def) return null;
-                  const tdClass = typeof def.tdClass === 'function' ? def.tdClass(row) : undefined;
-                  return (
-                    <td key={colKey} className={tdClass}>
-                      {def.cell(row, jiraBaseUrl)}
-                    </td>
-                  );
-                })}
+        <div className="fd-plan-table-wrap">
+          <table className="fd-plan-table">
+            <thead>
+              <tr>
+                {activeDefs.map((def) => (
+                  <th key={def.header}>{def.header}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {openChildren.map((row) => (
+                <tr key={row.key}>
+                  {columns.map((colKey) => {
+                    const def = COLUMN_DEFS[colKey];
+                    if (!def) return null;
+                    const tdClass = typeof def.tdClass === 'function' ? def.tdClass(row) : undefined;
+                    return (
+                      <td key={colKey} className={tdClass}>
+                        {def.cell(row, jiraBaseUrl)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

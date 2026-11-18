@@ -29,6 +29,19 @@ The canonical package includes a substantial implementation:
 - Monte Carlo release-outcome distribution (P10/P50/P90)
 - QI forecasting from current trend
 
+
+## Quick Start
+
+```text
+Input: { release, historicalReleases: string[], model: "monte-carlo" | "velocity" | "qi-forecast", scenarios?: object[] }
+Output: { p10, p50, p90, confidence, risks: { title, probability, impact }[], chart: "[chart:landing-confidence]" }
+
+1. Load release dataset for target + historical releases (capability #1)
+2. Run HistoricalAnalyzer on velocity + defect trends
+3. Execute Monte Carlo (N=10000) via CompletionPredictionModel or QI via QualityForecastingModel
+4. Render confidence band + risk burndown via PredictiveCharts.js
+5. Cite model inputs: velocity source, historical window, N, assumptions
+```
 ## Why It Matters Here
 
 This is **capability #8** in `CONSOLIDATION.md` and replaces my
@@ -76,3 +89,7 @@ inline CSS).
 - [ ] Risk numbers cite the model (not "I think")
 - [ ] Forecast section visibly separated from current-state section
 - [ ] Monte Carlo runs ≥ 1,000 simulations
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

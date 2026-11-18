@@ -114,7 +114,7 @@ the Team Executive specialist.
 
 ## Cross-references
 
-- `agent-pack/skills/backlog-triage/SKILL.md` (merged 2026-11-12, mode=new/stale/pending/all)
-- `agent-pack/skills/crisis-triage/SKILL.md` (P0 fire, separate)
+- `agent-pack/lighthouse/skills/backlog-triage/SKILL.md` (merged 2026-11-12, mode=new/stale/pending/all)
+- `agent-pack/lighthouse/skills/crisis-triage/SKILL.md` (P0 fire, separate)
 - `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D19

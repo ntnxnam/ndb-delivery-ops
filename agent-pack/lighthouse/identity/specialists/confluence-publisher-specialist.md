@@ -123,5 +123,5 @@ multi-section with anchor links per audience section.
 - `agent-pack/lighthouse/skills/confluence-width-cleanup/SKILL.md`
 - `agent-pack/lighthouse/rules/confluence-cleanup-clarification.mdc`
 - `agent-pack/lighthouse/rules/citation-first-output.mdc`
-- `~/.cursor/context/audience.md`
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror)
 - `DECISIONS.md` — D3 (Confluence connector), D9, D15d, D17, D20

@@ -22,6 +22,18 @@ This skill is canonically defined at:
   `[chart:<id>]` token mechanism (after chart catalog, capability #5,
   is ported)
 
+
+## Quick Start
+
+```text
+Input: { release, tickets: JiraIssue[], zoom: "daily" | "weekly" | "monthly" }
+Output: { reactGantt: "<SprintGantt tickets={...} />", htmlGantt: "<table>...</table>", chartToken?: "[chart:gantt-<id>]" }
+
+1. Classify tickets: FEAT-tier -> gate dates, Epic -> duedate, else -> sprint-end (fetch sprint via Agile API, cache by sprintId)
+2. Compute bar: start = ticket start || release EC date, end = hierarchy date above
+3. Render: React interactive Gantt (in-app) + static HTML table (email)
+4. Handle: no-sprint tickets -> blank bar (never hide), today marker, zoom toggle
+```
 ## Why It Matters Here
 
 This is **capability #18** in `CONSOLIDATION.md`. Once ported,
@@ -68,3 +80,7 @@ start → end, blank row for unassigned tickets.
 - [ ] Daily/weekly/monthly zoom works
 - [ ] Email HTML is self-contained
 - [ ] Sprint data cached (no duplicate Sprint API calls)
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.
