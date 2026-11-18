@@ -20,7 +20,12 @@
     "product/lighthouse/rules/persona-aware-output.mdc",
     "product/lighthouse/rules/product-agnostic.mdc",
     "product/lighthouse/rules/program-management-pov.mdc",
-    "product/lighthouse/rules/release-gate-aware-reasoning.mdc"
+    "product/lighthouse/rules/release-gate-aware-reasoning.mdc",
+    "product/lighthouse/rules/concise-comms.mdc",
+    "product/lighthouse/rules/deferral-workbench-order.mdc",
+    "product/lighthouse/rules/kpi-config-driven.mdc",
+    "product/lighthouse/rules/kpi-pulse-analytics.mdc",
+    "product/lighthouse/rules/release-outstanding-work-order.mdc"
   ],
   "memorySchema": "product/lighthouse/memory/schema.json",
   "identities": [

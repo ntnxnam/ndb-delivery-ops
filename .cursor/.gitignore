@@ -1,0 +1,5 @@
+# Generated harness files — source is agent-pack/
+*.mdc
+skills
+context
+workflows

@@ -20,7 +20,12 @@
     "rules/persona-aware-output.mdc",
     "rules/product-agnostic.mdc",
     "rules/program-management-pov.mdc",
-    "rules/release-gate-aware-reasoning.mdc"
+    "rules/release-gate-aware-reasoning.mdc",
+    "rules/concise-comms.mdc",
+    "rules/deferral-workbench-order.mdc",
+    "rules/kpi-config-driven.mdc",
+    "rules/kpi-pulse-analytics.mdc",
+    "rules/release-outstanding-work-order.mdc"
   ],
   "memorySchema": "memory/schema.json",
   "identities": [
