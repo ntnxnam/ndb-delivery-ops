@@ -269,6 +269,51 @@ function getSprintMetrics(input) {
   return { ...input, completionRate: 0, pendingQARate: 0, carryoverRate: 0, scopeCreepRate: 0, open: 0 };
 }
 
+function buildStatusCategoryByName(statuses) {
+  const map = new Map();
+  for (const s of statuses || []) {
+    const name = (s.name || '').trim();
+    if (!name) continue;
+    const key = (s.statusCategory?.key || '').toLowerCase();
+    const catName = (s.statusCategory?.name || '').toLowerCase();
+    if (key) map.set(name.toLowerCase(), key);
+    else if (catName.includes('progress')) map.set(name.toLowerCase(), 'indeterminate');
+    else if (catName === 'done' || catName === 'complete') map.set(name.toLowerCase(), 'done');
+    else map.set(name.toLowerCase(), 'new');
+  }
+  return map;
+}
+function extractFirstInProgressIso(issue, statusCategoryByName) {
+  const histories = issue?.changelog?.histories;
+  if (!histories?.length) return null;
+  let earliest = null;
+  for (const h of histories) {
+    for (const item of h.items || []) {
+      if (item.field !== 'status') continue;
+      const cat = statusCategoryByName.get((item.toString || '').toLowerCase());
+      if (cat === 'indeterminate') {
+        const d = h.created?.slice(0, 10);
+        if (!earliest || d < earliest) earliest = d;
+      }
+    }
+  }
+  return earliest;
+}
+function computeFeatureTiming(ecDate, seeds) {
+  let realStartKey = null, realStartIso = null;
+  for (const s of seeds || []) {
+    if (!s.firstInProgressIso) continue;
+    if (!realStartIso || s.firstInProgressIso < realStartIso) { realStartIso = s.firstInProgressIso; realStartKey = s.key; }
+  }
+  const deltaDaysVsEc = realStartIso && ecDate ? Math.round((new Date(realStartIso) - new Date(ecDate)) / 86400000) : null;
+  return { realStartKey, realStartIso, deltaDaysVsEc };
+}
+function computeFixVersionHygiene(tickets, release, baseJql) {
+  const wrong = (tickets || []).filter(t => !(t.fixVersions || []).includes(release));
+  const jql = wrong.length ? `${baseJql} AND key in (${wrong.map(t=>t.key).join(',')})` : baseJql;
+  return { wrongFixVersionCount: wrong.length, jql, missingKeys: wrong.map(t=>t.key) };
+}
+
 function countSelfReportedRisk() {
   return { red: 0, yellow: 0, green: 0, notSet: 0 };
 }
@@ -359,6 +404,10 @@ module.exports = {
   buildFeatureRecord,
   assembleReleaseIntelligence,
   getSprintMetrics,
+  buildStatusCategoryByName,
+  extractFirstInProgressIso,
+  computeFeatureTiming,
+  computeFixVersionHygiene,
   countSelfReportedRisk,
   computeReleaseHealthVerdict,
   evaluateTeamRiskContext,

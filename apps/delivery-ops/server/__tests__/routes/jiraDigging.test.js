@@ -1,4 +1,11 @@
 /*** Slice 2 FT — POST /api/jira-digging/prepare — read-only, per-request PAT ***/
+jest.mock('../../middleware/auth/jira', () => ({
+  validateJiraTokenMiddleware: (req, res, next) => {
+    if (!req.headers.authorization) return res.status(401).json({ error: 'Missing token' });
+    req.username = 'test.user';
+    next();
+  },
+}));
 const request = require('supertest');
 const app = require('../../index');
 
