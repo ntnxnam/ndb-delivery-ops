@@ -1,8 +1,8 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-coversVersion: "2.11"
-source: doc-user-guide @ 2026-05-19
+lastUpdated: 2026-11-18
+coversVersion: "3.0"
+source: doc-user-guide @ 2026-11-18
 ---
 
 # User Guide
@@ -18,7 +18,7 @@ source: doc-user-guide @ 2026-05-19
 
 ## Getting Started
 
-1. Log in at `/login` (RBAC via `allowedUsers.json` — see [ADMIN_GUIDE.md](./ADMIN_GUIDE.md#rbac)).
+1. Log in at `/login` (RBAC via `allowedUsers.json` — see [ADMIN_GUIDE.md#rbac) (see Documentation)).
 2. Pick product + release in the header.
 3. Use sidebar tabs per your permission.
 
@@ -53,9 +53,29 @@ feature.
   `time_filter=four_weeks`).
 - **Caveat:** Functional and System rows currently share the same source
   metrics until TCMS exposes a `test_category` filter. Do not read
-  distinctness into the two rows yet. See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
+  distinctness into the two rows yet. See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).
+
+## OnCalls
+**Who:** EM, TPM
+**Steps:** Open KPIs → OnCalls → select release → review counts by period.
+**Tips:** Click a count to see the filtered list; counts come from `kpiConfig` live JQL.
+
+## CFD / CFI
+**Who:** TPM, QA Lead
+**Steps:** Open KPIs → CFD/CFI → Top / Non-Top → check created vs resolved.
+**Tips:** Use MTTR and status-dwell to spot aging items.
+
+## Dependency View
+**Who:** FEAT owner, TPM
+**Steps:** Open Dependency View → select release → review blockers.
+**Tips:** Links show upstream/downstream tickets.
+
+## KPI Pulse
+**Who:** TPM, Director
+**Steps:** Open KPIs → last 2 quarters strip → toggle cumulative / point-in-time.
+**Tips:** Compare trend vs snapshot.
 
 ## Tips & FAQ
 
 - Missing tab? Check permissions in [ADMIN_GUIDE.md](./ADMIN_GUIDE.md).
-- Caveats? See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
+- Caveats? See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).

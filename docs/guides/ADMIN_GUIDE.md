@@ -1,9 +1,9 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-coversVersion: "2.11"
+lastUpdated: 2026-11-18
+coversVersion: "3.0"
 env: prod
-source: doc-admin-guide @ 2026-05-19
+source: doc-admin-guide @ 2026-11-18
 ---
 
 # Admin Guide

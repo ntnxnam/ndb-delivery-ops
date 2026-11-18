@@ -1,108 +1,129 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOYMENT_GUIDE</title><link rel="stylesheet" href="../assets/style.css"/></head><body><div class="container"><p class="breadcrumb"><a href="../index.html">docs</a> / Guides / DEPLOYMENT_GUIDE</p><article class="prose"><pre># Deployment Guide
-
-## Architecture
-
-```
-Browser ──:8899──> Nginx ──┬─ /       → React build (static files)
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOYMENT_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOYMENT_GUIDE</span></nav><div class="container"><article class="prose"><h1>Deployment Guide</h1>
+<h2>Architecture</h2>
+<pre><code>Browser ──:8899──&gt; Nginx ──┬─ /       → React build (static files)
                            ├─ /api/*  → Node backend (PM2) :8001
                            └─ /bin-packing → Node backend (PM2) :8001
-```
-
-| Service | Port | Notes |
-|---|---|---|
-| Nginx (public) | `8899` | HTTP_PORT in deploy scripts |
-| Node backend (PM2) | `8001` | BACKEND_PORT in deploy scripts |
-
----
-
-## Quick deploy (from your Mac)
-
-```bash
-./apps/delivery-ops/scripts/deploy-to-production.sh
-```
-
-That's it. The script:
-1. Runs the localhost guard (`npm run check:no-localhost`) — fails early if violated
-2. Zips the repo (excludes `node_modules`, `.git`, `build`, `server/.env`)
-3. SCPs the archive to the production server
-4. SSHes in, extracts the archive, and runs `server-deploy.sh`
-
-Both scripts are **idempotent** — the same command works for first deploy and every redeploy.
-
-### Options
-
-```
-./deploy-to-production.sh --server user@host   # override SSH target
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nginx (public)</td>
+<td><code>8899</code></td>
+<td>HTTP_PORT in deploy scripts</td>
+</tr>
+<tr>
+<td>Node backend (PM2)</td>
+<td><code>8001</code></td>
+<td>BACKEND_PORT in deploy scripts</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Quick deploy (from your Mac)</h2>
+<pre><code class="language-bash">./apps/delivery-ops/scripts/deploy-to-production.sh
+</code></pre>
+<p>That&#39;s it. The script:</p>
+<ol>
+<li>Runs the localhost guard (<code>npm run check:no-localhost</code>) — fails early if violated</li>
+<li>Zips the repo (excludes <code>node_modules</code>, <code>.git</code>, <code>build</code>, <code>server/.env</code>)</li>
+<li>SCPs the archive to the production server</li>
+<li>SSHes in, extracts the archive, and runs <code>server-deploy.sh</code></li>
+</ol>
+<p>Both scripts are <strong>idempotent</strong> — the same command works for first deploy and every redeploy.</p>
+<h3>Options</h3>
+<pre><code>./deploy-to-production.sh --server user@host   # override SSH target
                           --path /var/www/...  # override remote path
                           --http-port 8899     # override Nginx port
                           --app-name NAME      # override PM2 app name
                           --yes                # skip confirmation prompt
-```
-
-Defaults are set at the top of `deploy-to-production.sh`. Edit `PRODUCTION_SERVER` and `SERVER_PATH` there (or pass `--server` / `--path` each time).
-
----
-
-## What happens on the server (`server-deploy.sh`)
-
-The server-side script runs on **Rocky Linux 9**. Steps (all idempotent):
-
-1. Installs Node 20.x, build tools, Nginx, PM2 — only if missing
-2. Seeds `server/.env` from `server/.env.example` if absent; writes `PORT=8001`
-3. Runs `npm install` from repo root
-4. Builds the React client (`CI= npm run build`)
-5. Writes Nginx config to `/etc/nginx/conf.d/delivery-ops.conf`
-6. Configures SELinux (`httpd_can_network_connect`) and firewall if active
-7. Writes PM2 `ecosystem.config.js` and starts/reloads the backend
-8. Health-checks both backend (`:8001/api/health`) and Nginx (`:8899/api/health`)
-
-### Overridable environment variables
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PRODUCTION_SERVER` | set in script | SSH target (`user@host`) |
-| `SERVER_PATH` | `/var/www/html/ndb-delivery-ops` | Remote deploy path |
-| `HTTP_PORT` | `8899` | Public Nginx port |
-| `BACKEND_PORT` | `8001` | Internal Node port |
-| `PM2_APP_NAME` | `delivery-ops` | PM2 process name |
-| `NODE_MAJOR` | `20` | Node major version to install |
-
----
-
-## Pre-deploy checklist
-
-- [ ] `server/.env` on the production server has correct `SMTP_*` and `AI_*` values
-- [ ] `server/config/emailConfig.json` has `smtp.from` set to the service account
-- [ ] `PRODUCTION_SERVER` in `deploy-to-production.sh` points to the right box
-- [ ] `npm run check:no-localhost` passes locally (also run automatically by deploy script)
-
----
-
-## Post-deploy verification
-
-```bash
-# Backend health (direct)
-curl http://&lt;server-ip>:8001/api/health
+</code></pre>
+<p>Defaults are set at the top of <code>deploy-to-production.sh</code>. Edit <code>PRODUCTION_SERVER</code> and <code>SERVER_PATH</code> there (or pass <code>--server</code> / <code>--path</code> each time).</p>
+<hr>
+<h2>What happens on the server (<code>server-deploy.sh</code>)</h2>
+<p>The server-side script runs on <strong>Rocky Linux 9</strong>. Steps (all idempotent):</p>
+<ol>
+<li>Installs Node 20.x, build tools, Nginx, PM2 — only if missing</li>
+<li>Seeds <code>server/.env</code> from <code>server/.env.example</code> if absent; writes <code>PORT=8001</code></li>
+<li>Runs <code>npm install</code> from repo root</li>
+<li>Builds the React client (<code>CI= npm run build</code>)</li>
+<li>Writes Nginx config to <code>/etc/nginx/conf.d/delivery-ops.conf</code></li>
+<li>Configures SELinux (<code>httpd_can_network_connect</code>) and firewall if active</li>
+<li>Writes PM2 <code>ecosystem.config.js</code> and starts/reloads the backend</li>
+<li>Health-checks both backend (<code>:8001/api/health</code>) and Nginx (<code>:8899/api/health</code>)</li>
+</ol>
+<h3>Overridable environment variables</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>PRODUCTION_SERVER</code></td>
+<td>set in script</td>
+<td>SSH target (<code>user@host</code>)</td>
+</tr>
+<tr>
+<td><code>SERVER_PATH</code></td>
+<td><code>/var/www/html/ndb-delivery-ops</code></td>
+<td>Remote deploy path</td>
+</tr>
+<tr>
+<td><code>HTTP_PORT</code></td>
+<td><code>8899</code></td>
+<td>Public Nginx port</td>
+</tr>
+<tr>
+<td><code>BACKEND_PORT</code></td>
+<td><code>8001</code></td>
+<td>Internal Node port</td>
+</tr>
+<tr>
+<td><code>PM2_APP_NAME</code></td>
+<td><code>delivery-ops</code></td>
+<td>PM2 process name</td>
+</tr>
+<tr>
+<td><code>NODE_MAJOR</code></td>
+<td><code>20</code></td>
+<td>Node major version to install</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Pre-deploy checklist</h2>
+<ul>
+<li><input disabled="" type="checkbox"> <code>server/.env</code> on the production server has correct <code>SMTP_*</code> and <code>AI_*</code> values</li>
+<li><input disabled="" type="checkbox"> <code>server/config/emailConfig.json</code> has <code>smtp.from</code> set to the service account</li>
+<li><input disabled="" type="checkbox"> <code>PRODUCTION_SERVER</code> in <code>deploy-to-production.sh</code> points to the right box</li>
+<li><input disabled="" type="checkbox"> <code>npm run check:no-localhost</code> passes locally (also run automatically by deploy script)</li>
+</ul>
+<hr>
+<h2>Post-deploy verification</h2>
+<pre><code class="language-bash"># Backend health (direct)
+curl http://&lt;server-ip&gt;:8001/api/health
 
 # Backend health via Nginx
-curl http://&lt;server-ip>:8899/api/health
+curl http://&lt;server-ip&gt;:8899/api/health
 
 # PM2 status
-ssh user@host 'pm2 status'
+ssh user@host &#39;pm2 status&#39;
 
 # Live backend logs
-ssh user@host 'pm2 logs delivery-ops'
+ssh user@host &#39;pm2 logs delivery-ops&#39;
 
 # Nginx error log
-ssh user@host 'sudo tail -f /var/log/nginx/error.log'
-```
-
----
-
-## Common operations on the server
-
-```bash
-# Restart backend only
+ssh user@host &#39;sudo tail -f /var/log/nginx/error.log&#39;
+</code></pre>
+<hr>
+<h2>Common operations on the server</h2>
+<pre><code class="language-bash"># Restart backend only
 pm2 restart delivery-ops
 
 # Restart Nginx
@@ -117,24 +138,39 @@ sudo systemctl reload nginx
 pm2 logs
 
 # Check listening ports
-sudo ss -tulnp | grep -E ':(8001|8899)'
-```
-
----
-
-## Rollback
-
-Each deploy backs up the current `server/.env` and Nginx config to `&lt;SERVER_PATH>_backups/backup_&lt;timestamp>/`. To roll back code, redeploy an earlier archive. The `.env` is never overwritten by the deploy script — it is always preserved.
-
----
-
-## Troubleshooting
-
-| Symptom | Check |
-|---|---|
-| `502 Bad Gateway` | `pm2 status` — backend not running; `pm2 logs delivery-ops` |
-| Frontend loads but API calls fail | Nginx proxy config: `sudo nginx -t` |
-| PM2 in `errored` state | Port conflict: `sudo lsof -ti :8001 | xargs kill -9` then `pm2 restart delivery-ops` |
-| SELinux blocking Nginx | `sudo setsebool -P httpd_can_network_connect 1` |
-| Build fails (`Maximum call stack`) | Corrupt node_modules: `rm -rf node_modules &amp;&amp; npm install` from repo root |
-</pre></article></div></body></html>
+sudo ss -tulnp | grep -E &#39;:(8001|8899)&#39;
+</code></pre>
+<hr>
+<h2>Rollback</h2>
+<p>Each deploy backs up the current <code>server/.env</code> and Nginx config to <code>&lt;SERVER_PATH&gt;_backups/backup_&lt;timestamp&gt;/</code>. To roll back code, redeploy an earlier archive. The <code>.env</code> is never overwritten by the deploy script — it is always preserved.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>502 Bad Gateway</code></td>
+<td><code>pm2 status</code> — backend not running; <code>pm2 logs delivery-ops</code></td>
+</tr>
+<tr>
+<td>Frontend loads but API calls fail</td>
+<td>Nginx proxy config: <code>sudo nginx -t</code></td>
+</tr>
+<tr>
+<td>PM2 in <code>errored</code> state</td>
+<td>Port conflict: `sudo lsof -ti :8001</td>
+</tr>
+<tr>
+<td>SELinux blocking Nginx</td>
+<td><code>sudo setsebool -P httpd_can_network_connect 1</code></td>
+</tr>
+<tr>
+<td>Build fails (<code>Maximum call stack</code>)</td>
+<td>Corrupt node_modules: <code>rm -rf node_modules &amp;&amp; npm install</code> from repo root</td>
+</tr>
+</tbody></table>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

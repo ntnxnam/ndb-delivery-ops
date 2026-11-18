@@ -27,6 +27,7 @@
   "constitutionalRules": [
     "rules/weave.mdc",
     "rules/no-localhost.mdc",
+    "rules/no-hardcoding.mdc",
     "rules/one-shot.mdc",
     "rules/minimal-architecture.mdc",
     "rules/gerrit-push-for-review.mdc"

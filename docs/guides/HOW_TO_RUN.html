@@ -1,151 +1,128 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>HOW_TO_RUN</title><link rel="stylesheet" href="../assets/style.css"/></head><body><div class="container"><p class="breadcrumb"><a href="../index.html">docs</a> / Guides / HOW_TO_RUN</p><article class="prose"><pre># How to Run the Application
-
-## Port reference
-
-| Service | Dev port | Notes |
-|---|---|---|
-| Backend (Express) | `8001` | Set in `server/.env` as `PORT=8001` |
-| Frontend (React dev server) | `8899` | Set in `client/package.json` `start` script |
-| Production (Nginx) | `8899` | Public port; Nginx proxies `/api/*` to backend `8001` |
-
----
-
-## Local development
-
-### 1. Install dependencies
-
-Run once from the repo root (workspace install covers all workspaces):
-
-```bash
-npm install
-```
-
-### 2. Configure the backend environment
-
-```bash
-cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>HOW_TO_RUN — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>HOW_TO_RUN</span></nav><div class="container"><article class="prose"><h1>How to Run the Application</h1>
+<h2>Port reference</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Dev port</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Backend (Express)</td>
+<td><code>8001</code></td>
+<td>Set in <code>server/.env</code> as <code>PORT=8001</code></td>
+</tr>
+<tr>
+<td>Frontend (React dev server)</td>
+<td><code>8899</code></td>
+<td>Set in <code>client/package.json</code> <code>start</code> script</td>
+</tr>
+<tr>
+<td>Production (Nginx)</td>
+<td><code>8899</code></td>
+<td>Public port; Nginx proxies <code>/api/*</code> to backend <code>8001</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Local development</h2>
+<h3>1. Install dependencies</h3>
+<p>Run once from the repo root (workspace install covers all workspaces):</p>
+<pre><code class="language-bash">npm install
+</code></pre>
+<h3>2. Configure the backend environment</h3>
+<pre><code class="language-bash">cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
 # Then edit server/.env — SMTP_*, AI_*, JIRA_TOKEN are the key fields.
 # PORT is already set to 8001; do not change it without also updating client/package.json proxy.
-```
-
-### 3. Start both servers
-
-```bash
-# From repo root — starts backend on :8001 and React dev server on :8899
+</code></pre>
+<h3>3. Start both servers</h3>
+<pre><code class="language-bash"># From repo root — starts backend on :8001 and React dev server on :8899
 ./scripts/start.sh
-```
-
-Or start them separately (from `apps/delivery-ops/`):
-
-```bash
-# Terminal 1 — backend
+</code></pre>
+<p>Or start them separately (from <code>apps/delivery-ops/</code>):</p>
+<pre><code class="language-bash"># Terminal 1 — backend
 npm run server          # Express on http://localhost:8001
 
 # Terminal 2 — frontend
 npm run client          # React dev server on http://localhost:8899
-```
-
-Or use the `dev` script (both in one terminal via concurrently):
-
-```bash
-cd apps/delivery-ops &amp;&amp; npm run dev
-```
-
-### 4. Open the app
-
-- **Frontend**: http://localhost:8899
-- **Backend API**: http://localhost:8001/api/health
-
-### 5. Stop servers
-
-```bash
-./scripts/stop.sh
-```
-
-### 6. Restart servers
-
-```bash
-./scripts/restart.sh
-```
-
----
-
-## Pre-deploy localhost guard
-
-Before shipping to production, verify no hardcoded `localhost` or `127.0.0.1` has crept into app code:
-
-```bash
-cd apps/delivery-ops &amp;&amp; npm run check:no-localhost
-```
-
-This is also run automatically by `deploy-to-production.sh` before packaging.
-
----
-
-## Production deployment
-
-Production runs on a Rocky Linux 9 server behind Nginx + PM2. Two scripts handle the full lifecycle:
-
-| Script | Where it runs | Purpose |
-|---|---|---|
-| `apps/delivery-ops/scripts/deploy-to-production.sh` | Your Mac | Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script |
-| `apps/delivery-ops/scripts/server-deploy.sh` | Production server | Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend |
-
-### Quick deploy
-
-```bash
-# From anywhere in the repo
+</code></pre>
+<p>Or use the <code>dev</code> script (both in one terminal via concurrently):</p>
+<pre><code class="language-bash">cd apps/delivery-ops &amp;&amp; npm run dev
+</code></pre>
+<h3>4. Open the app</h3>
+<ul>
+<li><strong>Frontend</strong>: <a href="http://localhost:8899">http://localhost:8899</a></li>
+<li><strong>Backend API</strong>: <a href="http://localhost:8001/api/health">http://localhost:8001/api/health</a></li>
+</ul>
+<h3>5. Stop servers</h3>
+<pre><code class="language-bash">./scripts/stop.sh
+</code></pre>
+<h3>6. Restart servers</h3>
+<pre><code class="language-bash">./scripts/restart.sh
+</code></pre>
+<hr>
+<h2>Pre-deploy localhost guard</h2>
+<p>Before shipping to production, verify no hardcoded <code>localhost</code> or <code>127.0.0.1</code> has crept into app code:</p>
+<pre><code class="language-bash">cd apps/delivery-ops &amp;&amp; npm run check:no-localhost
+</code></pre>
+<p>This is also run automatically by <code>deploy-to-production.sh</code> before packaging.</p>
+<hr>
+<h2>Production deployment</h2>
+<p>Production runs on a Rocky Linux 9 server behind Nginx + PM2. Two scripts handle the full lifecycle:</p>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Where it runs</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>apps/delivery-ops/scripts/deploy-to-production.sh</code></td>
+<td>Your Mac</td>
+<td>Runs the localhost guard, zips the repo, SCPs it to the server, SSHes in and runs the server-side script</td>
+</tr>
+<tr>
+<td><code>apps/delivery-ops/scripts/server-deploy.sh</code></td>
+<td>Production server</td>
+<td>Idempotent: installs Node/Nginx/PM2 if missing, builds the client, writes PM2 + Nginx config, starts the backend</td>
+</tr>
+</tbody></table>
+<h3>Quick deploy</h3>
+<pre><code class="language-bash"># From anywhere in the repo
 ./apps/delivery-ops/scripts/deploy-to-production.sh
-```
-
-Both scripts are idempotent — the same command works for the first deploy and every subsequent redeploy.
-
-See `DEPLOYMENT_GUIDE.md` for full production setup instructions.
-
----
-
-## Troubleshooting
-
-### Port already in use
-
-```bash
-# Find what's on port 8001 (backend)
+</code></pre>
+<p>Both scripts are idempotent — the same command works for the first deploy and every subsequent redeploy.</p>
+<p>See <code>DEPLOYMENT_GUIDE.md</code> for full production setup instructions.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Port already in use</h3>
+<pre><code class="language-bash"># Find what&#39;s on port 8001 (backend)
 lsof -i :8001
 
-# Find what's on port 8899 (frontend)
+# Find what&#39;s on port 8899 (frontend)
 lsof -i :8899
 
 # Or just run stop.sh which clears both
 ./scripts/stop.sh
-```
-
-### Backend crashes on startup
-
-```bash
-tail -50 /tmp/server.log
-```
-
-Common causes: missing `server/.env`, wrong `PORT`, missing SMTP credentials.
-
-### Dependencies not installed
-
-```bash
-# From repo root
+</code></pre>
+<h3>Backend crashes on startup</h3>
+<pre><code class="language-bash">tail -50 /tmp/server.log
+</code></pre>
+<p>Common causes: missing <code>server/.env</code>, wrong <code>PORT</code>, missing SMTP credentials.</p>
+<h3>Dependencies not installed</h3>
+<pre><code class="language-bash"># From repo root
 npm install
-```
-
-### SMTP / email not working
-
-1. Check `server/.env` has `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
-2. Check `server/config/emailConfig.json` has `smtp.from` set.
-3. From the server, run: `cd apps/delivery-ops/server &amp;&amp; node test-smtp.js`
-
----
-
-## Production build only (no server)
-
-```bash
-cd apps/delivery-ops/client &amp;&amp; npm run build
+</code></pre>
+<h3>SMTP / email not working</h3>
+<ol>
+<li>Check <code>server/.env</code> has <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>.</li>
+<li>Check <code>server/config/emailConfig.json</code> has <code>smtp.from</code> set.</li>
+<li>From the server, run: <code>cd apps/delivery-ops/server &amp;&amp; node test-smtp.js</code></li>
+</ol>
+<hr>
+<h2>Production build only (no server)</h2>
+<pre><code class="language-bash">cd apps/delivery-ops/client &amp;&amp; npm run build
 # Output: apps/delivery-ops/client/build/
-```
-</pre></article></div></body></html>
+</code></pre>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

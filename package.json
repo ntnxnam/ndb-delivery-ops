@@ -54,5 +54,8 @@
       "underscore": "1.13.8",
       "jsonpath": "1.3.0"
     }
+  },
+  "devDependencies": {
+    "marked": "^18.2.1"
   }
 }

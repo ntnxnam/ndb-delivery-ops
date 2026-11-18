@@ -8,13 +8,20 @@ const guidesDir = path.join(root, 'docs', 'guides');
 let marked;
 try { marked = require('marked'); } catch { marked = null; }
 
+function stripFrontmatter(md) {
+  if (md.startsWith('---')) {
+    const end = md.indexOf('\n---', 3);
+    if (end !== -1) return md.slice(end + 4).replace(/^\n+/, '');
+  }
+  return md;
+}
 function mdToHtml(md) {
-  if (marked) return marked.parse(md);
-  // minimal fallback — wrap in <pre> if no parser
-  return '<pre>' + md.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>';
+  const clean = stripFrontmatter(md);
+  if (marked) return marked.parse(clean);
+  return '<pre>' + clean.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>';
 }
 function wrap(title, body) {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title><link rel="stylesheet" href="../assets/style.css"/></head><body><div class="container"><p class="breadcrumb"><a href="../index.html">docs</a> / Guides / ${title}</p><article class="prose">${body}</article></div></body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>${title}</span></nav><div class="container"><article class="prose">${body}</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>`;
 }
 if (!fs.existsSync(guidesDir)) { console.log('No guides dir'); process.exit(0); }
 const files = fs.readdirSync(guidesDir).filter(f=>f.endsWith('.md'));

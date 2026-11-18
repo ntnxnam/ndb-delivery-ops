@@ -1,61 +1,68 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>USER_GUIDE</title><link rel="stylesheet" href="../assets/style.css"/></head><body><div class="container"><p class="breadcrumb"><a href="../index.html">docs</a> / Guides / USER_GUIDE</p><article class="prose"><pre>---
-product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-coversVersion: "2.11"
-source: doc-user-guide @ 2026-05-19
----
-
-# User Guide
-
-> For IC / TPM / FEAT / QA personas. Maintained by `doc-specialist` via `doc-user-guide`.
-
-## Table of Contents
-- [Getting Started](#getting-started)
-- [Sprint Report](#sprint-report)
-- [Release Brief](#release-brief)
-- [Quality Column (TCMS)](#quality-column-tcms)
-- [Tips &amp; FAQ](#tips--faq)
-
-## Getting Started
-
-1. Log in at `/login` (RBAC via `allowedUsers.json` — see [ADMIN_GUIDE.md](./ADMIN_GUIDE.md#rbac)).
-2. Pick product + release in the header.
-3. Use sidebar tabs per your permission.
-
-## Sprint Report
-
-**Who:** TPM, FEAT owners
-**Steps:** Open Sprint Report → select sprint → review burndown/burnup.
-**Tips:** Use `?` filter help for JQL-backed counts.
-
-## Release Brief
-
-**Who:** Team Exec / Director
-**Steps:** Open Release Brief → check RAG + blockers → drill into FEAT.
-
-## Quality Column (TCMS)
-
-**Who:** TPM, FEAT owners, QA
-
-The Quality column on the Project Status table shows TCMS test results per
-feature.
-
-- **Four tables per feature**: `Release — Overall`, `Release — Last 4
-  weeks`, `Master — Overall`, `Master — Last 4 weeks`.
-- **Each table is a 2×2 grid**:
-  - Rows: **Functional**, **System**
-  - Columns: **Manual**, **Automation**
-  - Cells: QI / Run / Passed / Failed / Rate
-- **Last 4 weeks** window reflects runs in the most recent 4-week window;
-  shows "Not Set" when there are no runs in that window (it does not fall
-  back to Overall). Time-filtered runs now come from the corrected TCMS
-  metrics endpoint (`/api/v1/all_test_cases/aggregate/metrics` with
-  `time_filter=four_weeks`).
-- **Caveat:** Functional and System rows currently share the same source
-  metrics until TCMS exposes a `test_category` filter. Do not read
-  distinctness into the two rows yet. See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
-
-## Tips &amp; FAQ
-
-- Missing tab? Check permissions in [ADMIN_GUIDE.md](./ADMIN_GUIDE.md).
-- Caveats? See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).</pre></article></div></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>USER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>USER_GUIDE</span></nav><div class="container"><article class="prose"><h1>User Guide</h1>
+<blockquote>
+<p>For IC / TPM / FEAT / QA personas. Maintained by <code>doc-specialist</code> via <code>doc-user-guide</code>.</p>
+</blockquote>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#sprint-report">Sprint Report</a></li>
+<li><a href="#release-brief">Release Brief</a></li>
+<li><a href="#quality-column-tcms">Quality Column (TCMS)</a></li>
+<li><a href="#tips--faq">Tips &amp; FAQ</a></li>
+</ul>
+<h2>Getting Started</h2>
+<ol>
+<li>Log in at <code>/login</code> (RBAC via <code>allowedUsers.json</code> — see [ADMIN_GUIDE.md#rbac) (see Documentation)).</li>
+<li>Pick product + release in the header.</li>
+<li>Use sidebar tabs per your permission.</li>
+</ol>
+<h2>Sprint Report</h2>
+<p><strong>Who:</strong> TPM, FEAT owners
+<strong>Steps:</strong> Open Sprint Report → select sprint → review burndown/burnup.
+<strong>Tips:</strong> Use <code>?</code> filter help for JQL-backed counts.</p>
+<h2>Release Brief</h2>
+<p><strong>Who:</strong> Team Exec / Director
+<strong>Steps:</strong> Open Release Brief → check RAG + blockers → drill into FEAT.</p>
+<h2>Quality Column (TCMS)</h2>
+<p><strong>Who:</strong> TPM, FEAT owners, QA</p>
+<p>The Quality column on the Project Status table shows TCMS test results per
+feature.</p>
+<ul>
+<li><strong>Four tables per feature</strong>: <code>Release — Overall</code>, <code>Release — Last 4 weeks</code>, <code>Master — Overall</code>, <code>Master — Last 4 weeks</code>.</li>
+<li><strong>Each table is a 2×2 grid</strong>:<ul>
+<li>Rows: <strong>Functional</strong>, <strong>System</strong></li>
+<li>Columns: <strong>Manual</strong>, <strong>Automation</strong></li>
+<li>Cells: QI / Run / Passed / Failed / Rate</li>
+</ul>
+</li>
+<li><strong>Last 4 weeks</strong> window reflects runs in the most recent 4-week window;
+shows &quot;Not Set&quot; when there are no runs in that window (it does not fall
+back to Overall). Time-filtered runs now come from the corrected TCMS
+metrics endpoint (<code>/api/v1/all_test_cases/aggregate/metrics</code> with
+<code>time_filter=four_weeks</code>).</li>
+<li><strong>Caveat:</strong> Functional and System rows currently share the same source
+metrics until TCMS exposes a <code>test_category</code> filter. Do not read
+distinctness into the two rows yet. See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
+</ul>
+<h2>OnCalls</h2>
+<p><strong>Who:</strong> EM, TPM
+<strong>Steps:</strong> Open KPIs → OnCalls → select release → review counts by period.
+<strong>Tips:</strong> Click a count to see the filtered list; counts come from <code>kpiConfig</code> live JQL.</p>
+<h2>CFD / CFI</h2>
+<p><strong>Who:</strong> TPM, QA Lead
+<strong>Steps:</strong> Open KPIs → CFD/CFI → Top / Non-Top → check created vs resolved.
+<strong>Tips:</strong> Use MTTR and status-dwell to spot aging items.</p>
+<h2>Dependency View</h2>
+<p><strong>Who:</strong> FEAT owner, TPM
+<strong>Steps:</strong> Open Dependency View → select release → review blockers.
+<strong>Tips:</strong> Links show upstream/downstream tickets.</p>
+<h2>KPI Pulse</h2>
+<p><strong>Who:</strong> TPM, Director
+<strong>Steps:</strong> Open KPIs → last 2 quarters strip → toggle cumulative / point-in-time.
+<strong>Tips:</strong> Compare trend vs snapshot.</p>
+<h2>Tips &amp; FAQ</h2>
+<ul>
+<li>Missing tab? Check permissions in <a href="./ADMIN_GUIDE.md">ADMIN_GUIDE.md</a>.</li>
+<li>Caveats? See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
+</ul>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

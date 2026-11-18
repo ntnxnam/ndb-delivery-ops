@@ -1,56 +1,88 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE</title><link rel="stylesheet" href="../assets/style.css"/></head><body><div class="container"><p class="breadcrumb"><a href="../index.html">docs</a> / Guides / ADMIN_GUIDE</p><article class="prose"><pre>---
-product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-coversVersion: "2.11"
-env: prod
-source: doc-admin-guide @ 2026-05-19
----
-
-# Admin Guide
-
-> For architects / admins. Maintained by `doc-specialist` via `doc-admin-guide`.
-
-## Prerequisites
-
-- Node 20+, PM2, Nginx
-- JIRA PAT (Bearer per D40) — `JIRA_PAT` env
-
-## Installation
-
-```bash
-./scripts/start.sh   # backend 8001, frontend 8899
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>ADMIN_GUIDE</span></nav><div class="container"><article class="prose"><h1>Admin Guide</h1>
+<blockquote>
+<p>For architects / admins. Maintained by <code>doc-specialist</code> via <code>doc-admin-guide</code>.</p>
+</blockquote>
+<h2>Prerequisites</h2>
+<ul>
+<li>Node 20+, PM2, Nginx</li>
+<li>JIRA PAT (Bearer per D40) — <code>JIRA_PAT</code> env</li>
+</ul>
+<h2>Installation</h2>
+<pre><code class="language-bash">./scripts/start.sh   # backend 8001, frontend 8899
 ./scripts/stop.sh
-```
-
-## Configuration
-
-| Setting | File | Notes |
-|---|---|---|
-| `JIRA_PAT` | env | Bearer only, no Basic |
-| Team boards | `server/config/teamBoardConfig.json` | customfield_10360 for sprints |
-| Quality column | `server/config/releaseVersionsColumnsConfig.json` (`columns.quality`) | Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service `server/services/tcmsService.js` (time-filtered metrics via `/api/v1/all_test_cases/aggregate/metrics`, `time_filter=all|four_weeks`, `target={milestone}-qcow2`) |
-| RBAC | `server/config/allowedUsers.json` + `server/routes/auth.js::LEGACY_PERMISSION_MAPPING` | Keep client mirror in sync |
-| SMTP | `mailrelay.dyn.nutanix.com:25` | No auth; see `server/services/emailService.js` (sacred) |
-
-## RBAC
-
-See `RBAC_GUIDE.md` and `docs/api/` per `api-docs-required.mdc`.
-
-## Deployment
-
-- PM2: `pm2 start ecosystem.config.js`
-- Nginx: proxy 8899 → delivery-ops
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| Missing sidebar tab | Permission not mapped | Sync `LEGACY_PERMISSION_MAPPING` both sides, re-test permissions |
-| 401 from JIRA | PAT expired | Rotate `JIRA_PAT`, Bearer header |
-| TCMS Quality shows "Not Set" | TCMS timeout / no runs in window | Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`). |
-| TCMS Functional/System identical | Clone caveat (pending `test_category` filter) | Expected until TCMS ships filter; see `docs/tcms-rows-followup.md` |
-
-## Appendix
-
-Full env var table in `TECH_DESIGN.md`.
-</pre></article></div></body></html>
+</code></pre>
+<h2>Configuration</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>File</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>JIRA_PAT</code></td>
+<td>env</td>
+<td>Bearer only, no Basic</td>
+</tr>
+<tr>
+<td>Team boards</td>
+<td><code>server/config/teamBoardConfig.json</code></td>
+<td>customfield_10360 for sprints</td>
+</tr>
+<tr>
+<td>Quality column</td>
+<td><code>server/config/releaseVersionsColumnsConfig.json</code> (<code>columns.quality</code>)</td>
+<td>Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service <code>server/services/tcmsService.js</code> (time-filtered metrics via <code>/api/v1/all_test_cases/aggregate/metrics</code>, `time_filter=all</td>
+</tr>
+<tr>
+<td>RBAC</td>
+<td><code>server/config/allowedUsers.json</code> + <code>server/routes/auth.js::LEGACY_PERMISSION_MAPPING</code></td>
+<td>Keep client mirror in sync</td>
+</tr>
+<tr>
+<td>SMTP</td>
+<td><code>mailrelay.dyn.nutanix.com:25</code></td>
+<td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
+</tr>
+</tbody></table>
+<h2>RBAC</h2>
+<p>See <code>RBAC_GUIDE.md</code> and <code>docs/api/</code> per <code>api-docs-required.mdc</code>.</p>
+<h2>Deployment</h2>
+<ul>
+<li>PM2: <code>pm2 start ecosystem.config.js</code></li>
+<li>Nginx: proxy 8899 → delivery-ops</li>
+</ul>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Missing sidebar tab</td>
+<td>Permission not mapped</td>
+<td>Sync <code>LEGACY_PERMISSION_MAPPING</code> both sides, re-test permissions</td>
+</tr>
+<tr>
+<td>401 from JIRA</td>
+<td>PAT expired</td>
+<td>Rotate <code>JIRA_PAT</code>, Bearer header</td>
+</tr>
+<tr>
+<td>TCMS Quality shows &quot;Not Set&quot;</td>
+<td>TCMS timeout / no runs in window</td>
+<td>Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use <code>/api/v1/all_test_cases/aggregate/metrics</code> (<code>time_filter=four_weeks</code>, <code>target={milestone}-qcow2</code>).</td>
+</tr>
+<tr>
+<td>TCMS Functional/System identical</td>
+<td>Clone caveat (pending <code>test_category</code> filter)</td>
+<td>Expected until TCMS ships filter; see <code>docs/tcms-rows-followup.md</code></td>
+</tr>
+</tbody></table>
+<h2>Appendix</h2>
+<p>Full env var table in <code>TECH_DESIGN.md</code>.</p>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

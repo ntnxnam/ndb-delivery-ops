@@ -11,6 +11,7 @@ import {
   Users,
   ChevronRight,
   Link2,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { usePermissions } from '../../auth/hooks/usePermissions';
@@ -378,7 +379,7 @@ export const Sidebar = () => {
 
         <div className="sidebar-footer">
           {!isCollapsed && (
-            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="sidebar-docs-link" title="Open product documentation">Documentation</a>
+            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="sidebar-docs-link" title="Open Lighthouse documentation"><BookOpen size={14} strokeWidth={1.75} aria-hidden="true" /> Lighthouse Documentation</a>
           )}
           {!isCollapsed && user && (
             <div className="user-info">
@@ -799,7 +800,10 @@ export const Sidebar = () => {
           flex-shrink: 0;
         }
         .sidebar-docs-link {
-          display: block;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
           margin-bottom: 12px;
           color: #adb5bd;
           font-size: 12px;

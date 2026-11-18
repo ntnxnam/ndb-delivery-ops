@@ -199,18 +199,47 @@ function aggregate(issues, groupBy) {
 async function generate(input, token) {
   const team = getTeamConfig(input.teamId);
   if (!team) {
-    throw new Error(`Team not found: ${input.teamId}`);
+    const err = new Error(`Team not found: ${input.teamId}`);
+    err.statusCode = 400;
+    throw err;
   }
   const baseFilter = team.baseFilter || '';
+  const jqlBuilder = await getJqlBuilder();
+  const reportBaseFilter = jqlBuilder.stripDoneFromBaseFilter(baseFilter);
   const dateRange = resolveDateRange(input);
-  const shared = await getShared();
-  const { jqlBuilder } = shared;
   const mode = input.inclusionMode || 'closed';
-  const jqlResult = jqlBuilder.buildTimeWindowJql({ baseFilter, startDate: dateRange.start, endDate: dateRange.end, includeSubtasks: input.includeSubtasks || false }, mode);
-  const jql = jqlResult.jql;
-  const issues = await fetchIssues(jql, token, 2000);
-  const agg = aggregate(issues, input.groupBy || 'issuetype');
-  const totalIssues = issues.length;
+  const key = cacheKeyFor(input);
+
+  if (!input.forceRefresh) {
+    const cached = getCached(key);
+    if (cached) {
+      const dto = cloneDto(cached);
+      if (dto.meta) dto.meta.isCached = true;
+      if (input.username && dto.meta) dto.meta.generatedBy = input.username;
+      return dto;
+    }
+  }
+
+  const jqlResult = jqlBuilder.buildTimeWindowJql({ baseFilter: reportBaseFilter, startDate: dateRange.start, endDate: dateRange.end, includeSubtasks: input.includeSubtasks || false }, mode);
+  const jql = (jqlResult && jqlResult.jql) || '';
+  const primaryIssues = await fetchIssues(jql, token, 2000);
+
+  const includeCompanions = input.includeCompanions !== false && input.multiProject !== false;
+  let companionIssues = [];
+  if (includeCompanions && Array.isArray(team.companionDisciplines) && team.companionDisciplines.length > 0) {
+    companionIssues = await fetchCompanionIssues(team.companionDisciplines, dateRange, token, mode, input.includeSubtasks || false, 2000);
+  }
+
+  const allIssues = [...primaryIssues, ...companionIssues];
+  for (const issue of primaryIssues) {
+    if (!issue._sourceProject) {
+      const pk = issue.fields && issue.fields.project && issue.fields.project.key;
+      issue._sourceProject = pk || team.id;
+    }
+  }
+
+  const agg = aggregate(allIssues, input.groupBy || 'issuetype');
+  const totalIssues = allIssues.length;
   const throughputPerWeek = totalIssues > 0 ? Math.round((totalIssues / 7) * 100) / 100 : 0;
   const dto = {
     meta: {
@@ -225,6 +254,11 @@ async function generate(input, token) {
       generatedBy: input.username || 'unknown',
       issueCount: totalIssues,
       isCached: false,
+      jiraBaseUrl: 'https://jira.nutanix.com',
+      companionProjects: (team.companionDisciplines || []).map(d => d.projectKey || d),
+      primaryIssueCount: primaryIssues.length,
+      companionIssueCount: companionIssues.length,
+      multiProjectEnabled: includeCompanions,
     },
     kpis: {
       totalIssues,
@@ -240,7 +274,7 @@ async function generate(input, token) {
     timeline: {
       buckets: [],
     },
-    issuesSample: issues.slice(0, 100).map(issue => ({
+    issuesSample: allIssues.slice(0, 100).map(issue => ({
       key: issue.key,
       summary: issue.fields?.summary || '',
       issuetype: issue.fields?.issuetype?.name || 'Unknown',
@@ -255,9 +289,62 @@ async function generate(input, token) {
       integratedVersion: (issue.fields?.customfield_11360 || []).map(v => v.name || v),
       parentKey: issue.fields?.parent?.key || null,
       url: `https://jira.nutanix.com/browse/${issue.key}`,
+      sourceProject: issue._sourceProject || null,
     })),
   };
+  if (input.summarizeWithNAI !== false) {
+    dto.naiSummaries = [];
+  }
+  setCached(key, dto);
   return dto;
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const _cache = new Map();
+
+function cacheKeyFor(input) {
+  const keyObj = {
+    teamId: input.teamId,
+    periodType: input.periodType,
+    quarter: input.quarter,
+    year: input.year,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    inclusionMode: input.inclusionMode,
+    groupBy: input.groupBy,
+    includeSubtasks: input.includeSubtasks,
+    summarizeWithNAI: input.summarizeWithNAI,
+    includeCompanions: input.includeCompanions,
+    multiProject: input.multiProject,
+  };
+  return JSON.stringify(keyObj);
+}
+
+function getCached(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) {
+    _cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCached(key, value) {
+  _cache.set(key, { value, expires: Date.now() + CACHE_TTL_MS });
+}
+
+function invalidateCache(key) {
+  if (key) _cache.delete(key);
+  else _cache.clear();
+}
+
+function clearCache() {
+  _cache.clear();
+}
+
+function cloneDto(dto) {
+  return JSON.parse(JSON.stringify(dto));
 }
 
 module.exports = {
@@ -265,4 +352,14 @@ module.exports = {
   resolveDateRange,
   getTeamConfig,
   aggregate,
+  fetchIssues,
+  fetchCompanionIssues,
+  invalidateCache,
+  clearCache,
+  getCached,
+  setCached,
+  _cache,
+  cacheKeyFor,
+  CACHE_TTL_MS,
+  getJqlBuilder,
 };

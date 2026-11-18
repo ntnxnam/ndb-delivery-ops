@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BookOpen } from 'lucide-react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
@@ -67,7 +68,7 @@ export const Header = () => {
           )}
 
           <div className="header-actions">
-            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="docs-link" title="Open product documentation">Documentation</a>
+            <a href="/docs/" target="_blank" rel="noopener noreferrer" className="docs-link" title="Open Lighthouse documentation"><BookOpen size={14} strokeWidth={2} aria-hidden="true" /> Lighthouse Documentation</a>
             <button
               type="button"
               onClick={testConnection}
@@ -227,6 +228,9 @@ export const Header = () => {
           cursor: not-allowed;
         }
         .docs-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           color: #e9ecef;
           font-size: 13px;
           text-decoration: none;
