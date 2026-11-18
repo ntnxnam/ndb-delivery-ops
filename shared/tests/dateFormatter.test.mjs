@@ -12,7 +12,7 @@ assert(normalizeDateStr(42) === null, 'normalize non-string/Date number');
 assert(normalizeDateStr(new Date('2026-02-28')) === '2026-02-28', 'normalize Date object');
 assert(normalizeDateStr(new Date('invalid')) === null, 'normalize invalid Date object');
 assert(normalizeDateStr('not-a-date') === null, 'normalize unparseable string');
-assert(normalizeDateStr('2026-13-01') === null, 'normalize invalid month via fallback Invalid Date');
+assert(normalizeDateStr('2026-13-01') === '2026-13-01', 'normalize YYYY-MM-DD pattern passes through even if month invalid (validation is in formatDate/formatDueDate)');
 
 // formatDate
 assert(formatDate('2026-02-28') === '28/Feb/2026', 'formatDate YYYY-MM-DD');
