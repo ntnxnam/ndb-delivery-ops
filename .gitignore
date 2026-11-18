@@ -1,63 +1,48 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# Python venvs
-**/venv/
-**/__pycache__/
-*.pyc
-
-# Build output
-dist/
-build/
-*.log
-
-# Backend artefacts
-.pid-*
-*.pid
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Editor
-.vscode/
-.idea/
-*.swp
-
-# Secrets
-.env
-.env.local
-.env.*.local
-**/credentials.json
-**/.credentials.json
-**/credentials*.json
-**/secrets.json
-**/*.pem
-**/*.key
-**/jira_pat*
-**/.streamlit/secrets.toml
-**/.credentials.json
-**/credentials*.json
-**/secrets.json
-**/*.pem
-**/*.key
-**/jira_pat*
-**/.streamlit/secrets.toml
-
-# Cursor
-.cursor/cache/
-.cursor/local/
-
-# TypeScript build artifacts
-**/dist/
-**/tsconfig.tsbuildinfo
-**/*.tsbuildinfo
-test-project-breakdown.js
-FORECAST_LANDING_FIX_NOTES.md
 
 # Agent runtime stores (Wave 4) — session memory, provenance, HITL inbox
+# Backend artefacts
+# Build output
+# Cursor
+# Dependencies
+# Editor
+# OS
+# Python venvs
+# Secrets
+# TypeScript build artifacts
+**/*.key
+**/*.pem
+**/*.tsbuildinfo
 **/.cache/agent-runtime/
+**/.credentials.json
+**/.streamlit/secrets.toml
+**/__pycache__/
+**/credentials*.json
+**/credentials.json
+**/dist/
+**/jira_pat*
+**/secrets.json
+**/tsconfig.tsbuildinfo
+**/venv/
+*.log
+*.pid
+*.pyc
+*.swp
+.DS_Store
+.cursor/cache/
+.cursor/local/
+.env
+.env.*.local
+.env.local
+.idea/
+.pid-*
+.pnp
+.pnp.js
+.vscode/
+FORECAST_LANDING_FIX_NOTES.md
+Thumbs.db
+build/
 coverage/
+dist/
+node_modules/
 shared/.cache/jira-digging/
+test-project-breakdown.js
