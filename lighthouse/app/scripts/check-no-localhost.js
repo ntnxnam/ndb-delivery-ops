@@ -31,6 +31,7 @@ const SCAN_DIRS = ['client/src', 'server'];
 // Exact path suffixes that are allowed to contain localhost (e.g. dev-only config).
 const ALLOWED_SUFFIXES = [
   path.join('client', 'package.json'), // "proxy" for dev server
+  path.join('client', 'src', 'setupProxy.js'), // dev-only CRA proxy — see file header
 ];
 
 // Dir names to skip when scanning

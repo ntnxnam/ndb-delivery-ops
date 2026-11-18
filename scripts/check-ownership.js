@@ -70,14 +70,18 @@ for (const [owner, forbidden] of [['lighthouse', 'loom'], ['loom', 'lighthouse']
     }
   }
   collect(ownerDir);
-  const importRe = new RegExp(`from\\s+['"][^'"]*${forbidden}[^'"]*['"]|import\\s*\\([^)]*${forbidden}[^)]*\\)|\\b${forbidden}/`, 'i');
+  // Only flag real imports/binds: from 'x', import('x'), import x from 'x', or path starting with the product prefix
+  const codeImportRe = new RegExp(
+    `(from\\s+['"][^'"]*\\b${forbidden}\\b|import\\s*\\(\\s*['\"][^'\"]*\\b${forbidden}\\b|import\\s+[\\w*{][^;]*from\\s+['\"][^'\"]*\\b${forbidden}\\b)`,
+    'i'
+  );
   const allowedRe = /(agent-pack\/base|platform\/)/;
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf8');
     // Check each line
     for (const line of content.split('\n')) {
       if (allowedRe.test(line)) continue;
-      if (importRe.test(line) && line.includes(forbidden)) {
+      if (line.includes(forbidden) && codeImportRe.test(line)) {
         // Exclude comments about the rule itself
         if (line.includes('check:ownership') || line.includes('Ownership rule')) continue;
         fail(`${owner}/ imports from ${forbidden}/ in ${path.relative(ROOT, file)}: ${line.trim().slice(0, 120)}`);

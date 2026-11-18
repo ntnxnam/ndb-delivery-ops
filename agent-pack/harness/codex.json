@@ -1,8 +1,8 @@
 {
   "harness": "codex",
   "packs": {
-    "product": "agent-pack/lighthouse",
-    "builder": "agent-pack/loom"
+    "product": "lighthouse",
+    "builder": "loom"
   },
   "mcp": {
     "lighthouse": "mcp-lighthouse",

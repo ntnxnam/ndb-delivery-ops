@@ -2,7 +2,9 @@
   "mcpServers": {
     "mcp-lighthouse": {
       "command": "node",
-      "args": ["${workspaceFolder}/mcp/lighthouse/dist/index.js"],
+      "args": [
+        "${workspaceFolder}/lighthouse/mcp/dist/index.js"
+      ],
       "env": {
         "JIRA_BASE_URL": "https://jira.nutanix.com",
         "JIRA_PAT": "${env:JIRA_PAT}",
@@ -11,7 +13,9 @@
     },
     "mcp-loom": {
       "command": "node",
-      "args": ["${workspaceFolder}/mcp/loom/dist/index.js"],
+      "args": [
+        "${workspaceFolder}/loom/mcp/dist/index.js"
+      ],
       "env": {
         "JIRA_PAT": "${env:JIRA_PAT}",
         "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
