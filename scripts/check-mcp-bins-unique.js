@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 /**
  * Fails if two MCP workspaces share the same bin name, or if any tool file
- * exists byte-identical in both mcp-lighthouse and mcp-loom (indicates
- * un-split duplication).
+ * exists byte-identical in both lighthouse/mcp and loom/mcp (indicates
+ * un-split duplication — platform/ is the only shared code).
+ * Pre-reorg: checked mcp/*; post-reorg: checks lighthouse/mcp + loom/mcp.
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-const MCP_DIRS = ['mcp/loom', 'mcp/lighthouse'];
+// Support both layouts: pre-reorg mcp/* and post-reorg lighthouse/mcp + loom/mcp
+const MCP_DIRS_CANDIDATES = ['lighthouse/mcp', 'loom/mcp', 'mcp/lighthouse', 'mcp/loom'];
+const MCP_DIRS = MCP_DIRS_CANDIDATES.filter(d => fs.existsSync(path.join(ROOT, d)));
 let failed = false;
 
 function fail(msg) { console.error(`check:mcp FAIL — ${msg}`); failed = true; }
@@ -29,10 +32,12 @@ for (const dir of MCP_DIRS) {
   }
 }
 
-// 2. No byte-identical tool files across MCP dirs (shared single-source lives in mcp/shared/tools and is imported, not copied).
+// 2. No byte-identical tool files across MCP dirs.
+// Pre-reorg: mcp/shared/tools was single-source (whitelisted). Post-reorg: dissolved — no whitelist, platform/ is only shared.
 const sharedHashes = new Set();
-const sharedToolsDir = path.join(ROOT, 'mcp/shared/tools');
-if (fs.existsSync(sharedToolsDir)) {
+for (const legacyDir of ['mcp/shared/tools', 'platform/src']) {
+  const sharedToolsDir = path.join(ROOT, legacyDir);
+  if (!fs.existsSync(sharedToolsDir)) continue;
   for (const file of fs.readdirSync(sharedToolsDir)) {
     const full = path.join(sharedToolsDir, file);
     if (!fs.statSync(full).isFile()) continue;
