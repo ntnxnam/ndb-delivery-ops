@@ -200,9 +200,9 @@ or invent a parallel copy under `~/.cursor/skills/` as authoritative.
 ```
 1. Developer  →  1.5. Impact Scout  →  2. Code Review  →  3. QA  →  4. UX sign-off  →  5. PM sign-off
        →  6. Exec sign-off  →  7. JIRA Query Checker  →  8. Fix issues
-       →  9. Security (PAUSED)  →  10. Merge  →  11. Back to user
+       →  8.5. Doc sign-off  →  9. Security (PAUSED)  →  10. Merge  →  11. Back to user
        <!-- PAUSED: 9. Final security checks (`security-review` sub-agent) — skip until re-enabled -->
-       <!-- Stage 10 Merge: commit + push + merge to git when KPIs MET (skip only if no code change or user opts out) -->
+       <!-- Stage 10 Merge: commit + push + merge to git ONLY after user says ok + KPIs MET (skip only if no code change or user opts out) -->
 ```
 
 Multi-model review (**`/multi-model-review`**, pack skill
@@ -223,9 +223,10 @@ Cursor / Claude Code / Codex discover it via host skill symlinks.
 | **6. Exec sign-off** | Follow **`/exec-perspective`** (`agent-pack/skills/exec-perspective/`) via a readonly general-purpose subagent (`team-exec` or `director` audience) | When user-facing dashboards, metrics, or narrative ship: review as a Portfolio / Team Exec reader — **high-level first, then drill-down**; detail-oriented under the story, never dump-first. Enforce `persona-aware-output`, `citation-first-output`, `visual-storyteller-ui`, dual-click metrics. Fail on raw data dumps, metrics without a plain-English story, unverifiable counts, double-external count+JIRA, or IC-density noise in an exec surface. Skip for pure server/infra/docs with no product UI. | Score Exec KPIs (story, RAG, cite-ability) when on the card. |
 | **7. JIRA Query Checker** | Query specialist sub-agent | When any metric, count, JQL, or JIRA link is touched: every number must have a verifiable JIRA link (`jira-authenticity-links`, `comprehensive-jql-and-metrics`). **Dual-click check**: if the page has an in-app drill/sample for that metric, count must open the panel and a separate control must open the exact JQL — fail if both go external or if “Open in JIRA” is missing when `onOpen` exists. Flag drift; **do not** silently change JQL — propose and wait for approval. Prefer click-throughs that land on the **linked / downstream** tickets the metric claims to measure (not seed OnCalls unless the metric is explicitly a seed gap). OnCalls linked-downstream must be exactly `issueFunction in linkedIssuesOf("<OnCalls KPI baseQuery>")` from kpiConfig — do not invent alternate wrappers. | Score JIRA/link KPIs + dual-click; MISS → propose JQL (await approval), never silent edit. |
 | **8. Fix issues** | Developer (same thread) | Resolve blocking findings **and KPI MISSes** from stages 2–7. Re-run the failing stage after material fixes. | Close the feedback loop; do not declare done while applicable KPIs are MISS. |
+| **8.5. Doc sign-off** | Doc specialist sub-agent (`generalPurpose`, doc lens) | When any code/doc change ships: update `docs/`, `agent-pack/context/`, `docs/api/`, `docs/pages/` per `page-docs-required`/`api-docs-required`. Ensure no stale docs, no broken links, no missing AC. Return a punch list, not a rewrite. | Score Doc KPIs (doc completeness, accuracy, no broken links); MISS → `FEEDBACK_TO: Developer`. |
 | **9. Final security checks** | ~~`security-review` sub-agent~~ **PAUSED** | ~~Auth, secrets, injection, localhost leakage, unsafe HTML/email, data exposure.~~ **Do not spawn `security-review`.** Skip stage 9; note "Security skipped — paused" in handoff. | ~~Score Security KPIs~~ N/A while paused. |
-| **10. Merge to git** | `merge-agent` sub-agent (`generalPurpose`) or orchestrator direct | **Only after all applicable KPIs MET/WAIVED and Fix complete.** Commit staged + unstaged changes with conventional message (`<type>: <goal>` + Co-authored-by if needed), verify `git status` clean, push to `origin` current branch; if on feature branch and user asked to merge, merge to `main` (or target branch) via `git merge --no-ff` or `gh pr merge` — never force-push `main`. Skip if no code change or user explicitly opts out (`--no-merge` / "don't push"). On failure, return `FEEDBACK_TO: Developer` with git error. | Score Merge KPIs: committed, pushed, status clean; MISS blocks stage 11. |
-| **11. Back to user** | Orchestrator only | Short status: goal, KPI scorecard (met/miss/waived), what changed, merge result (commit SHA + branch), open asks. No stage dump. | Pipeline exit only when DONE WHEN + all applicable agent KPIs (incl. PM + Merge when applicable) are MET or waived. |
+| **10. Merge to git** | `merge-agent` sub-agent (`generalPurpose`) or orchestrator direct | **Gated on explicit user approval — do not run until user says ok / approve / lgtm / merge / ship it.** Only after all applicable KPIs MET/WAIVED, Fix complete, **and** user ok received: commit staged + unstaged changes with conventional message (`<type>: <goal>` + Co-authored-by if needed), verify `git status` clean, push to `origin` current branch; if on feature branch and user asked to merge, merge to `main` (or target branch) via `git merge --no-ff` or `gh pr merge` — never force-push `main`. Skip if no code change or user explicitly opts out (`--no-merge` / "don't push"). On failure, return `FEEDBACK_TO: Developer` with git error. | Score Merge KPIs: committed, pushed, status clean; MISS blocks stage 11. |
+| **11. Back to user → wait for ok → Merge** | Orchestrator only | Short status: goal, KPI scorecard (met/miss/waived), what changed, open asks. **Explicitly ask user for merge approval** ("Reply ok to merge"). Only after user ok, run stage 10 Merge, then report merge result (commit SHA + branch). No stage dump. | Pipeline exit only when DONE WHEN + all applicable agent KPIs (incl. PM) are MET or waived; Merge (10) runs only after user ok. |
 
 ## Code Review modes (stage 2)
 
@@ -259,6 +260,21 @@ When spawning Code Review (Bugbot, multi-model, or Task), always include:
 4. Hard rules to enforce: `minimal-architecture`, `react-useeffect-infinite-loop-prevention`, `no-localhost`, `jql-edit-approval` (flag only — no silent JQL edits)
 5. Instruction: **FAIL** unless findings are listed **and** KPI VERDICT is returned; no rubber stamps; prove clean only with MET KPIs + empty Blocking/High
 
+## Agent/model selection (mandatory)
+
+For **every** stage, identify the **best available agent/model** for that task from the
+available pool before spawning. Do not default to a single model when a better fit exists.
+
+- **Code Review (stage 2)**: prefer multi-model review (`agent-pack/skills/multi-model-review/`)
+  for high-risk/cross-cutting diffs; bugbot for typical changes; single Task review only if unavailable.
+- **Exec sign-off (stage 6)**: follow `/exec-perspective` via readonly general-purpose subagent
+  (`team-exec` or `director` audience) — high-level first, then drill-down.
+- **Doc sign-off (stage 8.5)**: doc specialist (`generalPurpose`, doc lens) — update docs, context, API.
+- **QA / UX / PM / Impact Scout**: spawn `generalPurpose` with the appropriate lens; never skip.
+- **Merge (stage 10)**: `merge-agent` sub-agent or orchestrator direct, only after user ok.
+
+If a better agent/model becomes available mid-run, re-evaluate and switch.
+
 ## How to spin agents
 
 - Use Cursor `Task` (or named review subagents) with a **single stage role** per spawn.
@@ -269,7 +285,7 @@ When spawning Code Review (Bugbot, multi-model, or Task), always include:
 - **Exec**: spawn a readonly Task that follows `/exec-perspective` — L1 skim → L2 risks → L3 detail; cite `persona-aware-output.mdc`; refuse rubber-stamp "looks fine."
 - **Code Review (Bugbot)**: prefer `bugbot` with `Diff: uncommitted changes` (or `branch changes`) and a short change description **plus Goal KPI Card**.
 - <!-- PAUSED: **Security**: use `security-review` with `Diff: uncommitted changes` or `branch changes` **plus Security KPIs from the card**. Do not call until re-enabled. -->
-- **Merge (stage 10)**: after loop exits with all KPIs MET/WAIVED, spawn `merge-agent` (or run directly) with: Goal KPI Card, branch name, commit message derived from GOAL, and push target. Mandate: `git status` clean after commit+push; never merge with MISS KPIs. Skip only if no code change or user opted out.
+- **Merge (stage 10)**: **only after user says ok** (ok/approve/lgtm/merge/ship it) AND loop exited with all KPIs MET/WAIVED. Spawn `merge-agent` (or run directly) with: Goal KPI Card, branch name, commit message derived from GOAL, and push target. Mandate: `git status` clean after commit+push; never merge with MISS KPIs or before user ok. Skip only if no code change or user opted out.
 
 ## Stage gating
 
@@ -287,6 +303,7 @@ When spawning Code Review (Bugbot, multi-model, or Task), always include:
 - Ship product behaviour / docs as "done" without PM KPIs MET (unless user waived)
 - Ship as "done" while any applicable Goal KPI is MISS (unless user waived)
 - Merge to git (stage 10) before all applicable KPIs are MET/WAIVED — merge is gated on pipeline pass
+- Merge to git without explicit user ok — stage 10 runs only after user says ok/approve/lgtm/merge/ship it, never auto-merge
 - Run agents without a Goal KPI Card derived from the current user ask
 - Keep a stale Goal KPI Card after the user changed the ask
 - Replace the full pipeline with multi-model review alone
