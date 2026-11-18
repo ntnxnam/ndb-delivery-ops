@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portfolio-delivery-ops/agent-pack/memory",
+  "title": "AgentPackMemory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tier", "updatedAt"],
+  "properties": {
+    "tier": {
+      "enum": ["session", "user", "org"]
+    },
+    "userId": { "type": "string" },
+    "productId": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "entities": {
+      "type": "object",
+      "description": "Resolved names from this session (release, ticket, risk).",
+      "additionalProperties": { "type": "string" }
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "source"],
+        "properties": {
+          "text": { "type": "string" },
+          "source": { "enum": ["human", "eval", "agent"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

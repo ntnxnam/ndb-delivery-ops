@@ -32,8 +32,23 @@ function parseFrontmatter(raw: string): { frontmatter: Record<string, string>; b
   return { frontmatter, body: match[2] };
 }
 
+function resolvePackPath(root: string, relativePath: string): string {
+  const direct = join(root, relativePath);
+  if (existsSync(direct)) return direct;
+  // Backward compat: shim used product/lighthouse/, canonical is now lighthouse/
+  if (relativePath.startsWith('product/lighthouse/')) {
+    const alt = join(root, relativePath.replace(/^product\/lighthouse\//, 'lighthouse/'));
+    if (existsSync(alt)) return alt;
+  }
+  if (relativePath.startsWith('lighthouse/')) {
+    const alt = join(root, relativePath.replace(/^lighthouse\//, 'product/lighthouse/'));
+    if (existsSync(alt)) return alt;
+  }
+  return direct;
+}
+
 function readMarkdown(root: string, relativePath: string): MarkdownDocument {
-  const path = join(root, relativePath);
+  const path = resolvePackPath(root, relativePath);
   const raw = readFileSync(path, 'utf8');
   const { frontmatter, body } = parseFrontmatter(raw);
   return { path, body, frontmatter };
@@ -136,7 +151,7 @@ export function loadAgentPack(explicitRoot?: string): AgentPack {
   });
 
   const memorySchema = JSON.parse(
-    readFileSync(join(root, manifest.memorySchema), 'utf8')
+    readFileSync(resolvePackPath(root, manifest.memorySchema), 'utf8')
   );
 
   const context = new Map<string, LoadedContextDoc>();

@@ -1,0 +1,167 @@
+# Release Gate-Aware Reasoning
+
+Before forming any point of view about a feature's delivery health, the AI must
+evaluate gate feasibility — not just current JIRA status. JIRA status is often stale;
+calendar math and capacity math are not.
+
+## The Four Gate-Feasibility Questions
+
+For every feature in Inception / Design / Coding / CC Met phase, answer all four
+before assigning a verdict:
+
+### 1. Is there a Code Complete date?
+
+- If `customfield_11067` (Code Complete Date) is null or missing on a feature in
+  Coding or CC Met phase → treat as `gate-lagging`, not `watching`.
+- Rationale: a team that has not committed to a CC date has no delivery contract.
+  Absence is itself a risk signal, not neutral.
+
+### 2. Is the CC date before the release-level CC gate?
+
+- Compare the feature's CC date against the release-level CCM marker (from
+  `releaseVersionsEmailConfig` / ganttConfig).
+- If feature CC date > release CCM date → flag as `CC_AFTER_GATE` with the delta in days.
+- YELLOW minimum; RED if delta > 14 days or if CCM has already passed.
+- The team's own estimate already violates the gate — this is not a projection, it is
+  a committed miss.
+
+### 3. Is there enough runway to the next gate?
+
+- Compute: `workingDays(today, nextGateDate)` × assumed daily velocity (default: 2 SP/day).
+- Compare against open story points on truly-open child tickets (`tasks.trulyOpenCount`
+  × average SP per task, or fetched directly if available).
+- If open work > available capacity → flag as `CAPACITY_INFEASIBLE`.
+- Surface as: "N SP of open work, ~D working days remaining to gate (capacity for ~C SP)."
+- This is a delivery risk independent of JIRA status — it answers "even if everything
+  goes perfectly, can they make it?"
+
+### 4. Are tickets created for the work?
+
+- If `tasks.trulyOpenCount = 0` AND the feature is in Coding phase with CC > 14 days
+  away → flag as `NO_CHILD_TICKETS`.
+- A feature in active coding with no open sub-tickets has either not broken down the
+  work or is tracking work entirely off-JIRA — both are visibility risks.
+
+## Signal Priority Order (first match wins for verdict floor)
+
+1. `CC_AFTER_GATE` with delta > 14d → **RED**
+2. `CAPACITY_INFEASIBLE` (open SP > 2× runway capacity) → **RED**
+3. `CC_DATE_MISSING` in Coding phase → **RED**
+4. `CC_AFTER_GATE` with delta 1–14d → **YELLOW**
+5. `CAPACITY_INFEASIBLE` (open SP > 1× but ≤ 2× runway) → **YELLOW**
+6. `NO_CHILD_TICKETS` in Coding phase → **YELLOW**
+
+## Implementation Contract
+
+These signals are computed **deterministically** in `execSummarySignals.js`,
+not by the LLM. The LLM receives pre-computed flags and reasons about them —
+it does not compute them.
+
+CRITICAL_RISKS entries for these signals follow the prefix convention:
+
+| Prefix | Meaning |
+|---|---|
+| `CC_DATE_MISSING: ...` | Feature in Coding/CC Met with no CC date set |
+| `CC_AFTER_GATE: +N days past CCM1 (YYYY-MM-DD)` | Feature's own CC estimate exceeds the release gate |
+| `CAPACITY_INFEASIBLE: N SP open, ~D days to gate, ~C SP capacity` | Not enough runway to close open work |
+| `NO_CHILD_TICKETS: feature in Coding with zero open sub-tickets` | Work not yet broken down in JIRA |
+
+The LLM prompt (`RELEASE_SUMMARY_SYSTEM_PROMPT` and `EXEC_SUMMARY_SYSTEM_PROMPT`)
+must include a `CAPACITY RISK SIGNALS` section that explains how to interpret
+these prefixes and what PATH TO GREEN actions are appropriate.
+
+## What the LLM Must Do With These Signals
+
+- **CC_DATE_MISSING**: sentence 1 must name the phase and the missing date; action
+  item = "Ask `<owner>` to commit a CC date by this week."
+- **CC_AFTER_GATE**: sentence 1 must state the delta; action item = "Negotiate scope
+  cut or request RM approval for schedule extension — `<N>` days over gate."
+- **CAPACITY_INFEASIBLE**: surface as "insufficient runway" with the numbers;
+  action item = "Reduce scope or add capacity — `<N SP>` of open work, only room for ~`<C SP>`."
+- **NO_CHILD_TICKETS**: flag as visibility gap; action item = "Break down remaining
+  work into sub-tickets this week so progress is trackable."
+
+## Gate Date Lookup Contract
+
+When `dateMetrics` or `ganttConfig` is available:
+
+- Use `ganttConfig.CCM1` (or the earliest CC marker label) as the release-level CC gate.
+- Use `ganttConfig.CG` / `ganttConfig.CG2` as the binding Commit Gate.
+- Use `ganttConfig.PG` / `ganttConfig.PG2` as the binding Promotion Gate.
+- Working-day calculation must exclude weekends; public holidays are not tracked,
+  so use calendar working days (Mon–Fri) as the approximation.
+- When `ganttConfig` is null, skip gate-comparison signals — do not fabricate dates.
+
+## Maintenance Release Cadence Rules
+
+Maintenance releases (two-dot versions, e.g. `NDB-2.10.3`) have a **simplified two-date gate model** and a 4-week stabilisation window:
+
+### Gate Model — Maintenance releases only have CC and GA
+
+| Milestone | Expected | All other dates |
+|---|---|---|
+| **Code Complete** | Aligned with GA of preceding patch release | **Must be empty / null** |
+| **GA / Release** | 4 weeks after CC | EC, CG, PG → must be empty |
+| **CC → GA window** | 4 weeks (28 calendar days) | |
+
+**EC, Commit Gate, and Promotion Gate dates must NOT be set on maintenance releases.** If any of these fields are populated, flag as `MAINT_UNEXPECTED_GATE_DATE` (data quality warning) and do not use those dates in health calculations.
+
+Apply these thresholds when computing maintenance release health:
+
+- `GA date − today < 28 days` **and** CC not yet met → **RED** (window is broken)
+- `GA date − today < 42 days` **and** CC not yet met → **YELLOW** (at risk of missing the 4-week window)
+- CC date is set but `GA date − CC date < 28 days` → flag as `MAINT_CC_WINDOW_SHORT`; treat as **YELLOW** or **RED** if < 14 days remain
+- Maintenance CC date > GA date of the immediately preceding patch release → flag as `MAINT_CC_MISALIGNED`; treat as **YELLOW** minimum
+- Any of EC / CG / PG fields are non-null on a maintenance release → flag as `MAINT_UNEXPECTED_GATE_DATE` (data quality warning, not a health signal)
+
+### CC Alignment Rule (cross-release dependency)
+
+The maintenance release Code Complete date must be **on or before the GA date of the immediately preceding patch release**. This ensures the maintenance release enters stabilisation only after the patch train has shipped.
+
+```
+preceding_patch_GA = GA date of the last patch release for this maintenance line
+maintenance_CC     = Code Complete date of the maintenance release
+
+VALID:   maintenance_CC ≤ preceding_patch_GA
+INVALID: maintenance_CC > preceding_patch_GA  → MAINT_CC_MISALIGNED
+```
+
+Example: `NDB-2.10.3.2` GA = 2026-07-18 → `NDB-2.10.4` CC must be ≤ 2026-07-18.
+
+LLM action items:
+- `MAINT_CC_WINDOW_SHORT`: "CC date is too close to GA — the 4-week stabilisation window will not be met. Either move CC earlier or push GA by `<delta>` days."
+- `MAINT_CC_MISALIGNED`: "Maintenance CC date (`<date>`) is after the preceding patch GA (`<patch_GA>`). Align maintenance CC to ship no later than the patch GA date, or confirm the patch GA is also slipping."
+- `MAINT_UNEXPECTED_GATE_DATE`: "Maintenance releases should only have CC and GA dates set. Remove the unexpected gate date(s): `<field list>`."
+
+## Patch Release Cadence Rules
+
+Patch releases (three-dot versions, e.g. `NDB-2.10.3.2`) follow a monthly rhythm and have a **simplified gate model**:
+
+### Gate Model — Patch releases only have CC and GA
+
+| Milestone | Expected | All other dates |
+|---|---|---|
+| **Code Complete** | Week 1 of the month (first working Wednesday on or after the 1st) | **Must be empty / null** |
+| **GA / Release** | Week 3 of the month | EC, CG, PG → must be empty |
+| **CC → GA window** | 2 weeks (14 calendar days) | |
+
+**Commit Gate, Promotion Gate, and EC dates must NOT be set on patch releases.** If any of these fields are populated, treat it as a data quality flag (`PATCH_UNEXPECTED_GATE_DATE`) and surface it as a warning — do not use those dates in health calculations.
+
+Apply these thresholds when computing patch health:
+
+- Today > Week 1 **and** CC not yet met → **YELLOW** minimum (cadence slip)
+- Today > end of Week 2 **and** GA is at risk → **RED**
+- CC date is set but `CC date + 14 days > end of Week 3` → flag as `PATCH_CC_TOO_LATE`; treat as **YELLOW** unless CC has already passed, then **RED**
+- Any of EC / CG / PG fields are non-null on a patch release → flag as `PATCH_UNEXPECTED_GATE_DATE` (data quality warning, not a health signal)
+
+LLM action items:
+- `PATCH_CC_TOO_LATE`: "CC date must move earlier — current CC date leaves < 14 days to reach the Week 3 GA target."
+- `PATCH_UNEXPECTED_GATE_DATE`: "Patch releases should only have CC and GA dates set. Remove the unexpected gate date(s): `<field list>`."
+
+## Never Do
+
+- Treat a missing CC date as equivalent to "not yet relevant"
+- Treat a CC date that exceeds the release gate as YELLOW when the delta is > 14 days
+- Skip capacity math because JIRA phase or self-reported risk looks "on track"
+- Report a feature as `watching` when any of the four feasibility questions yields a flag
+- Invent gate dates not present in `dateMetrics` or `ganttConfig`

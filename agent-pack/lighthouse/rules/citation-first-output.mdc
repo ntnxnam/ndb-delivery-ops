@@ -1,0 +1,94 @@
+---
+description: Every numerical or status claim cites a JIRA ticket, query, or data source
+alwaysApply: true
+---
+
+# Citation-First Output
+
+Per **D10 — Dual trust model**, the platform supports both "Portfolio
+Manager reviews then forwards" and "VP reads agent answer directly."
+The latter only works if **every claim is independently verifiable**.
+
+This rule applies to every output the agent produces, regardless of
+audience or surface.
+
+## What must be cited
+
+Every concrete claim must carry a citation. "Concrete claim" means:
+
+- **Counts** — "12 open bugs", "3 high-risk items", "8 stories at risk"
+- **Status assertions** — "NDB-2.11 is amber", "storage team is behind"
+- **Date predictions** — "expected to land 2026-06-15", "Code Complete slipped 1 week"
+- **Ownership / assignment claims** — "owned by John Doe"
+- **Numerical metrics** — "predictability is 73%", "story points planned: 245"
+
+Citation forms (any of these is acceptable):
+
+1. **JIRA ticket key**: `[NDB-12345]` (rendered as a link in HTML / chat)
+2. **JIRA query**: `[query: project = NDB AND status = "In Progress"]`
+3. **Data source**: `[source: statusService.releaseRag(NDB-2.11) @ 2026-05-19T12:30Z]`
+4. **Cached snapshot**: `[snapshot: weekly-rollup-2026-W21]`
+
+If you cannot cite a claim, **do not state it as a fact**. Either:
+
+- Mark it as inferred: "appears to be amber (inferred from open-bug velocity)"
+- Or qualify with confidence: "low-confidence estimate — no recent updates"
+
+## What does NOT require citation
+
+- General domain knowledge ("Code Complete is a gate before RTM")
+- Definitions from `audience.md` / `glossary`
+- Explanations of process ("the agent runs `predictLanding` for landing dates")
+- User's own statements being repeated back
+
+## Confidence indicators
+
+Numeric or predictive claims should carry a confidence level:
+
+| Confidence | Use when |
+|---|---|
+| **High** | direct measurement from live data (e.g. ticket count from JIRA) |
+| **Medium** | derived from historical patterns with similar inputs |
+| **Low** | extrapolated from sparse data or with significant unknowns |
+
+Render confidence inline: "Predicted landing **2026-06-15 (medium)** based on [NDB-12345], [NDB-12346]."
+
+## Chart citations
+
+Charts must include a data-source caption:
+
+```
+<small>Source: statusService.ragOverTime(NDB-2.11), 2026-05-19 12:30 UTC</small>
+```
+
+## VP-audience specifics (per D15)
+
+VP outputs follow the risk-register format. Each entry must cite:
+
+- The blocker ticket(s)
+- The owning team's recent commits / sprints
+- The dependency chain (if applicable, links to upstream JIRA tickets)
+
+Example risk register entry:
+
+```
+**Storage write throughput regression** — High impact, landing-blocker.
+- Blocker tickets: [NDB-12345], [NDB-12350]
+- Owner: storage team (last commit: 2 days ago, source: githubConnector)
+- Mitigation: hotfix in progress on [NDB-12351]; ETA Friday
+- Impact on landing: +1 week if not resolved by Wednesday
+```
+
+## Never Do
+
+- State a count without showing where it came from
+- Predict a date without a confidence level
+- Make a status assertion ("X is amber") without the underlying query or data source
+- Hide citations in `vp` / `director` audience output — VPs *want* them (per D10)
+- Include broken or fabricated ticket keys — verify the prefix matches the active product
+
+## Cross-references
+
+- **D10** in `DECISIONS.md` — Dual trust model
+- **D15** in `DECISIONS.md` — VP risk-register format requires citations on every line
+- **persona-aware-output.mdc** — citation density varies by audience but presence does not

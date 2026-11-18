@@ -1,0 +1,48 @@
+# NDB Release Gate — Bug Status Semantics
+
+## Status Meanings (from `teamBoardConfig.json`)
+
+| Status | Config key | Meaning |
+|---|---|---|
+| `Resolved` | `pendingQAStatusName` | Dev fix is merged. Awaiting QA verification. |
+| `Closed` | `completedStatusName` | QA has verified the fix. |
+
+## Verification is POST-PG
+
+QA verification (moving a bug from `Resolved` → `Closed`) happens **after** the
+Promotion Gate (PG). It is **not** a gate blocker for PG.
+
+## What "gate-ready" means per issue type
+
+### Tasks / Unit Tests (CC gate)
+- Gate-ready = `statusCategory === 'done'` (i.e. `Closed`)
+- Coding is done only when the task is fully closed.
+
+### Bugs / Improvements (CG and PG gates)
+- Gate-ready = `status === 'Resolved'` **OR** `statusCategory === 'done'` (Closed)
+- A bug that is `Resolved` satisfies the gate — the dev fix is in.
+- Do **not** require `Closed` for gate checks; that would block on post-PG QA work.
+
+### Test tickets (PG gate)
+- Gate-ready = `statusCategory === 'done'` (Closed)
+- Test tickets are QA-owned and must be fully closed before PG.
+
+## Gate → Issue Type Mapping
+
+| Gate | Issue types checked | "Done" condition |
+|---|---|---|
+| **CC** | `Task`, `Unit Test` | `Closed` |
+| **CG** | `Bug` (P0/P1/Blocker/Critical), `Improvement` (P0/P1) | `Resolved` or `Closed` |
+| **PG** | All `Bug`, `Improvement`, `Test` | Bugs/Improvements: `Resolved` or `Closed`; Tests: `Closed` |
+
+## Priority thresholds
+
+- **High severity** (CG gate): `P0`, `P1`, `Blocker`, `Critical`
+- **Standard** (PG gate): all priorities
+
+## Never Do
+
+- Use `statusCategory === 'done'` alone to check if a Bug is gate-ready —
+  this misses `Resolved` bugs and falsely shows them as still open.
+- Require `Closed` for bug gate checks — verification is a post-PG activity.
+- Conflate QA verification completion with dev fix completion.
