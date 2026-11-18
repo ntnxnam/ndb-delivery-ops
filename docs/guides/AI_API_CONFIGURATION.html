@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>AI_API_CONFIGURATION — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>AI_API_CONFIGURATION</span></nav><div class="container"><article class="prose"><h1>NAI API Key Configuration</h1>
+<p>The Team Executive Release Report system supports NAI API key management for generating executive reports.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Named API Keys</strong>: Users can assign friendly names to their API keys</li>
+<li><strong>Secure Storage</strong>: API keys and names stored locally in browser</li>
+<li><strong>Validation</strong>: Real-time testing of API connectivity before saving</li>
+<li><strong>Key Management</strong>: Easy clearing and updating of stored credentials</li>
+</ul>
+<h2>Supported AI APIs</h2>
+<h3>1. Nutanix NAI (Default)</h3>
+<ul>
+<li><strong>Endpoint</strong>: <code>https://dpro-nai.corp.p10y.ntnxdpro.com/enterpriseai/v1/chat/completions</code></li>
+<li><strong>Model</strong>: <code>eng-pool-05</code></li>
+<li><strong>Use Case</strong>: Internal Nutanix deployment</li>
+</ul>
+<h3>2. OpenAI</h3>
+<ul>
+<li><strong>Endpoint</strong>: <code>https://api.openai.com/v1/chat/completions</code></li>
+<li><strong>Models</strong>: <code>gpt-4</code>, <code>gpt-4-turbo</code>, <code>gpt-3.5-turbo</code></li>
+<li><strong>API Key</strong>: Obtain from <a href="https://platform.openai.com/">https://platform.openai.com/</a></li>
+</ul>
+<h3>3. Anthropic Claude</h3>
+<ul>
+<li><strong>Endpoint</strong>: <code>https://api.anthropic.com/v1/messages</code></li>
+<li><strong>Models</strong>: <code>claude-3-opus</code>, <code>claude-3-sonnet</code>, <code>claude-3-haiku</code></li>
+<li><strong>API Key</strong>: Obtain from <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+</ul>
+<h3>4. Custom/Self-Hosted APIs</h3>
+<ul>
+<li>Any OpenAI-compatible endpoint</li>
+<li>Local LLM deployments (e.g., Ollama, LocalAI)</li>
+<li>Enterprise AI platforms</li>
+</ul>
+<h2>Configuration Process</h2>
+<ol>
+<li><strong>Navigate to Release Trends Page</strong></li>
+<li><strong>Click &quot;🎯 Generate Executive Report&quot;</strong></li>
+<li><strong>Enter API Configuration</strong> (if not already configured):<ul>
+<li><strong>Key Name</strong> (optional): Friendly name for your API key (e.g., &quot;My NAI Key&quot;, &quot;Production Key&quot;)</li>
+<li><strong>API Key</strong> (required): Your NAI API key</li>
+</ul>
+</li>
+<li><strong>Test &amp; Save</strong>: System validates connectivity before storing</li>
+<li><strong>Generate Report</strong>: AI-powered Team Executive report is generated</li>
+</ol>
+<h2>Security Notes</h2>
+<ul>
+<li>API keys are stored locally in browser localStorage</li>
+<li>Keys are never sent to application servers</li>
+<li>Direct API calls are made from backend to AI service</li>
+<li>Clear configuration option available in modal</li>
+</ul>
+<h2>Error Handling</h2>
+<ul>
+<li><strong>Invalid Endpoint</strong>: URL format validation</li>
+<li><strong>Network Issues</strong>: Connectivity and timeout handling</li>
+<li><strong>Authentication</strong>: API key validation with service</li>
+<li><strong>Rate Limits</strong>: Proper error messaging for API limits</li>
+</ul>
+<h2>Usage Tips</h2>
+<ol>
+<li><strong>Test Connection</strong>: Always use &quot;Test &amp; Save&quot; to validate setup</li>
+<li><strong>Key Management</strong>: Regularly rotate API keys for security</li>
+<li><strong>Endpoint Selection</strong>: Choose based on compliance and performance needs</li>
+<li><strong>Fallback</strong>: Keep Nutanix NAI as fallback for internal use</li>
+</ol>
+<h2>Implementation Details</h2>
+<h3>Frontend (ReleaseTrendsPage.js)</h3>
+<ul>
+<li>Enhanced modal with endpoint and key fields</li>
+<li>Client-side URL validation</li>
+<li>Secure localStorage management</li>
+<li>Error handling and user feedback</li>
+</ul>
+<h3>Backend (server/routes/jira/index.js)</h3>
+<ul>
+<li><code>/validate-nai-key</code>: Tests API connectivity</li>
+<li><code>/generate-ai-vp-report</code>: Uses configured endpoint</li>
+<li>URL validation and error handling</li>
+<li>Generic OpenAI-compatible request format</li>
+</ul>
+<h2>Future Enhancements</h2>
+<ul>
+<li>Model selection dropdown</li>
+<li>API usage analytics</li>
+<li>Multiple endpoint profiles</li>
+<li>Import/export configuration</li>
+<li>Team-level API configuration</li>
+</ul>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

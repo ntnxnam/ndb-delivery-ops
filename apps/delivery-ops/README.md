@@ -2,7 +2,7 @@
 
 A web application for Confluence-based status update emails and JIRA release version tracking. Extract Confluence page contents to send status emails, use the Release Versions page to view JIRA issues by fix version and send release-version emails, or use the **Generic Emailer** to run any JQL query and email the results with configurable columns and recipients.
 
-**For developers taking over the codebase**, see **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** for architecture, setup, key files, configuration, and refactored structure.
+**For developers taking over the codebase**, see **[DEVELOPER_GUIDE.md](../../docs/guides/DEVELOPER_GUIDE.md)** for architecture, setup, key files, configuration, and refactored structure.
 
 ---
 
@@ -37,12 +37,12 @@ A web application for Confluence-based status update emails and JIRA release ver
 **Authentication and RBAC**:
 
 - **Auth**: Auth middleware and `authService` for role-based access. Roles (Super Admin, Admin, User) are config-driven via `server/config/allowedUsers.json`.
-- **Docs**: **[docs/RBAC_GUIDE.md](docs/RBAC_GUIDE.md)** – role hierarchy, config keys (`superAdminUsers`, `adminUsers`), and permissions (generic emailer and release setup restricted to Super Admin).
+- **Docs**: **[docs/RBAC_GUIDE.md](../../docs/guides/RBAC_GUIDE.md)** – role hierarchy, config keys (`superAdminUsers`, `adminUsers`), and permissions (generic emailer and release setup restricted to Super Admin).
 
 **Email and testing**:
 
 - **Email service**: Updates to email sending flow and service layer.
-- **Docs**: **[docs/EMAIL_SERVICE_TEST_PLAN.md](docs/EMAIL_SERVICE_TEST_PLAN.md)** – test plan for email functionality.
+- **Docs**: **[docs/EMAIL_SERVICE_TEST_PLAN.md](../../docs/guides/EMAIL_SERVICE_TEST_PLAN.md)** – test plan for email functionality.
 - **Tests**: New `server/__tests__/services/emailService.test.js`; expanded integration tests for email and JIRA.
 
 **Other**:
@@ -334,4 +334,4 @@ npm run dev
 - ✅ Email: subject always appended with date; tighter spacing, viewport max-width, table-wrap; empty cells show N/A
 - ✅ Sprint/agile fields in `jiraFieldsConfig.json`; `genericEmailerCCConfig.json` for Generic Emailer CC
 - ✅ Fetch and Send Email buttons side-by-side; client proxy to port 6001
-- ✅ **Refactored structure**: Email routes under `server/routes/email/`, JIRA routes under `server/routes/jira/`; EmailSender component in `client/src/components/EmailSender/`; shared `OutlookFallback.js`. See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
+- ✅ **Refactored structure**: Email routes under `server/routes/email/`, JIRA routes under `server/routes/jira/`; EmailSender component in `client/src/components/EmailSender/`; shared `OutlookFallback.js`. See [DEVELOPER_GUIDE.md](../../docs/guides/DEVELOPER_GUIDE.md).

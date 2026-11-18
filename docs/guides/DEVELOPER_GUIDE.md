@@ -172,7 +172,7 @@ ndb-status-update-sender/
 - **Report types**: Past sprint, current sprint, or trends by team
 - **Team**: Selected from header; base filter from `teamBoardConfig.json` (e.g. board 2888)
 - **Metrics**: Total in sprint, added after start, removed, completed, pending QA, incomplete; CSV download
-- **Access**: `sprintReportAllowedUsers` in `allowedUsers.json`. See [SPRINT_REPORT_CONTEXT.md](SPRINT_REPORT_CONTEXT.md) for design and limits.
+- **Access**: `sprintReportAllowedUsers` in `allowedUsers.json`. See SPRINT_REPORT_CONTEXT (archived) for design and limits.
 
 ### Other
 

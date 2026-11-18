@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOY_ROCKY_LINUX — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOY_ROCKY_LINUX</span></nav><div class="container"><article class="prose"><h1>Deploy to Rocky Linux / RHEL</h1>
+<h2>Prerequisites</h2>
+<ol>
+<li><strong>Open firewall ports</strong>:</li>
+</ol>
+<pre><code class="language-bash">sudo firewall-cmd --permanent --add-port=6100/tcp
+sudo firewall-cmd --permanent --add-port=6001/tcp
+sudo firewall-cmd --reload
+</code></pre>
+<ol start="2">
+<li><strong>Configure SELinux</strong> (if enabled):</li>
+</ol>
+<pre><code class="language-bash">sudo semanage port -a -t http_port_t -p tcp 6100
+sudo semanage port -a -t http_port_t -p tcp 6001
+# If semanage not found: sudo dnf install -y policycoreutils-python-utils
+</code></pre>
+<h2>Installation</h2>
+<ol>
+<li><strong>Copy files to server</strong>:</li>
+</ol>
+<pre><code class="language-bash">scp -r /path/to/ndb-status-sender user@server:/var/www/html/
+</code></pre>
+<ol start="2">
+<li><strong>Run installation script</strong>:</li>
+</ol>
+<pre><code class="language-bash">cd /var/www/html/ndb-status-sender
+bash install.sh
+</code></pre>
+<ol start="3">
+<li><strong>Create client/.env file</strong> (for FQDN access):</li>
+</ol>
+<pre><code class="language-bash">echo &quot;DANGEROUSLY_DISABLE_HOST_CHECK=true&quot; &gt; client/.env
+</code></pre>
+<h2>Running the App</h2>
+<h3>Development Mode (Recommended for QA):</h3>
+<pre><code class="language-bash">npm run dev
+</code></pre>
+<p>Access at: <a href="http://ndb-qa.dev.nutanix.com:6100/">http://ndb-qa.dev.nutanix.com:6100/</a></p>
+<h3>Production Mode with PM2:</h3>
+<pre><code class="language-bash">pm2 start ecosystem.dev.config.js
+pm2 save
+pm2 startup
+</code></pre>
+<h2>Troubleshooting</h2>
+<p><strong>Port already in use</strong>:</p>
+<pre><code class="language-bash">sudo fuser -k 6100/tcp
+sudo fuser -k 6001/tcp
+</code></pre>
+<p><strong>Cannot access via FQDN</strong>:</p>
+<ul>
+<li>Ensure client/.env has <code>DANGEROUSLY_DISABLE_HOST_CHECK=true</code></li>
+<li>Check firewall: <code>sudo firewall-cmd --list-ports</code></li>
+<li>Verify binding: <code>sudo netstat -tlnp | grep -E &#39;6100|6001&#39;</code></li>
+</ul>
+<p><strong>Dependency errors</strong>:</p>
+<pre><code class="language-bash">bash install.sh
+</code></pre>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

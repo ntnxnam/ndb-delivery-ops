@@ -1,0 +1,403 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>LOGGING_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>LOGGING_GUIDE</span></nav><div class="container"><article class="prose"><h1>📝 Logging Guide</h1>
+<h2>Overview</h2>
+<p>Complete logging system for NDB Status Sender that captures all errors, warnings, and info messages to log files.</p>
+<hr>
+<h2>📁 Log Files Location</h2>
+<p>All logs are stored in the <code>./logs/</code> directory:</p>
+<pre><code>logs/
+├── out.log          # Standard output (info, general messages)
+├── err.log          # Errors and warnings
+├── archive/         # Rotated/archived logs
+│   └── logs_*.tar.gz
+└── README.md
+</code></pre>
+<hr>
+<h2>🚀 Quick Start</h2>
+<h3>⚡ Automatic Setup</h3>
+<p><strong>Logging is automatically configured</strong> when you use the production scripts:</p>
+<pre><code class="language-bash">./start-production.sh      # Logging auto-configured on start
+./restart-production.sh    # Logging verified on restart
+./deploy-rhel8-complete.sh # Logging set up during deployment
+</code></pre>
+<h3>1. Manual Setup (Optional - if not using production scripts)</h3>
+<pre><code class="language-bash">chmod +x setup-logging.sh
+./setup-logging.sh
+</code></pre>
+<p>This sets up:</p>
+<ul>
+<li>✅ Log directory structure</li>
+<li>✅ PM2 logging configuration</li>
+<li>✅ Automatic log rotation</li>
+<li>✅ Log compression</li>
+</ul>
+<h3>2. View Logs</h3>
+<pre><code class="language-bash">chmod +x view-logs.sh
+./view-logs.sh
+</code></pre>
+<p><strong>Interactive menu to view:</strong></p>
+<ul>
+<li>Application logs (combined)</li>
+<li>Error logs only</li>
+<li>Output logs only</li>
+<li>Nginx logs</li>
+<li>PM2 live logs</li>
+<li>Summary of all logs</li>
+</ul>
+<h3>3. Manage Logs</h3>
+<pre><code class="language-bash">chmod +x manage-logs.sh
+./manage-logs.sh
+</code></pre>
+<p><strong>Interactive menu to:</strong></p>
+<ul>
+<li>View log sizes</li>
+<li>Rotate logs manually</li>
+<li>Clear all logs</li>
+<li>Setup automatic rotation</li>
+<li>View archived logs</li>
+<li>Clean old archives</li>
+</ul>
+<hr>
+<h2>📊 What Gets Logged</h2>
+<h3>Application Logs (<code>logs/out.log</code>)</h3>
+<ul>
+<li>✅ Server startup messages</li>
+<li>✅ API requests and responses</li>
+<li>✅ Database operations</li>
+<li>✅ General information</li>
+<li>✅ Debug messages (if enabled)</li>
+</ul>
+<h3>Error Logs (<code>logs/err.log</code>)</h3>
+<ul>
+<li>❌ Application errors</li>
+<li>⚠️ Warnings</li>
+<li>❌ Stack traces</li>
+<li>❌ Unhandled exceptions</li>
+<li>❌ PM2 process errors</li>
+</ul>
+<h3>Nginx Logs</h3>
+<ul>
+<li><strong>Access:</strong> <code>/var/log/nginx/access.log</code> - All HTTP requests</li>
+<li><strong>Error:</strong> <code>/var/log/nginx/error.log</code> - Web server errors</li>
+</ul>
+<hr>
+<h2>🔄 Automatic Log Rotation</h2>
+<p>Logs are automatically rotated when:</p>
+<ul>
+<li><strong>Size:</strong> File exceeds 10MB</li>
+<li><strong>Time:</strong> Daily at midnight</li>
+<li><strong>Retention:</strong> Keeps last 10 rotated files</li>
+<li><strong>Compression:</strong> Old logs are compressed (.gz)</li>
+</ul>
+<h3>Configuration</h3>
+<pre><code class="language-bash"># Rotation settings (already configured by setup-logging.sh)
+Max size:        10MB
+Retained files:  10
+Compression:     Enabled
+Rotation time:   Daily at midnight (00:00)
+Check interval:  Every 30 seconds
+</code></pre>
+<hr>
+<h2>📖 Using the Scripts</h2>
+<h3>view-logs.sh - Interactive Log Viewer</h3>
+<pre><code class="language-bash">./view-logs.sh
+</code></pre>
+<p><strong>Menu options:</strong></p>
+<ol>
+<li>Application logs (combined)</li>
+<li>Error logs only</li>
+<li>Output logs only</li>
+<li>Nginx access logs</li>
+<li>Nginx error logs</li>
+<li>PM2 logs (live tail)</li>
+<li>All logs summary</li>
+</ol>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Color-coded output</li>
+<li>Shows last 50 lines by default</li>
+<li>Live tailing option</li>
+<li>Summary view with sizes</li>
+</ul>
+<hr>
+<h3>manage-logs.sh - Log Management</h3>
+<pre><code class="language-bash">./manage-logs.sh
+</code></pre>
+<p><strong>Menu options:</strong></p>
+<ol>
+<li><strong>View log sizes</strong> - Check current log file sizes</li>
+<li><strong>Rotate logs</strong> - Archive current logs and start fresh</li>
+<li><strong>Clear all logs</strong> - Permanently delete all logs (with confirmation)</li>
+<li><strong>Setup automatic rotation</strong> - Configure PM2 log rotation</li>
+<li><strong>View archived logs</strong> - List all archived log files</li>
+<li><strong>Clean old archives</strong> - Delete archives older than 30 days</li>
+</ol>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Safe deletion (requires confirmation)</li>
+<li>Automatic archiving before clearing</li>
+<li>Archive management</li>
+<li>Size tracking</li>
+</ul>
+<hr>
+<h2>🛠️ Manual Log Commands</h2>
+<h3>PM2 Commands</h3>
+<pre><code class="language-bash"># View live logs
+pm2 logs ndb-status-sender
+
+# View last 100 lines
+pm2 logs ndb-status-sender --lines 100
+
+# View only errors
+pm2 logs ndb-status-sender --err
+
+# View only output
+pm2 logs ndb-status-sender --out
+
+# Clear logs
+pm2 flush ndb-status-sender
+
+# Show log paths
+pm2 show ndb-status-sender
+</code></pre>
+<h3>Direct File Access</h3>
+<pre><code class="language-bash"># View application output
+tail -f logs/out.log
+
+# View application errors
+tail -f logs/err.log
+
+# View last 100 lines
+tail -n 100 logs/out.log
+
+# Search for errors
+grep -i error logs/err.log
+
+# Search all logs
+grep -r &quot;search term&quot; logs/
+
+# Count errors
+grep -c ERROR logs/err.log
+</code></pre>
+<h3>Nginx Logs</h3>
+<pre><code class="language-bash"># View access logs
+sudo tail -f /var/log/nginx/access.log
+
+# View error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Search for specific IP
+sudo grep &quot;1.2.3.4&quot; /var/log/nginx/access.log
+
+# Count 404 errors
+sudo grep &quot; 404 &quot; /var/log/nginx/access.log | wc -l
+</code></pre>
+<hr>
+<h2>🔍 Troubleshooting</h2>
+<h3>Logs Not Being Written</h3>
+<p><strong>Check 1: Permissions</strong></p>
+<pre><code class="language-bash">ls -la logs/
+# Should be writable by your user
+</code></pre>
+<p><strong>Fix:</strong></p>
+<pre><code class="language-bash">chmod 755 logs
+chmod 644 logs/*.log
+</code></pre>
+<p><strong>Check 2: PM2 Configuration</strong></p>
+<pre><code class="language-bash">pm2 show ndb-status-sender
+# Look for error_file and out_file paths
+</code></pre>
+<p><strong>Check 3: Disk Space</strong></p>
+<pre><code class="language-bash">df -h
+# Ensure you have free space
+</code></pre>
+<p><strong>Check 4: Restart Application</strong></p>
+<pre><code class="language-bash">pm2 restart ndb-status-sender
+</code></pre>
+<h3>Logs Growing Too Large</h3>
+<p><strong>Option 1: Manual Rotation</strong></p>
+<pre><code class="language-bash">./manage-logs.sh
+# Choose option 2: Rotate logs
+</code></pre>
+<p><strong>Option 2: Setup Auto-Rotation</strong></p>
+<pre><code class="language-bash">./manage-logs.sh
+# Choose option 4: Setup automatic rotation
+</code></pre>
+<p><strong>Option 3: Clear Old Logs</strong></p>
+<pre><code class="language-bash">./manage-logs.sh
+# Choose option 6: Clean old archives
+</code></pre>
+<h3>Can&#39;t Find Specific Error</h3>
+<p><strong>Search all logs:</strong></p>
+<pre><code class="language-bash"># Search application logs
+grep -i &quot;error message&quot; logs/*.log
+
+# Search with context (show 5 lines before/after)
+grep -i -C 5 &quot;error message&quot; logs/*.log
+
+# Search by date
+grep &quot;2026-01-14&quot; logs/*.log
+</code></pre>
+<p><strong>View specific time range:</strong></p>
+<pre><code class="language-bash"># Show logs from specific hour
+sed -n &#39;/2026-01-14 14:/,/2026-01-14 15:/p&#39; logs/out.log
+</code></pre>
+<hr>
+<h2>📊 Log Analysis</h2>
+<h3>View Error Summary</h3>
+<pre><code class="language-bash"># Count errors by type
+grep ERROR logs/err.log | cut -d&#39; &#39; -f4- | sort | uniq -c | sort -rn
+
+# Most recent errors
+tail -20 logs/err.log
+</code></pre>
+<h3>View Access Statistics</h3>
+<pre><code class="language-bash"># Most accessed endpoints
+sudo cat /var/log/nginx/access.log | awk &#39;{print $7}&#39; | sort | uniq -c | sort -rn | head -10
+
+# Status code distribution
+sudo cat /var/log/nginx/access.log | awk &#39;{print $9}&#39; | sort | uniq -c | sort -rn
+</code></pre>
+<h3>Find Performance Issues</h3>
+<pre><code class="language-bash"># Slow requests (if timing is logged)
+grep &quot;took&quot; logs/out.log | awk &#39;$NF &gt; 1000&#39;
+
+# Memory warnings
+grep -i &quot;memory&quot; logs/err.log
+</code></pre>
+<hr>
+<h2>⚙️ Advanced Configuration</h2>
+<h3>Change Log Rotation Settings</h3>
+<pre><code class="language-bash"># Edit PM2 log rotation config
+pm2 set pm2-logrotate:max_size 20M      # Increase max size
+pm2 set pm2-logrotate:retain 20         # Keep more files
+pm2 set pm2-logrotate:compress false    # Disable compression
+</code></pre>
+<h3>Custom Log Location</h3>
+<p>Edit <code>ecosystem.config.js</code>:</p>
+<pre><code class="language-javascript">{
+  error_file: &#39;/custom/path/err.log&#39;,
+  out_file: &#39;/custom/path/out.log&#39;
+}
+</code></pre>
+<p>Then restart:</p>
+<pre><code class="language-bash">pm2 restart ndb-status-sender --update-env
+</code></pre>
+<hr>
+<h2>📋 Log Format</h2>
+<h3>Application Logs Format</h3>
+<pre><code>YYYY-MM-DD HH:mm:ss Z | LEVEL | Message
+2026-01-14 10:30:45 +0000 | INFO | Server started on port 6001
+2026-01-14 10:31:12 +0000 | ERROR | Database connection failed
+</code></pre>
+<h3>Nginx Access Log Format</h3>
+<pre><code>IP - - [Date] &quot;METHOD /path HTTP/1.1&quot; STATUS SIZE &quot;Referer&quot; &quot;User-Agent&quot;
+</code></pre>
+<hr>
+<h2>🔐 Security Considerations</h2>
+<ol>
+<li><p><strong>Sensitive Data</strong> - Ensure logs don&#39;t contain:</p>
+<ul>
+<li>Passwords</li>
+<li>API keys</li>
+<li>Personal information</li>
+<li>Credit card numbers</li>
+</ul>
+</li>
+<li><p><strong>Permissions</strong> - Restrict log access:</p>
+<pre><code class="language-bash">chmod 600 logs/err.log  # Only owner can read
+</code></pre>
+</li>
+<li><p><strong>Retention</strong> - Don&#39;t keep logs forever:</p>
+<pre><code class="language-bash"># Clean logs older than 90 days
+find logs/archive -name &quot;*.tar.gz&quot; -mtime +90 -delete
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2>📝 Best Practices</h2>
+<ol>
+<li><p><strong>Regular Monitoring</strong> - Check logs daily:</p>
+<pre><code class="language-bash">./view-logs.sh  # Option 7 for summary
+</code></pre>
+</li>
+<li><p><strong>Error Alerts</strong> - Set up monitoring for critical errors</p>
+</li>
+<li><p><strong>Disk Space</strong> - Monitor disk usage:</p>
+<pre><code class="language-bash">du -sh logs/
+</code></pre>
+</li>
+<li><p><strong>Rotation</strong> - Let automatic rotation handle large files</p>
+</li>
+<li><p><strong>Archiving</strong> - Keep archives for compliance but clean old ones</p>
+</li>
+<li><p><strong>Search</strong> - Use grep/awk for log analysis</p>
+</li>
+<li><p><strong>Backup</strong> - Include logs in backup strategy</p>
+</li>
+</ol>
+<hr>
+<h2>🆘 Common Issues</h2>
+<h3>Issue: &quot;No space left on device&quot;</h3>
+<p><strong>Solution:</strong> Clear old logs</p>
+<pre><code class="language-bash">./manage-logs.sh
+# Choose option 3 (clear) or 6 (clean old archives)
+</code></pre>
+<h3>Issue: &quot;Permission denied&quot; when viewing logs</h3>
+<p><strong>Solution:</strong> Fix permissions</p>
+<pre><code class="language-bash">sudo chown -R $USER:$USER logs/
+chmod 755 logs/
+</code></pre>
+<h3>Issue: Logs not rotating</h3>
+<p><strong>Solution:</strong> Reinstall log rotation</p>
+<pre><code class="language-bash">pm2 uninstall pm2-logrotate
+./setup-logging.sh
+</code></pre>
+<h3>Issue: Too many log files</h3>
+<p><strong>Solution:</strong> Reduce retention</p>
+<pre><code class="language-bash">pm2 set pm2-logrotate:retain 5
+</code></pre>
+<hr>
+<h2>📞 Quick Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>View logs interactively</td>
+<td><code>./view-logs.sh</code></td>
+</tr>
+<tr>
+<td>Manage logs</td>
+<td><code>./manage-logs.sh</code></td>
+</tr>
+<tr>
+<td>Live tail</td>
+<td><code>pm2 logs ndb-status-sender</code></td>
+</tr>
+<tr>
+<td>Check log sizes</td>
+<td><code>du -sh logs/</code></td>
+</tr>
+<tr>
+<td>Search errors</td>
+<td><code>grep ERROR logs/err.log</code></td>
+</tr>
+<tr>
+<td>Rotate logs</td>
+<td><code>./manage-logs.sh</code> → Option 2</td>
+</tr>
+<tr>
+<td>Clear logs</td>
+<td><code>pm2 flush ndb-status-sender</code></td>
+</tr>
+<tr>
+<td>Archive location</td>
+<td><code>logs/archive/</code></td>
+</tr>
+</tbody></table>
+<hr>
+<p><strong>TL;DR:</strong> Run <code>./setup-logging.sh</code> once, then use <code>./view-logs.sh</code> to view logs and <code>./manage-logs.sh</code> to manage them. All errors, warnings, and info are automatically saved to <code>./logs/</code> 📝</p>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
