@@ -54,6 +54,7 @@ export default function TeamOverallReportPage() {
   const [inclusionMode, setInclusionMode] = useState('closed');
   const [groupBy, setGroupBy] = useState('issuetype');
   const [includeCompanions, setIncludeCompanions] = useState(true);
+  const [drillOpen, setDrillOpen] = useState(false);
 
   // Data
   const [report, setReport] = useState(null);
@@ -149,7 +150,7 @@ export default function TeamOverallReportPage() {
   }
 
   return (
-    <div className="tor-page" style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="tor-page" data-audience="portfolio_mgr" style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto' }}>
       <h2 style={{ marginBottom: '8px' }}>Overall Team Report</h2>
       <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
         {selectedTeam?.displayName || teamId} — {report?.meta?.period?.label || 'Select a period and run'}
@@ -222,7 +223,7 @@ export default function TeamOverallReportPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-          <button onClick={handleRun} disabled={loading} style={{ padding: '6px 16px', borderRadius: '4px', border: 'none', background: '#4F46E5', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
+          <button aria-label="Run report" onClick={handleRun} disabled={loading} style={{ padding: '6px 16px', borderRadius: '4px', border: 'none', background: '#4F46E5', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
             {loading ? 'Loading...' : 'Run Report'}
           </button>
           <button onClick={handleRefresh} disabled={loading} title="Bypass cache and re-fetch" style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #d1d5db', background: '#fff', cursor: loading ? 'not-allowed' : 'pointer' }}>
@@ -262,10 +263,11 @@ export default function TeamOverallReportPage() {
           </div>
 
           {/* Charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', minWidth: 0 }}>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Work Type Distribution</h4>
-              <ResponsiveContainer width="100%" height={300}>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 8px 0' }}>Shows how work is distributed across types for the selected window.</p>
+              <ResponsiveContainer width="100%" height={300} aria-label="Work type distribution chart">
                 <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={60} />
@@ -276,10 +278,12 @@ export default function TeamOverallReportPage() {
                   <Bar dataKey="storyPoints" fill="#10B981" name="Story Points" />
                 </BarChart>
               </ResponsiveContainer>
+              <small style={{ fontSize: '10px', color: '#9ca3af' }}>Source: JIRA via /api/reports/team-overall. Count + story points per work type.</small>
             </div>
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', minWidth: 0 }}>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Status Breakdown</h4>
-              <ResponsiveContainer width="100%" height={300}>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 8px 0' }}>Distribution of issues by resolution status in the window.</p>
+              <ResponsiveContainer width="100%" height={300} aria-label="Status breakdown chart">
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
                     {pieData.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}
@@ -295,7 +299,7 @@ export default function TeamOverallReportPage() {
           <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <span style={{ fontSize: '12px', fontWeight: 600 }}>JQL Executed</span>
-              <button
+              <button aria-label="Copy JQL"
                 onClick={() => navigator.clipboard?.writeText(report.meta.jqlExecuted)}
                 style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
               >
@@ -315,14 +319,15 @@ export default function TeamOverallReportPage() {
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'auto', marginBottom: '16px' }}>
             <h4 style={{ margin: '12px 12px 8px', fontSize: '14px' }}>Issues Sample ({issuesSample.length})</h4>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <caption style={{ captionSide: 'top', textAlign: 'left', fontSize: '12px', color: '#6b7280', padding: '4px 12px' }}>Issues sample from JIRA</caption>
               <thead>
                 <tr style={{ background: '#f3f4f6', textAlign: 'left' }}>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Key</th>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Summary</th>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Type</th>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Status</th>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>SP</th>
-                  <th style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Source</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Key</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Summary</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Type</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Status</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>SP</th>
+                  <th scope="col" style={{ padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -343,6 +348,26 @@ export default function TeamOverallReportPage() {
               </tbody>
             </table>
           </div>
+
+
+          {/* In-app drill panel (metric dual-action: count -> panel) */}
+          {drillOpen && (
+            <div role="dialog" aria-label="Issues drill-down" style={{ position: 'fixed', top: '10%', left: '50%', transform: 'translateX(-50%)', width: '80%', maxWidth: '900px', maxHeight: '70vh', overflow: 'auto', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 1000 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ margin: 0, fontSize: '14px' }}>Issues Drill-Down ({report.issuesSample.length})</h4>
+                <button aria-label="Close drill-down" onClick={() => setDrillOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '18px' }}>×</button>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {report.issuesSample.map(issue => (
+                  <li key={issue.key} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: '13px' }}>
+                    <a href={issue.url} target="_blank" rel="noreferrer" style={{ color: '#4F46E5', fontWeight: 600, marginRight: '8px' }}>{issue.key}</a>
+                    <span>{issue.summary}</span>
+                    <span style={{ color: '#6b7280', marginLeft: '8px', fontSize: '11px' }}>({issue.issuetype} · {issue.status})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* NAI Summaries placeholder */}
           {report.naiSummaries && report.naiSummaries.length > 0 && (
