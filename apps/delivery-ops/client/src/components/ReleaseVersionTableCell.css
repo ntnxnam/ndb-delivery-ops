@@ -1,0 +1,201 @@
+/* ReleaseVersionTableCell.css — token-driven cell styling.
+ * Extracted from inline style={{}} objects in ReleaseVersionTableCell.js.
+ * All colours come from styles/tokens.css via var().
+ */
+
+/* ── shared cell wrapper ─────────────────────────────────────────── */
+.rv-cell {
+  padding: 6px;
+  border: 1px solid var(--border);
+  word-wrap: break-word;
+  text-align: left;
+  vertical-align: top;
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* ── Risk Details stack ──────────────────────────────────────────── */
+.rv-stack {
+  line-height: var(--lh-relaxed);
+  font-size: var(--fs-xs);
+}
+
+.rv-stack-row {
+  margin-bottom: var(--space-2);
+}
+
+.rv-stack-row:last-child {
+  margin-bottom: 0;
+}
+
+.rv-stack-label {
+  font-weight: var(--fw-semibold);
+  color: var(--muted-label);
+  margin-bottom: 2px;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.rv-stack-value {
+  padding-left: var(--space-1);
+  word-break: break-word;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+/* ── badges ──────────────────────────────────────────────────────── */
+.rv-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--text-inverse);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.rv-badge--notset {
+  background: var(--notset-bg);
+  color: var(--notset-text);
+  border-color: var(--notset-border);
+}
+
+.rv-badge--green  { background: var(--risk-green); border-color: var(--risk-green); }
+.rv-badge--yellow { background: var(--risk-yellow); border-color: var(--risk-yellow); }
+.rv-badge--red    { background: var(--risk-red); border-color: var(--risk-red); }
+.rv-badge--blue   { background: var(--risk-blue); border-color: var(--risk-blue); }
+.rv-badge--orange { background: var(--risk-yellow); border-color: var(--risk-yellow); }
+.rv-badge--deep-red { background: var(--risk-deep-red); border-color: var(--risk-deep-red); }
+.rv-badge--transparent {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* ── Not Set inline (used outside badges too) ────────────────────── */
+.rv-notset {
+  background: var(--notset-bg);
+  color: var(--notset-text);
+  font-weight: var(--fw-semibold);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: var(--fs-xs);
+  border: 1px solid var(--notset-border);
+}
+
+/* ── link ────────────────────────────────────────────────────────── */
+.rv-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.rv-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* ── Quality mini-tables ─────────────────────────────────────────── */
+.rv-quality {
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+.rv-quality__title {
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
+  color: var(--text-strong);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.rv-quality__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-xs);
+}
+
+.rv-quality__table th,
+.rv-quality__table td {
+  border: 1px solid var(--border);
+  padding: 2px 4px;
+  vertical-align: top;
+}
+
+.rv-quality__table th {
+  background: var(--surface);
+  text-align: center;
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+}
+
+.rv-quality__table th[scope="row"] {
+  text-align: left;
+}
+
+.rv-quality__hint {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 10px;
+  margin-top: var(--space-1);
+}
+
+.rv-quality__footnote {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: var(--space-1);
+  font-style: italic;
+}
+
+/* ── checkpoints / highlights ────────────────────────────────────── */
+.rv-highlight--red {
+  border: 2px solid var(--risk-red);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  background: var(--danger-soft);
+}
+
+.rv-highlight--yellow {
+  border: 2px solid var(--warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  background: var(--warning-soft);
+}
+
+.rv-extension {
+  background: var(--rag-amber-soft);
+}
+
+.rv-checkpoint-stack {
+  line-height: var(--lh-relaxed);
+  font-size: var(--fs-xs);
+}
+
+/* ── collaterals ─────────────────────────────────────────────────── */
+.rv-collaterals {
+  line-height: var(--lh-relaxed);
+  font-size: var(--fs-xs);
+}
+
+.rv-collaterals__hint {
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* ── status tick ─────────────────────────────────────────────────── */
+.rv-status-tick {
+  color: var(--success);
+  font-weight: var(--fw-bold);
+  font-size: 14px;
+}
+
+.rv-status-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

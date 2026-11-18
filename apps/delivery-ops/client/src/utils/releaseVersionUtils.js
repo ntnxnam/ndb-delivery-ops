@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import '../components/ReleaseVersionTableCell.css';
 
 /**
  * Check if a date is older than specified days
@@ -509,7 +510,7 @@ export function getExtensionColor(_dateStr) {
  * @returns {JSX.Element} Not Set indicator
  */
 export function renderNotSet() {
-  return <span style={{ backgroundColor: '#fff3cd', fontWeight: 600 }}>Not Set</span>;
+  return <span className="rv-notset">Not Set</span>;
 }
 
 /**

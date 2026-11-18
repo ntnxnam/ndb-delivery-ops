@@ -13,6 +13,7 @@ import {
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ExecSummaryCell from './ExecSummaryCell';
+import './ReleaseVersionTableCell.css';
 
 function getStatusDisplayValue(item) {
   const raw = item?.status;
@@ -63,7 +64,7 @@ function renderLinkOrText(value) {
   if (!text || text === 'N/A' || text === 'NA' || text === 'Not Set') return renderNotSet();
   if (/^https?:\/\//i.test(text)) {
     return (
-      <a href={text} target="_blank" rel="noopener noreferrer" style={{ color: '#0065ff', textDecoration: 'none' }}>
+      <a href={text} target="_blank" rel="noopener noreferrer" className="rv-link">
         Link
       </a>
     );
@@ -104,18 +105,11 @@ export function renderAllCollaterals(item) {
   ];
 
   return (
-    <div style={{ lineHeight: '1.8', fontSize: '11px' }}>
-      {collaterals.map((col, index) => (
-        <div
-          key={col.field}
-          style={{ marginBottom: index < collaterals.length - 1 ? '8px' : '0' }}
-        >
-          <div style={{ fontWeight: 600, color: '#495057', marginBottom: '2px', fontSize: '10px' }}>
-            {col.label}:
-          </div>
-          <div style={{ paddingLeft: '4px' }}>
-            {renderCollateralAnchor(col.value)}
-          </div>
+    <div className="rv-collaterals">
+      {collaterals.map((col) => (
+        <div key={col.field} className="rv-stack-row">
+          <div className="rv-stack-label">{col.label}:</div>
+          <div className="rv-stack-value">{renderCollateralAnchor(col.value)}</div>
         </div>
       ))}
     </div>
@@ -124,7 +118,7 @@ export function renderAllCollaterals(item) {
 
 function qualityCellValue(qi, run, passed, failed, rate) {
   return (
-    <div style={{ fontSize: '10px', lineHeight: '1.5' }}>
+    <div className="rv-collaterals__hint">
       <div>QI {qi != null ? `${qi}%` : '—'}</div>
       <div>Run {run ?? '—'}</div>
       <div>Passed {passed ?? '—'}</div>
@@ -141,29 +135,28 @@ function renderQualityTable(title, rowData) {
   ];
   return (
     <div style={{ marginBottom: '8px' }}>
-      <div style={{ fontWeight: 700, fontSize: '10px', color: '#2c3e50', marginBottom: '4px', borderBottom: '1px solid #dee2e6', paddingBottom: '2px' }}>{title}</div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+      <div className="rv-quality__title">{title}</div>
+      <table className="rv-quality__table">
         <thead>
           <tr>
-            <th scope="col" aria-label="Test scope" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'left', fontSize: '9px' }}></th>
-            <th scope="col" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'center', fontSize: '9px' }}>Manual</th>
-            <th scope="col" style={{ border: '1px solid #dee2e6', padding: '2px 4px', background: '#f8f9fa', textAlign: 'center', fontSize: '9px' }}>Automation</th>
+            <th scope="col" aria-label="Test scope"></th>
+            <th scope="col">Manual</th>
+            <th scope="col">Automation</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(r => {
-            // Back-compat: legacy shape had { overall, functional, automation } — map overall -> system fallback
             const row = rowData?.[r.key] ?? (r.key === 'system' ? rowData?.overall : null);
             const manual = row?.manual;
             const auto = row?.automation;
             return (
               <tr key={r.key}>
-                <th scope="row" style={{ border: '1px solid #dee2e6', padding: '2px 4px', fontWeight: 600, background: '#f8f9fa', textAlign: 'left' }}>{r.label}</th>
-                <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
-                  {manual ? qualityCellValue(manual.qi, manual.run, manual.passed, manual.failed, manual.rate) : <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px' }}>Not Set</span>}
+                <th scope="row">{r.label}</th>
+                <td>
+                  {manual ? qualityCellValue(manual.qi, manual.run, manual.passed, manual.failed, manual.rate) : <span className="rv-notset">Not Set</span>}
                 </td>
-                <td style={{ border: '1px solid #dee2e6', padding: '2px 4px', verticalAlign: 'top' }}>
-                  {auto ? qualityCellValue(auto.qi, auto.run, auto.passed, auto.failed, auto.rate) : <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px' }}>Not Set</span>}
+                <td>
+                  {auto ? qualityCellValue(auto.qi, auto.run, auto.passed, auto.failed, auto.rate) : <span className="rv-notset">Not Set</span>}
                 </td>
               </tr>
             );
@@ -202,17 +195,25 @@ export function renderRiskDetails(item) {
     }
   }
 
+  const badgeMap = {
+    '#00875a': 'rv-badge--green',
+    '#ff8b00': 'rv-badge--yellow',
+    '#de350b': 'rv-badge--red',
+    '#0052cc': 'rv-badge--blue',
+    '#8B0000': 'rv-badge--deep-red',
+    '#fff3cd': 'rv-badge--notset',
+    'transparent': 'rv-badge--transparent',
+  };
+  const badgeModifier = badgeMap[riskBgColor];
+  const badgeClass = isRiskNotSet
+    ? 'rv-badge rv-badge--notset'
+    : badgeModifier
+      ? `rv-badge ${badgeModifier}`
+      : 'rv-badge';
+  const badgeStyle = badgeModifier ? undefined : { backgroundColor: riskBgColor, color: riskTextColor };
+
   const riskIndicatorContent = isRiskNotSet ? renderNotSet() : (
-    <span style={{
-      display: 'inline-block',
-      backgroundColor: riskBgColor,
-      color: riskTextColor,
-      padding: '2px 8px',
-      borderRadius: '4px',
-      fontWeight: 600,
-      fontSize: '11px',
-      border: riskBgColor === 'transparent' ? '1px solid #dee2e6' : 'none'
-    }}>{riskValue}</span>
+    <span className={badgeClass} style={badgeStyle}>{riskValue}</span>
   );
 
   const fields = [
@@ -222,11 +223,11 @@ export function renderRiskDetails(item) {
   ];
 
   return (
-    <div style={{ lineHeight: '1.8', fontSize: '11px' }}>
-      {fields.map((f, index) => (
-        <div key={f.label} style={{ marginBottom: index < fields.length - 1 ? '8px' : '0' }}>
-          <div style={{ fontWeight: 600, color: '#495057', marginBottom: '2px', fontSize: '10px' }}>{f.label}:</div>
-          <div style={{ paddingLeft: '4px', wordBreak: 'break-word' }}>{f.content}</div>
+    <div className="rv-stack">
+      {fields.map((f) => (
+        <div key={f.label} className="rv-stack-row">
+          <div className="rv-stack-label">{f.label}:</div>
+          <div className="rv-stack-value">{f.content}</div>
         </div>
       ))}
     </div>
@@ -236,7 +237,7 @@ export function renderRiskDetails(item) {
 export function renderQualityCell(item, selectedVersion) {
   let q = item.tcmsQuality || item.tcmsQI;
   if (!q) {
-    return <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px', fontSize: '11px' }}>Not Set</span>;
+    return <span className="rv-notset">Not Set</span>;
   }
   // Back-compat: legacy tcmsQI shape is { master:{qi,…}, branch:{qi,…} } -> map to new 4-table shape
   if (q.master && q.branch && !q.releaseOverall) {
@@ -269,12 +270,12 @@ export function renderQualityCell(item, selectedVersion) {
   ];
   const hasData = (d) => d && (d.functional || d.system || d.overall);
   const visibleTables = tables.filter(t => hasData(t.data));
-  if (visibleTables.length === 0) return <span style={{ background: '#fff3cd', fontWeight: 600, padding: '2px 4px', borderRadius: '2px', fontSize: '11px' }}>Not Set</span>;
+  if (visibleTables.length === 0) return <span className="rv-notset">Not Set</span>;
   return (
-    <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
+    <div className="rv-quality">
       {visibleTables.map(t => <div key={t.title}>{renderQualityTable(t.title, t.data)}</div>)}
-      {visibleTables.length < tables.length && <div style={{ color: '#999', fontStyle: 'italic', fontSize: '10px', marginTop: '4px' }}>— No runs in other windows</div>}
-      <div style={{ fontSize: '9px', color: '#6c757d', marginTop: '4px', fontStyle: 'italic' }}>Functional/System share source until TCMS category filter lands</div>
+      {visibleTables.length < tables.length && <div className="rv-quality__hint">— No runs in other windows</div>}
+      <div className="rv-quality__footnote">Functional/System share source until TCMS category filter lands</div>
     </div>
   );
 }

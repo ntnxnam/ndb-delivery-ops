@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { ToastContainer } from '../../shared/components/Toast';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
+import './Layout.css';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
 import { useReleaseData } from '../../contexts/ReleaseDataContext';
 import { useTeam } from '../../contexts/TeamContext';
@@ -14,39 +15,13 @@ function JiraConnectivityBanner() {
   if (!unreachable) return null;
 
   return (
-    <div style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 1100,
-      background: '#fff3cd',
-      borderBottom: '1px solid #ffc107',
-      padding: '8px 20px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      fontSize: '13px',
-      color: '#856404',
-      fontWeight: 500,
-    }}>
-      <span style={{ fontSize: '16px' }}>⚠️</span>
+    <div className="jira-banner">
+      <span className="jira-banner__icon">⚠️</span>
       <span>
         Cannot reach JIRA servers — your data may be stale.
         Please check your <strong>VPN connection</strong> and refresh.
       </span>
-      <button
-        onClick={() => window.location.reload()}
-        style={{
-          marginLeft: 'auto',
-          background: '#ffc107',
-          border: 'none',
-          borderRadius: '4px',
-          padding: '3px 12px',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: '#333',
-          cursor: 'pointer',
-        }}
-      >
+      <button onClick={() => window.location.reload()} className="jira-banner__retry">
         Retry
       </button>
     </div>
@@ -114,76 +89,6 @@ export const Layout = ({ children, wide = false, fluid = false }) => {
       {/* Global toast notifications */}
       <ToastContainer position="top-right" />
 
-      <style>{`
-        .app-layout {
-          min-height: 100vh;
-          display: flex;
-          background: #f8f9fa;
-        }
-
-        .main-content {
-          flex: 1;
-          min-width: 0;
-          padding: 24px;
-          transition: margin-left 0.3s ease;
-          min-height: 100vh;
-          box-sizing: border-box;
-        }
-
-        /* Container for content with max-width */
-        .main-content > * {
-          max-width: 1200px;
-          margin-left: auto;
-          margin-right: auto;
-          margin-bottom: 24px;
-          width: 100%;
-          box-sizing: border-box;
-        }
-
-        .main-content.main-content-wide > * {
-          max-width: 1400px;
-        }
-
-        /* Fluid: full main-pane width with a soft cap (ui-density exception for dense tables) */
-        .main-content.main-content-fluid > * {
-          max-width: min(100%, 1800px);
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        .main-content > *:last-child {
-          margin-bottom: 0;
-        }
-
-        /* Mobile responsive behavior */
-        @media (max-width: 768px) {
-          .main-content {
-            margin-left: 0;
-            padding: 16px;
-          }
-
-          .main-content.sidebar-collapsed {
-            margin-left: 0;
-          }
-
-          .main-content > * {
-            margin-bottom: 16px;
-          }
-        }
-
-        @media (max-width: 576px) {
-          .main-content {
-            padding: 12px;
-          }
-        }
-
-        /* Ensure content is accessible when sidebar is open on mobile */
-        @media (max-width: 768px) {
-          .main-content.sidebar-expanded {
-            pointer-events: none;
-          }
-        }
-      `}</style>
     </div>
   );
 };
