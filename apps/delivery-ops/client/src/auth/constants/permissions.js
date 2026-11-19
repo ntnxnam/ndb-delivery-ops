@@ -56,7 +56,8 @@ export const TAB_PERMISSIONS = {
   '/oncalls': [PERMISSIONS.KPI_VIEW],
   '/cfdcfi': [PERMISSIONS.KPI_VIEW],
   '/system-test-scale': [PERMISSIONS.KPI_VIEW],
-  '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS]
+  '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS],
+  '/schedules': [PERMISSIONS.RELEASE_VERSIONS_VIEW]
 };
 
 // Legacy permission array mapping for migration compatibility.

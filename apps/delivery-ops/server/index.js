@@ -154,6 +154,8 @@ app.use('/api/release-outstanding-work', releaseOutstandingWorkRoutes);
 // Legacy alias — same router (old clients / bookmarks)
 app.use('/api/deferral-workbench', releaseOutstandingWorkRoutes);
 app.use('/api/bin-packing', binPackingConvertRoutes); // File→CSV conversion (multipart, tmp-isolated)
+const tpmSchedulesRoutes = require('./routes/tpmSchedules');
+app.use('/api/config/schedules', tpmSchedulesRoutes); // TPM schedules CRUD
 
 // Docs hub (product docs). Served at /docs per reorg (4fed099); keep /Documentation alias for old bookmarks.
 const docsRoot = path.join(__dirname, '..', '..', '..', 'docs');
@@ -280,6 +282,7 @@ app.use((req, res) => {
 
 const emailScheduler = require('./services/emailScheduler');
 const syncScheduler = require('./jobs/syncScheduler');
+const tpmScheduleRunner = require('./services/tpmScheduleRunner');
 
 // Export app for supertest/integration tests (avoid starting server when required as module)
 if (require.main === module) {
@@ -298,6 +301,7 @@ if (require.main === module) {
     }
     emailScheduler.start();
     syncScheduler.start();
+    tpmScheduleRunner.start();
   });
 }
 
