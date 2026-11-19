@@ -153,15 +153,17 @@ function ReleaseVersionSelector({
           )}
 
           {/* Load button */}
+          {/* Load button — keep enabled when version selected; token check happens on click with error feedback */}
           <button
             type="button"
             onClick={onFetchItems}
-            disabled={loadingItems || !selectedVersion || !jiraToken}
+            disabled={loadingItems || !selectedVersion}
+            title={!selectedVersion ? 'Select a release first' : loadingItems ? 'Loading...' : 'Load release data'}
             style={{
               ...BTN,
               backgroundColor: '#28a745',
-              opacity: loadingItems || !selectedVersion || !jiraToken ? 0.6 : 1,
-              cursor: loadingItems || !selectedVersion || !jiraToken ? 'not-allowed' : 'pointer',
+              opacity: loadingItems || !selectedVersion ? 0.6 : 1,
+              cursor: loadingItems || !selectedVersion ? 'not-allowed' : 'pointer',
             }}
           >
             {loadingItems ? 'Loading...' : 'Load'}

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTeam } from '../../contexts/TeamContext';
 import useTpmPulse from '../../hooks/useTpmPulse';
+import useTpmStage from '../../hooks/useTpmStage';
 import { formatDate } from '../../shared/utils/dateFormatter';
+import { getApiBase, getAuthHeaders } from '../../shared/services/apiService';
 import './TpmPulsePage.css';
 
 function getJiraBase() {
@@ -10,6 +12,9 @@ function getJiraBase() {
 function jiraUrl(jql) {
   return `${getJiraBase()}/issues/?jql=${encodeURIComponent(jql)}`;
 }
+
+const STAGE_LABELS = { execution: 'Execution', release: 'At release', postRelease: 'Post-release', overall: 'Overall' };
+const STAGE_TONE = { execution: 'var(--accent)', release: 'var(--warning)', postRelease: 'var(--success)', overall: 'var(--muted)' };
 
 function GateStrip({ gates }) {
   if (!gates || !Object.keys(gates).length) return null;
@@ -29,9 +34,141 @@ function GateStrip({ gates }) {
   );
 }
 
+function StageBadge({ stage, nextGate }) {
+  if (!stage) return null;
+  const variant = stage === 'execution' ? 'ds-badge--info' : stage === 'release' ? 'ds-badge--warning' : stage === 'postRelease' ? 'ds-badge--success' : 'ds-badge--neutral';
+  const countdown = nextGate ? Math.ceil((new Date(nextGate.date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+      <span className={`ds-badge ${variant}`}>{STAGE_LABELS[stage] || stage}</span>
+      {nextGate && <span className="ds-muted-label">Next: {nextGate.label} {nextGate.date} {countdown != null && countdown >= 0 ? `· in ${countdown}d` : ''}</span>}
+    </span>
+  );
+}
+
+function ReportPreviewModal({ open, onClose, teamId, releaseVersion, today, onSent }) {
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [testMode, setTestMode] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const fetchPreview = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const apiBase = getApiBase();
+      const { headers } = getAuthHeaders();
+      const res = await fetch(`${apiBase}/api/tpm/reports/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ teamId, releaseVersion, today }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Preview ${res.status}`);
+      setPreview(data);
+    } catch (e) {
+      setError(e.message || 'Failed to load preview');
+    } finally {
+      setLoading(false);
+    }
+  }, [teamId, releaseVersion, today]);
+
+  React.useEffect(() => {
+    if (open) fetchPreview();
+    else { setPreview(null); setError(''); setToast(''); }
+  }, [open, fetchPreview]);
+
+  const handleSend = async () => {
+    setSending(true);
+    setError('');
+    setToast('');
+    try {
+      const apiBase = getApiBase();
+      const { headers } = getAuthHeaders();
+      const res = await fetch(`${apiBase}/api/tpm/reports/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ teamId, releaseVersion, today, testMode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Send ${res.status}`);
+      setToast(`Sent to ${data.to ? data.to.join(', ') : 'recipients'}`);
+      if (onSent) onSent(data);
+    } catch (e) {
+      setError(e.message || 'Send failed');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="ds-modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="ds-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
+        <div className="ds-modal__header">
+          <h3 className="ds-modal__title">Send report — {releaseVersion}</h3>
+          <button type="button" className="ds-btn ds-btn--ghost ds-btn--sm" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="ds-modal__body">
+          {loading && <div className="ds-skeleton ds-skeleton--card" />}
+          {error && <div className="page-error" role="alert">{error}</div>}
+          {toast && <div className="ds-toast ds-toast--success" role="status">{toast}</div>}
+          {preview && (
+            <>
+              <div className="ds-muted-label" style={{ marginBottom: 'var(--space-3)' }}>
+                Stage: <strong style={{ color: STAGE_TONE[preview.stage] }}>{STAGE_LABELS[preview.stage] || preview.stage}</strong> · {preview.reason}
+                {preview.nextGate ? ` · Next gate: ${preview.nextGate.label} (${preview.nextGate.date})` : ''}
+                <span style={{ marginLeft: 'var(--space-2)' }}>· {preview.fetchedAt ? new Date(preview.fetchedAt).toLocaleString() : ''}</span>
+              </div>
+              {preview.recipients && (
+                <div className="ds-card ds-card--quiet" style={{ padding: 'var(--space-2) var(--space-3)', marginBottom: 'var(--space-3)', border: '1px solid var(--border-subtle)' }}>
+                  <div className="ds-muted-label">To: {preview.recipients.to?.length ? preview.recipients.to.join(', ') : '—'} {testMode && preview.recipients.to?.length ? '(test override: you only)' : ''}</div>
+                  <div className="ds-muted-label">CC: {preview.recipients.cc?.length ? preview.recipients.cc.join(', ') : '—'} {testMode ? '(empty in test)' : ''}</div>
+                </div>
+              )}
+              <div className="stat-row" style={{ marginBottom: 'var(--space-4)' }}>
+                {preview.kpiBreakdown && preview.kpiBreakdown.map((k) => (
+                  <div key={k.id} className="stat-card" style={{ minWidth: 160 }}>
+                    <div className="stat-card__label">{k.name}</div>
+                    <div className="stat-card__value">{k.count ?? '—'}</div>
+                    <div className="stat-card__caption ds-muted-label" style={{ fontSize: 'var(--fs-muted)' }}>{k.lifecyclePhase}</div>
+                    <a className="tpm-pulse__jql-link" href={jiraUrl(k.jql)} target="_blank" rel="noreferrer" title={k.jql}>JQL ↗</a>
+                    <div className="tpm-pulse__provenance">Cited: {k.jql ? k.jql.slice(0, 120) : ''} · at {k.citedAt ? new Date(k.citedAt).toLocaleString() : ''}</div>
+                    {k.error && <div className="ds-muted-label" style={{ color: 'var(--danger)' }}>{k.error}</div>}
+                  </div>
+                ))}
+              </div>
+              {preview.total != null && <div className="ds-muted-label">Total: {preview.total} open (sum of stage KPIs)</div>}
+              <label className="ds-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+                <input type="checkbox" checked={testMode} onChange={(e) => setTestMode(e.target.checked)} />
+                <span>Test report (send only to me)</span>
+              </label>
+              <p className="ds-muted-label" style={{ fontSize: 'var(--fs-muted)', marginTop: 'var(--space-1)' }}>
+                {testMode ? 'To: you only (CC empty) — safe for verification (D26).' : 'To/CC per release config — requires TPM/PortfolioMgr/RM role.'}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="ds-modal__footer">
+          <button type="button" className="ds-btn ds-btn--secondary" onClick={onClose}>Close</button>
+          <button type="button" className="ds-btn ds-btn--primary" onClick={handleSend} disabled={sending || loading}>
+            {sending ? 'Sending…' : testMode ? 'Send test to me' : 'Send report'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TpmPulsePage() {
   const { selectedTeamId } = useTeam();
+  const [todayOverride, setTodayOverride] = useState('');
+  const todayIso = todayOverride || new Date().toISOString().slice(0, 10);
   const { releases, activeRelease, setActiveRelease, phases, gates, loading, error, fetchedAt, refresh } = useTpmPulse(selectedTeamId);
+  const { stage, nextGate } = useTpmStage(selectedTeamId, activeRelease, todayIso);
+  const [showModal, setShowModal] = useState(false);
 
   if (loading && !phases.length) {
     return (
@@ -54,7 +191,9 @@ export default function TpmPulsePage() {
           <h1 className="page-header__title">Release health — 4 lifecycle cards</h1>
           <p className="page-header__subtitle">TPM Pulse · {releases.length} active release{releases.length !== 1 ? 's' : ''} · team {selectedTeamId || '—'}</p>
         </div>
-        <div className="page-header__actions">
+        <div className="page-header__actions" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+          <label className="ds-muted-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Today: <input type="date" value={todayIso} onChange={(e) => setTodayOverride(e.target.value)} max="2030-12-31" className="ds-input" style={{ width: 150 }} /></label>
+          {activeRelease && <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={() => setShowModal(true)}>Send Report</button>}
           <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={refresh}>Refresh</button>
         </div>
       </div>
@@ -73,7 +212,10 @@ export default function TpmPulsePage() {
         <div className="ds-section">
           <div className="ds-section__header">
             <h2 className="ds-section__title">{activeRelease} — gates</h2>
-            <span className="ds-muted-label">{fetchedAt ? new Date(fetchedAt).toLocaleString() : ''}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <StageBadge stage={stage} nextGate={nextGate} />
+              <span className="ds-muted-label">{fetchedAt ? new Date(fetchedAt).toLocaleString() : ''}</span>
+            </span>
           </div>
           <div className="ds-section__body">
             <GateStrip gates={activeGates} />
@@ -124,6 +266,8 @@ export default function TpmPulsePage() {
           <p className="ds-empty__hint">Add KPIs with lifecyclePhase in <a href="/kpis">KPIs</a> — {releases.length} release(s) found but no KPI cards.</p>
         </div>
       )}
+
+      <ReportPreviewModal open={showModal} onClose={() => setShowModal(false)} teamId={selectedTeamId} releaseVersion={activeRelease} today={todayIso} />
     </div>
   );
 }

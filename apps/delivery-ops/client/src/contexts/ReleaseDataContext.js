@@ -141,11 +141,19 @@ export function ReleaseDataProvider({ children }) {
     }
   }, [jiraToken, productId, selectedTeam?.activeVersionNames, username]);
 
+  // Auto-fetch on selectedRelease disabled — project-status must not auto-submit on load.
+  // Data is fetched only when consumer calls refreshRelease() explicitly (e.g. Load button).
+  // Team switch still clears stale data but does not trigger a fetch.
   useEffect(() => {
     const force = teamEpoch > loadedEpochRef.current;
     loadedEpochRef.current = teamEpoch;
-    loadRelease(selectedRelease, force);
-  }, [selectedRelease, loadRelease, teamEpoch]);
+    if (force) {
+      setReleaseTickets([]);
+      setReleaseMeta(null);
+      setReleaseError(null);
+    }
+    // No auto loadRelease(selectedRelease) — gated behind userInitiated refreshRelease()
+  }, [teamEpoch]);
 
   const value = useMemo(() => ({
     releaseTickets,

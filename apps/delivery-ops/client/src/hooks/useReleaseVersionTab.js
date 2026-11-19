@@ -143,13 +143,9 @@ export function useReleaseVersionTab({ releaseVersionsEmailSenders = [] } = {}) 
     } catch(e){ if(loadId===loadIdRef.current) console.error(e); }
   },[fetchHistoryForVersion, fetchItemsForVersion, jiraToken, resetTcmsData, setCheckpointHistory, setError, setItems, setItemsError, setVersionsError]);
 
-  useEffect(()=>{
-    if (!selectedVersion || !jiraToken || !hasTeamSelected || isTransitioning) return;
-    const key=`${selectedTeamId||''}::${selectedVersion}`;
-    if (lastLoadedKeyRef.current===key) return;
-    lastLoadedKeyRef.current=key;
-    loadVersionData(selectedVersion,{userInitiated:false});
-  },[hasTeamSelected, isTransitioning, jiraToken, loadVersionData, selectedTeamId, selectedVersion]);
+  // Auto-load on selectedVersion change removed — user must click Load or change version explicitly.
+  // Previously this effect auto-fetched items whenever selectedVersion was set (including on page load via default).
+  // Now fetch is only triggered via handleVersionChange (user picks dropdown) or fetchItems (Load button).
 
   const handleVersionChange = useCallback(async (event)=>{
     const nv=event.target.value;

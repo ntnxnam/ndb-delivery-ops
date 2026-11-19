@@ -157,6 +157,7 @@ app.use('/api/bin-packing', binPackingConvertRoutes); // File→CSV conversion (
 const tpmSchedulesRoutes = require('./routes/tpmSchedules');
 app.use('/api/config/schedules', tpmSchedulesRoutes); // TPM schedules CRUD
 app.use('/api/tpm/pulse', require('./routes/tpmPulse')); // TPM pulse — config passthrough
+app.use('/api/tpm/reports', require('./routes/tpmReports')); // TPM report preview + send (D26)
 app.use('/api/jql-builder', require('./routes/jqlBuilder')); // TPM JQL Builder
 
 // Docs hub (product docs). Served at /docs per reorg (4fed099); keep /Documentation alias for old bookmarks.
