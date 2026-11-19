@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { authenticatedGet } from '../shared/services/apiService';
 
 /**
  * JIRA configuration utility
@@ -26,7 +26,7 @@ export const fetchJiraBaseUrl = async () => {
   }
 
   // Fetch from backend
-  jiraBaseUrlPromise = axios.get('/api/config/jira')
+  jiraBaseUrlPromise = authenticatedGet('/api/config/jira')
     .then(response => {
       const baseUrl = response.data?.baseUrl || 'https://jira.nutanix.com';
       // Normalize: remove trailing slash
