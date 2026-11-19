@@ -1,5 +1,6 @@
 import React from 'react';
 import { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } from '../../config/emailSenderFeatures';
+import { MONTHS } from '../../shared/utils/dateFormatter';
 
 export function ccDisplayLabel(email) {
   const trimmed = String(email || '').trim().toLowerCase();
@@ -27,7 +28,6 @@ export function validateHighlightsLowlightsSections(html) {
   return { valid: missingSections.length === 0, missingSections };
 }
 
-const WEEKLY_UPDATE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Checklist links only — Risk Assessment / Path to Green render below Highlights. */
 export const EXTRA_FETCH_FIELDS = [
@@ -65,7 +65,7 @@ export function renderFetchedFieldValue(value) {
 
 export function formatWeeklyUpdateDate(date = new Date()) {
   const day = String(date.getDate()).padStart(2, '0');
-  const month = WEEKLY_UPDATE_MONTHS[date.getMonth()];
+  const month = MONTHS[date.getMonth()];
   return `${day}/${month}/${date.getFullYear()}`;
 }
 

@@ -34,18 +34,17 @@ const COLUMN_DEFS = {
   dueDate: {
     header: 'Due Date',
     cell: (row) => {
-      // Per jira-date-hierarchy.mdc only Epic tracks duedate; Feature/
-      // Initiative/X-FEAT/Capability track gate dates. Showing "Not Set"
-      // for those types is misleading — the field is not expected to be set.
       const t = String(row.issueType || '').toLowerCase();
       const isNonEpicPortfolio = ['feature', 'initiative', 'x-feat', 'capability'].includes(t);
       if (isNonEpicPortfolio) {
         return <span title="Portfolio types track gate dates, not Due Date">—</span>;
       }
+      const isSprintTracked = ['story', 'task', 'bug', 'sub-task', 'subtask'].includes(t);
+      if (isSprintTracked) {
+        return <span title="This type tracks sprint, not Due Date">—</span>;
+      }
       const v = row.duedate;
       if (!v || v === 'Not Set') return 'Not Set';
-      // epics payload already formats duedate as DD/Mon/YYYY — pass through;
-      // canonical payload carries ISO YYYY-MM-DD — format via shared formatter.
       if (/^\d{2}\/[A-Za-z]{3}\/\d{4}$/.test(v)) return v;
       const formatted = formatDate(v);
       return formatted || 'Not Set';
@@ -61,8 +60,8 @@ const COLUMN_DEFS = {
   },
 };
 
-// Default columns match Feature Dashboard (6-col). Email Sender passes 9-col override.
-const DEFAULT_COLUMNS = ['key', 'type', 'summary', 'status', 'assignee', 'priority'];
+// Default columns for Feature Dashboard — 7-col including Due Date (Epics show date, portfolio/sprint types show —).
+const DEFAULT_COLUMNS = ['key', 'type', 'summary', 'status', 'assignee', 'dueDate', 'priority'];
 
 const DONE_STATUSES = new Set(['done', 'resolved', 'closed', 'complete', 'fixed']);
 const EPIC_TYPES = new Set(['epic']);
