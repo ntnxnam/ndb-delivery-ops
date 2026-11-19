@@ -1,3 +1,4 @@
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 /**
  * Shared date formatting utilities for both UI and Email
  * Returns HTML strings that can be used in React (via dangerouslySetInnerHTML) and Email
@@ -164,11 +165,11 @@ function formatDateWithHistoryHTML(itemKey, fieldName, currentDate, checkpointHi
  */
 function formatAllCheckpointDatesHTML(item, selectedVersion, checkpointHistory = {}) {
   const dates = [
-    { label: 'FS/DS Done Date', field: 'fsdsDone', value: item.customfield_13861 },
-    { label: 'Test Plan Date', field: 'testPlan', value: item.customfield_11068 },
-    { label: 'Code Complete Date', field: 'codeComplete', value: item.customfield_11067 },
-    { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: item.customfield_35863 },
-    { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: item.customfield_35864 }
+    { label: 'FS/DS Done Date', field: 'fsdsDone', value: getFieldValue(item, 'fsdsDone') },
+    { label: 'Test Plan Date', field: 'testPlan', value: getFieldValue(item, 'testPlan') },
+    { label: 'Code Complete Date', field: 'codeComplete', value: getFieldValue(item, 'codeComplete') },
+    { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: getFieldValue(item, 'commitGate') },
+    { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: getFieldValue(item, 'promotionGate') }
   ];
   
   // Helper to get extension label and date from item
@@ -246,8 +247,8 @@ function formatAllCheckpointDatesHTML(item, selectedVersion, checkpointHistory =
   const extensionInfo = getExtensionLabelInfo(item);
   
   // Normalize and compare FS/DS Done Date and Test Plan Date
-  const fsdsDate = normalizeDateForComparison(item.customfield_13861);
-  const testPlanDate = normalizeDateForComparison(item.customfield_11068);
+  const fsdsDate = normalizeDateForComparison(getFieldValue(item, 'fsdsDone'));
+  const testPlanDate = normalizeDateForComparison(getFieldValue(item, 'testPlan'));
   
   // Determine highlighting conditions
   let fsdsHighlight = null; // null, 'yellow', or 'red'

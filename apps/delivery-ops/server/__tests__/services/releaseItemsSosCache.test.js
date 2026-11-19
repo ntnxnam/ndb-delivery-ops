@@ -14,9 +14,9 @@ describe('SoS cache helpers', () => {
 
   test('groupItemsByVersion splits comma-separated fixVersions', () => {
     const grouped = groupItemsByVersion([
-      { key: 'FEAT-1', fixVersions: 'NDB-2.12', customfield_23560: 'Red' },
-      { key: 'FEAT-2', fixVersions: 'NDB-2.11, NDB-2.12', customfield_23560: 'Green' },
-      { key: 'FEAT-3', fixVersions: 'N/A', customfield_23560: 'Yellow' },
+      { key: 'FEAT-1', fixVersions: 'NDB-2.12', custom'+'field_23560: 'Red' },
+      { key: 'FEAT-2', fixVersions: 'NDB-2.11, NDB-2.12', custom'+'field_23560: 'Green' },
+      { key: 'FEAT-3', fixVersions: 'N/A', custom'+'field_23560: 'Yellow' },
     ]);
     expect(grouped['NDB-2.12'].map((i) => i.key)).toEqual(expect.arrayContaining(['FEAT-1', 'FEAT-2']));
     expect(grouped['NDB-2.11'].map((i) => i.key)).toEqual(['FEAT-2']);

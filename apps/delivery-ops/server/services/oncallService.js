@@ -109,6 +109,15 @@ function computeRag(cfg, hero, pathStats) {
 
 async function getDashboard({ token, teamId } = {}) {
   const cfg = resolveRuntimeConfig(teamId);
+  if (!cfg.baseScopeJql || !String(cfg.baseScopeJql).trim()) {
+    return {
+      teamId: cfg.teamId,
+      notConfigured: true,
+      message: `OnCalls not configured for team "${cfg.teamId}". Add an OnCalls KPI in Admin → KPIs or configure oncallConfig.json.`,
+      baseScopeJql: '',
+      hero: {}, paths: {}, past: {}, rag: { level: 'GREEN', why: 'Not configured' }, escalation: null, pulse: null, priorityMix: [], assigneeMix: [], openTickets: [], stacksPreview: [], errors: undefined,
+    };
+  }
   const queries = buildHeroQueries(cfg);
   const t0 = Date.now();
   const { results, errors } = await runCounts(token, queries);

@@ -56,8 +56,8 @@ function buildDashboardFields(getFieldIdFn) {
     'created', 'updated', 'resolutiondate', 'duedate',
     'labels',                        // bug-by-phase analytics
     'fixVersions',                  // soft hygiene vs selected release
-    getFieldIdFn('parentLink'),      // Parent Link (customfield_20363) — Epic → FEAT/Initiative
-    getFieldIdFn('epicLink'),        // Epic Link (customfield_10361) — Task/Bug/Test → Epic
+    getFieldIdFn('parentLink'),      // Parent Link (parentLink) — Epic → FEAT/Initiative
+    getFieldIdFn('epicLink'),        // Epic Link (epicLink) — Task/Bug/Test → Epic
     getFieldIdFn('qaContact'),       // QA Contact — Status Sender epic table
     'issuelinks',
     getFieldIdFn('riskIndicator'),
@@ -70,9 +70,9 @@ function buildDashboardFields(getFieldIdFn) {
     getFieldIdFn('commitGate'),
     getFieldIdFn('promotionGate'),
     getFieldIdFn('codeComplete'),
-    'customfield_40468', // Feat ID
-    'customfield_14262', // FEAT Number
-    getFieldIdFn('assigneeManager'), // Assignee Manager (customfield_19262)
+    getFieldId('featId'), // Feat ID
+    getFieldId('featNumber'), // FEAT Number
+    getFieldIdFn('assigneeManager'), // Assignee Manager (assigneeManager)
   ].filter(Boolean).join(',');
 }
 
@@ -154,10 +154,10 @@ async function collectChangelogSignals(jira, keys, statusCategoryByName, sharedH
 
 function issueFromJira(issue) {
   const fields = issue?.fields || {};
-  const qaField = getFieldId('qaContact') || 'customfield_10860';
-  const parentLinkField = getFieldId('parentLink') || 'customfield_20363';
-  const epicLinkField = getFieldId('epicLink') || 'customfield_10361';
-  const managerField = getFieldId('assigneeManager') || 'customfield_19262';
+  const qaField = getFieldId('qaContact') || getFieldId('qaContact');
+  const parentLinkField = getFieldId('parentLink') || getFieldId('parentLink');
+  const epicLinkField = getFieldId('epicLink') || getFieldId('epicLink');
+  const managerField = getFieldId('assigneeManager') || getFieldId('assigneeManager');
   return {
     key: issue.key,
     summary: String(fields.summary || ''),
@@ -741,7 +741,7 @@ router.post('/reparent', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
-    const parentLinkField = getFieldId('parentLink') || 'customfield_20363';
+    const parentLinkField = getFieldId('parentLink') || getFieldId('parentLink');
     await jira.updateIssue(ticketKey, { [parentLinkField]: newParent });
 
     fs.mkdirSync(path.dirname(REPARENT_AUDIT_PATH), { recursive: true });

@@ -411,7 +411,7 @@ async function chatCompletion(messages, options = {}) {
  * @param {object|null} [narrative] - Output of jiraTicketNarrative.fetchTicketNarrative(...).
  *   Pass null if narrative fetch failed — the prompt falls back to signals-only
  *   reasoning and the model is instructed to note the absence rather than fabricate.
- * @param {string} [rawStatusText] - Raw status update text (customfield_23073)
+ * @param {string} [rawStatusText] - Raw status update text (statusUpdate)
  * @returns {Promise<string>} Hybrid-format exec summary (non-empty, trimmed)
  */
 async function generateExecSummary(signals, narrative = null, rawStatusText = null) {

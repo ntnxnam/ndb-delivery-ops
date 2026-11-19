@@ -84,11 +84,6 @@ async function invokeSkill(schedule) {
   }
 }
 
-/**
- * Human phrase for "what runs when" — single source for toResponse + preview.
- * @param {object} schedule
- * @returns {string}
- */
 function describeSchedule(schedule) {
   const s = schedule.schedule || {};
   const tz = schedule.tz || s.tz || 'UTC';
@@ -100,18 +95,13 @@ function describeSchedule(schedule) {
   return `${d} ${h}:${m} ${tz}`;
 }
 
-/**
- * Validate a schedule config and return per-check results for dry-run display.
- * @param {object} schedule - schedule record (id, skill, tpmScope, schedule{cron|dayOfWeek|hour|minute}, tz, to)
- * @returns {Array<{id:string,label:string,ok:boolean,detail:string}>} checks
- */
 function validateScheduleForTest(schedule) {
   const checks = [];
   const push = (id, label, ok, detail) => checks.push({ id, label, ok, detail });
-  const expr = schedule.schedule?.cron;
-  if (expr) {
-    const ok = expr && typeof expr === 'string' && expr.trim().split(/\s+/).length === 5 && cron.validate(expr);
-    push('cron', 'Cron expression', ok, ok ? expr : `Invalid cron: ${expr || '—'}`);
+  const cron = schedule.schedule?.cron;
+  if (cron) {
+    const ok = cron && typeof cron === 'string' && cron.trim().split(/\s+/).length === 5 && require('node-cron').validate(cron);
+    push('cron', 'Cron expression', ok, ok ? cron : `Invalid cron: ${cron || '—'}`);
   } else {
     const d = schedule.schedule?.dayOfWeek;
     const h = schedule.schedule?.hour;
@@ -129,16 +119,10 @@ function validateScheduleForTest(schedule) {
   return checks;
 }
 
-/**
- * Dry-run validation for a schedule — never mutates lastRun, never sends email.
- * @param {object} schedule
- * @param {{triggeredBy?:string}} opts
- * @returns {Promise<{ok:boolean,wouldSkip:boolean,testAt:string,testedAt:string,checks:Array,preview:object,dispatchResult:object|null,warnings:string[]}>}
- */
 async function testSchedule(schedule, { triggeredBy } = {}) {
   const checks = validateScheduleForTest(schedule);
   const failed = checks.filter((c) => !c.ok);
-  const wouldSkip = !!(schedule.deferAfterPg && isAfterPg(schedule));
+  const wouldSkip = schedule.deferAfterPg && isAfterPg(schedule);
   const preview = {
     id: schedule.id || 'preview',
     name: schedule.name || '',
@@ -164,13 +148,11 @@ async function testSchedule(schedule, { triggeredBy } = {}) {
     } catch (e) {
       const msg = e.message?.slice(0, 500) || 'dispatch failed';
       checks.push({ id: 'dispatch', label: 'Skill dispatch (dry-run)', ok: false, detail: msg });
-      const at = new Date().toISOString();
-      return { ok: false, wouldSkip: false, testAt: at, testedAt: at, checks, preview, dispatchResult: { ok: false, error: msg }, warnings: [] };
+      return { ok: false, checks, preview, dispatchResult: { ok: false, error: msg }, testedAt: new Date().toISOString() };
     }
   }
   const ok = failed.length === 0;
-  const at = new Date().toISOString();
-  return { ok, wouldSkip: !!wouldSkip, testAt: at, testedAt: at, checks, preview, dispatchResult, warnings: wouldSkip ? ['Schedule would be skipped — past Promotion Gate with deferAfterPg enabled.'] : [] };
+  return { ok: ok && !wouldSkip ? true : failed.length === 0 && wouldSkip ? true : false, checks, preview, dispatchResult, testedAt: new Date().toISOString(), warnings: wouldSkip ? ['Schedule would be skipped — past Promotion Gate with deferAfterPg enabled.'] : [] };
 }
 
 async function tick() {

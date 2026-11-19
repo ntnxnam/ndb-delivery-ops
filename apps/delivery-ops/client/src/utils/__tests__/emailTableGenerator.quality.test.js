@@ -1,4 +1,5 @@
 import { generateTableHTMLForEmail } from '../emailTableGenerator';
+import { getFieldId, getFieldValue } from '../jiraFields';
 
 const mockColumnsConfig = {
   columnOrder: ['key', 'summary', 'quality'],
@@ -18,11 +19,7 @@ describe('emailTableGenerator — TCMS Quality Functional/System rows', () => {
     summary: 'Test feature',
     status: 'In Progress',
     fixVersions: 'NDB-2.12',
-    assignee: 'user@test.com',
-    customfield_10860: null,
-    customfield_27764: null,
-    customfield_23073: null,
-    customfield_23560: null,
+    assignee: 'user@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null,
     tcmsQuality,
     tcmsQI: null,
   });

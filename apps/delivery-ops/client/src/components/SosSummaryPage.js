@@ -120,7 +120,7 @@ const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, 
   const riskAssessment = riskTextField(getFieldValue(item, 'riskAssessment'));
   const pathToGreen = riskTextField(getFieldValue(item, 'pathToGreen'));
   const riskTrail = formatRiskWithHistory(item.key, getFieldValue(item, 'riskIndicator'), checkpointHistory);
-  const testLead = personName(getFieldValue(item, 'testLead') ?? item.customfield_11065);
+  const testLead = personName(getFieldValue(item, 'testLead'));
   const qaContact = personName(getFieldValue(item, 'qaContact'));
   const pmOwner = personName(getFieldValue(item, 'pmOwner'));
   const programMgr = personName(getFieldValue(item, 'tpmOwner'));
@@ -439,7 +439,7 @@ export function ReleaseSection({
   const overallRag = ragCounts.Red > 0 ? 'Red' : ragCounts.Yellow > 0 ? 'Yellow' : ragCounts.Green > 0 ? 'Green' : 'NotSet';
   const ragColor = RAG_COLORS[overallRag] || RAG_COLORS.NotSet;
 
-  // Status-update staleness (customfield_45660): missing or ≥ STALE_DAYS old.
+  // Status-update staleness (statusUpdateDate): missing or ≥ STALE_DAYS old.
   const staleItems = useMemo(() => {
     return (items || []).filter((item) => {
       const age = daysOld(getFieldValue(item, 'statusUpdateDate'));

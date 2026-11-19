@@ -8,9 +8,9 @@ import { getFieldValue } from '../../utils/jiraFields';
 function RiskAndPathBoxes({ jiraData }) {
   if (!jiraData) return null;
 
-  const risk = getFieldValue(jiraData, 'riskIndicator') ?? jiraData.customfield_23560;
-  const assessment = getFieldValue(jiraData, 'riskAssessment') ?? jiraData.customfield_47780;
-  const pathToGreen = getFieldValue(jiraData, 'pathToGreen') ?? jiraData.customfield_55664;
+  const risk = getFieldValue(jiraData, 'riskIndicator');
+  const assessment = getFieldValue(jiraData, 'riskAssessment');
+  const pathToGreen = getFieldValue(jiraData, 'pathToGreen');
 
   const riskValue = fieldDisplayValue(risk);
   const assessmentValue = fieldDisplayValue(assessment);

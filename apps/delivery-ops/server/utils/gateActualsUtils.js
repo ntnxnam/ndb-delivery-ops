@@ -1,3 +1,4 @@
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 /**
  * Dual waterfall Prescribed vs Actual.
  * Code Complete: Prescribed = EC→release CC + ticket CC; Actual = coding start→end.
@@ -8,12 +9,12 @@ const MS_PER_DAY = 86400000;
 const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
 
 const TIMELINE_MILESTONES = [
-  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: 'customfield_13860', actualKey: null },
-  { key: 'fsds', label: 'FS/DS Done', fieldId: 'customfield_13861', actualKey: null },
-  { key: 'testPlan', label: 'Test Plan', fieldId: 'customfield_11068', actualKey: null },
-  { key: 'cc', label: 'Code Complete', fieldId: 'customfield_11067', actualKey: 'cc' },
-  { key: 'cg', label: 'Commit Gate', fieldId: 'customfield_35863', actualKey: 'cg' },
-  { key: 'pg', label: 'Promotion Gate', fieldId: 'customfield_35864', actualKey: 'pg' },
+  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: getFieldId('requirementsDone'), actualKey: null },
+  { key: 'fsds', label: 'FS/DS Done', fieldId: getFieldId('fsdsDone'), actualKey: null },
+  { key: 'testPlan', label: 'Test Plan', fieldId: getFieldId('testPlan'), actualKey: null },
+  { key: 'cc', label: 'Code Complete', fieldId: getFieldId('codeComplete'), actualKey: 'cc' },
+  { key: 'cg', label: 'Commit Gate', fieldId: getFieldId('commitGate'), actualKey: 'cg' },
+  { key: 'pg', label: 'Promotion Gate', fieldId: getFieldId('promotionGate'), actualKey: 'pg' },
   { key: 'ga', label: 'GA', fieldId: null, actualKey: 'ga' },
 ];
 

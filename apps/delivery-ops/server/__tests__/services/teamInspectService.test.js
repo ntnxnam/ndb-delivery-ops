@@ -1,3 +1,4 @@
+const { getFieldId, getFieldValue } = require('../../utils/jiraFieldsConfig');
 const {
   inspectBaseFilter,
   groupFeatureComponents,
@@ -7,7 +8,7 @@ const {
 } = require('../../services/teamInspectService');
 const { slugifyTeamId, normalizeFeatureComponents } = require('../../services/teamAdminService');
 
-const PC = 'customfield_15160';
+const PC = getFieldId('primaryComponent');
 
 describe('groupFeatureComponents', () => {
   it('groups primary-component children under their parent component', () => {

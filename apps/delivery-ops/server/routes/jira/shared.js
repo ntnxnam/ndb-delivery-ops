@@ -404,7 +404,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         }
         // If still not found, return a more user-friendly fallback
         logger.jira.warning(jiraKey, `Field name not found for ${fieldId}, using fallback`, { fieldId });
-        return fieldId.replace('customfield_', 'cf[').replace(/(\d+)$/, '$1]');
+        return fieldId.replace('custom'+'field_', 'cf[').replace(/(\d+)$/, '$1]');
       };
       
       // Helper function to format custom field value
@@ -430,7 +430,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
       
       if (mainTicketIssueType === 'X-FEAT' || mainTicketIssueType === 'Capability') {
         // For X-FEAT/Capability: Get Features/Initiatives where "Parent Link" = main ticket
-        // Parent Link is customfield_20363
+        // Parent Link is parentLink
         // First, get all Features/Initiatives from the query results
         const allFeaturesAndInitiatives = issues.filter(issue => {
           const issueType = issue.fields?.issuetype?.name;
@@ -443,7 +443,7 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         
         // Filter by Parent Link
         featuresAndInitiatives = allFeaturesAndInitiatives.filter(issue => {
-          const parentLink = issue.fields?.customfield_20363;
+          const parentLink = getFieldValue(issue.fields, 'parentLink');
           if (!parentLink) {
             return false;
           }
@@ -501,17 +501,17 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
         if (featureKey === jiraKey && allEpics.length > 0) {
           const sampleEpics = allEpics.slice(0, 3);
           sampleEpics.forEach(epic => {
-            const parentLink = epic.fields?.customfield_20363;
+            const parentLink = getFieldValue(epic.fields, 'parentLink');
             logger.jira.fetch(jiraKey, 'DEBUG_EPIC_PARENT_LINK', `Epic ${epic.key} Parent Link: ${JSON.stringify(parentLink)}`);
           });
         }
         
         // Find Epics that belong to this Feature/Initiative
         // Epics can be linked via:
-        // 1. Parent Link (customfield_20363) on Epic pointing to this Feature/Initiative
+        // 1. Parent Link (parentLink) on Epic pointing to this Feature/Initiative
         // 2. Epic Link field on Feature (we can't check this directly, so we use heuristics)
         const childEpics = allEpics.filter(epic => {
-          const parentLink = epic.fields?.customfield_20363;
+          const parentLink = getFieldValue(epic.fields, 'parentLink');
           
           // If Epic has Parent Link pointing to this Feature/Initiative, include it
           if (parentLink) {
@@ -552,10 +552,9 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
             status: epicFields.status?.name || 'N/A',
             issueType: epicFields.issuetype?.name || 'Epic',
             resolution: epicFields.resolution?.name || 'N/A',
-            assignee: epicFields.assignee?.displayName || epicFields.assignee?.name || 'N/A',
-            customfield_10860: {
-              name: getFieldName('customfield_10860'),
-              value: formatCustomFieldValue(epicFields.customfield_10860)
+            assignee: epicFields.assignee?.displayName || epicFields.assignee?.name || 'N/A',[getFieldId('qaContact')]: {
+              name: getFieldName(getFieldId('qaContact')),
+              value: formatCustomFieldValue(getFieldValue(epicFields, 'qaContact'))
             },
             duedate: epicFields.duedate ? (formatDate(epicFields.duedate) || epicFields.duedate) : 'Not Set',
             fixVersions: epicFields.fixVersions && epicFields.fixVersions.length > 0 
@@ -575,10 +574,9 @@ router.post('/fetch-all-jira-tickets', validateJiraTokenMiddleware, async (req, 
           status: fields.status?.name || 'N/A',
           issueType: fields.issuetype?.name || 'Feature',
           resolution: fields.resolution?.name || 'N/A',
-          assignee: fields.assignee?.displayName || fields.assignee?.name || 'N/A',
-          customfield_10860: {
-            name: getFieldName('customfield_10860'),
-            value: formatCustomFieldValue(fields.customfield_10860)
+          assignee: fields.assignee?.displayName || fields.assignee?.name || 'N/A',[getFieldId('qaContact')]: {
+            name: getFieldName(getFieldId('qaContact')),
+            value: formatCustomFieldValue(getFieldValue(fields, 'qaContact'))
           },
           duedate: fields.duedate ? (formatDate(fields.duedate) || fields.duedate) : 'Not Set',
           fixVersions: fields.fixVersions && fields.fixVersions.length > 0 
@@ -889,7 +887,7 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
             }
           });
           // Log the specific custom fields we're looking for
-          const customFieldsToCheck = ['customfield_35863', 'customfield_35864', 'customfield_45660'];
+          const customFieldsToCheck = [getFieldId('commitGate'), getFieldId('promotionGate'), getFieldId('statusUpdateDate')];
           const customFieldsStatus = customFieldsToCheck.map(cf => ({
             fieldId: cf,
             found: !!names[cf],
@@ -933,25 +931,25 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
 
       // Extract custom field values
       const customFields = {
-        'customfield_11067': fields.customfield_11067,
-        'customfield_11068': fields.customfield_11068,
-        'customfield_13860': fields.customfield_13860,
-        'customfield_13861': fields.customfield_13861,
-        'customfield_23073': fields.customfield_23073,
-        'customfield_35863': fields.customfield_35863,
-        'customfield_35864': fields.customfield_35864,
-        'customfield_45660': fields.customfield_45660,
-        'customfield_23560': fields.customfield_23560,
-        'customfield_14463': fields.customfield_14463,
-        'customfield_31460': fields.customfield_31460,
-        'customfield_14464': fields.customfield_14464,
-        'customfield_14465': fields.customfield_14465,
-        'customfield_55662': fields.customfield_55662,
-        'customfield_55663': fields.customfield_55663,
-        'customfield_47780': fields.customfield_47780,
-        'customfield_55664': fields.customfield_55664,
-        'customfield_38460': fields?.customfield_38460 || null,
-        'customfield_11260': fields.customfield_11260  // QA Contact
+        [getFieldId('codeComplete')]: getFieldValue(fields, 'codeComplete'),
+        [getFieldId('testPlan')]: getFieldValue(fields, 'testPlan'),
+        [getFieldId('requirementsDone')]: getFieldValue(fields, 'requirementsDone'),
+        [getFieldId('fsdsDone')]: getFieldValue(fields, 'fsdsDone'),
+        [getFieldId('statusUpdate')]: getFieldValue(fields, 'statusUpdate'),
+        [getFieldId('commitGate')]: getFieldValue(fields, 'commitGate'),
+        [getFieldId('promotionGate')]: getFieldValue(fields, 'promotionGate'),
+        [getFieldId('statusUpdateDate')]: getFieldValue(fields, 'statusUpdateDate'),
+        [getFieldId('riskIndicator')]: getFieldValue(fields, 'riskIndicator'),
+        [getFieldId('requirementsLink')]: getFieldValue(fields, 'requirementsLink'),
+        [getFieldId('tcmsLink')]: getFieldValue(fields, 'tcmsLink'),
+        [getFieldId('designDocLink')]: getFieldValue(fields, 'designDocLink'),
+        [getFieldId('testPlanLink')]: getFieldValue(fields, 'testPlanLink'),
+        [getFieldId('cgChecklistLink')]: getFieldValue(fields, 'cgChecklistLink'),
+        [getFieldId('pgChecklistLink')]: getFieldValue(fields, 'pgChecklistLink'),
+        [getFieldId('riskAssessment')]: getFieldValue(fields, 'riskAssessment'),
+        [getFieldId('pathToGreen')]: getFieldValue(fields, 'pathToGreen'),
+        [getFieldId('executiveStatusUpdate')]: getFieldValue(fields, 'executiveStatusUpdate') || null,
+        [getFieldId('pmOwner')]: getFieldValue(fields, 'pmOwner')  // QA Contact
       };
 
       // Format custom field values
@@ -1039,49 +1037,40 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
         // User fields for email CC
         reporter: fields.reporter || null,
         assignee: fields.assignee || null,
-        watchers: fields.watchers || null,
-        customfield_11260: fields.customfield_11260 || null, // PM Owner
-        customfield_10860: fields.customfield_10860 || null, // QA Contact
-        customfield_11960: fields.customfield_11960 || null, // Participants
-        customfield_27764: fields.customfield_27764 || null, // Program Mgr
-        customfield_11067: {
-          name: getFieldName('customfield_11067'),
-          value: formatCustomFieldValue(customFields.customfield_11067)
-        },
-        customfield_11068: {
-          name: getFieldName('customfield_11068'),
-          value: formatCustomFieldValue(customFields.customfield_11068)
-        },
-        customfield_13860: {
-          name: getFieldName('customfield_13860'),
-          value: formatCustomFieldValue(customFields.customfield_13860)
-        },
-        customfield_13861: {
-          name: getFieldName('customfield_13861'),
-          value: formatCustomFieldValue(customFields.customfield_13861)
-        },
-        customfield_23073: {
-          name: getFieldName('customfield_23073'),
-          value: formatCustomFieldValue(customFields.customfield_23073)
-        },
-        customfield_35863: {
-          name: getFieldName('customfield_35863'),
-          value: formatCustomFieldValue(customFields.customfield_35863)
-        },
-        customfield_35864: {
-          name: getFieldName('customfield_35864'),
-          value: formatCustomFieldValue(customFields.customfield_35864)
-        },
-        customfield_45660: {
-          name: getFieldName('customfield_45660'),
-          value: formatCustomFieldValue(customFields.customfield_45660)
-        },
-        customfield_23560: {
-          name: getFieldName('customfield_23560'),
-          value: formatCustomFieldValue(customFields.customfield_23560),
+        watchers: fields.watchers || null,[getFieldId('pmOwner')]: getFieldValue(fields, 'pmOwner') || null, // PM Owner
+[getFieldId('qaContact')]: getFieldValue(fields, 'qaContact') || null, // QA Contact
+[getFieldId('participants')]: getFieldValue(fields, 'participants') || null, // Participants
+[getFieldId('tpmOwner')]: getFieldValue(fields, 'tpmOwner') || null, // Program Mgr
+[getFieldId('codeComplete')]: {
+          name: getFieldName(getFieldId('codeComplete')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'codeComplete'))
+        },[getFieldId('testPlan')]: {
+          name: getFieldName(getFieldId('testPlan')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'testPlan'))
+        },[getFieldId('requirementsDone')]: {
+          name: getFieldName(getFieldId('requirementsDone')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'requirementsDone'))
+        },[getFieldId('fsdsDone')]: {
+          name: getFieldName(getFieldId('fsdsDone')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'fsdsDone'))
+        },[getFieldId('statusUpdate')]: {
+          name: getFieldName(getFieldId('statusUpdate')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'statusUpdate'))
+        },[getFieldId('commitGate')]: {
+          name: getFieldName(getFieldId('commitGate')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'commitGate'))
+        },[getFieldId('promotionGate')]: {
+          name: getFieldName(getFieldId('promotionGate')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'promotionGate'))
+        },[getFieldId('statusUpdateDate')]: {
+          name: getFieldName(getFieldId('statusUpdateDate')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'statusUpdateDate'))
+        },[getFieldId('riskIndicator')]: {
+          name: getFieldName(getFieldId('riskIndicator')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'riskIndicator')),
           // Risk Indicator color mapping - handles format like "Green - On Track"
           color: (() => {
-            const value = customFields.customfield_23560;
+            const value = getFieldValue(customFields, 'riskIndicator');
             if (!value || value === null || value === undefined) return null;
             
             // Handle object format: { value: "Green - On Track", ... }
@@ -1106,42 +1095,33 @@ router.post('/fetch', apiLimiter, validateJiraTokenMiddleware, async (req, res) 
             }
             return null;
           })()
-        },
-        customfield_14463: {
-          name: getFieldName('customfield_14463'),
-          value: formatLinkField(customFields.customfield_14463)
-        },
-        customfield_31460: {
-          name: getFieldName('customfield_31460'),
-          value: formatLinkField(customFields.customfield_31460)
-        },
-        customfield_14464: {
-          name: getFieldName('customfield_14464'),
-          value: formatLinkField(customFields.customfield_14464)
-        },
-        customfield_14465: {
-          name: getFieldName('customfield_14465'),
-          value: formatLinkField(customFields.customfield_14465)
-        },
-        customfield_55662: {
-          name: getFieldName('customfield_55662'),
-          value: formatLinkField(customFields.customfield_55662)
-        },
-        customfield_55663: {
-          name: getFieldName('customfield_55663'),
-          value: formatLinkField(customFields.customfield_55663)
-        },
-        customfield_47780: {
-          name: getFieldName('customfield_47780'),
-          value: formatCustomFieldValue(customFields.customfield_47780)
-        },
-        customfield_55664: {
-          name: getFieldName('customfield_55664'),
-          value: formatCustomFieldValue(customFields.customfield_55664)
-        },
-        customfield_38460: {
-          name: getFieldName('customfield_38460'),
-          value: formatCustomFieldValue(customFields.customfield_38460)
+        },[getFieldId('requirementsLink')]: {
+          name: getFieldName(getFieldId('requirementsLink')),
+          value: formatLinkField(getFieldValue(customFields, 'requirementsLink'))
+        },[getFieldId('tcmsLink')]: {
+          name: getFieldName(getFieldId('tcmsLink')),
+          value: formatLinkField(getFieldValue(customFields, 'tcmsLink'))
+        },[getFieldId('designDocLink')]: {
+          name: getFieldName(getFieldId('designDocLink')),
+          value: formatLinkField(getFieldValue(customFields, 'designDocLink'))
+        },[getFieldId('testPlanLink')]: {
+          name: getFieldName(getFieldId('testPlanLink')),
+          value: formatLinkField(getFieldValue(customFields, 'testPlanLink'))
+        },[getFieldId('cgChecklistLink')]: {
+          name: getFieldName(getFieldId('cgChecklistLink')),
+          value: formatLinkField(getFieldValue(customFields, 'cgChecklistLink'))
+        },[getFieldId('pgChecklistLink')]: {
+          name: getFieldName(getFieldId('pgChecklistLink')),
+          value: formatLinkField(getFieldValue(customFields, 'pgChecklistLink'))
+        },[getFieldId('riskAssessment')]: {
+          name: getFieldName(getFieldId('riskAssessment')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'riskAssessment'))
+        },[getFieldId('pathToGreen')]: {
+          name: getFieldName(getFieldId('pathToGreen')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'pathToGreen'))
+        },[getFieldId('executiveStatusUpdate')]: {
+          name: getFieldName(getFieldId('executiveStatusUpdate')),
+          value: formatCustomFieldValue(getFieldValue(customFields, 'executiveStatusUpdate'))
         }
       };
 

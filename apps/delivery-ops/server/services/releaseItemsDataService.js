@@ -59,16 +59,16 @@ const RELEASE_ITEMS_CONFIG = {
   AXIOS_TIMEOUT_MS: 60000,
   FIELDS_LIST: [
     'key', 'summary', 'status', 'priority', 'assignee', 'issuetype',
-    'fixVersions', 'labels', 'customfield_10360', 'customfield_10860',
-    'customfield_27764', 'customfield_11065', 'customfield_11260',
-    'customfield_11067', 'customfield_13861',
-    'customfield_11068', 'customfield_35863', 'customfield_35864',
-    'customfield_14463', 'customfield_31460', 'customfield_14464',
-    'customfield_14465', 'customfield_55662', 'customfield_55663',
-    'customfield_23073', 'customfield_45660',
-    'customfield_23560', 'customfield_47780', 'customfield_55664',
-    'customfield_38460', PRIMARY_COMPONENT_FIELD, 'components',
-    'customfield_19262', // Assignee Manager — TODO(D1): source id via productService
+    'fixVersions', 'labels', getFieldId('sprintNdb'), getFieldId('qaContact'),
+    getFieldId('tpmOwner'), getFieldId('testLead'), getFieldId('pmOwner'),
+    getFieldId('codeComplete'), getFieldId('fsdsDone'),
+    getFieldId('testPlan'), getFieldId('commitGate'), getFieldId('promotionGate'),
+    getFieldId('requirementsLink'), getFieldId('tcmsLink'), getFieldId('designDocLink'),
+    getFieldId('testPlanLink'), getFieldId('cgChecklistLink'), getFieldId('pgChecklistLink'),
+    getFieldId('statusUpdate'), getFieldId('statusUpdateDate'),
+    getFieldId('riskIndicator'), getFieldId('riskAssessment'), getFieldId('pathToGreen'),
+    getFieldId('executiveStatusUpdate'), PRIMARY_COMPONENT_FIELD, 'components',
+    getFieldId('assigneeManager'), // Assignee Manager — TODO(D1): source id via productService
   ].join(','),
 };
 
@@ -94,11 +94,11 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
 
   return allIssues.map((issue) => {
     // Extract the risk indicator value properly for SoS page compatibility
-    const rawRiskIndicator = issue.fields.customfield_23560;
+    const rawRiskIndicator = getFieldValue(issue.fields, 'riskIndicator');
     const riskIndicator = rawRiskIndicator?.value || rawRiskIndicator;
     
     const sprintInfo = boardId
-      ? resolveSprintState(issue.fields.customfield_10360, sprintMap)
+      ? resolveSprintState(getFieldValue(issue.fields, 'sprintNdb'), sprintMap)
       : { state: null, name: null };
     return {
       key: issue.key,
@@ -109,32 +109,11 @@ async function processReleaseItems(allIssues, jiraToken, httpsAgent, requestId, 
       labels: issue.fields.labels || [],
       labelsString: issue.fields.labels?.join(', ') || 'N/A',
       assignee: extractAssigneeName(issue.fields.assignee, issue.key),
-      assigneeManager: issue.fields.customfield_19262?.displayName || null,
-      assigneeManagerEmail: issue.fields.customfield_19262?.emailAddress || null,
+      assigneeManager: getFieldValue(issue.fields, 'assigneeManager')?.displayName || null,
+      assigneeManagerEmail: getFieldValue(issue.fields, 'assigneeManager')?.emailAddress || null,
       issuetype: issue.fields.issuetype?.name || null,
       sprintState: sprintInfo.state,
-      sprintName: sprintInfo.name,
-      customfield_10860: extractUserName(issue.fields.customfield_10860, issue.key, 'qaContact'),
-      customfield_27764: extractUserName(issue.fields.customfield_27764, issue.key, 'tpmOwner'),
-      customfield_11065: extractUserName(issue.fields.customfield_11065, issue.key, 'testLead'),
-      customfield_11260: extractUserName(issue.fields.customfield_11260, issue.key, 'pmOwner'),
-      customfield_11067: issue.fields.customfield_11067,
-      customfield_13861: issue.fields.customfield_13861,
-      customfield_11068: issue.fields.customfield_11068,
-      customfield_35863: issue.fields.customfield_35863,
-      customfield_35864: issue.fields.customfield_35864,
-      customfield_14463: issue.fields.customfield_14463,
-      customfield_31460: issue.fields.customfield_31460,
-      customfield_14464: issue.fields.customfield_14464,
-      customfield_14465: issue.fields.customfield_14465,
-      customfield_55662: asStoredField(issue.fields.customfield_55662),
-      customfield_55663: asStoredField(issue.fields.customfield_55663),
-      customfield_23073: issue.fields.customfield_23073,
-      customfield_45660: issue.fields.customfield_45660,
-      customfield_23560: riskIndicator,
-      customfield_47780: asStoredPlainText(issue.fields.customfield_47780),
-      customfield_55664: asStoredPlainText(issue.fields.customfield_55664),
-      customfield_38460: extractTextFieldValue(issue.fields?.customfield_38460),
+      sprintName: sprintInfo.name,[getFieldId('qaContact')]: extractUserName(getFieldValue(issue.fields, 'qaContact'), issue.key, 'qaContact'),[getFieldId('tpmOwner')]: extractUserName(getFieldValue(issue.fields, 'tpmOwner'), issue.key, 'tpmOwner'),[getFieldId('testLead')]: extractUserName(getFieldValue(issue.fields, 'testLead'), issue.key, 'testLead'),[getFieldId('pmOwner')]: extractUserName(getFieldValue(issue.fields, 'pmOwner'), issue.key, 'pmOwner'),[getFieldId('codeComplete')]: getFieldValue(issue.fields, 'codeComplete'),[getFieldId('fsdsDone')]: getFieldValue(issue.fields, 'fsdsDone'),[getFieldId('testPlan')]: getFieldValue(issue.fields, 'testPlan'),[getFieldId('commitGate')]: getFieldValue(issue.fields, 'commitGate'),[getFieldId('promotionGate')]: getFieldValue(issue.fields, 'promotionGate'),[getFieldId('requirementsLink')]: getFieldValue(issue.fields, 'requirementsLink'),[getFieldId('tcmsLink')]: getFieldValue(issue.fields, 'tcmsLink'),[getFieldId('designDocLink')]: getFieldValue(issue.fields, 'designDocLink'),[getFieldId('testPlanLink')]: getFieldValue(issue.fields, 'testPlanLink'),[getFieldId('cgChecklistLink')]: asStoredField(getFieldValue(issue.fields, 'cgChecklistLink')),[getFieldId('pgChecklistLink')]: asStoredField(getFieldValue(issue.fields, 'pgChecklistLink')),[getFieldId('statusUpdate')]: getFieldValue(issue.fields, 'statusUpdate'),[getFieldId('statusUpdateDate')]: getFieldValue(issue.fields, 'statusUpdateDate'),[getFieldId('riskIndicator')]: riskIndicator,[getFieldId('riskAssessment')]: asStoredPlainText(getFieldValue(issue.fields, 'riskAssessment')),[getFieldId('pathToGreen')]: asStoredPlainText(getFieldValue(issue.fields, 'pathToGreen')),[getFieldId('executiveStatusUpdate')]: extractTextFieldValue(getFieldValue(issue.fields, 'executiveStatusUpdate')),
       // Expose as { parent, child } so the UI can filter on either level.
       primaryComponent: parsePrimaryComponent(issue.fields[PRIMARY_COMPONENT_FIELD]),
       // Standard JIRA components field — array of component names
@@ -164,28 +143,7 @@ function mapCachedTicketToItem(t) {
     assigneeManagerEmail: t['Assignee Manager Email'] || null,
     issuetype: t['Issue Type'] || null,
     sprintState: null,
-    sprintName: t['Sprint Name'] || null,
-    customfield_10860: t['QA Contact'] || null,
-    customfield_27764: t['TPM Owner'] || null,
-    customfield_11065: t['Test Lead'] || null,
-    customfield_11260: t['PM Owner'] || null,
-    customfield_11067: t['CC Date'] || null,
-    customfield_13861: t['FS/DS Done Date'] || null,
-    customfield_11068: t['Test Plan Date'] || null,
-    customfield_35863: t['CG Date'] || null,
-    customfield_35864: t['PG Date'] || null,
-    customfield_14463: t['Requirements Link'] || null,
-    customfield_31460: t['TCMS Link'] || null,
-    customfield_14464: t['Design Doc Link'] || null,
-    customfield_14465: t['Test Plan Link'] || null,
-    customfield_55662: t['Link to CG checklist'] || null,
-    customfield_55663: t['Link to PG checklist'] || null,
-    customfield_23073: t['Status Update'] || null,
-    customfield_45660: t['Status Update Date'] || null,
-    customfield_23560: t['Risk Indicator'] || null,
-    customfield_47780: t['Risk Assessment'] || null,
-    customfield_55664: t['Path to Green'] || null,
-    customfield_38460: t['Executive Status Update'] || null,
+    sprintName: t['Sprint Name'] || null,[getFieldId('qaContact')]: t['QA Contact'] || null,[getFieldId('tpmOwner')]: t['TPM Owner'] || null,[getFieldId('testLead')]: t['Test Lead'] || null,[getFieldId('pmOwner')]: t['PM Owner'] || null,[getFieldId('codeComplete')]: t['CC Date'] || null,[getFieldId('fsdsDone')]: t['FS/DS Done Date'] || null,[getFieldId('testPlan')]: t['Test Plan Date'] || null,[getFieldId('commitGate')]: t['CG Date'] || null,[getFieldId('promotionGate')]: t['PG Date'] || null,[getFieldId('requirementsLink')]: t['Requirements Link'] || null,[getFieldId('tcmsLink')]: t['TCMS Link'] || null,[getFieldId('designDocLink')]: t['Design Doc Link'] || null,[getFieldId('testPlanLink')]: t['Test Plan Link'] || null,[getFieldId('cgChecklistLink')]: t['Link to CG checklist'] || null,[getFieldId('pgChecklistLink')]: t['Link to PG checklist'] || null,[getFieldId('statusUpdate')]: t['Status Update'] || null,[getFieldId('statusUpdateDate')]: t['Status Update Date'] || null,[getFieldId('riskIndicator')]: t['Risk Indicator'] || null,[getFieldId('riskAssessment')]: t['Risk Assessment'] || null,[getFieldId('pathToGreen')]: t['Path to Green'] || null,[getFieldId('executiveStatusUpdate')]: t['Executive Status Update'] || null,
   };
 }
 

@@ -111,8 +111,8 @@ async function buildSprintGanttData({ jiraKey, jiraData, epics, token }) {
     });
   }
   if (allTickets.length === 0 && jiraData) {
-    const sprintFieldA = getFieldId('sprint') || 'customfield_10020';
-    const sprintFieldB = getFieldId('sprints') || 'customfield_10021';
+    const sprintFieldA = getFieldId('sprint') || getFieldId('sprint');
+    const sprintFieldB = getFieldId('sprints') || getFieldId('sprints');
     const childResponse = await jira.get(`${baseUrl}/rest/api/2/search`, {
       timeout: 30000,
       params: {

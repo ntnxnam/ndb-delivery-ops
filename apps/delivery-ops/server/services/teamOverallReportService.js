@@ -34,6 +34,7 @@ function fallbackBuildTimeWindowJql(params, mode) {
 async function getJqlBuilder() {
   try {
     const shared = require('@portfolio-delivery-ops/shared');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
     if (shared && shared.jqlBuilder && typeof shared.jqlBuilder.stripDoneFromBaseFilter === 'function') {
       return {
         stripDoneFromBaseFilter: shared.jqlBuilder.stripDoneFromBaseFilter,
@@ -153,7 +154,7 @@ function aggregate(issues, groupBy) {
       groups[groupKey] = { key: groupKey, label: groupKey, count: 0, storyPoints: 0, cycleDays: 0, cycleCount: 0 };
     }
     groups[groupKey].count++;
-    const sp = f.storyPoints || f.customfield_10016 || f.customfield_10026;
+    const sp = f.storyPoints;
     if (sp != null) {
       const num = parseFloat(sp);
       if (!isNaN(num)) {
@@ -284,9 +285,9 @@ async function generate(input, token) {
       created: issue.fields?.created || '',
       updated: issue.fields?.updated || '',
       resolved: issue.fields?.resolved || null,
-      storyPoints: issue.fields?.storyPoints || issue.fields?.customfield_10016 || issue.fields?.customfield_10026 || null,
+      storyPoints: issue.fields?.storyPoints || getFieldValue(issue.fields, 'storyPointsAlt1') || getFieldValue(issue.fields, 'storyPointsAlt2') || null,
       fixVersion: (issue.fields?.fixVersions || []).map(v => v.name),
-      integratedVersion: (issue.fields?.customfield_11360 || []).map(v => v.name || v),
+      integratedVersion: (getFieldValue(issue.fields, 'integratedVersion') || []).map(v => v.name || v),
       parentKey: issue.fields?.parent?.key || null,
       url: `https://jira.nutanix.com/browse/${issue.key}`,
       sourceProject: issue._sourceProject || null,

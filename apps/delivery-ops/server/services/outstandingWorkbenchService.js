@@ -39,7 +39,7 @@ const RELEASE_EMAIL_CONFIG_PATH = path.join(
 const SAMPLE_LIMIT = 80;
 const PROJECT_PAGE_SIZE = 100;
 const PROJECT_MAX_PAGES = 50; // up to 5k for project discovery
-const QA_CONTACT_FIELD = getFieldId('qaContact') || 'customfield_10860';
+const QA_CONTACT_FIELD = getFieldId('qaContact') || getFieldId('qaContact');
 const OUTSTANDING_FIELDS = withExtraTicketFields(
   [
     'summary',
