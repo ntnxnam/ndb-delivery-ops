@@ -1,6 +1,6 @@
 # TPM Agent — Delivery Plan
 
-> Owner: PM Lead + Goal Dev Lead | Date: 2026-11-19 | Status: In discovery — recording answers
+> Owner: PM Lead + Goal Dev Lead | Date: 2026-11-19 | Status: Delivered 2026-11-20 — 6 skills live
 > Demo: NDB-2.12 / NDB-3.0 / NDB-2.11.1 + NDB-2.11.1.1 (GA 23 Nov 2026, OS image slip) — config already updated per release-gate-ops Route C
 
 ## Vision (1 line)

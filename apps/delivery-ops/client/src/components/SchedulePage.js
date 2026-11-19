@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import './SchedulePage.css';
 
-const SKILLS = ['tpm-execution-fetch','tpm-at-release-fetch','tpm-post-release-fetch','tpm-report-compose'];
+const SKILLS = ['tpm-execution','tpm-at-release','tpm-post-release','tpm-overall','tpm-report'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const TZS = ['UTC','Asia/Kolkata','America/Los_Angeles','America/New_York','Europe/London'];
 

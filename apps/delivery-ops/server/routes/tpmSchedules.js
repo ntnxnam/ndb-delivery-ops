@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const store = require('../utils/tpmSchedulesStore');
 const runner = require('../services/tpmScheduleRunner');
 
-const SCHEDULABLE = new Set(['tpm-execution-fetch','tpm-at-release-fetch','tpm-post-release-fetch','tpm-report-compose']);
+const SCHEDULABLE = new Set(['tpm-post-release','tpm-execution','tpm-at-release','tpm-overall','tpm-report']);
 
 function requireAuth(req, res, next) {
   // D26: mutate requires JIRA auth; reuse existing middleware if present, else allow with x-username.
