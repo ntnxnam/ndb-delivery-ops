@@ -7,25 +7,33 @@
  *   - server: jiraFilterService (renameReleaseCascade, cleanupDuplicatePrefixFilters)
  */
 
+function q(v) {
+  return `"${String(v).replace(/"/g, '\\"')}"`;
+}
+function slug(v) {
+  return String(v).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
 function generateFilterChain(version, excludeVersion) {
   const v = (version || '').trim();
   const vExclude = (excludeVersion || '').trim();
+  const vs = slug(v);
 
-  const filter1Name = `Get${v}FeaturesAndInitiatives`;
-  const filter2Name = `Get${v}EpicsOfFeaturesAndInitiatives`;
-  const filter3Name = `Get${v}IssuesInEpics`;
-  const filter4Name = `Get${v}ChildIssues`;
+  const filter1Name = `Get${vs}FeaturesAndInitiatives`;
+  const filter2Name = `Get${vs}EpicsOfFeaturesAndInitiatives`;
+  const filter3Name = `Get${vs}IssuesInEpics`;
+  const filter4Name = `Get${vs}ChildIssues`;
   const filter5Name = `${v}-All`;
 
   const excludeClause = vExclude
-    ? `fixVersion not in ("Era Future", ${vExclude})`
+    ? `fixVersion not in ("Era Future", ${q(vExclude)})`
     : `fixVersion not in ("Era Future")`;
 
   return [
     {
       order: 1,
       name: filter1Name,
-      jql: `type in (Initiative, Feature) AND fixVersion in (${v})`,
+      jql: `type in (Initiative, Feature) AND fixVersion in (${q(v)})`,
       dependsOn: [],
     },
     {
@@ -54,7 +62,7 @@ function generateFilterChain(version, excludeVersion) {
     {
       order: 5,
       name: filter5Name,
-      jql: `((fixVersion in (${v}) OR affectedVersion in (${v})) AND ${excludeClause}) OR filter in (${filter4Name}) OR issueFunction in portfolioChildrenOf("fixVersion=${v} and type=Epic and \\"Parent Link\\" IS EMPTY") OR (fixVersion = ${v} and type=Epic and "Parent Link" is EMPTY) AND status != Cancelled`,
+      jql: `((fixVersion in (${q(v)}) OR affectedVersion in (${q(v)})) AND ${excludeClause}) OR filter in (${filter4Name}) OR issueFunction in portfolioChildrenOf("fixVersion=${q(v)} and type=Epic and \\"Parent Link\\" IS EMPTY") OR (fixVersion = ${q(v)} and type=Epic and "Parent Link" is EMPTY) AND status != Cancelled`,
       dependsOn: [filter4Name],
     },
   ];
