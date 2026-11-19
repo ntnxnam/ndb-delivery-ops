@@ -208,6 +208,13 @@
       "toolClass": "read",
       "owner": "team-exec-specialist",
       "path": "skills/past-releases-report/SKILL.md"
+    },
+    {
+      "name": "tpm-post-release",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/tpm-post-release/SKILL.md"
     }
   ],
   "workflows": [

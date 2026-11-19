@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TpmPostReleaseInput",
+  "type": "object",
+  "required": ["scope"],
+  "properties": {
+    "scope": { "$ref": "tpmScope.json" }
+  },
+  "description": "Input for tpm-post-release skill — scope drives release/team filtering. Output is TpmFetchResult with lifecyclePhase=postRelease."
+}

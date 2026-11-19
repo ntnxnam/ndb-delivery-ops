@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TpmScope",
+  "type": "object",
+  "required": ["kind"],
+  "properties": {
+    "kind": { "type": "string", "enum": ["release", "sprint", "team", "overall"] },
+    "releaseVersion": { "type": "string", "description": "Required when kind=release" },
+    "teamId": { "type": "string" },
+    "productId": { "type": "string" },
+    "sprintId": { "type": ["string", "number"] }
+  },
+  "additionalProperties": false
+}

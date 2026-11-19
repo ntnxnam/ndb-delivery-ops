@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TpmFetchResult",
+  "type": "object",
+  "required": ["skillId", "lifecyclePhase", "scope", "asOf", "kpis", "totalKpis", "jiraBaseUrl"],
+  "properties": {
+    "skillId": { "type": "string", "enum": ["tpm-post-release", "tpm-execution", "tpm-release", "tpm-overall"] },
+    "lifecyclePhase": { "type": "string", "enum": ["postRelease", "execution", "release", "overall"] },
+    "scope": { "$ref": "tpmScope.json" },
+    "asOf": { "type": "string", "format": "date-time" },
+    "kpis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kpiId", "kpiName", "jql", "count", "jiraUrl", "capturedAt"],
+        "properties": {
+          "kpiId": { "type": "string" },
+          "kpiName": { "type": "string" },
+          "jql": { "type": "string" },
+          "count": { "type": "integer", "minimum": 0 },
+          "jiraUrl": { "type": "string" },
+          "capturedAt": { "type": "string", "format": "date-time" },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    "totalKpis": { "type": "integer", "minimum": 0 },
+    "jiraBaseUrl": { "type": "string" }
+  }
+}
