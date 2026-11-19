@@ -52,9 +52,10 @@ function collectThresholds(gateMap) {
   for (const [key, val] of Object.entries(gateMap)) {
     const iso = gateToIsoDate(val);
     if (!iso) continue;
-    // skip metadata keys that are not gates
-    if (['devDRIs', 'qaDRIs', 'dateHistory', 'notes', 'releaseNotes', 'info', '_jira', 'jiraMeta', '_source', '_syncedAt'].includes(key)) continue;
+    // skip metadata keys that are not gates (include ecDate/preEc/conceptCommit* which are milestones, not gates for nextGate)
+    if (['devDRIs', 'qaDRIs', 'dateHistory', 'notes', 'releaseNotes', 'info', '_jira', 'jiraMeta', '_source', '_syncedAt', 'ecDate', 'preEc', 'preCommit'].includes(key) || key.startsWith('conceptCommit')) continue;
     const bucket = classifyGate(key);
+    if (!bucket) continue;
     allDates.push({ key, date: iso, bucket });
   }
   allDates.sort((a, b) => a.date.localeCompare(b.date));

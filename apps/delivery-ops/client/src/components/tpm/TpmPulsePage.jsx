@@ -36,15 +36,17 @@ function GateStrip({ gates }) {
 
 function StageBadge({ stage, nextGate }) {
   if (!stage) return null;
+  const variant = stage === 'execution' ? 'ds-badge--info' : stage === 'release' ? 'ds-badge--warning' : stage === 'postRelease' ? 'ds-badge--success' : 'ds-badge--neutral';
+  const countdown = nextGate ? Math.ceil((new Date(nextGate.date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
   return (
-    <span className="ds-badge" style={{ background: 'var(--surface)', border: `1px solid ${STAGE_TONE[stage] || 'var(--border)'}`, color: STAGE_TONE[stage] || 'var(--text)' }}>
-      {STAGE_LABELS[stage] || stage}
-      {nextGate ? ` · next: ${nextGate.label} ${nextGate.date}` : ''}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+      <span className={`ds-badge ${variant}`}>{STAGE_LABELS[stage] || stage}</span>
+      {nextGate && <span className="ds-muted-label">Next: {nextGate.label} {nextGate.date} {countdown != null && countdown >= 0 ? `· in ${countdown}d` : ''}</span>}
     </span>
   );
 }
 
-function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
+function ReportPreviewModal({ open, onClose, teamId, releaseVersion, today, onSent }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +63,7 @@ function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
       const res = await fetch(`${apiBase}/api/tpm/reports/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ teamId, releaseVersion, today: new Date().toISOString().slice(0, 10) }),
+        body: JSON.stringify({ teamId, releaseVersion, today }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Preview ${res.status}`);
@@ -71,7 +73,7 @@ function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
     } finally {
       setLoading(false);
     }
-  }, [teamId, releaseVersion]);
+  }, [teamId, releaseVersion, today]);
 
   React.useEffect(() => {
     if (open) fetchPreview();
@@ -88,7 +90,7 @@ function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
       const res = await fetch(`${apiBase}/api/tpm/reports/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ teamId, releaseVersion, testMode }),
+        body: JSON.stringify({ teamId, releaseVersion, today, testMode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Send ${res.status}`);
@@ -120,6 +122,12 @@ function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
                 {preview.nextGate ? ` · Next gate: ${preview.nextGate.label} (${preview.nextGate.date})` : ''}
                 <span style={{ marginLeft: 'var(--space-2)' }}>· {preview.fetchedAt ? new Date(preview.fetchedAt).toLocaleString() : ''}</span>
               </div>
+              {preview.recipients && (
+                <div className="ds-card ds-card--quiet" style={{ padding: 'var(--space-2) var(--space-3)', marginBottom: 'var(--space-3)', border: '1px solid var(--border-subtle)' }}>
+                  <div className="ds-muted-label">To: {preview.recipients.to?.length ? preview.recipients.to.join(', ') : '—'} {testMode && preview.recipients.to?.length ? '(test override: you only)' : ''}</div>
+                  <div className="ds-muted-label">CC: {preview.recipients.cc?.length ? preview.recipients.cc.join(', ') : '—'} {testMode ? '(empty in test)' : ''}</div>
+                </div>
+              )}
               <div className="stat-row" style={{ marginBottom: 'var(--space-4)' }}>
                 {preview.kpiBreakdown && preview.kpiBreakdown.map((k) => (
                   <div key={k.id} className="stat-card" style={{ minWidth: 160 }}>
@@ -156,8 +164,10 @@ function ReportPreviewModal({ open, onClose, teamId, releaseVersion, onSent }) {
 
 export default function TpmPulsePage() {
   const { selectedTeamId } = useTeam();
+  const [todayOverride, setTodayOverride] = useState('');
+  const todayIso = todayOverride || new Date().toISOString().slice(0, 10);
   const { releases, activeRelease, setActiveRelease, phases, gates, loading, error, fetchedAt, refresh } = useTpmPulse(selectedTeamId);
-  const { stage, nextGate } = useTpmStage(selectedTeamId, activeRelease);
+  const { stage, nextGate } = useTpmStage(selectedTeamId, activeRelease, todayIso);
   const [showModal, setShowModal] = useState(false);
 
   if (loading && !phases.length) {
@@ -181,7 +191,8 @@ export default function TpmPulsePage() {
           <h1 className="page-header__title">Release health — 4 lifecycle cards</h1>
           <p className="page-header__subtitle">TPM Pulse · {releases.length} active release{releases.length !== 1 ? 's' : ''} · team {selectedTeamId || '—'}</p>
         </div>
-        <div className="page-header__actions">
+        <div className="page-header__actions" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+          <label className="ds-muted-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Today: <input type="date" value={todayIso} onChange={(e) => setTodayOverride(e.target.value)} max="2030-12-31" className="ds-input" style={{ width: 150 }} /></label>
           {activeRelease && <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={() => setShowModal(true)}>Send Report</button>}
           <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={refresh}>Refresh</button>
         </div>
@@ -256,7 +267,7 @@ export default function TpmPulsePage() {
         </div>
       )}
 
-      <ReportPreviewModal open={showModal} onClose={() => setShowModal(false)} teamId={selectedTeamId} releaseVersion={activeRelease} />
+      <ReportPreviewModal open={showModal} onClose={() => setShowModal(false)} teamId={selectedTeamId} releaseVersion={activeRelease} today={todayIso} />
     </div>
   );
 }

@@ -236,7 +236,7 @@ function checkKpiAdminAuthorization(username, teamId) {
   const teamAdmins = adminMap[teamId];
 
   if (!Array.isArray(teamAdmins)) {
-    return { authorized: true, normalizedUsername };
+    return { authorized: false, normalizedUsername };
   }
 
   const isAuthorized = teamAdmins.some((u) => normalizeToUsername(u) === normalizedUsername);

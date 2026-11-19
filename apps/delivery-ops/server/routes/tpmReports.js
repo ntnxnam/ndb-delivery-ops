@@ -39,9 +39,11 @@ function getKpisForStage(teamId, stage) {
 function buildReleaseJql(release, baseQuery) {
   const baseFilter = `filter=${release}-All`;
   if (!baseQuery || !String(baseQuery).trim()) return baseFilter;
-  const q = String(baseQuery).trim();
+  let q = String(baseQuery).trim().replace(/\btype\s*=/gi, 'issuetype=');
   if (/^\s*filter\s*=/i.test(q)) return q;
-  return `${baseFilter} AND (${q})`;
+  // Parity with kpiService.buildReleaseKpiCombinedJql: add status != Closed when not already present
+  const base = `${baseFilter} AND (${q})`;
+  return /\bstatus\s*(!=|not in)\b/i.test(q) ? base : `${base} AND status != Closed`;
 }
 
 /**
@@ -63,10 +65,11 @@ router.post('/preview', validateJiraTokenMiddleware, express.json(), async (req,
     const kpis = getKpisForStage(tid, stage);
     const fetchedAt = new Date().toISOString();
     const token = req.jiraToken;
+    // Recipients for preview (D26 visibility)
+    const previewRecipients = resolveRecipients({ releaseVersion, teamId: tid });
 
-    // Build per-KPI JQLs; optionally fetch counts if token present
-    const breakdown = [];
-    for (const k of kpis) {
+    // Build per-KPI JQLs; fetch counts in parallel (H-5)
+    const breakdown = await Promise.all(kpis.map(async (k) => {
       const baseQuery = k.baseQuery || '';
       const jql = buildReleaseJql(releaseVersion, baseQuery);
       let count = null;
@@ -80,7 +83,7 @@ router.post('/preview', validateJiraTokenMiddleware, express.json(), async (req,
           error = e.message || 'JIRA count failed';
         }
       }
-      breakdown.push({
+      return {
         id: k.id,
         name: k.name,
         lifecyclePhase: k.lifecyclePhase || 'overall',
@@ -88,8 +91,8 @@ router.post('/preview', validateJiraTokenMiddleware, express.json(), async (req,
         count,
         error,
         citedAt: fetchedAt,
-      });
-    }
+      };
+    }));
 
     res.json({
       teamId: tid,
@@ -103,6 +106,7 @@ router.post('/preview', validateJiraTokenMiddleware, express.json(), async (req,
       kpiBreakdown: breakdown,
       total: breakdown.reduce((s, x) => s + (x.count ?? 0), 0),
       fetchedAt,
+      recipients: previewRecipients,
     });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'Preview failed' });
@@ -178,9 +182,7 @@ router.post('/send', validateJiraTokenMiddleware, express.json(), async (req, re
       const stageInfo = getStageForRelease(releaseVersion, todayIso, gateDatesMap);
       const kpis = getKpisForStage(tid, stageInfo.stage);
       const fetchedAt = new Date().toISOString();
-      const rows = [];
-      const jiraBase = process.env.JIRA_BASE_URL || 'https://jira.nutanix.com';
-      for (const k of kpis) {
+      const rows = await Promise.all(kpis.map(async (k) => {
         const jql = buildReleaseJql(releaseVersion, k.baseQuery || '');
         let count = '—';
         try {
@@ -189,9 +191,10 @@ router.post('/send', validateJiraTokenMiddleware, express.json(), async (req, re
           const n = await jira.searchCount(jql);
           count = n != null ? String(n) : '—';
         } catch { /* keep — */ }
+        const jiraBase = process.env.JIRA_BASE_URL || 'https://jira.nutanix.com';
         const link = `${jiraBase}/issues/?jql=${encodeURIComponent(jql)}`;
-        rows.push(`<tr><td style="padding:6px 8px;border:1px solid var(--border)">${k.name}</td><td style="padding:6px 8px;border:1px solid var(--border);text-align:center">${count}</td><td style="padding:6px 8px;border:1px solid var(--border);font-size:12px"><a href="${link}">JQL</a></td><td style="padding:6px 8px;border:1px solid var(--border);font-size:10px;word-break:break-all">${jql.slice(0, 300)}</td></tr>`);
-      }
+        return `<tr><td style="padding:6px 8px;border:1px solid var(--border)">${k.name}</td><td style="padding:6px 8px;border:1px solid var(--border);text-align:center">${count}</td><td style="padding:6px 8px;border:1px solid var(--border);font-size:12px"><a href="${link}">JQL</a></td><td style="padding:6px 8px;border:1px solid var(--border);font-size:10px;word-break:break-all">${jql.slice(0, 300)}</td></tr>`;
+      }));
       emailHtml = `<div style="font-family:var(--font-sans,Arial,sans-serif);max-width:800px">
         <h2>${releaseVersion} — ${stageInfo.stage} stage</h2>
         <p style="color:var(--muted)">Stage: ${stageInfo.stage} — ${stageInfo.reason}${stageInfo.nextGate ? ` · Next: ${stageInfo.nextGate.label} (${stageInfo.nextGate.date})` : ''}</p>

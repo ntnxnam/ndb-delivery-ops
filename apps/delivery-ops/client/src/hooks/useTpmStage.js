@@ -31,13 +31,15 @@ function gateToIso(val) {
 
 function collectThresholds(gateMap) {
   if (!gateMap || typeof gateMap !== 'object') return { code: null, promotion: null, ga: null, allDates: [] };
-  const skip = new Set(['devDRIs', 'qaDRIs', 'dateHistory', 'notes', 'releaseNotes', 'info', '_jira', 'jiraMeta', '_source', '_syncedAt']);
+  const skip = new Set(['devDRIs', 'qaDRIs', 'dateHistory', 'notes', 'releaseNotes', 'info', '_jira', 'jiraMeta', '_source', '_syncedAt', 'ecDate', 'preEc', 'preCommit']);
   const allDates = [];
   for (const [key, val] of Object.entries(gateMap)) {
-    if (skip.has(key)) continue;
+    if (skip.has(key) || key.startsWith('conceptCommit')) continue;
     const iso = gateToIso(val);
     if (!iso) continue;
-    allDates.push({ key, date: iso, bucket: classifyGate(key) });
+    const bucket = classifyGate(key);
+    if (!bucket) continue;
+    allDates.push({ key, date: iso, bucket });
   }
   allDates.sort((a, b) => a.date.localeCompare(b.date));
   const earliest = (bucket) => {
