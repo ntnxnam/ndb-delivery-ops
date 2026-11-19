@@ -125,13 +125,15 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   }
 
   const envMaxTokens = process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '';
-  const maxTokensRaw = override?.maxTokens || (envMaxTokens ? parseInt(envMaxTokens, 10) : NaN) || aiConfigFallback.maxTokens;
+  const maxTokensRaw =
+    (override?.maxTokens ?? (envMaxTokens ? parseInt(envMaxTokens, 10) : NaN)) || aiConfigFallback.maxTokens;
   if (!maxTokensRaw || isNaN(maxTokensRaw as number)) {
     throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env.');
   }
 
   const envTimeout = process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT || '';
-  const timeoutRaw = override?.timeoutMs || (envTimeout ? parseInt(envTimeout, 10) : NaN) || aiConfigFallback.requestTimeoutMs;
+  const timeoutRaw =
+    (override?.timeoutMs ?? (envTimeout ? parseInt(envTimeout, 10) : NaN)) || aiConfigFallback.requestTimeoutMs;
   if (!timeoutRaw || isNaN(timeoutRaw as number)) {
     throw new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.');
   }

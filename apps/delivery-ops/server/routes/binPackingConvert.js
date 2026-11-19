@@ -38,11 +38,16 @@ const ALLOWED_MIMES = new Set([
 const ALLOWED_EXTS = new Set(['.csv', '.xlsx', '.xls']);
 
 // ── Shared service resolution (with inline fallback) ────────────────────────
+// TODO(W-xxx): remove inline fallback once shared/dist is re-exported via
+// shared/src/index.ts and consumed solely via the sharedAvailable path below.
+// Owner: @portfolio-delivery-ops/shared maintainers. Fallback duplicates alias
+// mapping in shared/src/services/productColumnAliases.ts to keep the route
+// functional until the next shared build — do not extend it.
 
 let CsvConverterService = null;
 let sharedAvailable = false;
 try {
-  // Try compiled shared dist first (ESM re-export may not include csvConverter yet).
+  // Compiled shared dist (preferred — single source of truth).
   // eslint-disable-next-line import/no-unresolved, global-require
   const maybe = require('../../../../shared/dist/services/csvConverterService.js');
   if (maybe && maybe.CsvConverterService) {
@@ -50,12 +55,11 @@ try {
     sharedAvailable = true;
   }
 } catch (_e) {
-  // Not compiled yet — fallback inline below. TODO: remove fallback once
-  // shared/dist ships csvConverterService (run `npm run build` in shared/).
+  // Not compiled yet — try workspace package export below.
 }
 try {
   if (!CsvConverterService) {
-    // Try @portfolio-delivery-ops/shared root export (future: index.js re-exports it)
+    // Workspace package re-export (after `npm run build` in shared/).
     // eslint-disable-next-line global-require
     const sharedRoot = require('@portfolio-delivery-ops/shared');
     if (sharedRoot && sharedRoot.CsvConverterService) {
@@ -67,7 +71,7 @@ try {
     }
   }
 } catch (_e2) {
-  // ignore — use fallback
+  // Not available — inline fallback below handles conversion.
 }
 
 // ── Fallback inline header-alias + CSV logic ───────────────────────────────
@@ -538,9 +542,8 @@ router.post('/convert', async (req, res) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const mime = String(file.mimetype || '').toLowerCase().trim();
 
-    // MIME allowlist check — allow generic octet-stream only if extension is known
-    const mimeAllowed = !mime || ALLOWED_MIMES.has(mime);
-    const extAllowed = !ext || ALLOWED_EXTS.has(ext);
+    // MIME / extension allowlist — octet-stream accepted only when extension is known.
+    // If neither mime nor ext is present, allow through to content-sniff fallback below.
     if (mime && !ALLOWED_MIMES.has(mime)) {
       return res.status(422).json({
         error: `Unsupported file type "${mime}". Allowed: ${[...ALLOWED_MIMES].join(', ')}`,
@@ -551,10 +554,6 @@ router.post('/convert', async (req, res) => {
         error: `Unsupported file extension "${ext}". Allowed: ${[...ALLOWED_EXTS].join(', ')}`,
       });
     }
-    if (!mimeAllowed && !extAllowed) {
-      return res.status(422).json({ error: 'Unsupported file type.' });
-    }
-    // If neither mime nor ext present, infer from content sniff fallback — still allow csv path
 
     // ── Temp dir (os.tmpdir()/binpacking-convert-<uuid>/) ──
     const tmpBase = path.join(os.tmpdir(), `binpacking-convert-${crypto.randomUUID()}`);

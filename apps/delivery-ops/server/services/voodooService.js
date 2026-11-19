@@ -184,6 +184,8 @@ Focus on ACTIONABLE INSIGHTS that enable quick executive decision-making. Use da
  * @returns {Promise<boolean>} True if key is valid
  */
 async function validateAPIKey(apiKey) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), VOODOO_CONFIG.timeoutMs);
   try {
     const response = await fetch(VOODOO_CONFIG.endpoint, {
       method: 'POST',
@@ -202,13 +204,16 @@ async function validateAPIKey(apiKey) {
         ],
         max_tokens: 10,
         stream: false
-      })
+      }),
+      signal: controller.signal,
     });
 
     return response.ok;
   } catch (error) {
     console.error('VooDoo API key validation failed:', error.message);
     return false;
+  } finally {
+    clearTimeout(tid);
   }
 }
 
