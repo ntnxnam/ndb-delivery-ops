@@ -9,11 +9,12 @@ import { getFieldValue } from './jiraFields';
  */
 
 import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
+import { formatRiskWithHistoryHTML } from './riskHistoryDisplay';
+import { RAG_COLORS, riskWord } from './riskHistoryDisplay';
 
 const DATE_PREFIX_REGEX = /^\[(\d{4}-\d{2}-\d{2})\]\s*/;
 const STALE_DAYS = 7;
 const GATE_ORDER = ['CC', 'CCM', 'EC', 'CG', 'PG', 'GA'];
-const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 const EMAIL_MAX_WIDTH = 800;
 const AI_SUMMARY_MAX = 220;
 const TIER_SUMMARY_MAX = 900;
@@ -34,10 +35,8 @@ function formatShortDate(val) {
 }
 
 function ragKey(riskIndicator) {
-  if (!riskIndicator) return '';
-  const val = typeof riskIndicator === 'string' ? riskIndicator : (riskIndicator.value || '');
-  const key = val.split(' ')[0] || '';
-  if (key === 'Red' || key === 'Yellow' || key === 'Green') return key;
+  const w = riskWord(riskIndicator);
+  if (w === 'Red' || w === 'Yellow' || w === 'Green') return w;
   return riskIndicator ? 'NotSet' : '';
 }
 
@@ -55,9 +54,9 @@ function truncate(text, max) {
 }
 
 function execSummaryText(item) {
-  const statusDays = daysOld(item?.getFieldValue(item, 'statusUpdateDate'));
+  const statusDays = daysOld(getFieldValue(item, 'statusUpdateDate'));
   if (statusDays !== null && statusDays >= STALE_DAYS) return '⚠ Stale Update';
-  const raw = item?.getFieldValue(item, 'executiveStatusUpdate') || '';
+  const raw = getFieldValue(item, 'executiveStatusUpdate') || '';
   if (!raw) return '—';
   return truncate(raw.replace(DATE_PREFIX_REGEX, '').trim() || '—', AI_SUMMARY_MAX);
 }
@@ -155,7 +154,7 @@ function buildRagCountsRow(items) {
   if (!items || items.length === 0) return '';
   const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
   items.forEach((item) => {
-    const key = ragKey(item.getFieldValue(item, 'riskIndicator'));
+    const key = ragKey(getFieldValue(item, 'riskIndicator'));
     if (key === 'Red' || key === 'Yellow' || key === 'Green') counts[key]++;
     else counts.NotSet++;
   });
@@ -279,7 +278,7 @@ const TH = 'background:#f0f4f8;padding:4px 5px;text-align:left;font-size:10px;bo
 
 function buildItemRows(items, breakdownDataMap, jiraBaseUrl, checkpointHistory) {
   return items.map((item) => {
-    const rag = ragKey(item.getFieldValue(item, 'riskIndicator')) || 'NotSet';
+    const rag = ragKey(getFieldValue(item, 'riskIndicator')) || 'NotSet';
     const ragColor = RAG_COLORS[rag] || RAG_COLORS.NotSet;
     const ragLabel = rag === 'NotSet' ? 'not set' : rag;
     const href = ticketHref(jiraBaseUrl, item.key);
@@ -290,11 +289,11 @@ function buildItemRows(items, breakdownDataMap, jiraBaseUrl, checkpointHistory) 
       <td style="${TD}white-space:nowrap">${keyCell}</td>
       <td style="${TD}">${escapeHtml(truncate(item.summary || '—', 80))}</td>
       <td style="${TD}white-space:nowrap">${escapeHtml(item.status || '—')}</td>
-      <td style="${TD}text-align:center;color:${ragColor};font-weight:700">${escapeHtml(ragLabel)}</td>
-      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'fsdsDone', item.getFieldValue(item, 'fsdsDone'), checkpointHistory)}</td>
-      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'codeComplete', item.getFieldValue(item, 'codeComplete'), checkpointHistory)}</td>
-      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'commitGate', item.getFieldValue(item, 'commitGate'), checkpointHistory)}</td>
-      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'promotionGate', item.getFieldValue(item, 'promotionGate'), checkpointHistory)}</td>
+      <td style="${TD}text-align:center;color:${ragColor};font-weight:700">${escapeHtml(ragLabel)}${(() => { const t = formatRiskWithHistoryHTML(item.key, getFieldValue(item, 'riskIndicator'), checkpointHistory); return t ? `<div style="margin-top:2px">${t}</div>` : ''; })()}</td>
+      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'fsdsDone', getFieldValue(item, 'fsdsDone'), checkpointHistory)}</td>
+      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'codeComplete', getFieldValue(item, 'codeComplete'), checkpointHistory)}</td>
+      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'commitGate', getFieldValue(item, 'commitGate'), checkpointHistory)}</td>
+      <td style="${TD}">${formatDateWithHistoryHTML(item.key, 'promotionGate', getFieldValue(item, 'promotionGate'), checkpointHistory)}</td>
       <td style="${TD}white-space:nowrap">${escapeHtml(truncate(item.assignee || '—', 18))}</td>
       <td style="${TD}">${escapeHtml(execSummaryText(item))}</td>
       <td style="${TD}white-space:nowrap">${escapeHtml(breakdownLabel(breakdownDataMap[item.key]))}</td>
@@ -319,7 +318,7 @@ function buildItemsTable(title, items, breakdownDataMap, jiraBaseUrl, checkpoint
 function overallRag(items) {
   const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
   items.forEach((item) => {
-    const key = ragKey(item.getFieldValue(item, 'riskIndicator'));
+    const key = ragKey(getFieldValue(item, 'riskIndicator'));
     if (key === 'Red' || key === 'Yellow' || key === 'Green') counts[key] += 1;
     else counts.NotSet += 1;
   });

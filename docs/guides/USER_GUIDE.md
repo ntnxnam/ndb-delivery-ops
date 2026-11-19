@@ -39,6 +39,7 @@ source: doc-user-guide @ 2026-11-19
 **Who:** Portfolio Manager, TPM, Director
 **Steps:** Open Project Status → select release → scan the Risk Details column.
 **What it shows:** Risk Indicator pill (Deep Red/Red/Green/Yellow) + Risk Assessment + Path to Green. Rich-text values authored in JIRA (ADF) render as plain text; URLs render as Link; empty stays Not Set. Previously cached HTML values strip on next fetch.
+**Risk movement trail:** When Risk Indicator has changed during the release, the badge is followed by a trail `Current ← Prior` (e.g. `Red ← Yellow ← Green`) with prior values struck-through. The trail is derived from `POST /api/jira/release-items-history` `checkpointHistory[key].riskIndicator` and rendered via `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`). Single-value history shows no trail. The same trail appears in SoS Summary table + SoS/release-versions emails; Feature Dashboard and Email Sender are intentionally out of scope (see `docs/pages/FeatureDashboard-data-layer.md#risk-trail-disposition`).
 
 ## Quality Column (TCMS)
 

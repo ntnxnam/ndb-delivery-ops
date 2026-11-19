@@ -340,8 +340,11 @@ sequenceDiagram
 **Note**: Items can come from ANY JIRA project (not restricted to FEAT or ERA):
 - Common sources: FEAT (Feature, X-FEAT), ERA (Initiative, Epic, Capability, etc. - but NOT Feature)
 
-#### POST `/api/jira/release-items-history`
-**Purpose**: Fetch checkpoint history for all items from ANY JIRA project (no project filter restrictions)
+#### POST `/api/jira/release-items-history` — includes riskIndicator trail
+**Purpose**: Fetch checkpoint history (+ `riskIndicator: [{ value, changedAt }]`) for all items from ANY JIRA project (no project filter restrictions). `riskHistoryDisplay.js` (SoT `RAG_COLORS`) renders `Current ← Prior` trail in Project Status / SoS / email; single-value → no trail. Server passes `includeRiskIndicator: true`.
+
+#### Legacy header (kept for search)
+**Purpose legacy**: Fetch checkpoint history for all items from ANY JIRA project (no project filter restrictions)
 
 **Request Body**:
 ```json

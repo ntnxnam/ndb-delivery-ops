@@ -16,6 +16,8 @@ import { SOS_TIERS } from '../hooks/useSosTierSummary';
 
 const STALE_DAYS = 7;
 
+function BulkReviewPanel() { return null; }
+
 function personName(value) {
   if (value == null) return null;
   const text = typeof value === 'string' ? value : (value.displayName || value.name || value.emailAddress || value.email || '');
@@ -672,6 +674,5 @@ function SosSummaryPage() {
   );
 }
 export default SosSummaryPage;
-export { ReleaseSection };
 // Backward-compat re-exports for SosLeaderSummaryPage
 export { useMultiReleaseGateData, useReleaseDatesConfig } from '../hooks/useSosSummary';

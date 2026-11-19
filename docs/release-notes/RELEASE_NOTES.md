@@ -34,6 +34,11 @@ See [NDB-2.11.md](./NDB-2.11.md) when cut.
   of erroring or echoing Overall. See `docs/tcms-rows-followup.md` (Endpoint
   migration).
 
+## Unreleased — risk-indicator-trail (checkpointHistory.riskIndicator SoT)
+
+- **Risk movement trail:** Project Status Risk Details + SoS Summary + release/SOS emails now show Risk Indicator change history (`Red ← Yellow ← Green`, prior values struck-through) from `POST /api/jira/release-items-history` `checkpointHistory[key].riskIndicator`. SoT is `client/src/utils/riskHistoryDisplay.js` (`RAG_COLORS`, `riskWord`, `formatRiskWithHistory`/`formatRiskWithHistoryHTML`); duplicate `RAG_COLORS` maps removed and HTML words escaped. Server `releaseHistoryService` passes `includeRiskIndicator:true` to `fetchFieldHistoryForMultiple`. Feature Dashboard / Email Sender intentionally out of scope — see `docs/pages/FeatureDashboard-data-layer.md#risk-trail-disposition` and `docs/pages/EmailSender-data-layer.md`.
+- **Docs:** `docs/pages/ProjectStatus-data-layer.md` documents `checkpointHistory.riskIndicator` contract and SoT; dispositions added to FeatureDashboard/EmailSender data-layer docs.
+
 ## Unreleased — weave-client-fields-labels (jiraFieldsConfig v1.1.0 client consolidation)
 
 - **Client SoT mirror:** `client/src/config/jiraFieldsConfig.json` mirrors server SoT (8 field cats + labels taxonomy: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest).

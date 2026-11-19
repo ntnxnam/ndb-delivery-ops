@@ -121,6 +121,10 @@ GET /api/config/email-sender
 
 ---
 
+## Risk trail disposition
+
+Out of scope for EmailSender — same rationale as Feature Dashboard. See `FeatureDashboard-data-layer.md#risk-trail-disposition`.
+
 ## Caching
 
 | Data | Cache strategy | TTL |

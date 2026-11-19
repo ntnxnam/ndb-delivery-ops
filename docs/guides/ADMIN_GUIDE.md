@@ -29,6 +29,7 @@ source: doc-admin-guide @ 2026-11-19
 | `JIRA_PAT` | env | Bearer only, no Basic |
 | Team boards | `server/config/teamBoardConfig.json` | customfield_10360 for sprints |
 | Quality column | `server/config/releaseVersionsColumnsConfig.json` (`columns.quality`) | Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service `server/services/tcmsService.js` (time-filtered metrics via `/api/v1/all_test_cases/aggregate/metrics`, `time_filter=all|four_weeks`, `target={milestone}-qcow2`) |
+| Risk trail | `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`) + `server/services/releaseHistoryService.js` (`includeRiskIndicator:true`) | `POST /api/jira/release-items-history` → `checkpointHistory[key].riskIndicator`; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions) |
 | RBAC | `server/config/allowedUsers.json` + `server/routes/auth.js::LEGACY_PERMISSION_MAPPING` | Keep client mirror in sync |
 | SMTP | `mailrelay.dyn.nutanix.com:25` | No auth; see `server/services/emailService.js` (sacred) |
 | `jiraFieldsConfig.json` | `server/config` + `client/src/config` | Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via `server/utils/jiraFieldsConfig.js` getFieldId/getLabelJql and `client/src/utils/jiraFields` + fieldConfig ensureLoaded() via `GET /api/config/jira-fields` |

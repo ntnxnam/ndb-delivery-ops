@@ -5,6 +5,7 @@
  */
 
 import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
+import { RAG_COLORS, getRagColor, riskWord, formatRiskWithHistoryHTML } from './riskHistoryDisplay';
 import { getFieldValue, getFieldId } from './jiraFields';
 
 /**
@@ -196,25 +197,15 @@ export function generateTableHTMLForEmail(
   const formatRiskDetailsHTML = (item) => {
     const riskIndicator = getFieldValue(item, 'riskIndicator');
     const riskValue = riskIndicator?.value || riskIndicator || '';
-    const riskColor = riskIndicator?.color || 'transparent';
     const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
-    let bg = 'transparent', fg = 'inherit', fw = 'normal';
-    if (isNotSet) { bg = '#fff3cd'; fw = '600'; }
-    else if (riskColor && riskColor !== 'transparent') { bg = riskColor; fg = '#ffffff'; fw = '600'; }
-    else if (typeof riskValue === 'string') {
-      const lowerRisk = String(riskValue).toLowerCase().trim();
-      if (lowerRisk.startsWith('deep red')) { bg = '#8B0000'; fg = '#ffffff'; fw = '600'; }
-      else {
-        const m = String(riskValue).match(/^(Green|Yellow|Red|Blue|Orange)/i);
-        if (m) {
-          const cmap = { green: '#00875a', yellow: '#ff8b00', red: '#de350b', blue: '#0052cc', orange: '#ff8b00' };
-          if (cmap[m[1].toLowerCase()]) { bg = cmap[m[1].toLowerCase()]; fg = '#ffffff'; fw = '600'; }
-        }
-      }
-    }
+    const w = riskWord(riskValue);
+    const bg = isNotSet ? RAG_COLORS.NotSet : (getRagColor(riskValue) || RAG_COLORS.NotSet);
+    const fg = w === 'Yellow' ? '#212529' : '#ffffff';
+    const fw = isNotSet ? 'normal' : '600';
+    const trail = !isNotSet ? formatRiskWithHistoryHTML(item.key, riskIndicator, checkpointHistory) : '';
     const indicatorHTML = isNotSet
       ? '<span style="color:#999;font-style:italic;">Not Set</span>'
-      : `<span style="background-color:${bg};color:${fg};font-weight:${fw};padding:2px 8px;border-radius:4px;font-size:11px;display:inline-block;">${escapeHtml(riskValue)}</span>`;
+      : `<span style="background-color:${bg};color:${fg};font-weight:${fw};padding:2px 8px;border-radius:4px;font-size:11px;display:inline-block;">${escapeHtml(riskValue)}</span>${trail ? `<div style="margin-top:3px">${trail}</div>` : ''}`;
 
     const toText = (raw) => {
       if (raw == null) return '';
@@ -312,44 +303,13 @@ export function generateTableHTMLForEmail(
     if (columnKey === 'riskIndicator') {
       const riskIndicator = getFieldValue(item, 'riskIndicator');
       const riskValue = riskIndicator?.value || riskIndicator || 'Not Set';
-      const riskColor = riskIndicator?.color || 'transparent';
       const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
-      
-      let riskBgColor = 'transparent';
-      let riskTextColor = 'inherit';
-      let riskFontWeight = 'normal';
-      
-      if (isNotSet) {
-        riskBgColor = '#fff3cd';
-        riskFontWeight = '600';
-      } else if (riskColor && riskColor !== 'transparent') {
-        riskBgColor = riskColor;
-        riskTextColor = '#ffffff';
-        riskFontWeight = '600';
-      } else if (typeof riskValue === 'string') {
-        const lowerRisk = String(riskValue).toLowerCase().trim();
-        if (lowerRisk.startsWith('deep red')) {
-          riskBgColor = '#8B0000'; riskTextColor = '#ffffff'; riskFontWeight = '600';
-        } else {
-          const colorMatch = String(riskValue).match(/^(Green|Yellow|Red|Blue|Orange)/i);
-          if (colorMatch) {
-            const colorName = colorMatch[1].toLowerCase();
-            const colorMap = {
-              'green': '#00875a',
-              'yellow': '#ff8b00',
-              'red': '#de350b',
-              'blue': '#0052cc',
-              'orange': '#ff8b00'
-            };
-            if (colorMap[colorName]) {
-              riskBgColor = colorMap[colorName];
-              riskTextColor = '#ffffff';
-              riskFontWeight = '600';
-            }
-          }
-        }
-      }
-      return `<span style="background-color: ${riskBgColor}; color: ${riskTextColor}; font-weight: ${riskFontWeight}; padding: 2px 6px; border-radius: 2px;">${escapeHtml(isNotSet ? 'Not Set' : riskValue)}</span>`;
+      const w2 = riskWord(riskValue);
+      const riskBgColor = isNotSet ? RAG_COLORS.NotSet : (getRagColor(riskValue) || RAG_COLORS.NotSet);
+      const riskTextColor = w2 === 'Yellow' ? '#212529' : (isNotSet ? 'inherit' : '#ffffff');
+      const riskFontWeight = isNotSet ? 'normal' : '600';
+      const trail2 = !isNotSet ? formatRiskWithHistoryHTML(item.key, riskIndicator, checkpointHistory) : '';
+      return `<span style="background-color: ${riskBgColor}; color: ${riskTextColor}; font-weight: ${riskFontWeight}; padding: 2px 6px; border-radius: 2px;">${escapeHtml(isNotSet ? 'Not Set' : riskValue)}</span>${trail2 ? `<div style="margin-top:2px">${trail2}</div>` : ''}`;
     }
     if (columnKey === 'executiveSummary') {
       return ''; // Hidden

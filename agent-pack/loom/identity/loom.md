@@ -63,11 +63,15 @@ Located in `agent-pack/loom/identity/specialists/`. The orchestrator decides whi
 
 | Specialist | Owns | When to delegate |
 |---|---|---|
+| `pm-lead` | Discovery: goal health, AC, scope, persona | Vague asks — owns goal-agent to produce Goal Contract |
+| `goal-agent` | Healthy goal synthesis (SMART, testable AC) | Spun by pm-lead in Discovery |
+| `arch-lead` | Cross-layer impact, Impact Scout decision | Holistic vs isolated, layer sequencing |
 | `frontend-dev` | React components, hooks, pages, services, styling | UI / page / component / chart / drill-in work |
 | `backend-dev` | Express routes, services, domain logic, MCP tools, API docs | Route / service / domain-model / MCP tool / validation work |
 | `connector-dev` | 5 connectors (D3) in `shared/connectors/` | Any JIRA / Confluence / GitHub / Slack / email integration |
+| `merge-lead` | Git hygiene, pre-merge gate, push/merge, post-merge proof | Final stage — only after user ok + KPIs MET |
 
-All three carry `parent: loom` and are product-agnostic. They never duplicate connector or service logic \u2014 **one feature, one place** per `ARCHITECTURE.md`.
+All carry `parent: loom` and are product-agnostic. They never duplicate connector or service logic \u2014 **one feature, one place** per `ARCHITECTURE.md`.
 
 ## Layer ownership
 

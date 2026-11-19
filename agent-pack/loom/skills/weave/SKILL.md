@@ -1,12 +1,12 @@
 ---
 name: weave
-description: Loom pipeline — Discuss target, draft plan to /opencode/plan/, then execute full stack weave (scaffold → review → QA → UX → Final Acceptance → merge). QA owns UX acceptance at the end. Includes link integrity gate (no broken/DOA links).
+description: Weave orchestrator — invoked by Loom thinker with a locked Goal Contract; executes full stack weave (scaffold → review → QA → UX → Final Acceptance → merge). QA owns UX acceptance at the end. Includes link integrity gate (no broken/DOA links).
 aliases: [multi-agent-delivery-pipeline]
 ---
 
-# Weave
+# Weave — Orchestrator (invoked by Loom)
 
-Discuss the target feature with the user, produce a plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
+Invoked by **Loom** (thinker) with a locked Goal Contract + Decomposition Memo. Produce/confirm plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
 
 ## Link integrity gate (applies to Loom and Lighthouse — including lighthouse docs)
 

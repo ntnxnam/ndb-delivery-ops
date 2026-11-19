@@ -144,6 +144,10 @@ All of the following run in the component/hook — no additional API calls:
 
 ---
 
+## Risk trail disposition
+
+Feature Dashboard and EmailSender intentionally do not render the risk movement trail. Feature Dashboard's risk is a derived roll-up for Gantt colouring, not a per-ticket history view; EmailSender's AI-summary path owns risk context via `riskAssessment`/`pathToGreen`. Trail remains in scope only for Project Status and SoS surfaces (table + email snapshot). No wiring planned — revisit if per-ticket history is needed on those pages.
+
 ## Error Handling
 
 | Scenario | HTTP code | Client behaviour |
