@@ -9,7 +9,7 @@ import TaskBreakdownCell from './TaskBreakdownCell';
 import ReleaseVersionGantt from './ReleaseVersionGantt';
 import SosEmailBar from './SosEmailBar';
 import SosTierSummaryBox from './SosTierSummaryBox';
-import SosReleaseCharts, { SosRagHeatmap } from './SosReleaseCharts';
+import SosReleaseCharts, { SosRagHeatmap, KpiBreakdownStrip } from './SosReleaseCharts';
 import ReleaseVersionFilterBar from './ReleaseVersionFilterBar';
 import { useSosSummary, RAG_COLORS } from '../hooks/useSosSummary';
 import { SOS_TIERS } from '../hooks/useSosTierSummary';
