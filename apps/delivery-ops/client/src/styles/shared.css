@@ -1,0 +1,13 @@
+/* styles/shared.css — shared utility classes consumed by multiple layers (utils + components).
+ * Keeps layering clean: utils shouldn't import components CSS.
+ */
+
+.rv-notset {
+  background: var(--notset-bg);
+  color: var(--notset-text);
+  font-weight: var(--fw-semibold);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: var(--fs-xs);
+  border: 1px solid var(--notset-border);
+}

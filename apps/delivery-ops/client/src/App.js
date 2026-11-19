@@ -60,57 +60,6 @@ const LoginPage = () => {
         />
       </div>
       
-      <style>{`
-        .login-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          padding: 24px;
-        }
-
-        .login-container {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          padding: 48px;
-          max-width: 400px;
-          width: 100%;
-        }
-
-        .login-header {
-          text-align: center;
-          margin-bottom: 32px;
-        }
-
-        .login-header h1 {
-          color: #333;
-          margin: 0 0 8px 0;
-          font-size: 28px;
-          font-weight: 600;
-        }
-
-        .login-header p {
-          color: #6c757d;
-          margin: 0;
-          font-size: 16px;
-        }
-
-        .login-form {
-          margin-top: 24px;
-        }
-
-        @media (max-width: 576px) {
-          .login-container {
-            padding: 32px 24px;
-          }
-
-          .login-header h1 {
-            font-size: 24px;
-          }
-        }
-      `}</style>
     </div>
   );
 };
@@ -462,48 +411,6 @@ const AppRouter = () => {
           <p>Checking your session...</p>
         </div>
         
-        <style>{`
-          .app-loading {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          }
-          
-          .loading-content {
-            text-align: center;
-            max-width: 400px;
-            padding: 48px;
-          }
-          
-          .loading-spinner {
-            width: 44px;
-            height: 44px;
-            margin: 0 auto 24px;
-            border: 4px solid rgba(255, 255, 255, 0.35);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: app-spin 0.8s linear infinite;
-          }
-          
-          .loading-content h2 {
-            margin: 0 0 16px 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          
-          .loading-content p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 16px;
-          }
-          
-          @keyframes app-spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }

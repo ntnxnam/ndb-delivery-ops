@@ -1,0 +1,75 @@
+/* Layout.css — shell layout (token-driven). Extracted from Layout.js <style> block. */
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  background: var(--surface);
+}
+
+.jira-banner {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-toast);
+  background: var(--notset-bg);
+  border-bottom: 1px solid var(--notset-border);
+  padding: var(--space-2) 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
+  color: var(--notset-text);
+  font-weight: var(--fw-medium);
+}
+
+.jira-banner__icon { font-size: 16px; }
+
+.jira-banner__retry {
+  margin-left: auto;
+  background: var(--warning);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.main-content > * {
+  max-width: var(--content-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: var(--space-6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.main-content.main-content-wide > * { max-width: var(--max-width); }
+.main-content.main-content-fluid > * {
+  max-width: min(100%, var(--max-width-fluid));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.main-content > *:last-child { margin-bottom: 0; }
+
+@media (max-width: 768px) {
+  .main-content { margin-left: 0 !important; padding: var(--space-4); }
+  .main-content.sidebar-collapsed { margin-left: 0 !important; }
+  .main-content > * { margin-bottom: var(--space-4); }
+  /* overlay mode: main inert while drawer open — Esc closes drawer for a11y */
+  .main-content.sidebar-expanded { pointer-events: none; }
+}
+
+@media (max-width: 576px) {
+  .main-content { padding: var(--space-3); }
+}

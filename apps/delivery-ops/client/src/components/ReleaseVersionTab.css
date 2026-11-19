@@ -1,3 +1,12 @@
+/* ReleaseVersionTab.css — legacy debt, partially tokenized.
+ * @TODO tokens: 113 hardcoded hex remain (modals, QI cards, gate readiness).
+ * In-scope for Step 2 tokenization: filter bar, table scroll, section panels.
+ * Out-of-scope legacy palette (e.g. QI #d4edda, gate #e3f2fd) documented as debt —
+ * renders on light canvas but not yet migrated to var(--*). Next slice will
+ * migrate to var(--surface/--border/--success-soft/etc). Guard counts these
+ * toward 2735 warn-only total.
+ */
+
 /* ─── Print / PDF styles ──────────────────────────────────────────────────── */
 @media print {
   /* Hide everything that isn't content */
@@ -23,7 +32,7 @@
   body {
     margin: 0;
     padding: 0;
-    background: #fff;
+    background: var(--surface-raised);
     font-size: 10pt;
     color: #000;
   }
@@ -43,7 +52,7 @@
     font-size: 14pt;
     font-weight: bold;
     margin-bottom: 8pt;
-    border-bottom: 1pt solid #333;
+    border-bottom: 1pt solid var(--text-strong);
     padding-bottom: 4pt;
   }
 
@@ -134,16 +143,16 @@
 .section-table th,
 .section-table td {
   padding: 8px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   text-align: left;
 }
 
 .section-table thead tr {
-  background-color: #e9ecef;
+  background-color: var(--border-subtle);
 }
 
 .section-table tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
 }
 
 /* Executive Summary Modal Styles */
@@ -162,7 +171,7 @@
 }
 
 .exec-summary-modal {
-  background: white;
+  background: var(--surface-raised);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   max-width: 900px;
@@ -178,14 +187,14 @@
   justify-content: between;
   align-items: center;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #dee2e6;
-  background-color: #f8f9fa;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
 }
 
 .exec-summary-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #172B4D;
+  color: var(--text-strong);
   flex-grow: 1;
 }
 
@@ -194,7 +203,7 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--muted);
   padding: 0;
   width: 30px;
   height: 30px;
@@ -205,8 +214,8 @@
 }
 
 .exec-summary-close:hover {
-  background-color: #e9ecef;
-  color: #333;
+  background-color: var(--border-subtle);
+  color: var(--text-strong);
 }
 
 .exec-summary-content {
@@ -223,7 +232,7 @@
 .exec-summary-section h3 {
   margin: 0 0 12px 0;
   font-size: 1.2rem;
-  color: #172B4D;
+  color: var(--text-strong);
   border-bottom: 2px solid #0066cc;
   padding-bottom: 8px;
 }
@@ -231,7 +240,7 @@
 .exec-summary-section p {
   margin: 0 0 16px 0;
   line-height: 1.6;
-  color: #333;
+  color: var(--text-strong);
 }
 
 .risk-breakdown-table {
@@ -248,22 +257,22 @@
 .risk-breakdown-table th,
 .risk-breakdown-table td {
   padding: 12px 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   text-align: left;
 }
 
 .risk-breakdown-table th {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   font-weight: 600;
-  color: #172B4D;
+  color: var(--text-strong);
 }
 
 .risk-breakdown-table tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
 }
 
 .risk-breakdown-table .total-row {
-  background-color: #e9ecef !important;
+  background-color: var(--border-subtle) !important;
   border-top: 2px solid #0066cc;
 }
 
@@ -272,9 +281,9 @@
 }
 
 .exec-summary-footer {
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--border);
   padding: 16px 24px;
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -284,7 +293,7 @@
 
 .exec-summary-footer p {
   margin: 0;
-  color: #666;
+  color: var(--muted);
 }
 
 .exec-summary-actions {
@@ -305,7 +314,7 @@
 
 .exec-summary-copy {
   background-color: #28a745;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .exec-summary-copy:hover {
@@ -314,7 +323,7 @@
 
 .exec-summary-close-btn {
   background-color: #6c757d;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .exec-summary-close-btn:hover {
@@ -329,7 +338,7 @@
 /* Quick Decision Data (DISC - D personalities) */
 .exec-summary-quick-data {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--text-inverse);
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -393,18 +402,18 @@
 .feat-breakdown-table th,
 .feat-breakdown-table td {
   padding: 12px 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   text-align: left;
 }
 
 .feat-breakdown-table th {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   font-weight: 600;
-  color: #172B4D;
+  color: var(--text-strong);
 }
 
 .feat-breakdown-table tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
 }
 
 .feat-breakdown-table tbody tr:hover {
@@ -413,8 +422,8 @@
 
 /* AI Section Styles */
 .ai-section {
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
+  background: var(--surface);
+  border: 2px solid var(--border-subtle);
   border-radius: 8px;
   padding: 20px;
 }
@@ -449,7 +458,7 @@
 
 .btn-ai {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-ai:hover:not(:disabled) {
@@ -459,7 +468,7 @@
 
 .btn-primary {
   background-color: #007bff;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -468,7 +477,7 @@
 
 .btn-secondary {
   background-color: #6c757d;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -477,7 +486,7 @@
 
 .btn-toggle {
   background-color: #17a2b8;
-  color: white;
+  color: var(--text-inverse);
   font-size: 12px;
   padding: 6px 12px;
 }
@@ -488,10 +497,10 @@
 
 /* AI Key Input */
 .ai-key-input {
-  background: white;
+  background: var(--surface-raised);
   border-radius: 6px;
   padding: 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   margin-top: 16px;
 }
 
@@ -499,7 +508,7 @@
   display: block;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #172B4D;
+  color: var(--text-strong);
 }
 
 .key-input-section input {
@@ -526,7 +535,7 @@
 
 /* AI Summary Display */
 .ai-summary-display {
-  background: white;
+  background: var(--surface-raised);
   border-radius: 6px;
   padding: 20px;
   border: 1px solid #28a745;
@@ -540,7 +549,7 @@
   top: -10px;
   left: 16px;
   background: #28a745;
-  color: white;
+  color: var(--text-inverse);
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 11px;
@@ -549,7 +558,7 @@
 
 .ai-summary-content {
   line-height: 1.6;
-  color: #333;
+  color: var(--text-strong);
 }
 
 /* Section Headers */
@@ -568,15 +577,15 @@
 
 /* Per-Project Details */
 .per-project-details {
-  background: white;
+  background: var(--surface-raised);
   border-radius: 6px;
   padding: 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   margin-top: 12px;
 }
 
 .project-details-placeholder {
-  color: #666;
+  color: var(--muted);
   font-style: italic;
   text-align: center;
   padding: 20px;
@@ -655,7 +664,7 @@
 .btn-copy {
   background: #f0f0f0;
   border: 1px solid #ddd;
-  color: #333;
+  color: var(--text-strong);
   padding: 4px 8px;
   font-size: 12px;
   border-radius: 4px;
@@ -667,8 +676,8 @@
 }
 
 .ai-summary-display {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 16px;
   margin-top: 12px;
@@ -679,7 +688,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
 
@@ -706,7 +715,7 @@
 .ai-summary-footer {
   margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--border);
   text-align: right;
 }
 
@@ -724,7 +733,7 @@
 
 .btn-ai {
   background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--text-inverse);
   border: none;
   box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
@@ -744,7 +753,7 @@
 .project-details-table {
   overflow-x: auto;
   border-radius: 8px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
 }
 
 .project-details-table table {
@@ -754,22 +763,22 @@
 }
 
 .project-details-table th {
-  background: #f8f9fa;
+  background: var(--surface);
   padding: 12px 8px;
   text-align: left;
   font-weight: 600;
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 2px solid var(--border);
   white-space: nowrap;
 }
 
 .project-details-table td {
   padding: 12px 8px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: top;
 }
 
 .project-details-table tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
 }
 
 .project-details-table tr.risk-red {
@@ -836,14 +845,14 @@
   font-size: 12px;
   padding: 2px 6px;
   border-radius: 12px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background: var(--surface);
+  border: 1px solid var(--border);
   display: inline-block;
   white-space: nowrap;
 }
 
 .work-count.bugs {
-  background: #fff5f5;
+  background: var(--surface-raised)5f5;
   border-color: #fed7d7;
   color: #c53030;
 }
@@ -897,9 +906,9 @@
 .qi-metrics {
   margin-top: 16px;
   padding: 16px;
-  background: #f8f9fa;
+  background: var(--surface);
   border-radius: 8px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
 }
 
 .qi-header h4 {
@@ -936,7 +945,7 @@
 }
 
 .qi-card.qi-acceptable {
-  background: #fff3cd;
+  background: var(--surface-raised)3cd;
   color: #856404;
   border-color: #ffeaa7;
 }
@@ -962,7 +971,7 @@
 }
 
 .qi-breakdown-section {
-  background: #f8f9fa;
+  background: var(--surface);
   border-radius: 8px;
   padding: 20px;
   margin: 16px 0;
@@ -976,10 +985,10 @@
 }
 
 .qi-category {
-  background: white;
+  background: var(--surface-raised);
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
 }
 
 .qi-category-header {
@@ -988,7 +997,7 @@
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #e9ecef;
+  border-bottom: 2px solid var(--border-subtle);
 }
 
 .qi-category-header h4 {
@@ -1017,7 +1026,7 @@
 }
 
 .qi-score-large.qi-acceptable {
-  background: #fff3cd;
+  background: var(--surface-raised)3cd;
   color: #856404;
   border-color: #ffeaa7;
 }
@@ -1036,9 +1045,9 @@
 
 .qi-factor {
   padding: 12px;
-  background: #f8f9fa;
+  background: var(--surface);
   border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-subtle);
 }
 
 .factor-info {
@@ -1057,7 +1066,7 @@
 .factor-weight {
   font-size: 12px;
   color: #6c757d;
-  background: #e9ecef;
+  background: var(--border-subtle);
   padding: 2px 6px;
   border-radius: 12px;
 }
@@ -1101,7 +1110,7 @@
 }
 
 .readiness-score.score-at-risk {
-  background: #fff3cd;
+  background: var(--surface-raised)3cd;
   color: #856404;
   border-color: #ffeaa7;
 }
@@ -1127,10 +1136,10 @@
 }
 
 .gate-category {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
-  background: #f8f9fa;
+  background: var(--surface);
 }
 
 .gate-category.category-good {
@@ -1140,12 +1149,12 @@
 
 .gate-category.category-warning {
   border-color: #ffc107;
-  background: #fffef5;
+  background: var(--surface-raised)ef5;
 }
 
 .gate-category.category-critical {
   border-color: #dc3545;
-  background: #fff5f5;
+  background: var(--surface-raised)5f5;
 }
 
 .category-header {
@@ -1154,7 +1163,7 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .category-header h4 {
@@ -1190,7 +1199,7 @@
 }
 
 .criterion.criterion-warning {
-  background: #fff3cd;
+  background: var(--surface-raised)3cd;
   color: #856404;
 }
 
@@ -1209,7 +1218,7 @@
 }
 
 .gate-recommendations {
-  background: #e9ecef;
+  background: var(--border-subtle);
   border-radius: 8px;
   padding: 16px;
   margin-top: 16px;
@@ -1234,7 +1243,7 @@
 }
 
 .recommendation.priority-high {
-  background: #fff3cd;
+  background: var(--surface-raised)3cd;
   border-color: #ffc107;
   color: #856404;
 }

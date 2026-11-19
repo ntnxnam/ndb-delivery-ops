@@ -25,6 +25,7 @@ import {
   isNavItemActive,
   findActiveGroupId,
 } from '../utils/sidebarNavConfig';
+import './Sidebar.css';
 
 const GROUP_ICONS = {
   SlidersHorizontal,

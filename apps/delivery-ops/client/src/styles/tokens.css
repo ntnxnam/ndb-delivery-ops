@@ -1,0 +1,282 @@
+/*
+ * styles/tokens.css — canonical light design tokens for portfolio-delivery-ops.
+ *
+ * Single source of truth. Every CSS file and inline style in the app should
+ * reference these variables instead of hard-coded hex. Light is the default;
+ * dark is parked (see THEMES_ROADMAP.md) and, when added, will override the
+ * same vars under `html[data-theme="dark"]`.
+ *
+ * Naming: short `--*` for app-wide use (`--bg`, `--text`), mirrored `--ds-*`
+ * aliases so existing `.ds-scope` pages (`ReleaseBriefPage`, `RetrospectivePage`,
+ * `DesignSystemDemo`) keep working without code changes.
+ */
+
+:root {
+  /* ── core surfaces ─────────────────────────────────────────────────── */
+  --bg: #ffffff;
+  --surface: #f8f9fa;
+  --surface-raised: #ffffff;
+  --surface-hover: #f1f3f5;
+  --border: #dee2e6;
+  --border-strong: #ced4da;
+  --border-subtle: #e9ecef;
+  --divider: rgba(0, 0, 0, 0.06);
+
+  /* ── sidebar / chrome (dark chrome on light canvas — intentional) ──── */
+  --sidebar-bg: #343a40;
+  --sidebar-bg-hover: #3d444b;
+  --sidebar-bg-active: #495057;
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: #adb5bd;
+  --sidebar-text-active: #87ceeb;
+  --sidebar-group-header: #ced4da;
+  --sidebar-border: #495057;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 60px;
+
+  /* ── header ────────────────────────────────────────────────────────── */
+  --header-bg: #1a1a1a;
+  --header-text: #ffffff;
+  --header-border: #333333;
+
+  /* ── ink ───────────────────────────────────────────────────────────── */
+  --text: #1a1a1a;
+  --text-strong: #212529;
+  --text-inverse: #ffffff;
+  --muted: #6c757d;
+  --muted-soft: #6c757d; /* was #868e96 3.32:1 fail — floor at muted for ≥4.5:1 on 10px hints */
+  --muted-label: #495057;
+
+  /* ── accent / brand ────────────────────────────────────────────────── */
+  --accent: #0d6efd;
+  --accent-hover: #0b5ed7;
+  --accent-soft: rgba(13, 110, 253, 0.08);
+  --accent-border: rgba(13, 110, 253, 0.32);
+  --accent-contrast: #ffffff;
+
+  /* brand gradient moments (login, loading) — keep existing #667eea→#764ba2 */
+  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* ── status / RAG ──────────────────────────────────────────────────── */
+  --success: #198754;
+  --success-soft: rgba(25, 135, 84, 0.10);
+  --success-border: rgba(25, 135, 84, 0.24);
+  --warning: #ffc107;
+  --warning-soft: rgba(255, 193, 7, 0.16);
+  --warning-border: rgba(255, 193, 7, 0.36);
+  --warning-text: #856404;
+  --danger: #dc3545;
+  --danger-hover: #c82333;
+  --danger-active: #bd2130;
+  --danger-soft: rgba(220, 53, 69, 0.08);
+  --danger-border: rgba(220, 53, 69, 0.24);
+  --info: #0d6efd;
+  --info-soft: rgba(13, 110, 253, 0.08);
+  --neutral: #6c757d;
+  --neutral-soft: #f1f3f5;
+
+  /* RAG aliases (release-status vocabulary) */
+  --rag-green: var(--success);
+  --rag-amber: #fd7e14;
+  --rag-amber-soft: rgba(253, 126, 20, 0.12);
+  --rag-red: var(--danger);
+  --rag-blue: #0d6efd;
+  --rag-grey: var(--neutral);
+  /* Not Set badge */
+  --notset-bg: #fff3cd;
+  --notset-border: #ffc107;
+  --notset-text: #856404;
+
+  /* risk RAG (ReleaseVersionTableCell badge backgrounds) */
+  --risk-green: #00875a;
+  --risk-yellow: #ff8b00;
+  --risk-red: #de350b;
+  --risk-blue: #0052cc;
+  --risk-deep-red: #8b0000;
+
+  /* ── type scale ────────────────────────────────────────────────────── */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --fs-xs: 0.6875rem;   /* 11px — dense risk labels */
+  --fs-muted: 0.75rem;  /* 12px — uppercase labels */
+  --fs-small: 0.8125rem;/* 13px — table cells */
+  --fs-body: 0.875rem;  /* 14px — body */
+  --fs-section: 1rem;   /* 16px — section titles */
+  --fs-page: 1.375rem;  /* 22px — page titles */
+  --fs-kpi-number: 1.75rem; /* 28px — KPI big number */
+  --fs-display: 1.75rem;/* 28px — login title */
+
+  --lh-tight: 1.2;
+  --lh-body: 1.5;
+  --lh-relaxed: 1.8;
+
+  --tracking-label: 0.05em;
+  --tracking-tight: 0.01em;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ── spacing (4/8/12/16/24/32) ─────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* ── radii + shadows ───────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.10);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* ── motion ────────────────────────────────────────────────────────── */
+  --transition: 0.15s ease;
+  --transition-slow: 0.24s ease;
+
+  /* ── layout ────────────────────────────────────────────────────────── */
+  --max-width: 1400px;
+  --max-width-wide: 1600px;
+  --max-width-fluid: 1800px;
+  --content-max-width: 1200px;
+
+  /* ── z-index ───────────────────────────────────────────────────────── */
+  --z-sidebar: 1000;
+  --z-header: 100;
+  --z-overlay: 1000;
+  --z-modal: 1010;
+  --z-toast: 1100;
+}
+
+/* ── Back-compat aliases: existing .ds-scope pages reference --ds-* vars.
+ * Mirror every light token so ReleaseBrief/Retrospective/DesignSystemDemo
+ * keep rendering correctly without JS changes. When dark theme lands,
+ * html[data-theme="dark"] will override the :root set above and these
+ * aliases will automatically pick up the dark values too.
+ */
+:root {
+  --ds-bg: var(--bg);
+  --ds-surface: var(--surface);
+  --ds-surface-raised: var(--surface-raised);
+  --ds-border: var(--border);
+  --ds-border-strong: var(--border-strong);
+  --ds-divider: var(--divider);
+
+  --ds-text: var(--text);
+  --ds-text-strong: var(--text-strong);
+  --ds-muted: var(--muted);
+  --ds-muted-soft: var(--muted-soft);
+
+  --ds-accent: var(--accent);
+  --ds-accent-soft: var(--accent-soft);
+  --ds-accent-border: var(--accent-border);
+
+  --ds-success: var(--success);
+  --ds-success-soft: var(--success-soft);
+  --ds-warning: var(--warning);
+  --ds-warning-soft: var(--warning-soft);
+  --ds-warning-text: var(--warning-text);
+  --ds-danger: var(--danger);
+  --ds-danger-soft: var(--danger-soft);
+  --ds-neutral: var(--neutral);
+  --ds-notset-bg: var(--notset-bg);
+  --ds-notset-border: var(--notset-border);
+  --ds-notset-text: var(--notset-text);
+
+  --ds-rag-green: var(--rag-green);
+  --ds-rag-amber: var(--rag-amber);
+  --ds-rag-red: var(--rag-red);
+  --ds-rag-grey: var(--rag-grey);
+
+  --ds-font-sans: var(--font-sans);
+  --ds-font-mono: var(--font-mono);
+  --ds-fs-page: var(--fs-page);
+  --ds-fs-section: var(--fs-section);
+  --ds-fs-body: var(--fs-body);
+  --ds-fs-kpi-number: var(--fs-kpi-number);
+  --ds-fs-small: var(--fs-small);
+  --ds-fs-muted: var(--fs-muted);
+  --ds-lh-tight: var(--lh-tight);
+  --ds-lh-body: var(--lh-body);
+  --ds-tracking-label: var(--tracking-label);
+  --ds-fw-regular: var(--fw-regular);
+  --ds-fw-medium: var(--fw-medium);
+  --ds-fw-semi: var(--fw-semibold);
+  --ds-space-1: var(--space-1);
+  --ds-space-2: var(--space-2);
+  --ds-space-3: var(--space-3);
+  --ds-space-4: var(--space-4);
+  --ds-space-5: var(--space-5);
+  --ds-space-6: var(--space-6);
+  --ds-radius-sm: var(--radius-sm);
+  --ds-radius: var(--radius);
+  --ds-radius-lg: var(--radius-md); /* intentional 8px — matches legacy design-system --ds-radius-lg: 8px, not app --radius-lg 12px */
+  --ds-radius-pill: var(--radius-pill);
+  --ds-shadow-inset: var(--shadow-inset);
+  --ds-shadow-card: var(--shadow-card);
+  --ds-transition: var(--transition);
+  --ds-max-width: var(--max-width);
+}
+
+/* ── Opt-in scope wrapper: legacy .ds-scope pages set bg/text/shadows
+ * to the current token values. New global pages don't need it — they
+ * inherit from :root via body — but we keep it so the three existing
+ * DS pages don't visually break during migration.
+ */
+.ds-scope {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ds-page {
+  min-height: 100vh;
+  padding: var(--space-5);
+}
+
+.ds-page__inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.ds-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-scope :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Parked dark override — uncomment and flesh out when THEMES_ROADMAP lands:
+html[data-theme="dark"] {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --surface-raised: #20293a;
+  --border: #2d3a4d;
+  --border-strong: #3a4a60;
+  --text: #e6edf3;
+  --text-strong: #f0f6fc;
+  --muted: #8b949e;
+  --muted-soft: #6e7681;
+  --accent: #58a6ff;
+  ...etc — full dark palette from design-system/tokens.css
+}
+*/

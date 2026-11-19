@@ -104,6 +104,23 @@ Each subagent prompt must include:
   - `page-docs-required` / `api-docs-required` when pages or routes ship
   - Auth, secrets, injection, unsafe HTML/email, data exposure (security lens)
 
+### 3b) Launch comments-check sub-agent in parallel (mandatory when code ships)
+
+Alongside the model reviewers, launch **one** readonly `generalPurpose` sub-agent for **comments hygiene** — it runs in the same parallel batch, not sequentially after synthesis. Its verdict folds into the stage-2 synthesis below.
+
+**Prompt must include:** same intent + diff + Goal KPI Card, plus:
+
+- **Mandate:** audit comment hygiene only — do not duplicate bug-hunting; focus on:
+  - Missing JSDoc/TSDoc for exported functions, hooks, services, API handlers
+  - Stale/misleading comments (comment says X, code does Y)
+  - Commented-out code (should be deleted, not left commented)
+  - TODO/FIXME/HACK without ticket/owner or without expiry
+  - Redundant obvious comments (`// increment i` for `i++`), noise vs signal
+  - Missing `// Why:` for non-obvious business logic, JIRA quirks, magic numbers
+  - Inconsistent comment style for the repo (use `// Why:` / JSDoc where mandated)
+- **Output:** same severity scale (Blocking only for stale/misleading comments that risk wrong behaviour; High for missing JSDoc on public API; Medium/Nit otherwise) with file:line, quote, fix suggestion.
+- **Gating:** Blocking from comments-check blocks like any model reviewer — merge its findings into consensus before synthesis. If the diff touches no code comments (pure config), it may return `SCORE: 0/0` with one-line rationale.
+
 Optional: after the multi-model Code Review batch, the **parent** may still
 spawn pipeline specialist stages (QA, UX, Exec, JIRA Query Checker, Security)
 per `multi-agent-delivery-pipeline.mdc` — those are separate stages, not a
@@ -111,10 +128,10 @@ replacement for multi-model consensus.
 
 ## 4) Synthesize (parent agent)
 
-Merge subagent findings:
+Merge all sub-agent findings — **model reviewers + comments-check** — into one stage-2 verdict:
 
-- **Consensus** (2+ models)
-- **Lone-model** findings
+- **Consensus** (2+ models, or model + comments-check agreeing on a location)
+- **Lone-model** / **comments-only** findings
 - Deduplicate overlapping issues
 - Note disagreements
 
