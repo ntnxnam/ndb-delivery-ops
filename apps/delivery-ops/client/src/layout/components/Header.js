@@ -4,11 +4,14 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { LogoutButton } from '../../auth/components/LogoutButton';
 import { useNotifications } from '../../shared/services/notificationService';
 import { useSelectedRelease } from '../../contexts/SelectedReleaseContext';
+import { useTeam } from '../../contexts/TeamContext';
+import { syncReleasesToConfig } from '../../release/services/releaseBriefService';
 import { TeamSelector } from './TeamSelector';
 
 export const Header = () => {
   const { user, testConnectionAndRefreshPermissions } = useAuth();
   const { refreshVersionsAndResetDefault } = useSelectedRelease();
+  const { selectedTeamId } = useTeam();
   const { success: showSuccess, error: showError } = useNotifications();
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
@@ -30,6 +33,19 @@ export const Header = () => {
         showSuccess(result.permissionsRefreshed ? 'JIRA connection successful • Permissions updated' : 'JIRA connection successful');
         // Re-fetch versions and reset the default release to the nearest GA date.
         refreshVersionsAndResetDefault().catch(() => {});
+        // Non-blocking: sync any JIRA versions not yet in runtime config
+        try {
+          const jiraToken = localStorage.getItem('jiraToken') || '';
+          const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
+          syncReleasesToConfig({ teamId: selectedTeamId || undefined, jiraToken, username })
+            .then((r) => {
+              if (r?.created?.length) {
+                showSuccess(`Synced ${r.created.length} new release(s): ${r.created.join(', ')}`);
+                window.dispatchEvent(new CustomEvent('releaseConfigSynced', { detail: r }));
+              }
+            })
+            .catch(() => {});
+        } catch (_) {}
       } else {
         throw new Error(result.message || 'Connection test failed');
       }

@@ -86,9 +86,24 @@ const CARD_STYLES = {
   }
 };
 
+const PHASE_LABELS = {
+  postRelease: 'Post-release',
+  execution: 'During Execution',
+  release: 'At Release',
+  overall: 'Overall',
+};
+const PHASE_ORDER = ['postRelease', 'execution', 'release', 'overall'];
+const PHASE_SUBTITLE = {
+  postRelease: 'CFDs / CFIs / OnCalls — did we ship cleanly?',
+  execution: 'P0 / P1 / E-W Projects — is the build on track?',
+  release: 'Regression / System Test / Pre-Commits — can we ship?',
+  overall: 'SLA / CVE / Deferral — are we meeting promises?',
+};
+
 const LIST_PAGE_SIZE = 5;
 
 function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
+  const isSuperImportant = kpi.isSuperImportant === true;
   const displayType = kpi.displayType === 'list' ? 'list' : 'count';
   const [listPage, setListPage] = useState(1);
   const jiraBase = (typeof process !== 'undefined' && process.env?.REACT_APP_JIRA_BASE) || 'https://jira.nutanix.com';
@@ -116,9 +131,10 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
   }, [displayType, hasData, totalListPages]);
 
   return (
-    <div style={CARD_STYLES.card}>
+    <div style={isSuperImportant ? { ...CARD_STYLES.card, borderColor: '#ff9800', borderWidth: '2px', boxShadow: '0 4px 14px rgba(255,152,0,0.18)' } : CARD_STYLES.card}>
       <div style={CARD_STYLES.cardHeader}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flexWrap: 'wrap' }}>"
+
           {deepLink ? (
             <Link
               to={deepLink}
@@ -141,7 +157,26 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
             <span>{kpi.name}</span>
           )}
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+        {isSuperImportant && (
+          <span
+            title="Super-important — E-W projects in release (labels ndb-ew / global-ew / nutanix-ew)"
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              color: '#e65100',
+              background: '#fff3e0',
+              border: '1px solid #ffcc80',
+              borderRadius: '999px',
+              padding: '0.1rem 0.4rem',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.02em',
+            }}
+          >
+            🔶 Super-important
+          </span>
+        )}
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>"
+
           {deepLink && (
             <Link
               to={deepLink}
@@ -742,31 +777,79 @@ export default function KPIPage() {
                   )}
                   {widgetsLoading && !widgetResults && <PageLoading message="Loading widget data…" />}
                   {(() => {
-                    const countKpis = kpis.filter((k) => k.displayType !== 'list');
-                    const listKpis = kpis.filter((k) => k.displayType === 'list');
+                    const grouped = {};
+                    PHASE_ORDER.forEach((ph) => { grouped[ph] = []; });
+                    const uncategorized = [];
+                    kpis.forEach((k) => {
+                      const ph = k.lifecyclePhase;
+                      if (ph && grouped[ph]) grouped[ph].push(k);
+                      else uncategorized.push(k);
+                    });
+                    const hasGrouped = PHASE_ORDER.some((ph) => grouped[ph].length > 0);
+                    if (!hasGrouped && uncategorized.length === 0) return null;
+                    // Fallback: if no lifecyclePhase at all, render flat grid as before
+                    if (!hasGrouped) {
+                      return (
+                        <div style={CARD_STYLES.grid}>
+                          {uncategorized.map((k) => (
+                            <KPIWidgetCard
+                              key={k.id}
+                              kpi={k}
+                              data={widgetResults && !widgetResults._error ? widgetResults[k.id] : undefined}
+                              onRefresh={refreshSingleWidget}
+                              isRefreshing={loadingWidgetId === k.id}
+                            />
+                          ))}
+                        </div>
+                      );
+                    }
                     return (
                       <>
-                        {countKpis.length > 0 && (
-                          <div style={{ marginBottom: '1.5rem' }}>
-                            <h4 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 600, color: '#495057' }}>Counts</h4>
-                            <div style={CARD_STYLES.grid}>
-                              {countKpis.map((k) => (
-                                <KPIWidgetCard
-                                  key={k.id}
-                                  kpi={k}
-                                  data={widgetResults && !widgetResults._error ? widgetResults[k.id] : undefined}
-                                  onRefresh={refreshSingleWidget}
-                                  isRefreshing={loadingWidgetId === k.id}
-                                />
-                              ))}
+                        {PHASE_ORDER.map((phase) => {
+                          const items = grouped[phase];
+                          if (!items.length) return null;
+                          return (
+                            <div key={phase} style={{ marginBottom: '1.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#212529' }}>
+                                  {PHASE_LABELS[phase]}
+                                </h4>
+                                <span style={{ fontSize: '0.75rem', color: '#6c757d' }}>
+                                  {PHASE_SUBTITLE[phase]}
+                                </span>
+                                <span
+                                  style={{
+                                    marginLeft: 'auto',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    color: '#495057',
+                                    background: '#e9ecef',
+                                    borderRadius: '999px',
+                                    padding: '0.15rem 0.5rem',
+                                  }}
+                                >
+                                  {items.length} KPI{items.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              <div style={CARD_STYLES.grid}>
+                                {items.map((k) => (
+                                  <KPIWidgetCard
+                                    key={k.id}
+                                    kpi={k}
+                                    data={widgetResults && !widgetResults._error ? widgetResults[k.id] : undefined}
+                                    onRefresh={refreshSingleWidget}
+                                    isRefreshing={loadingWidgetId === k.id}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {listKpis.length > 0 && (
-                          <div>
-                            <h4 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 600, color: '#495057' }}>Lists</h4>
+                          );
+                        })}
+                        {uncategorized.length > 0 && (
+                          <div style={{ marginBottom: '1.5rem' }}>
+                            <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 600, color: '#6c757d' }}>Other</h4>
                             <div style={CARD_STYLES.grid}>
-                              {listKpis.map((k) => (
+                              {uncategorized.map((k) => (
                                 <KPIWidgetCard
                                   key={k.id}
                                   kpi={k}

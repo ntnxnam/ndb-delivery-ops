@@ -168,6 +168,67 @@ function QuickDateInput({ onCommit }) {
   );
 }
 
+// ── Info / notes modal (* affordance) ────────────────────────────────────────
+function InfoNotesModal({ version, cfg, onSave, onClose }) {
+  const jiraMeta = cfg?._jira || cfg?.jiraMeta || null;
+  const [notes, setNotes] = useState(cfg?.notes || cfg?.releaseNotes || cfg?.info || '');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    try { await onSave(version, notes); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-box info-notes-modal" onClick={(e) => e.stopPropagation()}>
+        <h3>{version} — Details</h3>
+        <div className="info-meta">
+          {jiraMeta ? (
+            <table className="info-meta-table">
+              <tbody>
+                <tr><td>Project</td><td>{jiraMeta.projectKey || '—'}</td></tr>
+                <tr><td>Released</td><td>{jiraMeta.released ? 'Yes' : 'No'}</td></tr>
+                {jiraMeta.releaseDate && <tr><td>JIRA releaseDate</td><td>{jiraMeta.releaseDate}</td></tr>}
+                {jiraMeta.id && <tr><td>JIRA id</td><td>{jiraMeta.id}</td></tr>}
+                {jiraMeta.syncedAt && <tr><td>Synced</td><td>{new Date(jiraMeta.syncedAt).toLocaleString()}</td></tr>}
+              </tbody>
+            </table>
+          ) : (
+            <p className="info-meta-hint">No JIRA sync data — will appear after next Test Connection.</p>
+          )}
+          {jiraMeta?.projectKey && (
+            <a
+              href={`https://jira.nutanix.com/issues/?jql=${encodeURIComponent(`fixVersion = "${version}"`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="info-jira-link"
+            >
+              Open in JIRA
+            </a>
+          )}
+        </div>
+        <label className="info-notes-label">Notes</label>
+        <textarea
+          className="reason-textarea"
+          placeholder="Free-form notes for this release…"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={5}
+          maxLength={2000}
+          autoFocus
+        />
+        <div className="modal-actions">
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Reasoning modal ───────────────────────────────────────────────────────────
 function ReasonModal({ version, changedCols, onConfirm, onCancel }) {
   const [reason, setReason] = useState('');
@@ -205,6 +266,7 @@ const ReleaseConfigPage = () => {
   const [editingRow, setEditingRow]     = useState(null);
   const [pendingEdits, setPendingEdits] = useState({});
   const [showModal, setShowModal]       = useState(null);
+  const [infoModal, setInfoModal]       = useState(null);
   const [showNewForm, setShowNewForm]   = useState(false);
   const [newVersion, setNewVersion]     = useState('');
   const [loading, setLoading]           = useState(true);
@@ -227,6 +289,12 @@ const ReleaseConfigPage = () => {
   }, []);
 
   useEffect(() => { loadConfigs(); }, [loadConfigs]);
+
+  useEffect(() => {
+    const handler = () => loadConfigs();
+    window.addEventListener('releaseConfigSynced', handler);
+    return () => window.removeEventListener('releaseConfigSynced', handler);
+  }, [loadConfigs]);
 
   function startEdit(version) {
     setEditingRow(version);
@@ -337,6 +405,28 @@ const ReleaseConfigPage = () => {
     setNewVersion('');
   }
 
+  async function handleInfoSave(version, notes) {
+    const cfg = releases[version] || {};
+    const payload = { ...cfg, notes, version, reason: '' };
+    if (cfg._jira) payload._jira = cfg._jira;
+    if (cfg.jiraMeta) payload.jiraMeta = cfg.jiraMeta;
+    if (cfg._source) payload._source = cfg._source;
+    if (cfg._syncedAt) payload._syncedAt = cfg._syncedAt;
+    try {
+      const res = await fetch('/api/config/release-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Username': localStorage.getItem('username') || '' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      await loadConfigs();
+      setInfoModal(null);
+      setSuccess(`${version} notes saved.`);
+    } catch (e) {
+      setError('Save failed: ' + e.message);
+    }
+  }
+
   async function handleDelete(version) {
     if (!window.confirm(`Delete config for ${version}?`)) return;
     try {
@@ -418,7 +508,17 @@ const ReleaseConfigPage = () => {
 
                 return (
                   <tr key={version} className={editing ? 'row-editing' : ''}>
-                    <td className="col-version">{version}</td>
+                    <td className="col-version">
+                      <span>{version}</span>
+                      <button
+                        className={`info-btn${(cfg.notes || cfg.releaseNotes || cfg.info) ? ' has-notes' : ''}`}
+                        onClick={() => setInfoModal({ version, cfg })}
+                        aria-label={`More info for ${version}`}
+                        title={cfg.notes || cfg.releaseNotes || cfg.info ? 'Has notes — click to view/edit' : 'JIRA details & notes'}
+                      >
+                        *
+                      </button>
+                    </td>
 
                     {GATE_COLUMNS.map(col => {
                       const allEntries = col.getAll(cfg);   // [{ date, reason? }, …]
@@ -529,6 +629,15 @@ const ReleaseConfigPage = () => {
         />
       )}
 
+      {infoModal && (
+        <InfoNotesModal
+          version={infoModal.version}
+          cfg={releases[infoModal.version] || infoModal.cfg}
+          onSave={handleInfoSave}
+          onClose={() => setInfoModal(null)}
+        />
+      )}
+
       {error   && <Toast message={error}   type="error"   onClose={() => setError('')}   />}
       {success && <Toast message={success} type="success" onClose={() => setSuccess('')} />}
 
@@ -564,7 +673,25 @@ const ReleaseConfigPage = () => {
         .rc-table tbody tr:hover { background: #fafafa; }
         .rc-table tbody tr.row-editing { background: #fffbea; }
 
-        .col-version { font-weight: 600; min-width: 90px; white-space: nowrap; }
+        .col-version { font-weight: 600; min-width: 90px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+        .info-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          min-width: 22px; min-height: 22px; padding: 0 4px;
+          border: 1px solid #ced4da; border-radius: 4px; background: #fff;
+          color: #6c757d; font-size: 13px; font-weight: 700; line-height: 1;
+          cursor: pointer; transition: all 0.15s;
+        }
+        .info-btn:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f7ff; }
+        .info-btn.has-notes { background: #0d6efd; color: #fff; border-color: #0d6efd; }
+        .info-btn.has-notes:hover { background: #0a58ca; }
+        .info-meta { margin-bottom: 12px; }
+        .info-meta-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .info-meta-table td { padding: 4px 8px; border: 1px solid #e9ecef; }
+        .info-meta-table td:first-child { font-weight: 600; color: #495057; background: #f8f9fa; width: 140px; }
+        .info-meta-hint { font-size: 12px; color: #6c757d; font-style: italic; margin: 0 0 8px; }
+        .info-jira-link { font-size: 12px; color: #0d6efd; text-decoration: none; }
+        .info-jira-link:hover { text-decoration: underline; }
+        .info-notes-label { display: block; font-size: 12px; font-weight: 600; color: #495057; margin-bottom: 4px; }
         .col-ga      { background: rgba(40,167,69,0.04); }
         .col-dri     { min-width: 120px; max-width: 180px; }
         .col-actions { min-width: 104px; white-space: nowrap; }

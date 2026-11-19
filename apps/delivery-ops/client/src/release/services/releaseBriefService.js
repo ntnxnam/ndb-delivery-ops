@@ -374,6 +374,22 @@ export async function fetchBurndown({
 }
 
 /**
+ * Sync missing JIRA versions into runtime config (append-only).
+ * Called non-blocking after Test Connection succeeds.
+ */
+export async function syncReleasesToConfig({ teamId, jiraToken, username, projectKeys } = {}) {
+  const body = {};
+  if (teamId) body.teamId = teamId;
+  if (projectKeys) body.projectKeys = projectKeys;
+  const res = await authenticatedPost(
+    `${API_BASE}/api/config/sync-releases`,
+    body,
+    { jiraToken, username }
+  );
+  return res?.data || {};
+}
+
+/**
  * Turn a JQL string + a JIRA base URL into a clickable filter URL.
  *
  * Per jira-authenticity-links.mdc — every count on the page links to JIRA

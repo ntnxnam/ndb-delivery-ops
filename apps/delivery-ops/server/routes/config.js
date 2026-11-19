@@ -744,6 +744,9 @@ router.post('/release-dates', express.json(), (req, res) => {
       return val.date ? val : null;
     }
 
+    // Persisted extra keys that are not gates but per-release metadata
+    const EXTRA_PERSISTED_KEYS = new Set(['notes', 'releaseNotes', 'info', '_jira', '_source', '_syncedAt', 'jiraMeta']);
+
     // Build release config:
     // 1. Start from the existing saved config so unknown fields (ga4, ccm3Gate, overflow, etc.) survive.
     // 2. Apply all gate fields sent by the client on top (null-safe).
@@ -752,11 +755,43 @@ router.post('/release-dates', express.json(), (req, res) => {
     const releaseConfig = { ...previousConfig };
     for (const [key, val] of Object.entries(gateFields)) {
       if (SKIP_KEYS.has(key)) continue;
+      if (EXTRA_PERSISTED_KEYS.has(key)) {
+        if (key === 'notes' || key === 'releaseNotes' || key === 'info') {
+          releaseConfig.notes = String(val ?? '').slice(0, 2000);
+          // Keep alias keys in sync so either read path works
+          if (key !== 'notes') releaseConfig[key] = String(val ?? '').slice(0, 2000);
+        } else if (key === '_jira' || key === 'jiraMeta') {
+          // Validate shape before persisting — only known fields
+          if (val && typeof val === 'object') {
+            const sanitized = {};
+            if (val.projectKey) sanitized.projectKey = String(val.projectKey);
+            if (val.name) sanitized.name = String(val.name);
+            if (val.released != null) sanitized.released = !!val.released;
+            if (val.archived != null) sanitized.archived = !!val.archived;
+            if (val.releaseDate && /^\d{4}-\d{2}-\d{2}$/.test(String(val.releaseDate))) sanitized.releaseDate = String(val.releaseDate);
+            if (val.id) sanitized.id = String(val.id);
+            if (val.syncedAt) sanitized.syncedAt = String(val.syncedAt);
+            if (val.description) sanitized.description = String(val.description).slice(0, 2000);
+            releaseConfig._jira = sanitized;
+            if (key === 'jiraMeta') releaseConfig.jiraMeta = sanitized;
+          }
+        } else if (key === '_source' || key === '_syncedAt') {
+          releaseConfig[key] = String(val ?? '').slice(0, 500);
+        }
+        continue;
+      }
       if (key === 'ccm1Gate' || key === 'ccm2Gate') {
         releaseConfig[key] = normaliseGate(val);
       } else {
         releaseConfig[key] = val ?? null;
       }
+    }
+    // Normalize notes alias — ensure `notes` is canonical even if client sent releaseNotes/info
+    if (gateFields.releaseNotes != null && releaseConfig.notes === undefined) {
+      releaseConfig.notes = String(gateFields.releaseNotes ?? '').slice(0, 2000);
+    }
+    if (gateFields.info != null && releaseConfig.notes === undefined) {
+      releaseConfig.notes = String(gateFields.info ?? '').slice(0, 2000);
     }
 
     // Carry forward existing date history and append any dates that changed
@@ -1018,6 +1053,24 @@ router.get('/release-dates', (req, res) => {
       error: 'Failed to get release dates',
       message: error.message
     });
+  }
+});
+
+/**
+ * Sync missing JIRA versions into runtime config (append-only).
+ * POST /api/config/sync-releases  body: { teamId?, projectKeys? }
+ * Requires JIRA auth (Bearer PAT).
+ */
+router.post('/sync-releases', express.json(), validateJiraTokenMiddleware, async (req, res) => {
+  try {
+    const { teamId, projectKeys } = req.body || {};
+    const releaseConfigSyncService = require('../services/releaseConfigSyncService');
+    const result = await releaseConfigSyncService.syncMissingReleases(req.jiraToken, { teamId, projectKeys });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[config] POST /sync-releases failed:', error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ success: false, error: error.publicError || error.message || 'Sync failed' });
   }
 });
 

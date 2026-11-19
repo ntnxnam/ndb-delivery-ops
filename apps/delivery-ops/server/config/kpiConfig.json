@@ -104,6 +104,16 @@
         "displayType": "count",
         "order": 12,
         "lifecyclePhase": "overall"
+      },
+      {
+        "id": "kpi_ew_projects",
+        "name": "E-W Projects",
+        "baseQuery": "(   labels in (ndb-ew, global-ew, nutanix-ew) OR   issueFunction in portfolioChildrenOf(     \"labels in (ndb-ew, global-ew, nutanix-ew)      AND issuetype in (Feature, Initiative)\"   ) OR   issueFunction in issuesInEpics(     \"issueFunction in portfolioChildrenOf(       'labels in (ndb-ew, global-ew, nutanix-ew)        AND issuetype in (Feature, Initiative)'     )\"   ) OR   issueFunction in subtasksOf(     \"labels in (ndb-ew, global-ew, nutanix-ew)\"   ) OR   issueFunction in subtasksOf(     \"issueFunction in issuesInEpics(       \\\"issueFunction in portfolioChildrenOf(         'labels in (ndb-ew, global-ew, nutanix-ew)          AND issuetype in (Feature, Initiative)'       )\\\"     )\"   ) )",
+        "displayType": "count",
+        "order": 13,
+        "lifecyclePhase": "execution",
+        "isSuperImportant": true,
+        "releaseScoped": true
       }
     ],
     "datalens": [

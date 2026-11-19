@@ -220,8 +220,15 @@
         "label": "GA",
         "date": "2026-10-07",
         "color": "#28a745",
-        "style": "solid",
+        "style": "dotted",
         "reason": "Hand off to new team of image management"
+      },
+      "ga3": {
+        "label": "GA",
+        "date": "2026-11-23",
+        "color": "#28a745",
+        "style": "solid",
+        "reason": "OS image issue \u2014 patch slip, RM-approved"
       }
     },
     "NDB-2.11.0.2": {
@@ -384,14 +391,14 @@
         "date": "2026-12-15",
         "color": "#ff9800",
         "style": "dotted",
-        "reason": "Gate sequence compressed with NDB-3.0 CCM — superseded by 1-month slip"
+        "reason": "Gate sequence compressed with NDB-3.0 CCM \u2014 superseded by 1-month slip"
       },
       "commitGate3": {
         "label": "Commit Gate 3",
         "date": "2027-01-15",
         "color": "#ff9800",
         "style": "solid",
-        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 \u2014 RM-approved 1-month gate slip"
       },
       "promotionGate1": {
         "label": "Promotion Gate (old)",
@@ -404,7 +411,7 @@
         "date": "2027-03-02",
         "color": "#9c27b0",
         "style": "solid",
-        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 \u2014 RM-approved 1-month gate slip"
       },
       "deferralComplete": {
         "label": "Deferral Complete",
@@ -546,6 +553,41 @@
         "date": "2026-08-31",
         "color": "#28a745",
         "style": "solid"
+      }
+    },
+    "NDB-2.11.1.1": {
+      "codeFreeze": {
+        "label": "Code Freeze",
+        "date": "2026-08-04",
+        "color": "#de350b",
+        "style": "solid"
+      },
+      "commitGate1": {
+        "label": "Commit Gate",
+        "date": "2026-08-25",
+        "color": "#ff9800",
+        "style": "solid"
+      },
+      "ga1": {
+        "label": "GA (old)",
+        "date": "2026-09-22",
+        "color": "#28a745",
+        "style": "dotted",
+        "reason": "Hand off to new team of image management"
+      },
+      "ga2": {
+        "label": "GA",
+        "date": "2026-10-07",
+        "color": "#28a745",
+        "style": "dotted",
+        "reason": "Hand off to new team of image management"
+      },
+      "ga3": {
+        "label": "GA",
+        "date": "2026-11-23",
+        "color": "#28a745",
+        "style": "solid",
+        "reason": "OS image issue \u2014 patch slip, RM-approved"
       }
     }
   },
