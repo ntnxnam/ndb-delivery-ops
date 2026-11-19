@@ -173,3 +173,21 @@ No server TTL — file re-read each request. Client may hold in component state 
 
 **Caching**
 No server TTL — file re-read each request. Client holds via `useEmailSenderCCConfig`.
+
+---
+
+### GET /api/config/releases/:version/release-preview
+
+**Purpose**: Preview Mark-as-Released — returns open ticket count (JQL `fixVersion = "VER" AND status NOT IN (Done,Complete,Closed,Cancelled,Fixed)`), sample, JIRA version state, and email recipients (DRIs + ndb-tpms only, no defaultCC). Includes repair detection `jiraAlreadyReleased`/`canRepair` when JIRA already released but lighthouse not.
+
+**Auth**: admins/team-admins via `isAuthorized(username, teamId)` → 403 otherwise. Requires JIRA PAT for live counts.
+
+**Request** `GET /api/config/releases/NDB-2.11/release-preview?teamId=ndb` headers `X-Username`, `Authorization: Bearer <PAT>`
+
+**Response** `{ version, teamId, projectKey, jql, openCount, sample:[{key,summary,status}], alreadyReleased, jiraAlreadyReleased, canRepair, jiraVersions:[{projectKey,id,released}], emailTo:[...DRIs+ndb-tpms] }`
+
+### POST /api/config/releases/:version/mark-released
+
+**Purpose**: Execute 5-step release finalize: JIRA version `released=true` (skipped if `jiraAlreadyReleased` — repair path), lighthouse `released/releasedAt/releasedBy` (+ `repairFromJira` flag), email to DRIs+ndb-tpms with optional `note` (2000 chars, HTML-escaped), move open tickets to `master` preserving other fixVersions and commenting tagging assignee+manager.
+
+**Auth**: same admin gate. Body `{ teamId?, note? }` (note optional, 2000 cap, escaped `&<>"'`). Errors: 404 version not in config, 409 already lighthouse released. Returns `{ success, jira, lighthouse:{repair?}, email:{to,messageId}, tickets:{moved,failed,jql} }`.

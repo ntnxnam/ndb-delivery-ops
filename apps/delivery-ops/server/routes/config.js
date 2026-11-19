@@ -1058,6 +1058,32 @@ router.get('/release-dates', (req, res) => {
 });
 
 /**
+ * Mark release as Released — preview.
+ * GET /api/config/releases/:version/release-preview?teamId=ndb
+ */
+router.get('/releases/:version/release-preview', async (req, res) => {
+  try {
+    const { version } = req.params; const { teamId } = req.query;
+    const username = getUsername(req);
+    const svc = require('../services/releaseFinalizeService');
+    if (!svc.isAuthorized(username, teamId)) return res.status(403).json({ error: 'Only admins/team-admins may preview release.' });
+    const token = req.headers.authorization ? String(req.headers.authorization).replace(/^Bearer\s+/i,'') : (process.env.JIRA_TOKEN || require('../config/jiraConfig.json').token || '');
+    const data = await svc.previewRelease({ version, teamId, jiraToken: token });
+    res.json(data);
+  } catch (e) { res.status(e.statusCode||500).json({ error: e.message }); }
+});
+router.post('/releases/:version/mark-released', express.json(), async (req, res) => {
+  try {
+    const { version } = req.params; const { teamId, note } = req.body || {}; const username = getUsername(req);
+    const svc = require('../services/releaseFinalizeService');
+    if (!svc.isAuthorized(username, teamId)) return res.status(403).json({ error: 'Only admins/team-admins may mark a release as released.' });
+    const token = req.headers.authorization ? String(req.headers.authorization).replace(/^Bearer\s+/i,'') : (process.env.JIRA_TOKEN || require('../config/jiraConfig.json').token || '');
+    const data = await svc.markReleased({ version, teamId, jiraToken: token, username, note });
+    res.json({ success: true, ...data });
+  } catch (e) { res.status(e.statusCode||500).json({ error: e.message }); }
+});
+
+/**
  * Sync missing JIRA versions into runtime config (append-only).
  * POST /api/config/sync-releases  body: { teamId?, projectKeys? }
  * Requires JIRA auth (Bearer PAT).
