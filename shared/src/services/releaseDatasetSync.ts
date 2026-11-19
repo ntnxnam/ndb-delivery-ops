@@ -405,6 +405,12 @@ export interface SyncProgressEvent {
   detail: string;
 }
 
+function resolveSyncPrefixes(options: { productPrefix?: string; productPrefixes?: string[] }): string[] {
+  if (Array.isArray(options.productPrefixes) && options.productPrefixes.length > 0) return [...options.productPrefixes];
+  if (typeof options.productPrefix === 'string' && options.productPrefix.length > 0) return [options.productPrefix];
+  throw new Error('releaseDatasetSync: productPrefix/productPrefixes is required (D1)');
+}
+
 export interface SyncOptions {
   /** Required: where to cache. Caller-owned (D5 / D34). */
   cache: ReleaseDatasetCache;
@@ -421,8 +427,10 @@ export interface SyncOptions {
   projectKey: string;
   /** Required: label prefix for sidecars + derived columns (D1). */
   labelPrefix: string;
-  /** Required: product release prefix for `Release Type` classification (D1). */
-  productPrefix: string;
+  /** Required: product release prefix for `Release Type` classification (D1). @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  /** Product release prefixes. Canonical for multi-prefix tenants. */
+  productPrefixes?: string[];
   /** Required: sprint calendar for derived columns (D1). */
   sprintCalendar: SprintCalendar;
   /**
@@ -517,14 +525,16 @@ export async function syncReleaseDataset(
   if (!options.labelPrefix) {
     throw new Error('syncReleaseDataset: options.labelPrefix is required (D1)');
   }
-  if (!options.productPrefix) {
-    throw new Error('syncReleaseDataset: options.productPrefix is required (D1)');
+  const productPrefixes = resolveSyncPrefixes(options);
+  const productPrefix = productPrefixes[0] ?? '';
+  if (!productPrefixes.length) {
+    throw new Error('syncReleaseDataset: options.productPrefix/productPrefixes is required (D1)');
   }
   if (!options.sprintCalendar) {
     throw new Error('syncReleaseDataset: options.sprintCalendar is required (D1)');
   }
 
-  const { cache, projectKey, labelPrefix, productPrefix, sprintCalendar } =
+  const { cache, projectKey, labelPrefix, sprintCalendar } =
     options;
 
   // Preserve order, dedupe; in scoped mode we operate only on the
@@ -595,12 +605,12 @@ export async function syncReleaseDataset(
       }
 
       // "master", "Era Future", and any other non-versioned planning bucket
-      // don't start with the product prefix (e.g. "NDB-").  Their accumulated
+      // don't start with any product prefix (e.g. "NDB-").  Their accumulated
       // ticket history is too large for the standard JQL — skip moved_out and
       // use recency-bounded variants for the heavy buckets.
-      const isCatchAllVersion = !release
-        .toUpperCase()
-        .startsWith(productPrefix.toUpperCase());
+      const isCatchAllVersion = !productPrefixes.some((p) =>
+        release.toUpperCase().startsWith(p.toUpperCase())
+      );
 
       emit({ release, status: 'fetching', detail: 'starting bucket fan-out (Groups 1+2+3)' });
       let result: FetchReleaseResult;
@@ -757,7 +767,7 @@ export async function syncReleaseDataset(
 
     const processed = processMaster(combined, {
       labelPrefix,
-      productPrefix,
+      productPrefixes,
       sprintCalendar,
     });
     const sortedReleases = Object.keys(combined).sort();
@@ -786,7 +796,9 @@ export interface SyncBucketOptions {
   cache: ReleaseDatasetCache;
   projectKey: string;
   labelPrefix: string;
-  productPrefix: string;
+  /** @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  productPrefixes?: string[];
   sprintCalendar: SprintCalendar;
   onProgress?: (event: SyncProgressEvent) => void;
   baseFilter?: string;
@@ -824,7 +836,9 @@ export async function syncReleaseBucket(
   bucketName: string,
   options: SyncBucketOptions
 ): Promise<SyncBucketResult> {
-  const { cache, projectKey, labelPrefix, productPrefix, sprintCalendar, onProgress } = options;
+  const { cache, projectKey, labelPrefix, sprintCalendar, onProgress } = options;
+  const syncPrefixes = (() => { try { return resolveSyncPrefixes(options); } catch { return []; } })();
+  const productPrefix = syncPrefixes[0] ?? options.productPrefix ?? '';
 
   const emit = (event: SyncProgressEvent) => onProgress?.(event);
 
@@ -877,7 +891,8 @@ export async function syncReleaseBucket(
   // Rebuild the bundle so downstream pages read fresh data.
   const allReleases = cache.loadAllReleases({ projectKey, labelPrefix });
   allReleases[release] = merged;
-  const processed = processMaster(allReleases, { labelPrefix, productPrefix, sprintCalendar });
+  const syncP = syncPrefixes.length > 0 ? syncPrefixes : (productPrefix ? [productPrefix] : []);
+  const processed = processMaster(allReleases, { labelPrefix, productPrefixes: syncP.length ? syncP : undefined, productPrefix: syncP[0], sprintCalendar });
   const sortedReleases = Object.keys(allReleases).sort();
   cache.saveBundle(processed, sortedReleases, { projectKey, labelPrefix, productPrefix });
 
@@ -902,20 +917,23 @@ export function rebuildBundleFromDisk(options: {
   cache: ReleaseDatasetCache;
   projectKey: string;
   labelPrefix: string;
-  productPrefix: string;
+  productPrefix?: string;
+  productPrefixes?: string[];
   sprintCalendar: SprintCalendar;
 }): {
   processed: ProcessedTicketWithDerived[];
   releases: string[];
 } | null {
-  const { cache, projectKey, labelPrefix, productPrefix, sprintCalendar } =
-    options;
+  const { cache, projectKey, labelPrefix, sprintCalendar } = options;
+  const rbPrefixes = (() => { try { return resolveSyncPrefixes(options as unknown as { productPrefix?: string; productPrefixes?: string[] }); } catch { return []; } })();
+  const productPrefix = rbPrefixes[0] ?? (options as unknown as { productPrefix?: string }).productPrefix ?? '';
   const perRelease = cache.loadAllReleases({ projectKey, labelPrefix });
   const releaseList = Object.keys(perRelease);
   if (releaseList.length === 0) return null;
   const processed = processMaster(perRelease, {
     labelPrefix,
-    productPrefix,
+    productPrefixes: rbPrefixes.length ? rbPrefixes : undefined,
+    productPrefix: productPrefix || undefined,
     sprintCalendar,
   });
   const sortedReleases = releaseList.sort();

@@ -1638,17 +1638,18 @@ router.get('/retrospective/bootstrap', auth, async (req, res) => {
     const versionConfig = gateConfig[release] || null;
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
 
-    const releasePrefix = productService.getReleasePrefix(productId);
+    const releasePrefixes = productService.getReleasePrefixes(productId);
     // Catch-all planning buckets (e.g. "Era Future", "master") don't have real
     // gate contracts, so gate checks and label-anchored queries are meaningless.
-    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+    const isCatchAll = !releasePrefixes.some((p) => release.toUpperCase().startsWith(p.toUpperCase()));
 
     const options = {
       release,
-      projectKeys: [product.projectKey, featureProjectKey],
+      projectKeys: [product.projectKey, featureProjectKey].filter(Boolean),
       companionDisciplines,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix,
+      releasePrefix: releasePrefixes[0],
+      releasePrefixes,
     };
 
     // Run parent count and release-level gate checks in parallel so cards
@@ -1724,8 +1725,8 @@ router.get('/retrospective/projects', auth, async (req, res) => {
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
     const gateDates = resolveGateDates(gateTimeline);
 
-    const releasePrefix = productService.getReleasePrefix(productId);
-    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+    const releasePrefixes = productService.getReleasePrefixes(productId);
+    const isCatchAll = !releasePrefixes.some((p) => release.toUpperCase().startsWith(p.toUpperCase()));
     if (isCatchAll) {
       return res.json({ success: true, data: { projects: [], total: 0, page, limit, timingMs: Date.now() - t0 } });
     }
@@ -1737,7 +1738,8 @@ router.get('/retrospective/projects', auth, async (req, res) => {
       page,
       limit,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix,
+      releasePrefix: releasePrefixes[0],
+      releasePrefixes,
       ccmDate: gateDates.ccmDate || undefined,
       cgDate: gateDates.cgDate || undefined,
       pgDate: gateDates.pgDate || undefined,
@@ -1806,8 +1808,8 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
     const env = { ...loadEnv({ requirePat: false }), jiraPat: userJiraPat };
     const jira = new JiraConnector(env);
 
-    const releasePrefix = productService.getReleasePrefix(productId);
-    const isCatchAll = !release.toUpperCase().startsWith(releasePrefix.toUpperCase());
+    const releasePrefixes = productService.getReleasePrefixes(productId);
+    const isCatchAll = !releasePrefixes.some((p) => release.toUpperCase().startsWith(p.toUpperCase()));
     if (isCatchAll) {
       return res.json({ success: true, data: null, reason: 'catch-all version has no gate contracts' });
     }
@@ -1817,10 +1819,11 @@ router.get('/retrospective/project/:key', auth, async (req, res) => {
     const gateTimeline = parseReleaseGateTimeline(release, { versionConfig });
     const options = {
       release,
-      projectKeys: [product.projectKey, featureProjectKey],
+      projectKeys: [product.projectKey, featureProjectKey].filter(Boolean),
       companionDisciplines,
       labelPrefix: productService.getLabelPrefix(productId),
-      releasePrefix,
+      releasePrefix: releasePrefixes[0],
+      releasePrefixes,
     };
 
     const data = await getRetroProjectDetail(

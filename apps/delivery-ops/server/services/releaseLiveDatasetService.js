@@ -75,11 +75,11 @@ async function fetchLivePerRelease({ productId, release, jiraToken, writeThrough
   const env = { ...loadEnv({ requirePat: false }), jiraPat: jiraToken };
   const jira = new JiraConnector(env);
   const labelPrefix = productService.getLabelPrefix(productId);
-  const productPrefix = productService.getReleasePrefix
-    ? productService.getReleasePrefix(productId)
-    : '';
+  const productPrefixes = productService.getReleasePrefixes
+    ? productService.getReleasePrefixes(productId)
+    : (productService.getReleasePrefix ? [productService.getReleasePrefix(productId)] : []);
   const isCatchAllVersion = Boolean(
-    productPrefix && !String(release).toUpperCase().startsWith(productPrefix.toUpperCase())
+    productPrefixes.length > 0 && !productPrefixes.some((p) => String(release).toUpperCase().startsWith(String(p).toUpperCase()))
   );
 
   const result = await fetchReleaseData(jira, release, {

@@ -328,8 +328,17 @@ export interface LabelAnchoredMetrics {
 export interface LabelAnchoredOptions {
   /** Label prefix for `extractDeferredSourceReleases` (D1). */
   labelPrefix: string;
-  /** Canonical release name prefix (D1). */
-  productPrefix: string;
+  /** Canonical release name prefix (D1). @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  /** Canonical release name prefixes (D1). */
+  productPrefixes?: string[];
+}
+
+function resolveInsightPrefixes(options: LabelAnchoredOptions): string[] {
+  const o = options as { productPrefixes?: string[]; productPrefix?: string };
+  if (Array.isArray(o.productPrefixes) && o.productPrefixes.length > 0) return [...o.productPrefixes];
+  if (typeof o.productPrefix === 'string' && o.productPrefix.length > 0) return [o.productPrefix];
+  throw new Error('releaseInsightsService: productPrefix/productPrefixes is required (D1)');
 }
 
 /**
@@ -354,11 +363,7 @@ export function computeLabelAnchoredMetrics(
       'computeLabelAnchoredMetrics: options.labelPrefix is required (D1)'
     );
   }
-  if (!options?.productPrefix) {
-    throw new Error(
-      'computeLabelAnchoredMetrics: options.productPrefix is required (D1)'
-    );
-  }
+  const prefixes = resolveInsightPrefixes(options);
 
   const out: LabelAnchoredMetrics = {
     deferred: 0,
@@ -374,7 +379,7 @@ export function computeLabelAnchoredMetrics(
   // Build sort key for the current release once. Anything that fails
   // to parse (release name doesn't match the productPrefix shape)
   // bails out with the deferred count we already have.
-  const classOpts: ClassificationOptions = { productPrefix: options.productPrefix };
+  const classOpts: ClassificationOptions = { productPrefixes: prefixes };
   let curKey;
   try {
     curKey = sortKey(release, classOpts);
