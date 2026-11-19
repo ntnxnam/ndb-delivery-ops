@@ -230,6 +230,41 @@ router.post('/create-jch-ticket', validateJiraTokenMiddleware, requireAuth('rele
   }
 });
 
+router.post('/check-jch-exists', validateJiraTokenMiddleware, requireAuth('releaseSetup'), async (req, res) => {
+  try {
+    const result = await releaseSetupService.checkJchTicketExists(req.jiraToken, req.body || {});
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in /api/jira/check-jch-exists:', error.message);
+    return sendServiceError(res, error, 'Failed to check JCH');
+  }
+});
+
+router.post('/check-companion-tickets', validateJiraTokenMiddleware, requireAuth('releaseSetup'), async (req, res) => {
+  try {
+    const companionTicketService = require('../../services/companionTicketService');
+    const result = await companionTicketService.checkCompanionTickets(req.jiraToken, req.body || {});
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in /api/jira/check-companion-tickets:', error.message);
+    return sendServiceError(res, error, 'Failed to check companion tickets');
+  }
+});
+
+router.post('/create-companion-tickets', validateJiraTokenMiddleware, requireAuth('releaseSetup'), async (req, res) => {
+  try {
+    const actor = req.username || req.headers['x-username'] || 'unknown';
+    const companionTicketService = require('../../services/companionTicketService');
+    const result = await companionTicketService.createCompanionTickets(req.jiraToken, req.body || {});
+    const logger = require('../../utils/logger');
+    logger.audit.action(actor, 'create-companion-tickets', `${req.body?.version}`, { created: result.created?.length });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in /api/jira/create-companion-tickets:', error.message);
+    return sendServiceError(res, error, 'Failed to create companion tickets');
+  }
+});
+
 /**
  * Fetch TCMS QI + component data for a list of feature keys.
  * Called by the client after items load (non-blocking background fetch).

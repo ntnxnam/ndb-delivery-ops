@@ -194,8 +194,37 @@ async function createFilter(jiraToken, { filterName, jql, description }) {
   };
 }
 
+async function checkJchTicketExists(jiraToken, { versionName, projectKey }) {
+  if (!versionName || !projectKey) {
+    const e = new Error('versionName and projectKey are required');
+    e.statusCode = 400;
+    throw e;
+  }
+  const jira = await getJira(jiraToken);
+  const summary = `Request: Create fixVersion ${versionName} in ${projectKey}`;
+  // Search by project + summary substring; then exact-match in code to avoid JQL fuzzy issues
+  const jql = `project = JCH AND summary ~ "${summary.replace(/"/g, '\\"').slice(0, 80)}"`;
+  try {
+    const res = await jira.get('/rest/api/2/search', { params: { jql, maxResults: 20, fields: 'key,summary,status,issuetype' }, timeout: JIRA_TIMEOUT_MS });
+    const issues = res.data?.issues || [];
+    const exact = issues.find(it => String(it.fields?.summary || '').trim() === summary);
+    if (exact) {
+      return { exists: true, key: exact.key, id: exact.id, status: exact.fields?.status?.name, url: `${JIRA_API_V2.BASE_URL}/browse/${exact.key}` };
+    }
+  } catch (_) {}
+  // Fallback: try broader JQL by fixVersion text in summary without JQL escaping issues
+  try {
+    const jql2 = `project = JCH AND text ~ "${`${versionName} ${projectKey}`.replace(/"/g, '\\"')}"`;
+    const res2 = await jira.get('/rest/api/2/search', { params: { jql: jql2, maxResults: 20, fields: 'key,summary,status' }, timeout: JIRA_TIMEOUT_MS });
+    const exact2 = (res2.data?.issues || []).find(it => String(it.fields?.summary || '').includes(versionName) && String(it.fields?.summary || '').includes(projectKey));
+    if (exact2) return { exists: true, key: exact2.key, id: exact2.id, status: exact2.fields?.status?.name, url: `${JIRA_API_V2.BASE_URL}/browse/${exact2.key}` };
+  } catch (_) {}
+  return { exists: false };
+}
+
 /**
  * Create a JCH ticket requesting version creation when direct creation failed.
+ * Idempotent: if a JCH with same summary already exists, return it instead of creating duplicate.
  * Uses POST /rest/api/2/issue. If JCH mandates Component/s (or other required
  * fields) we fetch createmeta + project components and retry once.
  */
@@ -205,6 +234,13 @@ async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail
     err.statusCode = 400;
     throw err;
   }
+  // Dedup: if JCH already exists for this version/project, return it (don't create duplicate)
+  try {
+    const existing = await checkJchTicketExists(jiraToken, { versionName, projectKey });
+    if (existing.exists) {
+      return { key: existing.key, id: existing.id, url: existing.url, alreadyExists: true, status: existing.status };
+    }
+  } catch (_) {}
 
   async function doCreate(extraFields = null) {
     const jira = await getJira(jiraToken);
@@ -289,4 +325,5 @@ module.exports = {
   checkFilterExists,
   createFilter,
   createJchTicket,
+  checkJchTicketExists,
 };

@@ -60,7 +60,7 @@ function generateFilterChain(version, excludeVersion) {
   ];
 }
 
-const RELEASE_PROJECTS = ['ERA', 'SDL', 'LBDR', 'TECHPUBS', 'LEG', 'SR'];
+const RELEASE_PROJECTS = ['ERA', 'FEAT', 'SDL', 'LBDR', 'TECHPUBS', 'LEG', 'SR'];
 
 function isValidVersionName(version) {
   return (version || '').trim().length > 0;

@@ -1,0 +1,52 @@
+{
+  "templates": [
+    {
+      "id": "lbdr-os-oob",
+      "projectKey": "LBDR",
+      "summaryTpl": "{{version}} — OS/OOB image check",
+      "descriptionTpl": "Automated via Release Setup. Verify OS/OOB images for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    },
+    {
+      "id": "lbdr-signoff",
+      "projectKey": "LBDR",
+      "summaryTpl": "{{version}} — NDB product code sign-off",
+      "descriptionTpl": "Automated via Release Setup. NDB product code sign-off for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    },
+    {
+      "id": "leg-tracking",
+      "projectKey": "LEG",
+      "summaryTpl": "{{version}} — LEG tracking",
+      "descriptionTpl": "Automated via Release Setup. LEG tracking ticket for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    },
+    {
+      "id": "techpubs-userguide",
+      "projectKey": "TECHPUBS",
+      "summaryTpl": "{{version}} — Userguide updates",
+      "descriptionTpl": "Automated via Release Setup. Userguide updates for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    },
+    {
+      "id": "techpubs-relnote",
+      "projectKey": "TECHPUBS",
+      "summaryTpl": "{{version}} — Release notes",
+      "descriptionTpl": "Automated via Release Setup. Release notes for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    },
+    {
+      "id": "sdl-blackduck",
+      "projectKey": "SDL",
+      "summaryTpl": "{{version}} — Blackduck scan",
+      "descriptionTpl": "Automated via Release Setup. Blackduck scan for {{version}}.",
+      "issuetype": "Task",
+      "fixVersionFromRelease": true
+    }
+  ]
+}

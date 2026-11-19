@@ -30,6 +30,12 @@ function CreateRelease() {
   const [checkError, setCheckError] = useState('');
   const [bulkVersionsRunning, setBulkVersionsRunning] = useState(false);
   const [bulkFiltersRunning, setBulkFiltersRunning] = useState(false);
+  const [bulkCompanionRunning, setBulkCompanionRunning] = useState(false);
+
+  const [companionTickets, setCompanionTickets] = useState([]);
+  const [companionStatuses, setCompanionStatuses] = useState({});
+  const [companionErrors, setCompanionErrors] = useState({});
+  const [selectedCompanion, setSelectedCompanion] = useState({});
 
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
@@ -46,10 +52,15 @@ function CreateRelease() {
     setFilterErrors({});
     setFilterEdits({});
     setSelectedFilters({});
+    setCompanionTickets([]);
+    setCompanionStatuses({});
+    setCompanionErrors({});
+    setSelectedCompanion({});
     setCheckError('');
     setJchStatus({});
     setBulkVersionsRunning(false);
     setBulkFiltersRunning(false);
+    setBulkCompanionRunning(false);
   }, []);
 
   const handleCheck = useCallback(async () => {
@@ -111,6 +122,42 @@ function CreateRelease() {
       setFilterEdits({ ...newFilterEdits });
     }
     setSelectedFilters(newSelectedFilters);
+
+    // Companion tickets check (LBDR×2, LEG×1, TECHPUBS×2, SDL×1) — highlight gaps if release already exists but tickets missing
+    try {
+      const res = await authenticatedPost('/api/jira/check-companion-tickets', { version }, { jiraToken, username });
+      const tickets = Array.isArray(res.data?.tickets) ? res.data.tickets : [];
+      setCompanionTickets(tickets);
+      const newCompanionStatuses = {};
+      const newCompanionErrors = {};
+      const newSelectedCompanion = {};
+      tickets.forEach(t => {
+        newCompanionStatuses[t.id] = t.exists ? STATUS.EXISTS : STATUS.MISSING;
+        if (t.error) newCompanionErrors[t.id] = t.error;
+        if (!t.exists) newSelectedCompanion[t.id] = true;
+      });
+      setCompanionStatuses(newCompanionStatuses);
+      setCompanionErrors(newCompanionErrors);
+      setSelectedCompanion(newSelectedCompanion);
+    } catch (err) {
+      // non-blocking: leave companion section empty
+      setCompanionTickets([]);
+    }
+
+    // JCH dedup: if version missing but JCH already exists, surface it so user doesn't create duplicate
+    const newJchStatus = {};
+    for (const proj of releaseProjects) {
+      if (newVersionStatuses[proj] === STATUS.MISSING || newVersionStatuses[proj] === STATUS.ERROR) {
+        try {
+          const r = await authenticatedPost('/api/jira/check-jch-exists', { versionName: version, projectKey: proj }, { jiraToken, username });
+          if (r.data?.exists) {
+            newJchStatus[proj] = { state: 'created', key: r.data.key, url: r.data.url, alreadyExists: true, status: r.data.status };
+          }
+        } catch (_) {}
+      }
+    }
+    if (Object.keys(newJchStatus).length) setJchStatus(prev => ({ ...prev, ...newJchStatus }));
+
     setPhase('checked');
   }, [version, excludeVersion, jiraToken, username, releaseProjects]);
 
@@ -189,17 +236,6 @@ function CreateRelease() {
     if (!targets.length) return;
     setBulkFiltersRunning(true);
     for (const f of targets) {
-      const s = filterStatuses[f.name];
-      const depsSkipped = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.SKIPPED);
-      const depsFailed = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.ERROR);
-      const depsMet = f.dependsOn.every(dep => {
-        const depStatus = filterStatuses[dep];
-        return depStatus === STATUS.EXISTS || depStatus === STATUS.CREATED;
-      });
-      if ((depsSkipped || depsFailed) && !depsMet) {
-        // skip auto-create if deps not met; user can uncheck or fix manually
-        // but still allow if they selected it — proceed with warning already shown
-      }
       // sequential to respect chain order
       // eslint-disable-next-line no-await-in-loop
       await handleCreateFilter(f);
@@ -207,16 +243,57 @@ function CreateRelease() {
     setBulkFiltersRunning(false);
   }, [filterChain, selectedFilters, filterStatuses, handleCreateFilter]);
 
+  const handleCreateCompanionOne = useCallback(async (ticketId) => {
+    setCompanionStatuses(prev => ({ ...prev, [ticketId]: STATUS.CREATING }));
+    try {
+      await authenticatedPost('/api/jira/create-companion-tickets', { version, ids: [ticketId] }, { jiraToken, username });
+      setCompanionStatuses(prev => ({ ...prev, [ticketId]: STATUS.CREATED }));
+    } catch (err) {
+      setCompanionStatuses(prev => ({ ...prev, [ticketId]: STATUS.ERROR }));
+      setCompanionErrors(prev => ({ ...prev, [ticketId]: err.response?.data?.error || err.message }));
+    }
+  }, [version, jiraToken, username]);
+
+  const handleBulkCreateCompanion = useCallback(async () => {
+    const targets = companionTickets.filter(t => selectedCompanion[t.id] && companionStatuses[t.id] === STATUS.MISSING);
+    if (!targets.length) return;
+    setBulkCompanionRunning(true);
+    const ids = targets.map(t => t.id);
+    try {
+      const res = await authenticatedPost('/api/jira/create-companion-tickets', { version, ids }, { jiraToken, username });
+      const createdIds = new Set((res.data?.created || []).map(c => c.id));
+      setCompanionStatuses(prev => {
+        const next = { ...prev };
+        ids.forEach(id => { if (createdIds.has(id)) next[id] = STATUS.CREATED; else if (next[id] !== STATUS.CREATED) next[id] = STATUS.ERROR; });
+        return next;
+      });
+      if (res.data?.skipped) {
+        res.data.skipped.forEach(s => {
+          if (s.error) setCompanionErrors(prev => ({ ...prev, [s.id]: s.error }));
+        });
+      }
+    } catch (err) {
+      ids.forEach(id => setCompanionStatuses(prev => ({ ...prev, [id]: STATUS.ERROR })));
+      setCompanionErrors(prev => ({ ...prev, _bulk: err.response?.data?.error || err.message }));
+    } finally {
+      setBulkCompanionRunning(false);
+    }
+  }, [companionTickets, selectedCompanion, companionStatuses, version, jiraToken, username]);
+
   const hasMissingVersions = releaseProjects.some(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR);
   const hasMissingFilters = filterChain.some(f => filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR);
-  const everythingExists = phase === 'checked' && !hasMissingVersions && !hasMissingFilters
+  const hasMissingCompanion = companionTickets.some(t => companionStatuses[t.id] === STATUS.MISSING);
+  const everythingExists = phase === 'checked' && !hasMissingVersions && !hasMissingFilters && !hasMissingCompanion
     && releaseProjects.every(p => versionStatuses[p] === STATUS.EXISTS)
-    && filterChain.every(f => filterStatuses[f.name] === STATUS.EXISTS);
+    && filterChain.every(f => filterStatuses[f.name] === STATUS.EXISTS)
+    && companionTickets.every(t => companionStatuses[t.id] === STATUS.EXISTS);
 
   const missingVersionCount = releaseProjects.filter(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR).length;
   const missingFilterCount = filterChain.filter(f => filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR).length;
+  const missingCompanionCount = companionTickets.filter(t => companionStatuses[t.id] === STATUS.MISSING).length;
   const selectedVersionCount = releaseProjects.filter(p => selectedVersions[p] && (versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR)).length;
   const selectedFilterCount = filterChain.filter(f => selectedFilters[f.name] && (filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR)).length;
+  const selectedCompanionCount = companionTickets.filter(t => selectedCompanion[t.id] && companionStatuses[t.id] === STATUS.MISSING).length;
 
   return (
     <div>
@@ -343,6 +420,9 @@ function CreateRelease() {
                       {versionErrors[proj] && <div style={{ color: '#dc3545', fontSize: '0.72rem', marginTop: 6, wordBreak: 'break-word' }}>{versionErrors[proj]}</div>}
                       <JchFallbackBanner projectKey={proj} errorDetail={versionErrors[proj]} jchState={jchStatus[proj]} onFileJch={() => handleCreateJchTicket(proj)} />
                     </>
+                  )}
+                  {jchStatus[proj]?.state === 'created' && s !== STATUS.ERROR && (
+                    <div style={{ marginTop: 6 }}><JchFallbackBanner projectKey={proj} errorDetail={versionErrors[proj]} jchState={jchStatus[proj]} onFileJch={() => handleCreateJchTicket(proj)} /></div>
                   )}
                   {(s === STATUS.CREATED || s === STATUS.EXISTS) && versionErrors[proj] && (
                     <div style={{ color: '#dc3545', fontSize: '0.72rem', marginTop: 4 }}>{versionErrors[proj]}</div>
@@ -473,10 +553,70 @@ function CreateRelease() {
               <span style={{ fontSize: '0.78rem', color: '#666' }}>Selected filters will be created in dependency order.</span>
             </div>
           )}
-          {phase === 'checked' && !hasMissingVersions && !hasMissingFilters && !everythingExists && (
+          {/* Companion tickets — LBDR×2, LEG×1, TECHPUBS×2, SDL×1 — highlight gaps if release exists but tickets missing */}
+          {companionTickets.length > 0 && (
+            <>
+              {(!hasMissingVersions && !hasMissingFilters && hasMissingCompanion) && (
+                <div style={{ ...cardStyle, background: '#fff3cd', borderColor: '#ffc107', marginTop: 16 }}>
+                  <strong style={{ color: '#856404' }}>Gap: release exists but {missingCompanionCount} default companion ticket{missingCompanionCount > 1 ? 's are' : ' is'} missing.</strong>
+                  <span style={{ color: '#856404', marginLeft: 8 }}>Create them now to complete the release.</span>
+                </div>
+              )}
+              <div style={{ ...sectionHeading, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
+                <span>Companion Tickets {missingCompanionCount ? `· ${missingCompanionCount} missing` : '· all present'}</span>
+                {hasMissingCompanion && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={missingCompanionCount > 0 && selectedCompanionCount === missingCompanionCount} onChange={e => { const checked = e.target.checked; const next = {}; companionTickets.forEach(t => { if (companionStatuses[t.id] === STATUS.MISSING) next[t.id] = checked; }); setSelectedCompanion(next); }} />
+                    Select all
+                  </label>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {companionTickets.map(t => {
+                  const s = companionStatuses[t.id];
+                  const selectable = s === STATUS.MISSING;
+                  return (
+                    <div key={t.id} style={{ ...cardStyle, marginBottom: 0, borderLeft: `4px solid ${statusColor(s)}`, opacity: s === STATUS.SKIPPED ? 0.6 : 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: selectable ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
+                          <input type="checkbox" disabled={!selectable} checked={!!selectedCompanion[t.id]} onChange={e => setSelectedCompanion(prev => ({ ...prev, [t.id]: e.target.checked }))} style={{ cursor: selectable ? 'pointer' : 'not-allowed' }} />
+                          <span style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong>{t.projectKey}</strong> — {t.summary}
+                          </span>
+                        </label>
+                        <span style={{ color: statusColor(s), fontSize: '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          {statusIcon(s)} {statusLabel(s)}{t.issueKey ? ` ${t.issueKey}` : ''}
+                        </span>
+                      </div>
+                      {t.exists && t.issueKey && (
+                        <div style={{ fontSize: '0.75rem', marginTop: 4 }}><a href={`https://jira.nutanix.com/browse/${t.issueKey}`} target="_blank" rel="noreferrer" style={{ color: '#007bff' }}>{t.issueKey}</a> {t.status ? `· ${t.status}` : ''}</div>
+                      )}
+                      {companionErrors[t.id] && <div style={{ color: '#dc3545', fontSize: '0.75rem', marginTop: 6 }}>{companionErrors[t.id]}</div>}
+                      {selectable && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                          <button onClick={() => handleCreateCompanionOne(t.id)} disabled={s === STATUS.CREATING} style={{ padding: '5px 10px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: 4, cursor: s === STATUS.CREATING ? 'not-allowed' : 'pointer', opacity: s === STATUS.CREATING ? 0.6 : 1, fontSize: '0.75rem' }}>{s === STATUS.CREATING ? 'Creating…' : 'Create'}</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {hasMissingCompanion && (
+                <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button onClick={handleBulkCreateCompanion} disabled={selectedCompanionCount === 0 || bulkCompanionRunning} style={{ padding: '8px 18px', backgroundColor: '#6f42c1', color: '#fff', border: 'none', borderRadius: 4, cursor: selectedCompanionCount === 0 || bulkCompanionRunning ? 'not-allowed' : 'pointer', opacity: selectedCompanionCount === 0 || bulkCompanionRunning ? 0.6 : 1, fontSize: '0.85rem', fontWeight: 600 }}>
+                    {bulkCompanionRunning ? 'Creating…' : `Create Selected Companion Tickets (${selectedCompanionCount})`}
+                  </button>
+                  <span style={{ fontSize: '0.78rem', color: '#666' }}>Each creates a Task with fixVersion = {version}.</span>
+                </div>
+              )}
+              {companionErrors._bulk && <div style={{ color: '#dc3545', fontSize: '0.8rem', marginTop: 6 }}>{companionErrors._bulk}</div>}
+            </>
+          )}
+
+          {phase === 'checked' && !hasMissingVersions && !hasMissingFilters && !hasMissingCompanion && !everythingExists && (
             <div style={{ ...cardStyle, background: '#d4edda', borderColor: '#28a745', marginTop: 12 }}>
               <strong style={{ color: '#155724' }}>All processed.</strong>
-              <span style={{ color: '#155724', marginLeft: 8 }}>No more missing versions or filters for {version}.</span>
+              <span style={{ color: '#155724', marginLeft: 8 }}>No more missing versions, filters or companion tickets for {version}.</span>
             </div>
           )}
         </>
