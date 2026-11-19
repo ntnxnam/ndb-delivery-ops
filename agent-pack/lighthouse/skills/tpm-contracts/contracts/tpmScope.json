@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "TpmScope": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "teamId", "principal"], "properties": { "kind": { "const": "me" }, "teamId": { "type": "string" }, "principal": { "type": "string" } } },
+        { "type": "object", "required": ["kind", "releaseVersion", "teamId"], "properties": { "kind": { "const": "release" }, "releaseVersion": { "type": "string" }, "teamId": { "type": "string" } } },
+        { "type": "object", "required": ["kind", "teamId"], "properties": { "kind": { "const": "team" }, "teamId": { "type": "string" } } },
+        { "type": "object", "required": ["kind", "orgId", "teamIds"], "properties": { "kind": { "const": "org" }, "orgId": { "type": "string" }, "teamIds": { "type": "array", "items": { "type": "string" } } } }
+      ]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tpm-schedule contract",
+  "description": "CRUD + runner contract for scheduling any phase skill or tpm-report.",
+  "routes": ["GET /api/config/schedules", "POST /api/config/schedules", "PUT /api/config/schedules/:id", "DELETE /api/config/schedules/:id"],
+  "validation": { "cron": "5-field validated server-side", "tz": "IANA TZ id", "skill": "subset of TPM_SCHEDULABLE_SKILLS", "authz": "D26" },
+  "runner": { "ticks": "node-cron in apps/delivery-ops/server", "invokes": "skill non-interactively", "persists": "lastRun/nextRun to schedules.json" }
+}

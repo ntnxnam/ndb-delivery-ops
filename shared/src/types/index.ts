@@ -9,4 +9,4 @@ export * from './ticket.js';
 export * from './sprint.js';
 export * from './team.js';
 export * from './chart.js';
-export * from './reports.js';
+export * from './reports.js';export * from './tpm.js';

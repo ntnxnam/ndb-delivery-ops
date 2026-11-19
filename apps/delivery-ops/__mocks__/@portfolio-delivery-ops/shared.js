@@ -416,6 +416,24 @@ module.exports = {
   computeLandingForecast: jest.fn().mockResolvedValue({}),
   computeLandingForecastFromTickets: jest.fn().mockReturnValue({}),
   loadAgentPack,
+  composeReport: async (input) => {
+    const MODE_SCOPE_KIND = {'my-focus':'me', release:'release', digest:'team', rollup:'org'};
+    const expected = MODE_SCOPE_KIND[input.mode];
+    if (input.scope.kind !== expected) throw new Error(`Mode ${input.mode} requires scope kind ${expected}, got ${input.scope.kind}`);
+    const phases = ['tpm-post-release','tpm-execution','tpm-at-release','tpm-overall'];
+    const sections = await Promise.all(phases.map(async (phase) => ({ phase, result: await input.fetcher(phase, { scope: input.scope }) })));
+    const totals = sections.reduce((a,s)=>({total:a.total+s.result.totals.total, open:a.open+s.result.totals.open, done:a.done+s.result.totals.done}),{total:0,open:0,done:0});
+    const links = sections.map(s=>s.result.links); const cited = sections.flatMap(s=>s.result.cited);
+    let gateDeadlines; if(input.mode==='digest' && input.gateDeadlinesProvider){ const all=input.gateDeadlinesProvider(); const now=Date.now(); const weekMs=7*24*3600*1000; gateDeadlines=all.filter(g=>{const t=new Date(g.date).getTime(); return t>=now && t<=now+weekMs;}); }
+    const needsDeferralTag = (movedAt, pgDate) => { if(!pgDate) return false; return new Date(movedAt).getTime() > new Date(pgDate).getTime(); };
+    const deferralSummary = { deferred: ((input.deferredTickets||[]).filter(t=>needsDeferralTag(t.movedAt, input.promotionGateDate??null)).length), pending: (input.pendingDeferrals||[]).length };
+    let emailPreview; if(input.recipients && input.sendEmail){ if(input.isAuthorized && !input.isAuthorized([...input.recipients.to, ...input.recipients.cc])) throw new Error('D26: recipients not authorized'); const subject=`TPM ${input.mode} report`; const html=`<p>Total:${totals.total}</p>`; emailPreview={to:input.recipients.to, cc:input.recipients.cc, subject, html}; if(!input.previewOnly) await input.sendEmail(emailPreview); }
+    return { mode:input.mode, scope:input.scope, sections, gateDeadlines, deferralSummary, totals, links, cited, emailPreview };
+  },
+  needsDeferralTag: (movedAt, pgDate) => { if(!pgDate) return false; return new Date(movedAt).getTime() > new Date(pgDate).getTime(); },
+  buildDeferralSummary: (deferred, pending, pgDate) => { const f=(m,pg)=>{if(!pg) return false; return new Date(m).getTime() > new Date(pg).getTime();}; return { deferred: (deferred||[]).filter(t=>f(t.movedAt, pgDate??null)).length, pending: (pending||[]).length }; },
+  MODE_SCOPE_KIND: {'my-focus':'me', release:'release', digest:'team', rollup:'org'},
+
   runAgentTurn,
   createAgentRuntimeStores,
   mergeEntities,
