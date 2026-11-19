@@ -53,9 +53,9 @@ function loadKpiConfig() {
     config.teams[tid] = config.teams[tid].map((k, idx) => {
       const order = typeof k.order === 'number' ? k.order : idx;
       if (k && k.id) {
-        return { id: k.id, name: k.name || '', baseQuery: k.baseQuery || '', displayType: k.displayType === 'list' ? 'list' : 'count', order };
+        return { id: k.id, name: k.name || '', baseQuery: k.baseQuery || '', displayType: k.displayType === 'list' ? 'list' : 'count', order, ...(k.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k.isSuperImportant ? { isSuperImportant: true } : {}), ...(k.releaseScoped ? { releaseScoped: true } : {}) };
       }
-      return { id: generateKpiId(), name: k?.name || '', baseQuery: k?.baseQuery || '', displayType: 'count', order };
+      return { id: generateKpiId(), name: k?.name || '', baseQuery: k?.baseQuery || '', displayType: 'count', order, ...(k?.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k?.isSuperImportant ? { isSuperImportant: true } : {}), ...(k?.releaseScoped ? { releaseScoped: true } : {}) };
     });
   });
   return config;

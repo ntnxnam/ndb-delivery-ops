@@ -50,3 +50,5 @@ export * from './productColumnAliases.js';
 export * from '../constants/binPackingSizing.js';
 export * from './tpmScope.js';
 export * from './tpmFetch.js';
+export * from './tpmKpiService.js';
+export * from './tpmExecutionService.js';

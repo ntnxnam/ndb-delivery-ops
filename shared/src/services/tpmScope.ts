@@ -3,6 +3,7 @@
  * Fetch weaves call these; report weave reuses them for fan-out.
  */
 import type { TpmScope } from '../types/tpm.js';
+import type { TpmScope } from '../types/tpm.js';
 
 export function scopeLabel(scope: TpmScope): string {
   switch (scope.kind) {
