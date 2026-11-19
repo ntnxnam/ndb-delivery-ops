@@ -235,7 +235,7 @@ export async function convertFile({ file, productId }) {
   try {
     raw = await tryServerConvert({ file, productId, base64 });
   } catch (err) {
-    // Only fallback on 404 / 501 / network failure; surface other errors directly
+    // Only fallback on 404 / 501 / network failure; surface other errors directly (400 is validation)
     const shouldFallback = err.isNotFound || err.status === 501 || err.message.includes('Failed to fetch') || err.message.includes('NetworkError');
     if (!shouldFallback) throw err;
     logger.info('csv-converter-agent: server route unavailable, falling back to AI chat', err.message);
@@ -243,13 +243,13 @@ export async function convertFile({ file, productId }) {
     raw = await fallbackViaAiChat({ file, productId, base64 });
   }
 
-  // Normalize response shape across server / AI paths
-  const canonicalCsv = raw.canonicalCsv || raw.csv || '';
+  // Normalize response shape across server / AI paths (server returns csvText/report, AI returns canonicalCsv/csv)
+  const canonicalCsv = raw.canonicalCsv || raw.csvText || raw.csv || '';
   const rows = raw.rows || null;
   const originalHeaders = raw.originalHeaders || (rows && rows[0] ? rows[0] : null) || null;
   const mappedHeaders = raw.mappedHeaders || raw.canonicalHeaders || null;
-  const warnings = Array.isArray(raw.warnings) ? raw.warnings : [];
-  const stats = raw.stats || null;
+  const warnings = Array.isArray(raw.warnings) ? raw.warnings : (raw.report && Array.isArray(raw.report.warnings) ? raw.report.warnings : []);
+  const stats = raw.stats || (raw.report && raw.report.stats ? raw.report.stats : null);
   const error = raw.error || null;
 
   if (error && !canonicalCsv && !rows) throw new Error(error);
