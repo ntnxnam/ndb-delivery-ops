@@ -1,3 +1,5 @@
+import { getAllFields } from './jiraFields';
+
 /**
  * JQL Autocomplete Logic — full field scrub (jiraFieldsConfig.json + teamBoardConfig + ScriptRunner)
  * Source: shared/src/services/releaseDatasetService.ts RELEASE_DATASET_FIELDS (33), jiraFieldsConfig 30 custom, plus 13 extra customfield IDs from codebase = 43 unique customfields
@@ -21,54 +23,21 @@ export const JQL_SYSTEM_FIELDS = [
   'Primary Component', 'Release Commit',
 ];
 
+// Build custom field entries from jiraFieldsConfig at module load via getAllFields()
+function buildCustomFieldEntries() {
+  const all = getAllFields();
+  const entries = [];
+  for (const [, cfg] of Object.entries(all)) {
+    if (cfg.id && cfg.label) entries.push(cfg.id, cfg.label);
+  }
+  return entries;
+}
+
+// All custom fields now sourced from jiraFieldsConfig.json via getAllFields() (including extras category)
+// EXTRA_CUSTOM_FIELD_PAIRS removed — no hardcodes; derive via SoT
 export const JQL_FIELDS = [
   ...JQL_SYSTEM_FIELDS,
-  // Custom fields — id + friendly label (jiraFieldsConfig.json + extra 13)
-  // Checkpoint dates
-  'customfield_13860', 'Rqmnts Done Date',
-  'customfield_11067', 'Code Complete Date',
-  'customfield_11068', 'Test Plan Date',
-  'customfield_13861', 'FS/DS Done Date',
-  'customfield_35863', 'Commit Gate Date',
-  'customfield_35864', 'Promotion Gate Date',
-  'customfield_45660', 'Status Update Date',
-  'customfield_11069', 'Start Date',
-  'customfield_14367', 'GA Date',
-  'customfield_40473', 'Commit Gate Review Date',
-  'customfield_18461', 'Automation Completion Date',
-  // People
-  'customfield_15968', 'UX Owner',
-  'customfield_10860', 'QA Contact',
-  'customfield_11065', 'Test Lead',
-  'customfield_11861', 'GUI Lead',
-  'customfield_27764', 'TPM Owner',
-  'customfield_51460', 'Team Members',
-  'customfield_11260', 'PM Owner',
-  'customfield_11960', 'Participants',
-  'customfield_19262', 'Assignee Manager',
-  'customfield_23461', 'System Test Lead',
-  // Content / Links / Indicators
-  'customfield_23073', 'Status Update',
-  'customfield_38460', 'Executive Status Update',
-  'customfield_42660', 'Deferral Justification',
-  'customfield_14463', 'Requirements Link',
-  'customfield_31460', 'TCMS Link',
-  'customfield_14464', 'Design Doc Link',
-  'customfield_14465', 'Test Plan Link',
-  'customfield_55662', 'CG Checklist Link',
-  'customfield_55663', 'PG Checklist Link',
-  'customfield_11061', 'Release Commit',
-  'customfield_23560', 'Risk Indicator',
-  'customfield_47780', 'Risk Assessment',
-  'customfield_55664', 'Path to Green',
-  'customfield_15160', 'Primary Component',
-  'customfield_10361', 'Epic Link',
-  'customfield_20363', 'Parent Link',
-  // Agile
-  'customfield_10002', 'Story Points',
-  'customfield_10360', 'Sprint (NDB 10360)',
-  'customfield_10020', 'Sprint (10020)',
-  'customfield_10021', 'Sprints',
+  ...buildCustomFieldEntries(),
 ];
 
 export const JQL_OPERATORS = ['=', '!=', 'in', 'not in', '~', '!~', 'is', 'is not', 'was', 'was in', 'was not in', 'changed', 'during', '>', '>=', '<', '<='];

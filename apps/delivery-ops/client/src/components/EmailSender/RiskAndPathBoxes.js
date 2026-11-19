@@ -1,5 +1,6 @@
 import React from 'react';
 import { fieldDisplayValue } from './gateDateUtils';
+import { getFieldValue } from '../../utils/jiraFields';
 
 /**
  * Compact risk row: Indicator | Assessment | Path to Green.
@@ -7,9 +8,9 @@ import { fieldDisplayValue } from './gateDateUtils';
 function RiskAndPathBoxes({ jiraData }) {
   if (!jiraData) return null;
 
-  const risk = jiraData.customfield_23560;
-  const assessment = jiraData.customfield_47780;
-  const pathToGreen = jiraData.customfield_55664;
+  const risk = getFieldValue(jiraData, 'riskIndicator') ?? jiraData.customfield_23560;
+  const assessment = getFieldValue(jiraData, 'riskAssessment') ?? jiraData.customfield_47780;
+  const pathToGreen = getFieldValue(jiraData, 'pathToGreen') ?? jiraData.customfield_55664;
 
   const riskValue = fieldDisplayValue(risk);
   const assessmentValue = fieldDisplayValue(assessment);

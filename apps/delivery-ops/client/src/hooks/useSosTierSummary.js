@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 
@@ -86,20 +87,20 @@ function isPortfolioItem(item) {
 }
 
 const GATE_PREREQUISITE_FIELD = {
-  CCM: 'customfield_11067',
-  CC:  'customfield_11067',
-  CG:  'customfield_11067',  // Code Complete must land before CG closes (non-portfolio)
-  PG:  'customfield_35863',  // Commit Gate Ready must land before PG closes
-  GA:  'customfield_35864',  // Promotion Gate Ready must land before GA closes
+  CCM: getFieldId('codeComplete'),
+  CC:  getFieldId('codeComplete'),
+  CG:  getFieldId('codeComplete'),  // Code Complete must land before CG closes (non-portfolio)
+  PG:  getFieldId('commitGate'),  // Commit Gate Ready must land before PG closes
+  GA:  getFieldId('promotionGate'),  // Promotion Gate Ready must land before GA closes
 };
 
 // Portfolio items (Feature/Initiative/X-FEAT) use their own gate estimation dates.
 const GATE_PREREQUISITE_FIELD_PORTFOLIO = {
-  CCM: 'customfield_11067',
-  CC:  'customfield_11067',
-  CG:  'customfield_35863',  // Commit Gate Ready Estimation Date
-  PG:  'customfield_35864',  // Promotion Gate Ready Estimation Date
-  GA:  'customfield_35864',
+  CCM: getFieldId('codeComplete'),
+  CC:  getFieldId('codeComplete'),
+  CG:  getFieldId('commitGate'),  // Commit Gate Ready Estimation Date
+  PG:  getFieldId('promotionGate'),  // Promotion Gate Ready Estimation Date
+  GA:  getFieldId('promotionGate'),
 };
 
 export function classifyRiskWord(riskIndicator) {
@@ -216,14 +217,14 @@ export function buildTierCallouts(items, checkpointHistory = {}, gateContext = n
     .filter((i) => {
       if (!i?.key) return false;
       if (RISK_NOT_SET_EXCLUDE_STATUSES.has((i.status || '').toLowerCase())) return false;
-      return classifyRiskWord(i.customfield_23560) === 'NotSet';
+      return classifyRiskWord(getFieldValue(i, 'riskIndicator')) === 'NotSet';
     })
     .map((i) => i.key);
 
   const staleKeys = list
     .filter((i) => {
       if (!i?.key) return false;
-      const days = daysSinceIso(i.customfield_45660);
+      const days = daysSinceIso(getFieldValue(i, 'statusUpdateDate'));
       return days != null && days >= STALE_STATUS_DAYS;
     })
     .map((i) => i.key);
@@ -286,7 +287,7 @@ export function buildTierCallouts(items, checkpointHistory = {}, gateContext = n
       // AFTER the release gate cutoff (toll booth closes before they arrive).
       const prereqField = (i) =>
         (isPortfolioItem(i) ? GATE_PREREQUISITE_FIELD_PORTFOLIO : GATE_PREREQUISITE_FIELD)[nextGate.kind]
-        || 'customfield_11067';
+        || getFieldId('codeComplete');
       const keys = list.filter((i) => {
         if (!i?.key) return false;
         const prereqDate = itemDateIso(i, prereqField(i));
@@ -345,7 +346,7 @@ export function buildTierCallouts(items, checkpointHistory = {}, gateContext = n
 function ragCountsFromItems(items) {
   const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
   for (const i of items || []) {
-    counts[classifyRiskWord(i?.customfield_23560)]++;
+    counts[classifyRiskWord(getFieldValue(i, 'riskIndicator'))]++;
   }
   return counts;
 }
@@ -409,9 +410,9 @@ function buildCriticalItems(features) {
     .filter((f) => f?.key)
     .map((f) => ({
       key: f.key,
-      rag: classifyRiskWord(f.customfield_23560),
+      rag: classifyRiskWord(getFieldValue(f, 'riskIndicator')),
       summary: f.summary || '',
-      tldr: extractTldrLine(f.customfield_38460),
+      tldr: extractTldrLine(getFieldValue(f, 'executiveStatusUpdate')),
     }))
     .sort((a, b) => (RAG_RANK[a.rag] ?? 9) - (RAG_RANK[b.rag] ?? 9));
 

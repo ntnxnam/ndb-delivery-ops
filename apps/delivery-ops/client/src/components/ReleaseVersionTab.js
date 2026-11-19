@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { Link } from 'react-router-dom';
 import { PageLoading } from '../shared/components/PageLoading';
 import html2canvas from 'html2canvas';
@@ -739,19 +740,19 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
   // Helper function to render all checkpoint dates in a single column
   const _renderAllCheckpointDates = (item, selectedVersion, checkpointHistory) => {
     const dates = [
-      { label: 'FS/DS Done Date', field: 'fsdsDone', value: item.customfield_13861 },
-      { label: 'Test Plan Date', field: 'testPlan', value: item.customfield_11068 },
-      { label: 'Code Complete Date', field: 'codeComplete', value: item.customfield_11067 },
-      { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: item.customfield_35863 },
-      { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: item.customfield_35864 }
+      { label: 'FS/DS Done Date', field: 'fsdsDone', value: getFieldValue(item, 'fsdsDone') },
+      { label: 'Test Plan Date', field: 'testPlan', value: getFieldValue(item, 'testPlan') },
+      { label: 'Code Complete Date', field: 'codeComplete', value: getFieldValue(item, 'codeComplete') },
+      { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: getFieldValue(item, 'commitGate') },
+      { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: getFieldValue(item, 'promotionGate') }
     ];
     
     // Get extension label info (if any)
     const extensionInfo = getExtensionLabelInfo(item, selectedVersion);
     
     // Normalize and compare FS/DS Done Date and Test Plan Date
-    const fsdsDate = normalizeDateForComparison(item.customfield_13861);
-    const testPlanDate = normalizeDateForComparison(item.customfield_11068);
+    const fsdsDate = normalizeDateForComparison(getFieldValue(item, 'fsdsDone'));
+    const testPlanDate = normalizeDateForComparison(getFieldValue(item, 'testPlan'));
     
     // Determine highlighting conditions
     let fsdsHighlight = null; // null, 'yellow', or 'red'
@@ -1695,4 +1696,3 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
 }
 
 export default ReleaseVersionTab;
-

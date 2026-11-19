@@ -5,6 +5,7 @@
  */
 
 import { formatDueDate } from '../../shared/utils/dateFormatter';
+import { getFieldId } from '../../utils/jiraFields';
 
 const FEATURE_TYPES = new Set(['feature', 'initiative']);
 const LEVEL1_TYPES = new Set(['x-feat', 'capability']);
@@ -28,7 +29,7 @@ export function toStatusSenderEpicRow(issue, fallbackType = 'Epic') {
     issueType: issue?.issueType || fallbackType,
     resolution: issue?.resolution || 'N/A',
     assignee: issue?.assignee || 'N/A',
-    customfield_10860: {
+    [getFieldId('qaContact')]: {
       name: 'QA Contact',
       value: qa || 'Not Set',
     },

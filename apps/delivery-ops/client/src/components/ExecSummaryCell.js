@@ -1,4 +1,5 @@
 import React, { useState, useCallback, memo } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { authenticatedPost, authenticatedPut } from '../shared/services/apiService';
 
 const STALE_DAYS = 7;
@@ -38,11 +39,11 @@ function parseStampedSummary(raw) {
  * Otherwise → show existing summary (if any) + Generate/Regenerate button.
  */
 function ExecSummaryCell({ item, selectedVersion, ganttConfig = null, breakdownData = null, releaseContext = null }) {
-  const statusUpdateDate = item?.customfield_45660 || null;
+  const statusUpdateDate = getFieldValue(item, 'statusUpdateDate') || null;
   const statusUpdateDaysOld = daysOldFromDate(statusUpdateDate);
   const isStaleUpdate = statusUpdateDaysOld !== null && statusUpdateDaysOld >= STALE_DAYS;
 
-  const existingRaw = item?.customfield_38460 || '';
+  const existingRaw = getFieldValue(item, 'executiveStatusUpdate') || '';
   const { text: existingText, generatedDate } = parseStampedSummary(existingRaw);
   const hasExisting = Boolean(existingText);
   const summaryAgeDays = daysOldFromDate(generatedDate);

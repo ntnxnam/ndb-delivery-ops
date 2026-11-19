@@ -590,9 +590,31 @@ function buildPartnershipBlocksJql(release) {
   return `issueFunction in linkedIssuesOf("fixVersion = ${release}", "blocks")`;
 }
 
-/** Q5 — Train label discovery */
-function buildTrainLabelsJql(trainSlug) {
-  return `labels in ("ndb-${trainSlug}-dependency", "ndb-${trainSlug}-asks")`;
+/** Q5 — Train label discovery — delegated to taxonomy (labels.longTermFunded pattern) */
+function buildTrainLabelsJql(trainSlug, labelPrefix = 'ndb') {
+  const prefix = resolveLabelPrefix(labelPrefix);
+  const slug = String(trainSlug || '').trim().toLowerCase();
+  let depLabel = null;
+  let askLabel = null;
+  try {
+    // eslint-disable-next-line global-require
+    const { getLabelPattern } = require('../utils/jiraFieldsConfig');
+    depLabel = getLabelPattern('dependency.trainAsk', { prefix, train: slug });
+  } catch {}
+  if (!depLabel) depLabel = `${prefix}-${slug}-dependency`;
+  // No taxonomy entry for asks variant yet — derive via second label manually
+  askLabel = `${prefix}-${slug}-asks`;
+  // Prefer taxonomy JQL if available; otherwise construct labels in (...)
+  try {
+    // eslint-disable-next-line global-require
+    const { getLabelJql } = require('../utils/jiraFieldsConfig');
+    const jql = getLabelJql('dependency.trainAsk', { prefix, train: slug });
+    if (jql) {
+      // jql is `labels in ("{prefix}-{train}-dependency")` single-value; expand to 2 values
+      return `labels in ("${depLabel}", "${askLabel}")`;
+    }
+  } catch {}
+  return `labels in ("${depLabel}", "${askLabel}")`;
 }
 
 /** Release slug for wishlist labels: NDB-3.1 → 3.1 */
@@ -604,13 +626,26 @@ function releaseToWishlistSlug(release) {
 }
 
 function resolveLabelPrefix(prefix) {
-  if (prefix && String(prefix).trim()) return String(prefix).trim().toLowerCase();
-  // Try productService / teamBoardConfig when available (D1), else default ndb
-  try {
-    // eslint-disable-next-line global-require
-    const { getLabelPrefix } = require('../utils/jiraFieldsConfig'); // fallback check
-    void getLabelPrefix;
-  } catch {}
+  if (prefix && String(prefix).trim()) {
+    // Accept team object, string prefix, or {labelPrefix}
+    if (typeof prefix === 'object') {
+      if (typeof prefix.labelPrefix === 'string' && prefix.labelPrefix.trim()) return prefix.labelPrefix.trim().toLowerCase().replace(/-+$/, '');
+      if (typeof prefix.id === 'string' && prefix.id.trim()) prefix = prefix.id;
+      else if (typeof prefix.productId === 'string' && prefix.productId.trim()) prefix = prefix.productId;
+      else return 'ndb';
+    }
+    const v = String(prefix).trim().toLowerCase().replace(/-+$/, '');
+    if (v) {
+      // If it looks like a team id, try to resolve via teamBoardConfig labelPrefix
+      try {
+        // eslint-disable-next-line global-require
+        const cfg = require('../config/teamBoardConfig.json');
+        const t = (cfg.teams || []).find((x) => x.id === v);
+        if (t && typeof t.labelPrefix === 'string' && t.labelPrefix.trim()) return t.labelPrefix.trim().toLowerCase().replace(/-+$/, '');
+      } catch {}
+      return v;
+    }
+  }
   return 'ndb';
 }
 
@@ -1532,10 +1567,16 @@ async function fetchEarlyCallBundle(token, early, cfg, jiraBaseUrl, wlCfg, orpha
     askLabelHint: early.askLabelHint || null,
     releaseSlug,
     wishlistLabel: wishlistLabel(releaseSlug, wlOpts.labelSuffix),
-    trainAskLabels: [
-      `ndb-${trainSlug}-dependency`,
-      `ndb-${trainSlug}-asks`,
-    ],
+    trainAskLabels: (() => {
+      const p = resolveLabelPrefix(cfg.defaultTeamId || 'ndb');
+      try {
+        // eslint-disable-next-line global-require
+        const { getLabelPattern } = require('../utils/jiraFieldsConfig');
+        const dep = getLabelPattern('dependency.trainAsk', { prefix: p, train: trainSlug });
+        if (dep) return [dep, `${p}-${trainSlug}-asks`];
+      } catch {}
+      return [`${p}-${trainSlug}-dependency`, `${p}-${trainSlug}-asks`];
+    })(),
     ndbGates: {
       ecDate: releaseCtx.ecDate,
       gaDate: releaseCtx.gaDate,
@@ -1592,7 +1633,7 @@ async function getOverview({ token, teamId, release } = {}) {
   );
   const trainLabels = await searchSection(
     token,
-    buildTrainLabelsJql(trainSlug),
+    buildTrainLabelsJql(trainSlug, team?.labelPrefix || effectiveTeamId),
     { source: 'labels' },
     cfg,
     jiraBaseUrl,

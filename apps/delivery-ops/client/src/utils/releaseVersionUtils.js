@@ -5,6 +5,7 @@
 
 import React from 'react';
 import '../styles/shared.css'; /* shared .rv-notset — avoids utils → components inversion */
+import { getLabelPattern } from './jiraFields';
 
 /**
  * Check if a date is older than specified days
@@ -462,9 +463,10 @@ export function hasCodeCompleteExtensionLabel(item) {
       : item.labels.split(/\s+/).map(l => l.trim());
   }
   
-  // Check if any label ends with "code-complete-extension-recieved" (case-insensitive)
-  // Note: "extension" is the correct spelling (not "extention")
-  const extensionSuffix = 'code-complete-extension-recieved';
+  // Use SoT label pattern when available; fallback preserves render if fetch fails
+  let extensionSuffix = 'code-complete-extension-recieved';
+  try { const pat = getLabelPattern('lifecycle.extension'); if (pat) { const m = pat.match(/([a-z0-9-]+)$/i); if (m) extensionSuffix = m[1]; } } catch {}
+  // SoT pattern is "{prefix}-{version}-code-complete-extension-recieved"
   
   for (const label of labels) {
     if (!label) continue;

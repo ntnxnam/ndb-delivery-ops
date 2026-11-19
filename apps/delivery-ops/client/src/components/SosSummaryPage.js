@@ -9,6 +9,7 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { PageLoading } from '../shared/components/PageLoading';
 import { useSosItems } from '../hooks/useSosItems';
 import { useEraComponents } from '../hooks/useEraComponents';
@@ -59,11 +60,11 @@ function daysOld(dateVal) {
 /** Returns true if this item needs a fresh AI summary generated. */
 function needsSummary(item) {
   // Stale status update → skip entirely
-  const statusDays = daysOld(item?.customfield_45660);
+  const statusDays = daysOld(getFieldValue(item, 'statusUpdateDate'));
   if (statusDays !== null && statusDays >= STALE_DAYS) return false;
 
   // Already has a fresh summary → skip
-  const raw = item?.customfield_38460 || '';
+  const raw = getFieldValue(item, 'executiveStatusUpdate') || '';
   if (raw) {
     const match = raw.match(DATE_PREFIX_REGEX);
     if (match) {
@@ -280,7 +281,7 @@ function useBatchExecSummary() {
     const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
     await authenticatedPut(`/api/ai/exec-summary/${key}`, { summary: entry.summary }, { jiraToken, username });
     // Update in-memory so the cell shows "Generated today"
-    entry.item.customfield_38460 = entry.summary;
+    entry.summary = entry.summary; // SoT: executiveStatusUpdate via getFieldValue
     setPendingReviews(prev => {
       const next = { ...prev };
       delete next[key];
@@ -521,22 +522,22 @@ function GateDateStrip({ ganttConfig }) {
 
 const SosItemRow = React.memo(function SosItemRow({ item, version, ganttConfig, breakdownDataMap, loadingBreakdowns = false, jiraBaseUrl, checkpointHistory = {} }) {
   const breakdown = breakdownDataMap[item.key] || null;
-  const ragColor = getRagColor(item.customfield_23560);
-  const ragLabel = getRagLabel(item.customfield_23560);
-  const riskAssessment = riskTextField(item.customfield_47780);
-  const pathToGreen = riskTextField(item.customfield_55664);
-  const riskTrail = formatRiskWithHistory(item.key, item.customfield_23560, checkpointHistory);
-  const testLead = personName(item.customfield_11065);
-  const qaContact = personName(item.customfield_10860);
-  const pmOwner = personName(item.customfield_11260);
-  const programMgr = personName(item.customfield_27764);
+  const ragColor = getRagColor(getFieldValue(item, 'riskIndicator'));
+  const ragLabel = getRagLabel(getFieldValue(item, 'riskIndicator'));
+  const riskAssessment = riskTextField(getFieldValue(item, 'riskAssessment'));
+  const pathToGreen = riskTextField(getFieldValue(item, 'pathToGreen'));
+  const riskTrail = formatRiskWithHistory(item.key, getFieldValue(item, 'riskIndicator'), checkpointHistory);
+  const testLead = personName(getFieldValue(item, 'testLead') ?? item.customfield_11065);
+  const qaContact = personName(getFieldValue(item, 'qaContact'));
+  const pmOwner = personName(getFieldValue(item, 'pmOwner'));
+  const programMgr = personName(getFieldValue(item, 'tpmOwner'));
 
   // Date rows: label → field mapping for the stacked Dates cell
   const DATE_ROWS = [
-    { label: 'FS/DS', field: 'fsdsDone',     raw: item.customfield_13861 },
-    { label: 'CCM',   field: 'codeComplete',  raw: item.customfield_11067 },
-    { label: 'CG',    field: 'commitGate',    raw: item.customfield_35863 },
-    { label: 'PG',    field: 'promotionGate', raw: item.customfield_35864 },
+    { label: 'FS/DS', field: 'fsdsDone',     raw: getFieldValue(item, 'fsdsDone') },
+    { label: 'CCM',   field: 'codeComplete',  raw: getFieldValue(item, 'codeComplete') },
+    { label: 'CG',    field: 'commitGate',    raw: getFieldValue(item, 'commitGate') },
+    { label: 'PG',    field: 'promotionGate', raw: getFieldValue(item, 'promotionGate') },
   ];
 
   return (
@@ -834,7 +835,7 @@ export function ReleaseSection({
   const ragCounts = useMemo(() => {
     const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
     items.forEach((i) => {
-      const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
+      const raw = typeof getFieldValue(i, 'riskIndicator') === 'string' ? getFieldValue(i, 'riskIndicator') : (getFieldValue(i, 'riskIndicator')?.value || '');
       const v = String(raw).split(' ')[0];
       if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
       else counts.NotSet++;
@@ -848,7 +849,7 @@ export function ReleaseSection({
   // Status-update staleness (customfield_45660): missing or ≥ STALE_DAYS old.
   const staleItems = useMemo(() => {
     return (items || []).filter((item) => {
-      const age = daysOld(item?.customfield_45660);
+      const age = daysOld(getFieldValue(item, 'statusUpdateDate'));
       return age === null || age >= STALE_DAYS;
     });
   }, [items]);
@@ -1188,7 +1189,7 @@ function SosSummaryPage() {
     for (const [version, items] of Object.entries(byVersion)) {
       const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
       items.forEach((i) => {
-        const raw = typeof i.customfield_23560 === 'string' ? i.customfield_23560 : (i.customfield_23560?.value || '');
+        const raw = typeof getFieldValue(i, 'riskIndicator') === 'string' ? getFieldValue(i, 'riskIndicator') : (getFieldValue(i, 'riskIndicator')?.value || '');
         const v = String(raw).split(' ')[0];
         if (v === 'Red' || v === 'Yellow' || v === 'Green') counts[v]++;
         else counts.NotSet++;

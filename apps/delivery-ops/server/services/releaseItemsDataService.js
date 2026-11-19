@@ -203,17 +203,39 @@ async function loadItemsFromCache(fixVersion, productId) {
     if (!Array.isArray(tickets) || tickets.length === 0) return null;
 
     const versionLabel = fixVersion.toLowerCase();
+    // Resolve label prefix for taxonomy (D1): productId → teamBoardConfig labelPrefix
+    const _resolvePrefix = (pid) => {
+      const p = String(pid || '').trim().toLowerCase();
+      if (!p) return 'ndb';
+      try {
+        const cfg = require('../config/teamBoardConfig.json');
+        const t = (cfg.teams || []).find((x) => x.id === p);
+        if (t && t.labelPrefix) return String(t.labelPrefix).trim().toLowerCase().replace(/-+$/, '');
+      } catch {}
+      return p.replace(/-+$/, '') || 'ndb';
+    };
+    const labelPrefix = _resolvePrefix(productId);
+    const lowerPrefix = labelPrefix.toLowerCase();
+    const versionSuffix = versionLabel.startsWith(`${lowerPrefix}-`) ? versionLabel.slice(lowerPrefix.length + 1) : versionLabel;
+    let longTermLabelPattern = null;
+    try {
+      // eslint-disable-next-line global-require
+      const { getLabelPattern } = require('../utils/jiraFieldsConfig');
+      longTermLabelPattern = getLabelPattern('lifecycle.longTermFunded', { prefix: labelPrefix, version: versionSuffix });
+    } catch {}
+    if (!longTermLabelPattern) longTermLabelPattern = `${labelPrefix}-${versionSuffix}-long-term-funded`;
+    const longTermLabelLower = longTermLabelPattern.toLowerCase();
     const items = tickets
       .filter((t) => {
         const type = (t['Issue Type'] || '').toLowerCase();
         if (type !== 'feature' && type !== 'initiative') return false;
         if ((t['Status'] || '').toLowerCase() === 'cancelled') return false;
-        // Include tickets whose fixVersion matches OR carry the long-term-funded label
+        // Include tickets whose fixVersion matches OR carry the long-term-funded label (taxonomy)
         const fv = (t['All Fix Versions'] || t['Fix Version'] || '').toLowerCase();
         const lbls = Array.isArray(t['Labels'])
           ? t['Labels'].join(' ').toLowerCase()
           : String(t['Labels'] || '').toLowerCase();
-        return fv.includes(versionLabel) || lbls.includes(`${versionLabel}-long-term-funded`);
+        return fv.includes(versionLabel) || lbls.includes(longTermLabelLower);
       })
       .map(mapCachedTicketToItem);
 

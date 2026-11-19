@@ -9,6 +9,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { jiraSearchUrl } from '../release/services/releaseBriefService';
 import { classifyRiskWord } from '../hooks/useSosTierSummary';
 import { useComponentCounts } from '../hooks/useComponentCounts';
@@ -38,7 +39,7 @@ function RagDonut({ ragCounts, items, release, jiraBaseUrl, compact = false }) {
     const map = { Red: [], Yellow: [], Green: [], NotSet: [] };
     for (const i of items || []) {
       if (!i?.key) continue;
-      map[classifyRiskWord(i.customfield_23560)].push(i.key);
+      map[classifyRiskWord(getFieldValue(i, 'riskIndicator'))].push(i.key);
     }
     return map;
   }, [items]);
@@ -653,7 +654,7 @@ export function SosRagHeatmap({ byVersion, sortedVersions, defaultOpen = false }
       const items = byVersion?.[version] || [];
       const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
       items.forEach((i) => {
-        counts[classifyRiskWord(i.customfield_23560)]++;
+        counts[classifyRiskWord(getFieldValue(i, 'riskIndicator'))]++;
       });
       const total = counts.Red + counts.Yellow + counts.Green + counts.NotSet;
       return { version, ...counts, total };

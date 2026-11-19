@@ -1,3 +1,4 @@
+import { getFieldValue } from '../utils/jiraFields';
 import React from 'react';
 import ReleaseVersionTableHeader from './ReleaseVersionTableHeader';
 import ReleaseVersionTableRow from './ReleaseVersionTableRow';
@@ -107,8 +108,8 @@ export function sortItems(itemsArray) {
   
   return [...itemsArray].sort((a, b) => {
     // 1. Sort by Risk Indicator (priority)
-    const riskA = getRiskIndicatorPriority(a.customfield_23560);
-    const riskB = getRiskIndicatorPriority(b.customfield_23560);
+    const riskA = getRiskIndicatorPriority(getFieldValue(a, 'riskIndicator'));
+    const riskB = getRiskIndicatorPriority(getFieldValue(b, 'riskIndicator'));
     if (riskA !== riskB) {
       return riskA - riskB;
     }
@@ -131,8 +132,8 @@ export function sortItems(itemsArray) {
     }
     
     // 4. Sort by Code Complete Date (earliest first, nulls last)
-    const dateA = parseDateForSorting(a.customfield_11067);
-    const dateB = parseDateForSorting(b.customfield_11067);
+    const dateA = parseDateForSorting(getFieldValue(a, 'codeComplete'));
+    const dateB = parseDateForSorting(getFieldValue(b, 'codeComplete'));
     
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1; // null dates go last

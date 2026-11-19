@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { formatDate } from '../../utils/dateFormatter';
+import { getFieldValue } from '../../../utils/jiraFields';
 import './ProjectPlanView.css';
 
 // Column definitions — single place for header + cell rendering.
@@ -25,7 +26,7 @@ const COLUMN_DEFS = {
   },
   resolution: { header: 'Resolution', cell: (row) => row.resolution || 'N/A' },
   assignee: { header: 'Assignee', cell: (row) => row.assignee || '—' },
-  qaContact: { header: 'QA Contact', cell: (row) => row.qaContact || row.customfield_10860?.value || 'Not Set' },
+  qaContact: { header: 'QA Contact', cell: (row) => row.qaContact || (getFieldValue(row, 'qaContact') ?? row.customfield_10860)?.value || 'Not Set' },
   priority: {
     header: 'Priority',
     cell: (row) => row.priority || '—',

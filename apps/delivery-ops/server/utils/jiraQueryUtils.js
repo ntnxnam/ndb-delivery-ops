@@ -40,6 +40,7 @@ function buildCommitItemsJQL(fixVersion, teamConfigOrOpts = null) {
   const porJql = getLabelJql('porExclude', { prefix: labelPrefix });
   // porExclude jql is `labels not in ("{prefix}-not-por")`; fallback to inline if config missing
   const porClause = porJql || `labels not in ("${labelPrefix}-not-por")`;
+  if (!porJql) console.warn('[jiraQueryUtils] porExclude taxonomy miss — fallback literal used for prefix', labelPrefix);
   return `fixVersion = "${fixVersion}" AND issuetype in (Feature, Initiative) AND status != Cancelled AND ${porClause}`;
 }
 
@@ -61,6 +62,7 @@ function buildLongTermItemsJQL(fixVersion, teamConfig = null) {
   const labelPrefix = resolveLabelPrefix(teamConfig);
   const version = deriveVersionSuffix(fixVersion, labelPrefix);
   const jql = getLabelJql('lifecycle.longTermFunded', { prefix: labelPrefix, version });
+  if (!jql) console.warn('[jiraQueryUtils] lifecycle.longTermFunded taxonomy miss — fallback literal used for', fixVersion, labelPrefix);
   const baseJQL = `${jql || `labels = "${fixVersion.toLowerCase()}-long-term-funded"`} AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
   return baseJQL;
 }
@@ -76,6 +78,7 @@ function buildExtensionItemsJQL(fixVersion, teamConfig = null) {
   const version = deriveVersionSuffix(fixVersion, labelPrefix);
   // lifecycle.extension jql covers both spellings via `labels in ("...recieved", "...extention-recieved")`
   const jql = getLabelJql('lifecycle.extension', { prefix: labelPrefix, version });
+  if (!jql) console.warn('[jiraQueryUtils] lifecycle.extension taxonomy miss — fallback literal used for', fixVersion, labelPrefix);
   const baseJQL = `${jql || `labels = "${fixVersion.toLowerCase()}-code-complete-extention-recieved"`} AND issuetype in (Feature, Initiative) AND status != Cancelled ORDER BY key ASC`;
   return baseJQL;
 }

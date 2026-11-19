@@ -5,7 +5,7 @@
  */
 import fieldsConfig from '../config/jiraFieldsConfig.json';
 
-function getAllFields() {
+export function getAllFields() {
   const all = {};
   Object.keys(fieldsConfig.fields).forEach((cat) => {
     Object.keys(fieldsConfig.fields[cat]).forEach((k) => {
@@ -59,14 +59,31 @@ export function getFieldKeyByName(displayName) {
   return fieldsConfig.fieldNameMappings?.[n] || null;
 }
 
+function applyLabelPlaceholders(template, replacements = {}) {
+  const prefix = replacements.prefix ? String(replacements.prefix).toLowerCase() : 'ndb';
+  const map = { ...replacements, prefix };
+  return template.replace(/\{(\w+)\}/g, (_, k) => (k in map && map[k] != null ? String(map[k]) : `{${k}}`));
+}
+export function getLabelPattern(key, params = {}) {
+  const parts = key.split('.');
+  let cur = fieldsConfig.labels;
+  for (const p of parts) cur = cur?.[p];
+  if (!cur?.pattern) return null;
+  return applyLabelPlaceholders(cur.pattern, params);
+}
+export function getLabelConfig(key) {
+  const parts = key.split('.');
+  let cur = fieldsConfig.labels;
+  for (const p of parts) cur = cur?.[p];
+  return cur || null;
+}
 // Labels helpers (minimal)
 export function getLabelJql(key, params = {}) {
   const parts = key.split('.');
   let cur = fieldsConfig.labels;
   for (const p of parts) cur = cur?.[p];
   if (!cur?.jql) return null;
-  const prefix = (params.prefix || 'ndb').toLowerCase();
-  return cur.jql.replace(/\{(\w+)\}/g, (_, k) => (k === 'prefix' ? prefix : params[k] != null ? String(params[k]) : `{${k}}`));
+  return applyLabelPlaceholders(cur.jql, params);
 }
 
 export default {
@@ -78,5 +95,7 @@ export default {
   buildFieldIdsString,
   getFieldIdsForContext,
   getFieldKeyByName,
+  getLabelPattern,
+  getLabelConfig,
   getLabelJql,
 };

@@ -38,6 +38,7 @@ import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage'
 import TeamOverallReportPage from './components/TeamOverallReportPage';
 import SchedulePage from './components/SchedulePage';
 
+import { ensureLoaded as ensureFieldConfigLoaded } from './utils/fieldConfig';
 import './design-system/tokens.css';
 import './design-system/primitives.css';
 import './App.css';
@@ -456,6 +457,7 @@ const AppRouter = () => {
 
 // Main App component
 function App() {
+  React.useEffect(() => { ensureFieldConfigLoaded(); }, []);
   return (
     <ErrorBoundary>
       <BrowserRouter>

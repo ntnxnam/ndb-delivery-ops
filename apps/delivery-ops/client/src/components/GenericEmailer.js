@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { authenticatedPost, authenticatedGet, authenticatedPut, authenticatedDelete } from '../shared/services/apiService';
@@ -127,7 +128,7 @@ function GenericEmailer() {
       setFieldsWithData(fields);
       setPreviewPage(1);
       const fieldIds = fields.map(f => f.id);
-      const defaultIds = ['key', 'summary', 'assignee', 'customfield_10860', 'priority'];
+      const defaultIds = ['key', 'summary', 'assignee', getFieldId('qaContact'), 'priority'];
       const savedOrder = getSavedColumnOrder();
       const deselectedIds = getSavedDeselectedFieldIds();
       let order;

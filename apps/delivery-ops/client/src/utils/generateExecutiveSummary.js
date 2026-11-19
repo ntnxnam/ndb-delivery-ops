@@ -1,3 +1,4 @@
+import { getFieldValue } from './jiraFields';
 /**
  * Generate Executive Summary for a Single Feature/Project
  * 
@@ -128,14 +129,14 @@ export function generateExecutiveSummary({
   // Get extension date if label exists
   const extensionDate = getExtensionDateFromLabel(item);
   // JIRA Code Complete Date (for overshoot comparison)
-  const jiraCodeCompleteDate = parseDate(item.customfield_11067);
+  const jiraCodeCompleteDate = parseDate(item.getFieldValue(item, 'codeComplete'));
   // Use extension date for calculations if available, otherwise use JIRA date
   const codeCompleteDate = extensionDate || jiraCodeCompleteDate;
-  const fsdsDoneDate = parseDate(item.customfield_13861);
-  const testPlanDate = parseDate(item.customfield_11068);
-  const commitGateDate = parseDate(item.customfield_35863);
-  const promotionGateDate = parseDate(item.customfield_35864);
-  const statusUpdateDate = parseDate(item.customfield_45660);
+  const fsdsDoneDate = parseDate(item.getFieldValue(item, 'fsdsDone'));
+  const testPlanDate = parseDate(item.getFieldValue(item, 'testPlan'));
+  const commitGateDate = parseDate(item.getFieldValue(item, 'commitGate'));
+  const promotionGateDate = parseDate(item.getFieldValue(item, 'promotionGate'));
+  const statusUpdateDate = parseDate(item.getFieldValue(item, 'statusUpdateDate'));
 
   // Helper to get latest marker date from ganttConfig for a given gate type
   const getLatestMarkerDate = (gatePrefix) => {
@@ -251,9 +252,9 @@ export function generateExecutiveSummary({
   const fsdsDateMissing = !fsdsDoneDate;
   const testPlanDateMissing = !testPlanDate;
   
-  const designDocExists = !!getStringValue(item.customfield_14464);
-  const requirementsLinkExists = !!getStringValue(item.customfield_14463);
-  const testPlanLinkExists = !!getStringValue(item.customfield_14465);
+  const designDocExists = !!getStringValue(item.getFieldValue(item, 'designDocLink'));
+  const requirementsLinkExists = !!getStringValue(item.getFieldValue(item, 'requirementsLink'));
+  const testPlanLinkExists = !!getStringValue(item.getFieldValue(item, 'testPlanLink'));
 
   // Check labels for security/legal
   const labels = Array.isArray(item.labels) ? item.labels : (item.labelsString ? item.labelsString.split(',').map(l => l.trim()) : []);

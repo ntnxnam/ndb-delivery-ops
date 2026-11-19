@@ -1,6 +1,7 @@
 import React from 'react';
 import { FeatureAnalyticsRow } from '../../feature/FeatureAnalyticsWidgets';
 import { ProjectPlanView } from '../../shared/components/ProjectPlanView';
+import { getFieldValue } from '../../utils/jiraFields';
 import IssueTypeBreakdownCompact from './IssueTypeBreakdownCompact';
 
 export default function EmailSenderPulledExtras({
@@ -35,7 +36,7 @@ export default function EmailSenderPulledExtras({
           duedate: feature.duedate,
           fixVersions: feature.fixVersions,
           assignee: feature.assignee,
-          qaContact: feature.customfield_10860?.value || null,
+          qaContact: (getFieldValue(feature, 'qaContact') ?? feature.customfield_10860)?.value || null,
           // ProjectPlanView accepts either childItems or childEpics
           childItems: (feature.childEpics || []).map((epic) => ({
             key: epic.key,
@@ -44,8 +45,8 @@ export default function EmailSenderPulledExtras({
             issueType: epic.issueType,
             resolution: epic.resolution,
             assignee: epic.assignee,
-            qaContact: epic.customfield_10860?.value || null,
-            customfield_10860: epic.customfield_10860,
+            qaContact: (getFieldValue(epic, 'qaContact') ?? epic.customfield_10860)?.value || null,
+            customfield_10860: getFieldValue(epic, 'qaContact') ?? epic.customfield_10860,
             duedate: epic.duedate,
             fixVersions: epic.fixVersions,
             priority: epic.priority || null,

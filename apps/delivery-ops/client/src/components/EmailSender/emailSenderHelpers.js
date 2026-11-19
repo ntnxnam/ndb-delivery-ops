@@ -1,4 +1,5 @@
 import React from 'react';
+import { getFieldValue, getFieldId } from '../../utils/jiraFields';
 import { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } from '../../config/emailSenderFeatures';
 import { MONTHS } from '../../shared/utils/dateFormatter';
 
@@ -31,8 +32,8 @@ export function validateHighlightsLowlightsSections(html) {
 
 /** Checklist links only — Risk Assessment / Path to Green render below Highlights. */
 export const EXTRA_FETCH_FIELDS = [
-  ['customfield_55662', 'Link to CG checklist'],
-  ['customfield_55663', 'Link to PG checklist'],
+  [getFieldId('cgChecklistLink'), 'Link to CG checklist'],
+  [getFieldId('pgChecklistLink'), 'Link to PG checklist'],
 ];
 
 function safeClientHttpUrl(raw) {
@@ -241,4 +242,3 @@ export function formatJiraWikiMarkup(text, jiraBaseUrl) {
   
   return formatted;
 }
-

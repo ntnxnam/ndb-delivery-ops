@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 
 /**
  * Extract a stable string risk value from an item's risk indicator field.
  * The field can be a string, an object {value, color}, or null.
  */
 function extractRisk(item) {
-  const raw = item.customfield_23560;
+  const raw = getFieldValue(item, 'riskIndicator');
   if (!raw) return 'Not Set';
   if (typeof raw === 'string') return raw.trim() || 'Not Set';
   if (typeof raw === 'object') return (raw.value || raw.name || 'Not Set').trim();
@@ -49,7 +50,7 @@ function extractAssigneeManager(item) {
  * Returns true if the item's status update date is older than `days` days or missing.
  */
 function isStale(item, days = 10) {
-  let d = item.customfield_45660;
+  let d = getFieldValue(item, 'statusUpdateDate');
   if (!d) return true;
   if (typeof d === 'object' && !(d instanceof Date)) d = d.value || d.date || null;
   if (!d) return true;

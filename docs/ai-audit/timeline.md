@@ -4,6 +4,9 @@
 
 | Date | Page | File | Weave | Goal |
 |------|------|------|-------|------|
+| 2026-11-19 | EmailSender | [2026-11-19__client-fields-labels__weave-client-fields-labels.md](../../apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs/2026-11-19__client-fields-labels__weave-client-fields-labels.md) | `weave-client-fields-labels` | TBD |
+| 2026-11-19 | ProjectStatus | [2026-11-19__client-fields-labels__weave-client-fields-labels.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-19__client-fields-labels__weave-client-fields-labels.md) | `weave-client-fields-labels` | TBD |
+| 2026-11-19 | SosSummary | [2026-11-19__client-fields-labels__weave-client-fields-labels.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary/2026-11-19__client-fields-labels__weave-client-fields-labels.md) | `weave-client-fields-labels` | TBD |
 | 2026-11-20 | EmailSender | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for EmailSender |
 | 2026-11-20 | ProjectStatus | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ProjectStatus |
 | 2026-11-20 | FeatureDashboard | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/feature/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for FeatureDashboard |

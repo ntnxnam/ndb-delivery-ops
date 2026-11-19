@@ -472,6 +472,85 @@
         "standard": false
       }
     },
+    "extras": {
+      "startDate": {
+        "id": "customfield_11069",
+        "label": "Start Date",
+        "type": "date",
+        "category": "extras",
+        "description": "Start Date (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "Start Date",
+        "jql": "customfield_11069",
+        "standard": false
+      },
+      "gaDate": {
+        "id": "customfield_14367",
+        "label": "GA Date",
+        "type": "date",
+        "category": "extras",
+        "description": "GA Date (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "GA Date",
+        "jql": "customfield_14367",
+        "standard": false
+      },
+      "commitGateReviewDate": {
+        "id": "customfield_40473",
+        "label": "Commit Gate Review Date",
+        "type": "date",
+        "category": "extras",
+        "description": "Commit Gate Review Date (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "Commit Gate Review Date",
+        "jql": "customfield_40473",
+        "standard": false
+      },
+      "automationCompletionDate": {
+        "id": "customfield_18461",
+        "label": "Automation Completion Date",
+        "type": "date",
+        "category": "extras",
+        "description": "Automation Completion Date (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "Automation Completion Date",
+        "jql": "customfield_18461",
+        "standard": false
+      },
+      "systemTestLead": {
+        "id": "customfield_23461",
+        "label": "System Test Lead",
+        "type": "user",
+        "category": "extras",
+        "description": "System Test Lead (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "System Test Lead",
+        "jql": "customfield_23461",
+        "standard": false
+      },
+      "storyPoints": {
+        "id": "customfield_10002",
+        "label": "Story Points",
+        "type": "number",
+        "category": "extras",
+        "description": "Story Points (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "Story Points",
+        "jql": "customfield_10002",
+        "standard": false
+      },
+      "sprintNdb": {
+        "id": "customfield_10360",
+        "label": "Sprint (NDB 10360)",
+        "type": "sprint",
+        "category": "extras",
+        "description": "Sprint NDB 10360 (autocomplete parity)",
+        "usedIn": ["autocomplete"],
+        "jiraName": "Sprint",
+        "jql": "customfield_10360",
+        "standard": false
+      }
+    },
     "agile": {
       "sprint": {
         "id": "customfield_10020",
@@ -631,6 +710,7 @@
     "deferral justification": "deferralJustification"
   },
   "fieldCategories": {
+    "extras": "Extra fields for autocomplete parity (derived via getAllFields)",
     "checkpoint": "Checkpoint dates for tracking project milestones",
     "people": "User/people fields for contacts and owners",
     "content": "Text content fields for status updates",

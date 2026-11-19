@@ -11,6 +11,7 @@ import {
   validateHighlightsLowlightsSections,
 } from './emailSenderHelpers';
 import EmailSenderPulledPanel from './EmailSenderPulledPanel';
+import { getFieldValue } from '../../utils/jiraFields';
 import { useEmailSender } from '../../hooks/useEmailSender';
 import './EmailSender.css';
 
@@ -134,17 +135,17 @@ function EmailSender({ onLogout: _onLogout }) {
                 <span>{jiraData.fixVersions}</span>
               </>
             )}
-            {jiraData.customfield_23560?.value && (
+            {(() => { const _risk = getFieldValue(jiraData, 'riskIndicator') ?? jiraData.customfield_23560; return _risk?.value ? (
               <span
                 className="email-sender-strip-risk"
                 style={{
-                  backgroundColor: jiraData.customfield_23560.color || '#e9ecef',
-                  color: jiraData.customfield_23560.color ? '#fff' : '#1a1a1a',
+                  backgroundColor: _risk.color || '#e9ecef',
+                  color: _risk.color ? '#fff' : '#1a1a1a',
                 }}
               >
-                {jiraData.customfield_23560.value}
+                {_risk.value}
               </span>
-            )}
+            ) : null; })()}
           </div>
         )}
 

@@ -10,14 +10,14 @@
  *   • Call to Action = max ~5 verb-first action items, one line each
  *
  * Fields used:
- *   customfield_23560  — Risk Indicator  ("Green - On Track", "Yellow - …", "Red - …")
- *   customfield_23073  — Status Update text (mined for risk reason)
- *   customfield_45660  — Status Update Date
- *   customfield_11067  — Code Complete Date
- *   customfield_13861  — FS/DS Done Date
- *   customfield_11068  — Test Plan Date
- *   customfield_35863  — Commit Gate Ready Estimation Date
- *   customfield_35864  — Promotion Gate Ready Estimation Date
+ *   getFieldValue(item, 'riskIndicator')  — Risk Indicator  ("Green - On Track", "Yellow - …", "Red - …")
+ *   getFieldValue(i, 'statusUpdate')  — Status Update text (mined for risk reason)
+ *   getFieldValue(item, 'statusUpdateDate')  — Status Update Date
+ *   getFieldValue(item, 'codeComplete')  — Code Complete Date
+ *   getFieldValue(item, 'fsdsDone')  — FS/DS Done Date
+ *   getFieldValue(item, 'testPlan')  — Test Plan Date
+ *   getFieldValue(item, 'commitGate')  — Commit Gate Ready Estimation Date
+ *   getFieldValue(item, 'promotionGate')  — Promotion Gate Ready Estimation Date
  *   item.priority      — "Blocker - P0", "Critical - P1", "Major - P2", etc.
  *   item.status        — "Code Complete Met", "Execute Commit", …
  *   item.summary       — feature title
@@ -29,6 +29,7 @@
  * @param {string} jiraBaseUrl     - e.g. "https://jira.nutanix.com"
  * @returns {{ highlightsHtml: string, lowlightsHtml: string, callToActionHtml: string }}
  */
+import { getFieldValue } from './jiraFields';
 import { formatters } from '../shared/utils/formatters';
 export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   const commit = items.commit || [];
@@ -38,7 +39,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
 
   const getRisk = (item) => {
     // #region agent log
-    const field = item.customfield_23560;
+    const field = item.getFieldValue(item, 'riskIndicator');
     const fieldType = typeof field;
     const fieldValue = Array.isArray(field) ? field.join(',') : (field && typeof field === 'object' ? JSON.stringify(field) : String(field || ''));
     console.log('[DEBUG bc15bd] getRisk field analysis:', {key: item.key, field, fieldType, fieldValue});
@@ -70,7 +71,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   const link = (key) =>
     `<a href="${jiraBaseUrl}/browse/${key}" style="color:#0052cc;">${key}</a>`;
 
-  const hasStatusUpdate = (item) => !!item.customfield_45660;
+  const hasStatusUpdate = (item) => !!item.getFieldValue(item, 'statusUpdateDate');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -195,10 +196,10 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   // Date issues: CC date passed but not complete, or FS/DS > Test Plan
   const dateIssues = (arr) =>
     arr.filter((item) => {
-      const ccDate = parseDate(item.customfield_11067);
-      const ccMissed = ccDate && isDateMissed(item.customfield_11067) && !isCCMet(item);
-      const fsdsDate = parseDate(item.customfield_13861);
-      const tpDate = parseDate(item.customfield_11068);
+      const ccDate = parseDate(item.getFieldValue(item, 'codeComplete'));
+      const ccMissed = ccDate && isDateMissed(item.getFieldValue(item, 'codeComplete')) && !isCCMet(item);
+      const fsdsDate = parseDate(item.getFieldValue(item, 'fsdsDone'));
+      const tpDate = parseDate(item.getFieldValue(item, 'testPlan'));
       const orderIssue = fsdsDate && tpDate && fsdsDate >= tpDate;
       return ccMissed || orderIssue;
     });
@@ -264,7 +265,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
     reds.forEach((i) => {
       const pl = getPriorityLabel(i);
       const assignee = i.assignee ? ` · ${i.assignee}` : '';
-      const snippet = extractStatusSnippet(i.customfield_23073);
+      const snippet = extractStatusSnippet(getFieldValue(i, 'statusUpdate'));
       s += `<li><strong>[${pl}]</strong> ${link(i.key)} — ${i.summary} <em style="color:#6c757d;">(${i.status || 'unknown'}${assignee})</em>`;
       if (snippet) s += `<br><span style="color:#5e6c84;font-size:0.92em;">→ ${snippet}</span>`;
       s += `</li>`;
@@ -277,7 +278,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
     if (yellows.length === 0) return '';
     let s = `<p><strong>🟡 ${label} — ${yellows.length} item${yellows.length > 1 ? 's' : ''} at slight risk</strong></p><ul>`;
     yellows.forEach((i) => {
-      const snippet = extractStatusSnippet(i.customfield_23073);
+      const snippet = extractStatusSnippet(getFieldValue(i, 'statusUpdate'));
       s += `<li>${link(i.key)} — ${i.summary}`;
       if (snippet) s += `<br><span style="color:#5e6c84;font-size:0.92em;">→ ${snippet}</span>`;
       s += `</li>`;
@@ -309,11 +310,11 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   if (allDateIssues.length > 0) {
     l += `<p><strong>📅 Date issues (${allDateIssues.length} item${allDateIssues.length > 1 ? 's' : ''})</strong></p><ul>`;
     allDateIssues.forEach((i) => {
-      const ccDate = parseDate(i.customfield_11067);
-      const fsdsDate = parseDate(i.customfield_13861);
-      const tpDate = parseDate(i.customfield_11068);
+      const ccDate = parseDate(getFieldValue(i, 'codeComplete'));
+      const fsdsDate = parseDate(getFieldValue(i, 'fsdsDone'));
+      const tpDate = parseDate(getFieldValue(i, 'testPlan'));
       const reasons = [];
-      if (ccDate && isDateMissed(i.customfield_11067) && !isCCMet(i)) {
+      if (ccDate && isDateMissed(getFieldValue(i, 'codeComplete')) && !isCCMet(i)) {
         reasons.push('Code Complete date has passed');
       }
       if (fsdsDate && tpDate && fsdsDate >= tpDate) {
@@ -348,7 +349,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
     const pl = getPriorityLabel(i);
     const urgency = getPriorityOrder(i) === 0 ? 'IMMEDIATE' : 'URGENT';
     const assignee = i.assignee ? ` (${i.assignee})` : '';
-    const snippet = extractStatusSnippet(i.customfield_23073);
+    const snippet = extractStatusSnippet(getFieldValue(i, 'statusUpdate'));
     const context = snippet ? ` Context: <em>${snippet}</em>.` : '';
     c += `<li><strong>[${pl} — ${urgency}]</strong> ${link(i.key)}${assignee} — resolve blockers and confirm mitigation + ETA by EOW.${context}</li>`;
   });
@@ -370,7 +371,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
     ctaCount++;
     if (ltfC.reds.length === 1) {
       const i = ltfC.reds[0];
-      const snippet = extractStatusSnippet(i.customfield_23073);
+      const snippet = extractStatusSnippet(getFieldValue(i, 'statusUpdate'));
       const context = snippet ? ` Context: <em>${snippet}</em>.` : '';
       c += `<li><strong>[LTF Red]</strong> ${link(i.key)} — program owner to review timeline and confirm if adjustment is needed.${context}</li>`;
     } else {

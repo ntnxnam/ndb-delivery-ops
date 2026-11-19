@@ -9,6 +9,7 @@
  *   - downloadBoth(ganttRef, items, opts)      → Gantt PNG + Excel
  */
 
+import { getFieldValue } from './jiraFields';
 import { formatters } from '../shared/utils/formatters';
 
 import html2canvas from 'html2canvas';
@@ -58,7 +59,7 @@ function extractText(val) {
 }
 
 function extractRisk(item) {
-  const r = item.customfield_23560;
+  const r = item.getFieldValue(item, 'riskIndicator');
   if (!r) return 'Not Set';
   if (typeof r === 'string') return r.trim() || 'Not Set';
   return (r.value || r.name || 'Not Set').trim();
@@ -92,21 +93,21 @@ function flattenItem(item, checkpointHistory, section) {
       : (item.fixVersions ? String(item.fixVersions) : ''),
     'Risk Indicator': extractRisk(item),
     Assignee: contact(item.assignee),
-    'QA Contact': contact(item.customfield_10860),
-    'PM Owner': contact(item.customfield_11260),
-    'Program Mgr': contact(item.customfield_27764),
-    'FS/DS Done Date': fmtDate(item.customfield_13861),
+    'QA Contact': contact(item.getFieldValue(item, 'qaContact')),
+    'PM Owner': contact(item.getFieldValue(item, 'pmOwner')),
+    'Program Mgr': contact(item.getFieldValue(item, 'tpmOwner')),
+    'FS/DS Done Date': fmtDate(item.getFieldValue(item, 'fsdsDone')),
     'FS/DS History': historyStr('fsdsDone'),
-    'Test Plan Date': fmtDate(item.customfield_11068),
+    'Test Plan Date': fmtDate(item.getFieldValue(item, 'testPlan')),
     'Test Plan History': historyStr('testPlan'),
-    'Code Complete Date': fmtDate(item.customfield_11067),
+    'Code Complete Date': fmtDate(item.getFieldValue(item, 'codeComplete')),
     'Code Complete History': historyStr('codeComplete'),
-    'Commit Gate Date': fmtDate(item.customfield_35863),
+    'Commit Gate Date': fmtDate(item.getFieldValue(item, 'commitGate')),
     'Commit Gate History': historyStr('commitGate'),
-    'Promotion Gate Date': fmtDate(item.customfield_35864),
+    'Promotion Gate Date': fmtDate(item.getFieldValue(item, 'promotionGate')),
     'Promotion Gate History': historyStr('promotionGate'),
-    'Status Update': extractText(item.customfield_23073),
-    'Status Update Date': fmtDate(item.customfield_45660),
+    'Status Update': extractText(item.getFieldValue(item, 'statusUpdate')),
+    'Status Update Date': fmtDate(item.getFieldValue(item, 'statusUpdateDate')),
   };
 }
 

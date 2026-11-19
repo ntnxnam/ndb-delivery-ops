@@ -66,11 +66,11 @@
 }
 
 .rv-badge--green  { background: var(--risk-green); border-color: var(--risk-green); color: var(--text-inverse); }
-/* yellow/orange: dark text on amber = 6.57:1 — white would be 2.35:1 FAIL */
-.rv-badge--yellow { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-strong); }
+/* yellow/orange: white on amber = 5.43:1 PASS (dark #0c111d was 3.47:1 FAIL) */
+.rv-badge--yellow { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-inverse); }
 .rv-badge--red    { background: var(--risk-red); border-color: var(--risk-red); color: var(--text-inverse); }
 .rv-badge--blue   { background: var(--risk-blue); border-color: var(--risk-blue); color: var(--text-inverse); }
-.rv-badge--orange { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-strong); }
+.rv-badge--orange { background: var(--risk-yellow); border-color: var(--risk-yellow); color: var(--text-inverse); }
 .rv-badge--deep-red { background: var(--risk-deep-red); border-color: var(--risk-deep-red); color: var(--text-inverse); }
 .rv-badge--transparent {
   background: transparent;

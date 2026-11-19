@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import ReleaseVersionTableCell from './ReleaseVersionTableCell';
 import { 
   getUIColumnOrder, 
@@ -40,7 +41,7 @@ const ReleaseVersionTableRow = React.memo(function ReleaseVersionTableRow({
     ganttConfig
   }), [item, selectedVersion, ganttConfig]);
   // Check if Status Update Date is older than 10 days or empty (for row highlighting)
-  let statusUpdateDateValue = item.customfield_45660;
+  let statusUpdateDateValue = getFieldValue(item, 'statusUpdateDate');
   if (statusUpdateDateValue && typeof statusUpdateDateValue === 'object' && !(statusUpdateDateValue instanceof Date)) {
     statusUpdateDateValue = statusUpdateDateValue.value || statusUpdateDateValue.date || statusUpdateDateValue;
   }
@@ -86,4 +87,3 @@ const ReleaseVersionTableRow = React.memo(function ReleaseVersionTableRow({
 });
 
 export default ReleaseVersionTableRow;
-

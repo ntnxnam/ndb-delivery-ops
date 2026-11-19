@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { 
   renderNotSet, 
   formatDate, 
@@ -98,11 +99,11 @@ function renderCollateralAnchor(value) {
 
 export function renderAllCollaterals(item) {
   const collaterals = [
-    { label: 'Requirements', field: 'requirementsLink', value: item.customfield_14463 },
-    { label: 'Design Doc', field: 'designDocLink', value: item.customfield_14464 },
-    { label: 'Test Plan', field: 'testPlanLink', value: item.customfield_14465 },
-    { label: 'CG checklist', field: 'cgChecklistLink', value: item.customfield_55662 },
-    { label: 'PG checklist', field: 'pgChecklistLink', value: item.customfield_55663 },
+    { label: 'Requirements', field: 'requirementsLink', value: getFieldValue(item, 'requirementsLink') },
+    { label: 'Design Doc', field: 'designDocLink', value: getFieldValue(item, 'designDocLink') },
+    { label: 'Test Plan', field: 'testPlanLink', value: getFieldValue(item, 'testPlanLink') },
+    { label: 'CG checklist', field: 'cgChecklistLink', value: getFieldValue(item, 'cgChecklistLink') },
+    { label: 'PG checklist', field: 'pgChecklistLink', value: getFieldValue(item, 'pgChecklistLink') },
   ];
 
   return (
@@ -170,7 +171,7 @@ function renderQualityTable(title, rowData) {
 
 export function renderRiskDetails(item) {
   // Risk Indicator — reuse color logic from riskIndicator cell
-  const riskIndicator = item.customfield_23560;
+  const riskIndicator = getFieldValue(item, 'riskIndicator');
   const riskValue = riskIndicator?.value || riskIndicator || '';
   const riskColor = riskIndicator?.color || 'transparent';
   const isRiskNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
@@ -224,8 +225,8 @@ export function renderRiskDetails(item) {
 
   const fields = [
     { label: 'Risk Indicator', content: riskIndicatorContent },
-    { label: 'Risk Assessment', content: renderLinkOrText(item.customfield_47780) },
-    { label: 'Path to Green', content: renderLinkOrText(item.customfield_55664) },
+    { label: 'Risk Assessment', content: renderLinkOrText(getFieldValue(item, 'riskAssessment')) },
+    { label: 'Path to Green', content: renderLinkOrText(getFieldValue(item, 'pathToGreen')) },
   ];
 
   return (
@@ -308,19 +309,19 @@ function StatusWithTick({ statusValue, statusesWithTick }) {
  */
 export function renderAllCheckpointDates(item, selectedVersion, checkpointHistory) {
   const dates = [
-    { label: 'FS/DS Done Date', field: 'fsdsDone', value: item.customfield_13861 },
-    { label: 'Test Plan Date', field: 'testPlan', value: item.customfield_11068 },
-    { label: 'Code Complete Date', field: 'codeComplete', value: item.customfield_11067 },
-    { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: item.customfield_35863 },
-    { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: item.customfield_35864 }
+    { label: 'FS/DS Done Date', field: 'fsdsDone', value: getFieldValue(item, 'fsdsDone') },
+    { label: 'Test Plan Date', field: 'testPlan', value: getFieldValue(item, 'testPlan') },
+    { label: 'Code Complete Date', field: 'codeComplete', value: getFieldValue(item, 'codeComplete') },
+    { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: getFieldValue(item, 'commitGate') },
+    { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: getFieldValue(item, 'promotionGate') }
   ];
   
   // Check if item has extension label
   const hasExtension = hasCodeCompleteExtensionLabel(item);
 
   // Normalize and compare FS/DS Done Date and Test Plan Date
-  const fsdsDate = normalizeDateForComparison(item.customfield_13861);
-  const testPlanDate = normalizeDateForComparison(item.customfield_11068);
+  const fsdsDate = normalizeDateForComparison(getFieldValue(item, 'fsdsDone'));
+  const testPlanDate = normalizeDateForComparison(getFieldValue(item, 'testPlan'));
   
   // Determine highlighting conditions
   let fsdsHighlight = null; // null, 'yellow', or 'red'
@@ -419,9 +420,9 @@ export function renderAllCheckpointDates(item, selectedVersion, checkpointHistor
 export function renderTeamContacts(item) {
   const contacts = [
     { label: 'Assignee', value: item.assignee },
-    { label: 'QA Contact', value: item.customfield_10860 },
-    { label: 'PM Owner', value: item.customfield_11260 },
-    { label: 'Program Mgr', value: item.customfield_27764 }
+    { label: 'QA Contact', value: getFieldValue(item, 'qaContact') },
+    { label: 'PM Owner', value: getFieldValue(item, 'pmOwner') },
+    { label: 'Program Mgr', value: getFieldValue(item, 'tpmOwner') }
   ];
 
   // Helper to format user value
@@ -508,7 +509,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
 
   // Risk Indicator styling (legacy — hidden in UI, kept for backward compat)
   if (columnKey === 'riskIndicator') {
-    const riskIndicator = item.customfield_23560;
+    const riskIndicator = getFieldValue(item, 'riskIndicator');
     const riskValue = riskIndicator?.value || riskIndicator || 'Not Set';
     const riskColor = riskIndicator?.color || 'transparent';
     const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
@@ -562,7 +563,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   
   // Status Update Date
   if (columnKey === 'statusUpdateDate') {
-    let dateValue = item.customfield_45660;
+    let dateValue = getFieldValue(item, 'statusUpdateDate');
     if (dateValue && typeof dateValue === 'object' && !(dateValue instanceof Date)) {
       dateValue = dateValue.value || dateValue.date || dateValue;
     }
@@ -590,7 +591,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   
   // Status Update - Show from JIRA (customfield_23073) - render as rich text HTML
   if (columnKey === 'statusUpdate') {
-    const statusUpdateValue = item.customfield_23073;
+    const statusUpdateValue = getFieldValue(item, 'statusUpdate');
     let displayHtml = '';
     
     if (statusUpdateValue) {
@@ -643,7 +644,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     const generatedSummary = itemExecutiveSummary || '';
     
     // Get JIRA summary
-    const jiraSummaryValue = item.customfield_38460;
+    const jiraSummaryValue = getFieldValue(item, 'executiveStatusUpdate');
     let jiraSummary = '';
     let jiraSummaryIsHtml = false;
     if (jiraSummaryValue) {
@@ -775,7 +776,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   
   // Executive Update - Show from JIRA (customfield_38460) as read-only
   if (columnKey === 'executiveUpdate') {
-    const executiveUpdateValue = item.customfield_38460;
+    const executiveUpdateValue = getFieldValue(item, 'executiveStatusUpdate');
     let displayValue = '';
     
     if (executiveUpdateValue) {
@@ -934,7 +935,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
 
   if (columnKey === 'key') {
     // Manual TCMS link from Jira ticket field
-    const tcmsRaw = item.customfield_31460;
+    const tcmsRaw = getFieldValue(item, 'tcmsLink') ?? item.customfield_31460;
     const manualTcmsUrl = tcmsRaw?.value?.url
       || (typeof tcmsRaw === 'string' && /^https?:\/\//i.test(tcmsRaw) ? tcmsRaw : null);
 
@@ -1045,12 +1046,12 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     cellContent = (typeof assignee === 'string' ? assignee : (assignee?.displayName || assignee?.name || assignee?.emailAddress || 'N/A'));
   } else if (columnKey === 'uxOwner') {
     // Defensive: ensure it's a string, not an object
-    const uxOwner = item.customfield_15968;
+    const uxOwner = getFieldValue(item, 'uxOwner') ?? item.customfield_15968;
     cellContent = (typeof uxOwner === 'string' ? uxOwner : (uxOwner?.displayName || uxOwner?.name || uxOwner?.emailAddress || 'N/A'));
   } else if (columnKey === 'qaContact') {
     // Show QA Contact and Test Lead side by side
-    const qaContact = item.customfield_10860;
-    const testLead = item.customfield_11065;
+    const qaContact = getFieldValue(item, 'qaContact');
+    const testLead = getFieldValue(item, 'testLead') ?? item.customfield_11065;
     const qaContactDisplay = qaContact ? (typeof qaContact === 'string' ? qaContact : (qaContact?.displayName || qaContact?.name || qaContact?.emailAddress || 'N/A')) : null;
     const testLeadDisplay = testLead ? (typeof testLead === 'string' ? testLead : (testLead?.displayName || testLead?.name || testLead?.emailAddress || 'N/A')) : null;
     
@@ -1074,11 +1075,11 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     }
   } else if (columnKey === 'guiLead') {
     // Defensive: ensure it's a string, not an object
-    const guiLead = item.customfield_11861;
+    const guiLead = getFieldValue(item, 'guiLead') ?? item.customfield_11861;
     cellContent = (typeof guiLead === 'string' ? guiLead : (guiLead?.displayName || guiLead?.name || guiLead?.emailAddress || 'N/A'));
   } else if (columnKey === 'tpmOwner') {
     // Defensive: ensure it's a string, not an object
-    const tpmOwner = item.customfield_27764;
+    const tpmOwner = getFieldValue(item, 'tpmOwner');
     cellContent = (typeof tpmOwner === 'string' ? tpmOwner : (tpmOwner?.displayName || tpmOwner?.name || tpmOwner?.emailAddress || 'N/A'));
   } else if (
     columnKey === 'riskAssessment' ||
@@ -1087,7 +1088,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     cellContent = renderLinkOrText(col?.customField ? item[col.customField] : null);
   } else if (columnKey === 'teamMembers') {
     // Handle array of team members
-    const teamMembers = item.customfield_51460;
+    const teamMembers = getFieldValue(item, 'teamMembers') ?? item.customfield_51460;
     if (!teamMembers) {
       cellContent = 'N/A';
     } else if (Array.isArray(teamMembers)) {
@@ -1111,4 +1112,3 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
 });
 
 export default ReleaseVersionTableCell;
-

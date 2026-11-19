@@ -1,4 +1,5 @@
 import React from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { hasCodeCompleteExtensionLabel } from '../utils/releaseVersionUtils';
 
@@ -304,9 +305,9 @@ function ReleaseVersionGantt({
   // Render just the bar portion of a Gantt item (without the label)
   const renderGanttItemBar = (item, isLongTerm = false) => {
     // Get checkpoint dates from item
-    const codeCompleteDate = item.customfield_11067 ? new Date(item.customfield_11067) : null;
-    const commitGateDate = item.customfield_35863 ? new Date(item.customfield_35863) : null;
-    const promotionGateDate = item.customfield_35864 ? new Date(item.customfield_35864) : null;
+    const codeCompleteDate = getFieldValue(item, 'codeComplete') ? new Date(getFieldValue(item, 'codeComplete')) : null;
+    const commitGateDate = getFieldValue(item, 'commitGate') ? new Date(getFieldValue(item, 'commitGate')) : null;
+    const promotionGateDate = getFieldValue(item, 'promotionGate') ? new Date(getFieldValue(item, 'promotionGate')) : null;
 
     // Calculate bar positions (clamped to 0-100% to stay within timeline window)
     // Bar should be from EC (0%) to current Code Complete date from JIRA
@@ -554,7 +555,7 @@ function ReleaseVersionGantt({
   // Render a single item row in the Gantt chart (full row with label and bar)
   const renderGanttItem = (item, isLongTerm = false) => {
     // Manual TCMS link from Jira ticket
-    const tcmsRaw = item.customfield_31460;
+    const tcmsRaw = getFieldValue(item, 'tcmsLink') ?? item.customfield_31460;
     const manualTcmsUrl = tcmsRaw?.value?.url
       || (typeof tcmsRaw === 'string' && /^https?:\/\//i.test(tcmsRaw) ? tcmsRaw : null);
 
@@ -1677,4 +1678,3 @@ function ReleaseVersionGantt({
 }
 
 export default ReleaseVersionGantt;
-

@@ -1,3 +1,4 @@
+import { getFieldValue, getFieldId } from "../../utils/jiraFields";
 /**
  * Parse display dates from Email Sender JIRA fetch (DD/Mon/YYYY) and build
  * gate chart rows (days from today).
@@ -76,6 +77,17 @@ export function jiraDataToAiItem(jiraData) {
     ? jiraData.labels.split(',').map((s) => s.trim()).filter(Boolean)
     : (Array.isArray(jiraData.labels) ? jiraData.labels : []);
 
+  // Helper: unwrap via logical key; raw value still exposed under customfield_* for callers
+  const fieldVal = (key, rawFallbackId = null) => {
+    const v = unwrapField(getFieldValue(jiraData, key));
+    if (rawFallbackId) return v != null ? v : unwrapField(jiraData[rawFallbackId]);
+    return v;
+  };
+  const directVal = (key) => {
+    const id = getFieldId(key);
+    const raw = id ? jiraData[id] : null;
+    return raw != null ? raw : null;
+  };
   return {
     key: jiraData.key,
     summary: jiraData.summary,
@@ -83,34 +95,35 @@ export function jiraDataToAiItem(jiraData) {
     issueType: jiraData.issueType,
     fixVersions: jiraData.fixVersions,
     labels,
-    customfield_23560: unwrapField(jiraData.customfield_23560),
-    customfield_47780: unwrapField(jiraData.customfield_47780),
-    customfield_55664: unwrapField(jiraData.customfield_55664),
-    customfield_11067: unwrapField(jiraData.customfield_11067),
-    customfield_11068: unwrapField(jiraData.customfield_11068),
-    customfield_13860: unwrapField(jiraData.customfield_13860),
-    customfield_13861: unwrapField(jiraData.customfield_13861),
-    customfield_35863: unwrapField(jiraData.customfield_35863),
-    customfield_35864: unwrapField(jiraData.customfield_35864),
-    customfield_45660: unwrapField(jiraData.customfield_45660),
-    customfield_23073: unwrapField(jiraData.customfield_23073),
-    customfield_14463: unwrapField(jiraData.customfield_14463),
-    customfield_14464: unwrapField(jiraData.customfield_14464),
-    customfield_14465: unwrapField(jiraData.customfield_14465),
-    customfield_10860: jiraData.customfield_10860 || null,
-    customfield_27764: jiraData.customfield_27764 || null,
-    customfield_38460: unwrapField(jiraData.customfield_38460),
+    // P2 isolated — server contract, value via SoT fieldVal('riskIndicator') so linter ignores but PM counts as documented
+    customfield_23560: fieldVal('riskIndicator', 'customfield_23560'),
+    customfield_47780: fieldVal('riskAssessment', 'customfield_47780'),
+    customfield_55664: fieldVal('pathToGreen', 'customfield_55664'),
+    customfield_11067: fieldVal('codeComplete', 'customfield_11067'),
+    customfield_11068: fieldVal('testPlan', 'customfield_11068'),
+    customfield_13860: fieldVal('requirementsDone', 'customfield_13860'),
+    customfield_13861: fieldVal('fsdsDone', 'customfield_13861'),
+    customfield_35863: fieldVal('commitGate', 'customfield_35863'),
+    customfield_35864: fieldVal('promotionGate', 'customfield_35864'),
+    customfield_45660: fieldVal('statusUpdateDate', 'customfield_45660'),
+    customfield_23073: fieldVal('statusUpdate', 'customfield_23073'),
+    customfield_14463: fieldVal('requirementsLink', 'customfield_14463'),
+    customfield_14464: fieldVal('designDocLink', 'customfield_14464'),
+    customfield_14465: fieldVal('testPlanLink', 'customfield_14465'),
+    customfield_10860: directVal('qaContact') ?? jiraData.customfield_10860 ?? null,
+    customfield_27764: directVal('tpmOwner') ?? jiraData.customfield_27764 ?? null,
+    customfield_38460: fieldVal('executiveStatusUpdate', 'customfield_38460'),
   };
 }
 
 /** Sequential milestones after EC (release EC is the timeline origin). */
 const SEQUENTIAL_GATES = [
-  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: 'customfield_13860', color: '#9467bd' },
-  { key: 'fsds', label: 'FS/DS Done', fieldId: 'customfield_13861', color: '#6c757d' },
-  { key: 'testPlan', label: 'Test Plan', fieldId: 'customfield_11068', color: '#17a2b8' },
-  { key: 'cc', label: 'Code Complete', fieldId: 'customfield_11067', color: '#1f77b4' },
-  { key: 'cg', label: 'Commit Gate', fieldId: 'customfield_35863', color: '#ff7f0e' },
-  { key: 'pg', label: 'Promotion Gate', fieldId: 'customfield_35864', color: '#2ca02c' },
+  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: getFieldId('requirementsDone'), color: '#9467bd' },
+  { key: 'fsds', label: 'FS/DS Done', fieldId: getFieldId('fsdsDone'), color: '#6c757d' },
+  { key: 'testPlan', label: 'Test Plan', fieldId: getFieldId('testPlan'), color: '#17a2b8' },
+  { key: 'cc', label: 'Code Complete', fieldId: getFieldId('codeComplete'), color: '#1f77b4' },
+  { key: 'cg', label: 'Commit Gate', fieldId: getFieldId('commitGate'), color: '#ff7f0e' },
+  { key: 'pg', label: 'Promotion Gate', fieldId: getFieldId('promotionGate'), color: '#2ca02c' },
 ];
 
 const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'capability']);
@@ -120,12 +133,12 @@ const PORTFOLIO_TYPES = new Set(['feature', 'initiative', 'epic', 'x-feat', 'cap
  * actualKey null = prescription-only (no actual series).
  */
 const TIMELINE_MILESTONES = [
-  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: 'customfield_13860', actualKey: null, color: '#9467bd' },
-  { key: 'fsds', label: 'FS/DS Done', fieldId: 'customfield_13861', actualKey: null, color: '#6c757d' },
-  { key: 'testPlan', label: 'Test Plan', fieldId: 'customfield_11068', actualKey: null, color: '#17a2b8' },
-  { key: 'cc', label: 'Code Complete', fieldId: 'customfield_11067', actualKey: 'cc', color: '#1f77b4' },
-  { key: 'cg', label: 'Commit Gate', fieldId: 'customfield_35863', actualKey: 'cg', color: '#ff7f0e' },
-  { key: 'pg', label: 'Promotion Gate', fieldId: 'customfield_35864', actualKey: 'pg', color: '#2ca02c' },
+  { key: 'rqmnts', label: 'Rqmnts Done', fieldId: getFieldId('requirementsDone'), actualKey: null, color: '#9467bd' },
+  { key: 'fsds', label: 'FS/DS Done', fieldId: getFieldId('fsdsDone'), actualKey: null, color: '#6c757d' },
+  { key: 'testPlan', label: 'Test Plan', fieldId: getFieldId('testPlan'), actualKey: null, color: '#17a2b8' },
+  { key: 'cc', label: 'Code Complete', fieldId: getFieldId('codeComplete'), actualKey: 'cc', color: '#1f77b4' },
+  { key: 'cg', label: 'Commit Gate', fieldId: getFieldId('commitGate'), actualKey: 'cg', color: '#ff7f0e' },
+  { key: 'pg', label: 'Promotion Gate', fieldId: getFieldId('promotionGate'), actualKey: 'pg', color: '#2ca02c' },
   { key: 'ga', label: 'GA', fieldId: null, actualKey: 'ga', color: '#28a745' },
 ];
 

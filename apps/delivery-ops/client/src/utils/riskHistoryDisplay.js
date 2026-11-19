@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { getFieldValue, getFieldId } from './jiraFields';
 
 const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
 
@@ -54,7 +55,7 @@ function buildRiskSequence(itemKey, currentRisk, checkpointHistory) {
  * value) — in which case the caller just shows the RAG dot on its own.
  *
  * @param {string} itemKey
- * @param {*} currentRisk - item.customfield_23560 (string or { value })
+ * @param {*} currentRisk - getFieldValue(item, 'riskIndicator') (string or { value })
  * @param {Object} checkpointHistory
  * @returns {JSX.Element|null}
  */

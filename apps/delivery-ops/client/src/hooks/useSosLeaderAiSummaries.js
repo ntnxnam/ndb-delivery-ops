@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { getFieldValue, getFieldId } from '../utils/jiraFields';
 import { authenticatedPost } from '../shared/services/apiService';
 import { getUserFacingMessage } from '../utils/errorMessages';
 import { classifyRiskWord } from './useSosTierSummary';
@@ -20,7 +21,7 @@ function daysOld(dateVal) {
 function ragCountsFromItems(items) {
   const counts = { Red: 0, Yellow: 0, Green: 0, NotSet: 0 };
   (items || []).forEach((i) => {
-    counts[classifyRiskWord(i.customfield_23560)] += 1;
+    counts[classifyRiskWord(getFieldValue(i, 'riskIndicator'))] += 1;
   });
   return counts;
 }
@@ -47,9 +48,9 @@ function itemHygiene(items) {
   let staleCount = 0;
   let notSetCount = 0;
   (items || []).forEach((i) => {
-    const age = daysOld(i?.customfield_45660);
+    const age = daysOld(getFieldValue(i, 'statusUpdateDate'));
     if (age === null || age >= STALE_DAYS) staleCount += 1;
-    if (classifyRiskWord(i.customfield_23560) === 'NotSet') notSetCount += 1;
+    if (classifyRiskWord(getFieldValue(i, 'riskIndicator')) === 'NotSet') notSetCount += 1;
   });
   return { staleCount, notSetCount };
 }
@@ -58,7 +59,7 @@ function compactItems(items) {
   return (items || []).slice(0, 40).map((i) => ({
     key: i.key,
     summary: i.summary || i.fields?.summary || '',
-    rag: classifyRiskWord(i.customfield_23560),
+    rag: classifyRiskWord(getFieldValue(i, 'riskIndicator')),
     status: i.status || i.fields?.status?.name || '',
   }));
 }

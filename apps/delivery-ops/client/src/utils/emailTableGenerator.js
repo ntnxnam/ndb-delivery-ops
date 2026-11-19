@@ -5,6 +5,7 @@
  */
 
 import { formatDateWithHistoryHTML } from './dateHistoryDisplay';
+import { getFieldValue, getFieldId } from './jiraFields';
 
 /**
  * Generate HTML table for email from release version items
@@ -70,9 +71,9 @@ export function generateTableHTMLForEmail(
   const formatTeamContactsHTML = (item) => {
     const contacts = [
       { label: 'Assignee', value: item.assignee },
-      { label: 'QA Contact', value: item.customfield_10860 },
-      { label: 'PM Owner', value: item.customfield_11260 },
-      { label: 'Program Mgr', value: item.customfield_27764 }
+      { label: 'QA Contact', value: getFieldValue(item, 'qaContact') },
+      { label: 'PM Owner', value: getFieldValue(item, 'pmOwner') },
+      { label: 'Program Mgr', value: getFieldValue(item, 'tpmOwner') }
     ];
 
     // Helper to format user value
@@ -105,11 +106,11 @@ export function generateTableHTMLForEmail(
   // Helper to format checkpoint dates as HTML
   const formatCheckpointDatesHTML = (item) => {
     const dates = [
-      { label: 'FS/DS Done Date', field: 'fsdsDone', value: item.customfield_13861 },
-      { label: 'Test Plan Date', field: 'testPlan', value: item.customfield_11068 },
-      { label: 'Code Complete Date', field: 'codeComplete', value: item.customfield_11067 },
-      { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: item.customfield_35863 },
-      { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: item.customfield_35864 }
+      { label: 'FS/DS Done Date', field: 'fsdsDone', value: getFieldValue(item, 'fsdsDone') },
+      { label: 'Test Plan Date', field: 'testPlan', value: getFieldValue(item, 'testPlan') },
+      { label: 'Code Complete Date', field: 'codeComplete', value: getFieldValue(item, 'codeComplete') },
+      { label: 'Commit Gate Ready Estimation Date', field: 'commitGate', value: getFieldValue(item, 'commitGate') },
+      { label: 'Promotion Gate Ready Estimation Date', field: 'promotionGate', value: getFieldValue(item, 'promotionGate') }
     ];
 
     const extensionInfo = getExtensionLabelInfo(item);
@@ -134,8 +135,8 @@ export function generateTableHTMLForEmail(
       }
     };
 
-    const fsdsDate = normalizeDateForComparison(item.customfield_13861);
-    const testPlanDate = normalizeDateForComparison(item.customfield_11068);
+    const fsdsDate = normalizeDateForComparison(getFieldValue(item, 'fsdsDone'));
+    const testPlanDate = normalizeDateForComparison(getFieldValue(item, 'testPlan'));
 
     let fsdsHighlight = null;
     let testPlanHighlight = null;
@@ -193,7 +194,7 @@ export function generateTableHTMLForEmail(
 
   // Helper to format merged Risk Details (Risk Indicator + Assessment + Path to Green)
   const formatRiskDetailsHTML = (item) => {
-    const riskIndicator = item.customfield_23560;
+    const riskIndicator = getFieldValue(item, 'riskIndicator');
     const riskValue = riskIndicator?.value || riskIndicator || '';
     const riskColor = riskIndicator?.color || 'transparent';
     const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
@@ -228,8 +229,8 @@ export function generateTableHTMLForEmail(
 
     let h = '<div style="line-height:1.8;font-size:11px;">';
     h += `<div style="margin-bottom:8px;"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Risk Indicator:</div><div style="padding-left:4px;">${indicatorHTML}</div></div>`;
-    h += `<div style="margin-bottom:8px;"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Risk Assessment:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(item.customfield_47780)}</div></div>`;
-    h += `<div><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Path to Green:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(item.customfield_55664)}</div></div>`;
+    h += `<div style="margin-bottom:8px;"><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Risk Assessment:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(getFieldValue(item, 'riskAssessment'))}</div></div>`;
+    h += `<div><div style="font-weight:600;color:#495057;margin-bottom:2px;font-size:10px;">Path to Green:</div><div style="padding-left:4px;word-break:break-word;">${linkOrText(getFieldValue(item, 'pathToGreen'))}</div></div>`;
     h += '</div>';
     return h;
   };
@@ -256,10 +257,10 @@ export function generateTableHTMLForEmail(
     }
     if (columnKey === 'qaContact') {
       // QA Contact is already extracted to string by backend
-      return escapeHtml(item.customfield_10860 || 'N/A');
+      return escapeHtml(getFieldValue(item, 'qaContact') || 'N/A');
     }
     if (columnKey === 'tpmOwner') {
-      return escapeHtml(item.customfield_27764 || 'N/A');
+      return escapeHtml(getFieldValue(item, 'tpmOwner') || 'N/A');
     }
     if (columnKey === 'teamContacts') {
       return formatTeamContactsHTML(item);
@@ -309,7 +310,7 @@ export function generateTableHTMLForEmail(
       return formatRiskDetailsHTML(item);
     }
     if (columnKey === 'riskIndicator') {
-      const riskIndicator = item.customfield_23560;
+      const riskIndicator = getFieldValue(item, 'riskIndicator');
       const riskValue = riskIndicator?.value || riskIndicator || 'Not Set';
       const riskColor = riskIndicator?.color || 'transparent';
       const isNotSet = !riskValue || riskValue === 'Not Set' || riskValue === 'N/A' || String(riskValue).trim() === '';
@@ -358,7 +359,7 @@ export function generateTableHTMLForEmail(
     }
     if (columnKey === 'executiveUpdate') {
       // Format executiveUpdate (customfield_38460) - same as customfield38460
-      const executiveValue = item.customfield_38460;
+      const executiveValue = getFieldValue(item, 'executiveStatusUpdate');
       if (!executiveValue) {
         return 'Not Set';
       }
@@ -390,27 +391,27 @@ export function generateTableHTMLForEmail(
     }
     if (columnKey === 'customfield38460') {
       // Format customfield_38460 similar to statusUpdate
-      if (!item.customfield_38460 || typeof item.customfield_38460 !== 'string') {
+      if (!getFieldValue(item, 'executiveStatusUpdate') || typeof getFieldValue(item, 'executiveStatusUpdate') !== 'string') {
         return 'Not Set';
       }
       // Use formatJiraWikiMarkup if available, otherwise escape HTML
       try {
         // Try to use formatJiraWikiMarkup function if passed in
         if (formatJiraWikiMarkup && typeof formatJiraWikiMarkup === 'function') {
-          return formatJiraWikiMarkup(item.customfield_38460, jiraBaseUrl);
+          return formatJiraWikiMarkup(getFieldValue(item, 'executiveStatusUpdate'), jiraBaseUrl);
         }
       } catch (e) {
         // Fallback to escaped HTML
       }
-      return escapeHtml(item.customfield_38460);
+      return escapeHtml(getFieldValue(item, 'executiveStatusUpdate'));
     }
     if (columnKey === 'collaterals') {
       const collaterals = [
-        { label: 'Requirements', fieldId: 'customfield_14463' },
-        { label: 'Design Doc', fieldId: 'customfield_14464' },
-        { label: 'Test Plan', fieldId: 'customfield_14465' },
-        { label: 'CG checklist', fieldId: 'customfield_55662' },
-        { label: 'PG checklist', fieldId: 'customfield_55663' },
+        { label: 'Requirements', fieldId: getFieldId('requirementsLink') },
+        { label: 'Design Doc', fieldId: getFieldId('designDocLink') },
+        { label: 'Test Plan', fieldId: getFieldId('testPlanLink') },
+        { label: 'CG checklist', fieldId: getFieldId('cgChecklistLink') },
+        { label: 'PG checklist', fieldId: getFieldId('pgChecklistLink') },
       ];
       const isDriveUrl = (url) => /drive\.google\.com|docs\.google\.com/i.test(url);
       let h = '<div style="line-height:1.8;font-size:11px;">';
@@ -447,7 +448,7 @@ export function generateTableHTMLForEmail(
       return escapeHtml(text);
     }
     if (columnKey === 'statusUpdateDate') {
-      let statusUpdateDateValue = item.customfield_45660;
+      let statusUpdateDateValue = getFieldValue(item, 'statusUpdateDate');
       if (statusUpdateDateValue && typeof statusUpdateDateValue === 'object' && !(statusUpdateDateValue instanceof Date)) {
         statusUpdateDateValue = statusUpdateDateValue.value || statusUpdateDateValue.date || statusUpdateDateValue;
       }
@@ -472,7 +473,7 @@ export function generateTableHTMLForEmail(
   // Helper to format a single row
   const formatRowHTML = (item) => {
     // Check if row should be highlighted (Status Update Date > 10 days or empty)
-    let statusUpdateDateValue = item.customfield_45660;
+    let statusUpdateDateValue = getFieldValue(item, 'statusUpdateDate');
     if (statusUpdateDateValue && typeof statusUpdateDateValue === 'object' && !(statusUpdateDateValue instanceof Date)) {
       statusUpdateDateValue = statusUpdateDateValue.value || statusUpdateDateValue.date || statusUpdateDateValue;
     }
