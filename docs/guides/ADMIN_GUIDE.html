@@ -46,6 +46,105 @@
 <td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
 </tr>
 </tbody></table>
+<h2>AI / NAI Configuration</h2>
+<p>All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.</p>
+<h3>Environment variables (canonical <code>NAI_*</code>)</h3>
+<p>Five <code>NAI_*</code> variables are canonical. <code>AI_*</code> is kept as fallback during transition — if a <code>NAI_*</code> value is set it wins; otherwise the matching <code>AI_*</code> value is used.</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Secret?</th>
+<th>Required</th>
+<th>Default / fallback</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NAI_API_KEY</code></td>
+<td>yes</td>
+<td>Required for any AI call</td>
+<td><em>(none)</em> — must be set in <code>server/.env</code></td>
+<td>NuToken from <code>tokens.corp.nutanix.com</code>. No fallback file. Server error: <code>NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.</code></td>
+</tr>
+<tr>
+<td><code>NAI_API_BASE_URL</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:baseUrl</code> (<code>https://tokens.corp.nutanix.com/enterpriseai/gateway/v1</code>)</td>
+<td>Env overrides <code>aiConfig.json</code>. <code>AI_API_BASE_URL</code> fallback. Server error: <code>NAI_API_BASE_URL is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_DEFAULT_MODEL</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:defaultModel</code> (<code>beam-1-501b</code>)</td>
+<td>Also accepts legacy <code>NAI_MODEL</code>. Server error: <code>NAI_DEFAULT_MODEL is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_MAX_TOKENS</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:maxTokens</code> (8192)</td>
+<td>Env parsed as int; <code>AI_MAX_TOKENS</code> fallback. Server error: <code>NAI_MAX_TOKENS is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_REQUEST_TIMEOUT</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:requestTimeoutMs</code> (120000 ms)</td>
+<td>Env parsed as int ms; <code>AI_REQUEST_TIMEOUT</code> fallback. Server error: <code>NAI_REQUEST_TIMEOUT is not set…</code></td>
+</tr>
+</tbody></table>
+<p>Full table + rationale in <a href="./AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> and <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</p>
+<h3>Precedence diagram</h3>
+<pre><code>per-call override (aiConnector options)
+        │
+        ▼
+  NAI_* env var  ──fallback──▶  AI_* env var
+        │                           │
+        └──────────┬────────────────┘
+                   ▼
+         aiConfig.json  (server/config/aiConfig.json)
+         { baseUrl, defaultModel, maxTokens, requestTimeoutMs }
+                   │
+                   ▼
+           missing → throw actionable error naming the NAI_* var
+</code></pre>
+<ul>
+<li><strong>Secrets</strong> (<code>NAI_API_KEY</code>): env only — never in <code>aiConfig.json</code>.</li>
+<li><strong>Non-secrets</strong> (<code>NAI_API_BASE_URL</code>, <code>NAI_DEFAULT_MODEL</code>, <code>NAI_MAX_TOKENS</code>, <code>NAI_REQUEST_TIMEOUT</code>): <code>NAI_*</code> env → <code>AI_*</code> fallback → <code>aiConfig.json</code> → throw <code>NAI_* is not set</code>.</li>
+<li>Implementation: <code>shared/src/connectors/aiConnector.ts</code> and <code>apps/delivery-ops/server/.env.example</code>.</li>
+</ul>
+<h3>Bin-Packing Converter — server / auth</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Route</td>
+<td><code>POST /api/bin-packing/convert</code> → <code>apps/delivery-ops/server/routes/binPackingConvert.js</code> (mounted at <code>/api/bin-packing</code> in <code>server/index.js</code>)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>apiLimiter</code> + <code>validateJiraTokenMiddleware</code> — same guard as <code>POST /api/ai/chat</code> and <code>/api/jira-digging</code>. Unauthenticated requests receive 401 before any file processing.</td>
+</tr>
+<tr>
+<td>Input</td>
+<td>Accepts both <code>multipart/form-data</code> (primary) and <code>JSON { filename, contentBase64, mimeType, productId }</code> (alternate). Max file 10 MB (multipart) / ~13 MB b64 (JSON).</td>
+</tr>
+<tr>
+<td>Body parser</td>
+<td><code>bodyParser.json({ limit: &#39;15mb&#39; })</code> in <code>server/index.js</code> — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. <code>bodyParser.urlencoded</code> also <code>15mb</code>.</td>
+</tr>
+<tr>
+<td>Temp files</td>
+<td>Per-request <code>mkdtemp</code> via <code>shared/src/services/csvConverterService.ts</code>; never executes from the upload dir (downloaded files are untrusted — see project <code>AGENTS.md</code> environment note).</td>
+</tr>
+</tbody></table>
 <h2>RBAC</h2>
 <p>See <code>RBAC_GUIDE.md</code> and <code>docs/api/</code> per <code>api-docs-required.mdc</code>.</p>
 <h2>Deployment</h2>
@@ -71,6 +170,26 @@
 <td>401 from JIRA</td>
 <td>PAT expired</td>
 <td>Rotate <code>JIRA_PAT</code>, Bearer header</td>
+</tr>
+<tr>
+<td><code>NAI_API_KEY is not set</code> on AI call</td>
+<td><code>NAI_API_KEY</code> missing from <code>server/.env</code></td>
+<td>Set <code>NAI_API_KEY</code> (NuToken from <code>tokens.corp.nutanix.com</code>); see <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a></td>
+</tr>
+<tr>
+<td><code>NAI_API_BASE_URL is not set</code></td>
+<td>No <code>NAI_API_BASE_URL</code> env and <code>aiConfig.json</code> missing/misconfigured</td>
+<td>Set <code>NAI_API_BASE_URL</code> in env or ensure <code>server/config/aiConfig.json</code> has <code>baseUrl</code></td>
+</tr>
+<tr>
+<td>401 on <code>POST /api/bin-packing/convert</code></td>
+<td>Missing/invalid JIRA Bearer token</td>
+<td>Same fix as <code>POST /api/ai/chat</code> — supply <code>Authorization: Bearer &lt;JIRA_PAT&gt;</code></td>
+</tr>
+<tr>
+<td>413 / 422 on bin-packing upload</td>
+<td>File &gt; 10 MB or unsupported type</td>
+<td>Reduce file or convert to CSV/XLSX; see <a href="../product/CSV_CONVERTER_GUIDE.md">CSV_CONVERTER_GUIDE.md</a></td>
 </tr>
 <tr>
 <td>TCMS Quality shows &quot;Not Set&quot;</td>

@@ -299,7 +299,45 @@ When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.
 
 ---
 
-## 7. NAI API Call Pattern
+## 7. NAI Configuration — Canonical `NAI_*` Precedence
+
+`shared/src/connectors/aiConnector.ts:readConfig()` is the single config resolver for every NAI call (chat, exec summary, release briefing, bin-packing convert fallback). `apps/delivery-ops/server/.env.example` documents the canonical names.
+
+**Five canonical vars:** `NAI_API_KEY`, `NAI_API_BASE_URL`, `NAI_DEFAULT_MODEL`, `NAI_MAX_TOKENS`, `NAI_REQUEST_TIMEOUT`. During transition each has an `AI_*` fallback (`AI_API_KEY` is not used — `NAI_API_KEY` is the only secret — but `AI_API_BASE_URL`, `AI_DEFAULT_MODEL`, `AI_MAX_TOKENS`, `AI_REQUEST_TIMEOUT` are checked if the `NAI_*` counterpart is empty).
+
+```
+per-call override (aiConnector completeChat options: baseUrl / apiKey / defaultModel / maxTokens / timeoutMs)
+        │
+        ▼
+  NAI_* env var  ──fallback──▶  AI_* env var
+        │                           │
+        └──────────┬────────────────┘
+                   ▼
+         aiConfig.json — apps/delivery-ops/server/config/aiConfig.json
+         { baseUrl, defaultModel, maxTokens, requestTimeoutMs }
+         (non-secret defaults only; NAI_API_KEY never lives here)
+                   │
+                   ▼
+           missing → throw actionable error naming the NAI_* var
+                   e.g. "NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env."
+```
+
+Per-var resolution:
+
+| Var | Env check | aiConfig fallback | Error if still missing |
+|---|---|---|---|
+| `NAI_API_BASE_URL` | `NAI_API_BASE_URL \|\| AI_API_BASE_URL` | `aiConfig.json:baseUrl` | `NAI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.` |
+| `NAI_API_KEY` | `NAI_API_KEY` (no file fallback — secret) | — | `NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.` |
+| `NAI_DEFAULT_MODEL` | `NAI_DEFAULT_MODEL \|\| AI_DEFAULT_MODEL \|\| NAI_MODEL` | `aiConfig.json:defaultModel` | `NAI_DEFAULT_MODEL is not set…` |
+| `NAI_MAX_TOKENS` | `NAI_MAX_TOKENS \|\| AI_MAX_TOKENS` (parsed int) | `aiConfig.json:maxTokens` | `NAI_MAX_TOKENS is not set. Set it in server/.env.` |
+| `NAI_REQUEST_TIMEOUT` | `NAI_REQUEST_TIMEOUT \|\| AI_REQUEST_TIMEOUT` (parsed int ms) | `aiConfig.json:requestTimeoutMs` | `NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.` |
+
+Notes:
+- `||` for `baseUrl`/`model` so an empty-string env correctly falls through to `aiConfig.json`; `??` for `apiKey`/`maxTokens`/`timeoutMs` so an explicit `0` override is not swallowed.
+- `aiConnector` also rejects `NAI_API_BASE_URL` containing `localhost`/`127.0.0.1` when `NODE_ENV=production`.
+- Admin setup is in [ADMIN_GUIDE.md](../guides/ADMIN_GUIDE.md#ai--nai-configuration) and [NAI_API_SETUP.md](../guides/NAI_API_SETUP.md); env template in `apps/delivery-ops/server/.env.example`.
+
+## 8. NAI API Call Pattern
 
 ```javascript
 async function callNAI({ systemPrompt, userPrompt, maxTokens = 2048 }) {
