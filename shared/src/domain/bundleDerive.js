@@ -1025,10 +1025,24 @@ export function deriveComponentHealthFromBundle(bundle, componentName) {
  * for a named JIRA component — same shape as /api/component/data.
  * Returns null if bundle has no data for this component.
  */
-export function deriveComponentDataFromBundle(bundle, componentName) {
+export function deriveComponentDataFromBundle(bundle, componentName, team = null) {
   if (!bundle || !bundle.tickets || !componentName) return null;
   const tickets = bundle.tickets.filter(t => ticketHasComponent(t, componentName));
   if (tickets.length === 0) return null;
+  // D1: team-aware release predicate — NCN has 3 prefixes, Prism has "AOS " (space)
+  const teamPrefixes = team ? (team.releasePrefixes || (team.releasePrefix ? [team.releasePrefix] : [])) : null;
+  const teamPinned = team ? (team.activeVersionNames || []) : ['master', 'Master'];
+  const isTeamRelease = (rel) => {
+    if (!rel || typeof rel !== 'string') return false;
+    if (teamPinned.includes(rel) || teamPinned.map(s=>String(s).toLowerCase()).includes(String(rel).toLowerCase())) {
+      // case-insensitive pinned check for master etc.
+      const lower = String(rel).toLowerCase();
+      if (teamPinned.some(p => String(p).toLowerCase() === lower)) return true;
+    }
+    if (teamPrefixes) return teamPrefixes.some(p => p && rel.startsWith(p));
+    // Fallback: any-team heuristic (covers calls without team — don't hardcode NDB-)
+    return /^\w+[- ]/.test(rel) && /\d/.test(rel) || rel.toLowerCase() === 'master';
+  };
 
   const now = Date.now();
 
@@ -1055,18 +1069,21 @@ export function deriveComponentDataFromBundle(bundle, componentName) {
       return b.age - a.age;
     });
 
-  // ── Build available releases ──────────────────────────────────────────────
+  // ── Build available releases (team-aware, generic sort)
   const releaseSet = new Set();
   tickets.forEach(t => {
     const rel = t['Release Name'] || '';
-    if (/^NDB-\d/.test(rel) || rel.toLowerCase() === 'master') releaseSet.add(rel);
+    if (isTeamRelease(rel)) releaseSet.add(rel);
   });
   const sortFV = (a, b) => {
-    const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
-    const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
-    if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
-    if (ndbA) return -1;
-    if (ndbB) return 1;
+    const aIsRel = isTeamRelease(a); const bIsRel = isTeamRelease(b);
+    if (aIsRel && !bIsRel) return -1; if (!aIsRel && bIsRel) return 1;
+    if (aIsRel && bIsRel) {
+      const numsA = (String(a).match(/\d+/g) || []).map(Number);
+      const numsB = (String(b).match(/\d+/g) || []).map(Number);
+      const len = Math.max(numsA.length, numsB.length);
+      for (let i = 0; i < len; i++) { const d = (numsB[i] || 0) - (numsA[i] || 0); if (d) return d; }
+    }
     if (a.toLowerCase() === 'master') return -1;
     if (b.toLowerCase() === 'master') return 1;
     return a.localeCompare(b);
@@ -1174,8 +1191,7 @@ export function deriveComponentDataFromBundle(bundle, componentName) {
     ...standaloneEpics.filter(e => !crIsDone(e)).map(e => mapRow(e, collectDesc(e['Issue Key']), 'epic')),
     ...directItems.map(d => {
       const fv = d['Release Name'] || 'Unknown';
-      const isRelevantFV = /^NDB-\d/.test(fv) || fv.toLowerCase() === 'master';
-      if (!isRelevantFV) return null;
+      if (!isTeamRelease(fv)) return null;
       const wt = crClassifyType(d['Issue Type']);
       const counts = {};
       CR_WORK_TYPES.forEach(cwt => { counts[cwt] = { outstanding: 0, done: 0, p0: 0, p1: 0 }; });

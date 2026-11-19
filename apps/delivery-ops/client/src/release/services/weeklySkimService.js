@@ -53,16 +53,22 @@ function pill(metric, jiraBaseUrl, label, bg, fg) {
   return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="${style}" title="Open in JIRA">${body}</a>`;
 }
 
-function ragStripHtml(rows) {
+function ragStripHtml(rows, team) {
   const ok = (rows || []).filter((r) => !r.error);
   if (!ok.length) return '';
+  const prefixes = team?.releasePrefixes || team?.releasePrefix ? (team.releasePrefixes || [team.releasePrefix]) : null;
+  const strip = (v) => {
+    if (!v) return v;
+    if (prefixes) { const s = [...prefixes].sort((a,b)=>b.length-a.length); for (const p of s) if (p && v.startsWith(p)) return v.slice(p.length); }
+    return String(v).replace(/^[A-Za-z][A-Za-z0-9]*[- ]/, '');
+  };
   const cards = ok
     .map((r) => {
       const bg =
         r.rag === 'RED' ? '#fcebea' : r.rag === 'YELLOW' ? '#fff8e6' : '#e3fcef';
       const fg =
         r.rag === 'RED' ? '#c9372c' : r.rag === 'YELLOW' ? '#b38600' : '#1f7a1f';
-      const short = String(r.release || '').replace(/^NDB-/, '');
+      const short = strip(String(r.release || ''));
       return `<td style="background:${bg};border:1px solid #d0d7de;padding:6px 8px;text-align:center;">
         <div style="font-size:8pt;font-weight:800;color:${fg};">${esc(r.rag || '?')}</div>
         <div style="font-size:10pt;font-weight:600;">${esc(short)}</div>
@@ -75,7 +81,7 @@ function ragStripHtml(rows) {
 /**
  * Outlook-friendly skim HTML — PDF #248 column shape + visual RAG strip.
  */
-export function buildWeeklySkimHtml(payload, { jiraBaseUrl = 'https://jira.nutanix.com' } = {}) {
+export function buildWeeklySkimHtml(payload, { jiraBaseUrl = 'https://jira.nutanix.com', team = null } = {}) {
   const rows = payload?.rows || [];
   const chase = payload?.chase || [];
   const thisWeek = payload?.thisWeek || '';
@@ -133,20 +139,21 @@ export function buildWeeklySkimHtml(payload, { jiraBaseUrl = 'https://jira.nutan
           )
           .join('')}</ol>`;
 
+  const teamLabel = team?.label || 'NDB';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!-- Weekly-Status | NDB | Skim | ${esc(when)} -->
+<!-- Weekly-Status | ${esc(teamLabel)} | Skim | ${esc(when)} -->
 <!-- audience: team-exec -->
-<title>NDB Weekly Skim</title>
+<title>${esc(teamLabel)} Weekly Skim</title>
 </head>
 <body style="font-family:Aptos,Segoe UI,Calibri,Arial,sans-serif;font-size:11pt;color:#172B4D;margin:0;padding:16px;background:#fff;">
 <div style="max-width:800px;">
-  <h1 style="font-size:14pt;margin:0 0 4px;border-bottom:2px solid #0052cc;padding-bottom:4px;">NDB Weekly Skim</h1>
+  <h1 style="font-size:14pt;margin:0 0 4px;border-bottom:2px solid #0052cc;padding-bottom:4px;">${esc(teamLabel)} Weekly Skim</h1>
   <p style="margin:0 0 12px;font-size:9pt;color:#6c757d;">Generated ${esc(when)}</p>
 
-  ${ragStripHtml(rows)}
+  ${ragStripHtml(rows, team)}
 
   <div style="background:#e8f4fd;border:1px solid #0052cc;padding:12px 14px;margin:0 0 14px;">
     <div style="font-size:9pt;font-weight:700;letter-spacing:0.04em;color:#0052cc;margin-bottom:4px;">THIS WEEK</div>
@@ -178,14 +185,15 @@ export function buildWeeklySkimHtml(payload, { jiraBaseUrl = 'https://jira.nutan
 </html>`;
 }
 
-export function downloadWeeklySkimHtml(payload, opts) {
+export function downloadWeeklySkimHtml(payload, opts = {}) {
   const html = buildWeeklySkimHtml(payload, opts);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const day = new Date().toISOString().slice(0, 10);
+  const teamLabel = opts?.team?.label || 'NDB';
   a.href = url;
-  a.download = `Weekly-Status-NDB-Skim-${day}.html`;
+  a.download = `Weekly-Status-${teamLabel}-Skim-${day}.html`;
   document.body.appendChild(a);
   a.click();
   a.remove();

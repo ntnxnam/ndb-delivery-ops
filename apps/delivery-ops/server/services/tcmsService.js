@@ -10,6 +10,7 @@
 
 const axios = require('axios');
 const { tcmsCache } = require('../utils/simpleCache');
+const { getTeamById, inferTeamIdByVersion, stripReleasePrefix } = require('../utils/teamConfig');
 
 const TCMS_API_BASE = 'https://tcms.eng.nutanix.com';
 const TCMS_QI_PATH = '/api/v1/quality_index';
@@ -68,11 +69,14 @@ async function fetchMilestoneCount(featKey, milestone) {
  * @param {string} fixVersion - e.g. "NDB-2.11"
  */
 function buildTcmsQueryUrl(featKey, fixVersion) {
-  const versionNum = fixVersion.replace(/^NDB-/i, '');
+  const teamId = inferTeamIdByVersion(fixVersion);
+  const team = teamId ? getTeamById(teamId) : null;
+  const segment = team?.tcms?.projectSegment || 'NDB';
+  const versionNum = stripReleasePrefix(fixVersion, teamId);
   const search = encodeURIComponent(JSON.stringify([
     { field: 'Requirements', op: '$eq', value: [featKey] }
   ]));
-  return `${TCMS_API_BASE}/#/testcases/NDB/${versionNum}/qcow2?search=${search}&tab=package_type&type=All`;
+  return `${TCMS_API_BASE}/#/testcases/${segment}/${versionNum}/qcow2?search=${search}&tab=package_type&type=All`;
 }
 
 /**

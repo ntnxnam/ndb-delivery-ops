@@ -938,8 +938,8 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     const manualTcmsUrl = tcmsRaw?.value?.url
       || (typeof tcmsRaw === 'string' && /^https?:\/\//i.test(tcmsRaw) ? tcmsRaw : null);
 
-    // Constructed TCMS query URL — built client-side from item.key + selectedVersion
-    const tcmsVersion = (selectedVersion || '').replace(/^NDB-/i, '');
+    // Constructed TCMS query URL — built client-side from item.key + selectedVersion (team-agnostic; NDB segment kept until TCMS per-team routing lands)
+    const tcmsVersion = (() => { const s = String(selectedVersion || ''); const d = s.indexOf('-'); return d >= 0 ? s.slice(d + 1) : s; })();
     const tcmsSearch = encodeURIComponent(JSON.stringify([
       { field: 'Requirements', op: '$eq', value: [item.key] }
     ]));

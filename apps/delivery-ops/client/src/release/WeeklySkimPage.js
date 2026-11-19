@@ -17,6 +17,7 @@ import {
 } from './services/weeklySkimService';
 import { jiraSearchUrl } from './services/releaseBriefService';
 import { RELEASE_TYPE_CHIPS } from './utils/releaseTypeUtils';
+import { stripReleasePrefix } from '../utils/versionPattern';
 import './WeeklySkimPage.css';
 
 function fmtGa(ga) {
@@ -60,7 +61,7 @@ function CountPill({ metric, jiraBaseUrl, label, tone }) {
   );
 }
 
-function RagStrip({ rows }) {
+function RagStrip({ rows, team }) {
   const ok = (rows || []).filter((r) => !r.error);
   if (!ok.length) return null;
   return (
@@ -73,7 +74,7 @@ function RagStrip({ rows }) {
           title={r.pulse || r.release}
         >
           <span className="ws-rag-card__rag">{r.rag || '?'}</span>
-          <span className="ws-rag-card__name">{r.release.replace(/^NDB-/, '')}</span>
+          <span className="ws-rag-card__name">{stripReleasePrefix(r.release, team)}</span>
         </Link>
       ))}
     </div>
@@ -217,7 +218,7 @@ export default function WeeklySkimPage() {
       {payload && (
         <>
           <div className="ws-preview" ref={previewRef}>
-            <h2 className="ws-preview-title">NDB Weekly Skim</h2>
+            <h2 className="ws-preview-title">{selectedTeam?.label || 'NDB'} Weekly Skim</h2>
             <p className="ws-muted ws-gen">
               Generated{' '}
               {payload.generatedAt
@@ -225,7 +226,7 @@ export default function WeeklySkimPage() {
                 : '—'}
             </p>
 
-            <RagStrip rows={payload.rows} />
+            <RagStrip rows={payload.rows} team={selectedTeam} />
 
             <div className="ws-this-week">
               <div className="ws-section-label">THIS WEEK</div>

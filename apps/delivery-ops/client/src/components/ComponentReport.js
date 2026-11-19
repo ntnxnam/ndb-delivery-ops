@@ -9,6 +9,8 @@
 
 import React, { useState } from 'react';
 import { authenticatedGet, getApiBase } from '../shared/services/apiService';
+import { useTeam } from '../contexts/TeamContext';
+import { isKnownReleaseVersion } from '../utils/versionPattern';
 import './ComponentReport.css';
 
 const API_BASE = getApiBase();
@@ -21,12 +23,17 @@ const isInSelected = (fixVersionsStr, selectedReleases) => {
   return fixVersionsStr.split(',').some(v => selectedReleases.has(v.trim()));
 };
 
-// Returns true if this issue's fixVersions include "NDB-*" or "master"
-const isCurrent = (fixVersionsStr) => {
+// Returns true if this issue's fixVersions include a known team release
+const isCurrent = (fixVersionsStr, team = null) => {
   if (!fixVersionsStr) return false;
+  const prefixes = team?.releasePrefixes || null;
+  const pinned = team?.activeVersionNames || ['master'];
   return fixVersionsStr.split(',').some(v => {
     const trimmed = v.trim();
-    return /^NDB-\d+\.\d+/.test(trimmed) || trimmed.toLowerCase() === 'master';
+    if (!trimmed) return false;
+    if (prefixes) return isKnownReleaseVersion(trimmed, prefixes, pinned);
+    // Fallback without team — generic release-like heuristic
+    return /\d/.test(trimmed) || pinned.map(s=>String(s).toLowerCase()).includes(trimmed.toLowerCase());
   });
 };
 

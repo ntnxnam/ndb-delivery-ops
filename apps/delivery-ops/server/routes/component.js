@@ -13,7 +13,7 @@ const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { jiraTimeout } = require('../middleware/timeout');
 const { fetchComponentsFromERA, fetchComponentPayload } = require('../services/componentReportService');
-const { getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
+const { getTeamById, loadTeamBoardConfig, isKnownReleaseVersion } = require('../utils/teamConfig');
 
 const router = express.Router();
 
@@ -173,12 +173,12 @@ function classifyIssueType(issuetype) {
   return 'Other';
 }
 
-// Extract primary fixVersion name from an issue (first NDB-* or master, else first)
+// Extract primary fixVersion name from an issue (first known team release, else first)
 function primaryFixVersion(issue) {
   const fvs = Array.isArray(issue.fixVersions)
     ? issue.fixVersions.map(v => v.name)
     : (issue.fixVersions ? String(issue.fixVersions).split(',').map(s => s.trim()) : []);
-  const preferred = fvs.find(v => /^NDB-\d/.test(v) || v.toLowerCase() === 'master');
+  const preferred = fvs.find(v => isKnownReleaseVersion(v));
   return preferred || fvs[0] || 'Unknown';
 }
 
@@ -386,9 +386,8 @@ function buildProjectBreakdown(payload) {
   // directTickets are already filtered to outstanding-only by JQL
   function mapDirectRow(issue) {
     const fv = primaryFixVersion(issue);
-    // Only show direct tickets with a meaningful fixVersion (NDB-* or master)
-    // Tickets with ancient/ambiguous versions (Era 1.0 etc.) are noise
-    const isRelevantFV = /^NDB-\d/.test(fv) || fv.toLowerCase() === 'master';
+    // Only show direct tickets with a meaningful fixVersion for any team
+    const isRelevantFV = isKnownReleaseVersion(fv);
     if (!isRelevantFV) return null;
 
     const t = classifyIssueType(issue.issuetype?.name || issue.issuetype || '');
@@ -446,13 +445,21 @@ function buildProjectBreakdown(payload) {
     }).filter(r => r.openChildCount > 0),
   ];
 
-  // ── Group active rows by fixVersion ───────────────────────────────────────
+  // ── Group active rows by fixVersion — generic numeric sort (D1: no NDB hardcode)
   const sortFV = (a, b) => {
-    const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
-    const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
-    if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
-    if (ndbA) return -1;
-    if (ndbB) return 1;
+    const isRel = (v) => isKnownReleaseVersion(v);
+    const aIsRel = isRel(a); const bIsRel = isRel(b);
+    if (aIsRel && !bIsRel) return -1;
+    if (!aIsRel && bIsRel) return 1;
+    if (aIsRel && bIsRel) {
+      const numsA = (String(a).match(/\d+/g) || []).map(Number);
+      const numsB = (String(b).match(/\d+/g) || []).map(Number);
+      const len = Math.max(numsA.length, numsB.length);
+      for (let i = 0; i < len; i++) {
+        const diff = (numsB[i] || 0) - (numsA[i] || 0);
+        if (diff) return diff;
+      }
+    }
     if (a.toLowerCase() === 'master') return -1;
     if (b.toLowerCase() === 'master') return 1;
     return a.localeCompare(b);
@@ -512,19 +519,19 @@ router.get('/data', jiraTimeout, auth, async (req, res) => {
       const names = Array.isArray(fvs) ? fvs.map(v => v.name) : (fvs ? String(fvs).split(',').map(s => s.trim()) : []);
       names.forEach(n => {
         if (!n) return;
-        // Only include NDB-X.Y (committed releases) and master (active funded work)
-        if (/^NDB-\d/.test(n) || n.toLowerCase() === 'master') {
-          versionSet.add(n);
-        }
+        if (isKnownReleaseVersion(n)) versionSet.add(n);
       });
     });
 
     const availableReleases = [...versionSet].sort((a, b) => {
-      const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
-      const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
-      if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
-      if (ndbA) return -1;
-      if (ndbB) return 1;
+      const aIsRel = isKnownReleaseVersion(a); const bIsRel = isKnownReleaseVersion(b);
+      if (aIsRel && !bIsRel) return -1; if (!aIsRel && bIsRel) return 1;
+      if (aIsRel && bIsRel) {
+        const numsA = (String(a).match(/\d+/g) || []).map(Number);
+        const numsB = (String(b).match(/\d+/g) || []).map(Number);
+        const len = Math.max(numsA.length, numsB.length);
+        for (let i = 0; i < len; i++) { const d = (numsB[i] || 0) - (numsA[i] || 0); if (d) return d; }
+      }
       if (a.toLowerCase() === 'master') return -1;
       if (b.toLowerCase() === 'master') return 1;
       return a.localeCompare(b);

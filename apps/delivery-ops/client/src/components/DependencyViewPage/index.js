@@ -4,7 +4,7 @@ import { useDependencyView } from '../../hooks/useDependencyView';
 import { useTeam } from '../../contexts/TeamContext';
 import { TeamRequiredGate } from '../../layout/components/TeamRequiredGate';
 import DirectionColumn from './DirectionColumn';
-import DependencySwimlanes from './DependencySwimlanes';
+import DependencySwimlanes, { setSwimlaneHomeProjects } from './DependencySwimlanes';
 import EarlyCallBundle from './EarlyCallBundle';
 import TicketChip from './TicketChip';
 import { buildHygieneItems } from './hygiene';
@@ -155,10 +155,17 @@ function countByEwScope(issues, { excludeNdbHome = false } = {}) {
   return counts;
 }
 
-/** ERA / FEAT / NDB* — Peer NDB home; Peer↔Peer deps belong on We wait only. */
-function isNdbHomeIssue(iss) {
+/** Team home: selectedTeam.homeProjects if set, else ERA/FEAT/NDB* fallback. */
+function isHomeIssue(iss, homeProjects) {
   const pk = String(iss?.project || String(iss?.key || '').split('-')[0] || '').toUpperCase();
+  if (Array.isArray(homeProjects) && homeProjects.length) {
+    return homeProjects.some((p) => String(p).toUpperCase() === pk);
+  }
   return pk === 'ERA' || pk === 'FEAT' || pk.startsWith('NDB');
+}
+function isNdbHomeIssue(iss) {
+  // Back-compat alias — callers that already have team context should use isHomeIssue(iss, selectedTeam?.homeProjects)
+  return isHomeIssue(iss, null);
 }
 
 function Metric({ section, label }) {
@@ -201,7 +208,9 @@ export default function DependencyViewPage() {
 
   useEffect(() => {
     setRelease('');
-  }, [selectedTeamId]);
+    if (selectedTeam?.homeProjects?.length) setSwimlaneHomeProjects(selectedTeam.homeProjects);
+    else setSwimlaneHomeProjects(null);
+  }, [selectedTeamId, selectedTeam?.homeProjects]);
 
   useEffect(() => {
     if (!data) return;
@@ -232,11 +241,11 @@ export default function DependencyViewPage() {
     () => filterByEwScope(iWaitAll, ewScope, EW_SCOPES_WE),
     [iWaitAll, ewScope]
   );
-  /** They wait EW scope: never list NDB-home tickets (those are We-wait / Peer NDB). */
+  /** They wait EW scope: never list home tickets (those are We-wait / Peer). */
   const theyWaitByEw = useMemo(() => {
     const scoped = filterByEwScope(theyWaitAll, ewScope, EW_SCOPES_THEY);
-    return scoped.filter((t) => !isNdbHomeIssue(t));
-  }, [theyWaitAll, ewScope]);
+    return scoped.filter((t) => !isHomeIssue(t, selectedTeam?.homeProjects));
+  }, [theyWaitAll, ewScope, selectedTeam?.homeProjects]);
 
   /** EW + component — used inside We wait / They wait panels. */
   const iWait = useMemo(
@@ -288,7 +297,7 @@ export default function DependencyViewPage() {
   );
   const wishlist = useMemo(() => sections.wishlist?.issues || [], [sections.wishlist]);
   /**
-   * NDB-side *wait roots* (Project column) — not the FEAT/ENG blockers themselves.
+   * Team-side *wait roots* (Project column) — not the FEAT/ENG blockers themselves.
    * Includes wishlist + server waitRoots (e.g. ERA-49565) + home keys linked from blockers.
    */
   const projectIssues = useMemo(() => {
@@ -305,7 +314,7 @@ export default function DependencyViewPage() {
       (blocker.links || []).forEach((link) => {
         if (!link?.key || blockerKeys.has(link.key)) return;
         const pk = String(link.project || String(link.key).split('-')[0] || '').toUpperCase();
-        if (pk !== 'ERA' && pk !== 'FEAT' && !pk.startsWith('NDB')) return;
+        if (!isHomeIssue({ project: pk, key: link.key }, selectedTeam?.homeProjects)) return;
         const stub = {
           key: link.key,
           summary: link.summary || link.key,

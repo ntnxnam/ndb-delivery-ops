@@ -181,6 +181,77 @@ function getTeamById(teamId) {
   return findTeamInList(config.teams, teamId);
 }
 
+function getReleasePrefixesForTeam(teamId) {
+  const team = getTeamById(teamId);
+  if (!team) return [];
+  if (Array.isArray(team.releasePrefixes)) return team.releasePrefixes;
+  if (typeof team.releasePrefix === 'string' && team.releasePrefix) return [team.releasePrefix];
+  return [];
+}
+
+function getActiveVersionNamesForTeam(teamId) {
+  const team = getTeamById(teamId);
+  return Array.isArray(team?.activeVersionNames) ? team.activeVersionNames : [];
+}
+
+function getAllReleasePrefixes() {
+  const cfg = loadTeamBoardConfig();
+  const out = [];
+  for (const t of cfg.teams || []) {
+    const ps = Array.isArray(t.releasePrefixes) ? t.releasePrefixes : (t.releasePrefix ? [t.releasePrefix] : []);
+    for (const p of ps) if (p && !out.includes(p)) out.push(p);
+  }
+  return out;
+}
+
+function getAllActiveVersionNames() {
+  const cfg = loadTeamBoardConfig();
+  const out = [];
+  for (const t of cfg.teams || []) {
+    for (const n of (Array.isArray(t.activeVersionNames) ? t.activeVersionNames : [])) if (n && !out.includes(n)) out.push(n);
+  }
+  return out;
+}
+
+function inferTeamIdByVersion(versionName) {
+  if (!versionName || typeof versionName !== 'string') return null;
+  const cfg = loadTeamBoardConfig();
+  for (const t of cfg.teams || []) {
+    const pinned = Array.isArray(t.activeVersionNames) ? t.activeVersionNames : [];
+    if (pinned.includes(versionName)) return t.id;
+    const prefixes = Array.isArray(t.releasePrefixes) ? t.releasePrefixes : (t.releasePrefix ? [t.releasePrefix] : []);
+    if (prefixes.some((p) => p && versionName.startsWith(p))) return t.id;
+  }
+  return null;
+}
+
+function stripReleasePrefix(versionName, teamId = null) {
+  if (!versionName || typeof versionName !== 'string') return versionName;
+  let prefixes = [];
+  if (teamId) prefixes = getReleasePrefixesForTeam(teamId);
+  else prefixes = getAllReleasePrefixes();
+  // Longest first so NCN-Konvoy- wins over NCN-
+  const sorted = [...prefixes].sort((a, b) => b.length - a.length);
+  for (const p of sorted) if (p && versionName.startsWith(p)) return versionName.slice(p.length);
+  // Generic fallback — never hardcode NDB-
+  return versionName.replace(/^[A-Za-z][A-Za-z0-9]*[- ]/, '');
+}
+
+function isKnownReleaseVersion(versionName, teamId = null) {
+  if (!versionName || typeof versionName !== 'string') return false;
+  if (teamId) {
+    const pinned = getActiveVersionNamesForTeam(teamId);
+    if (pinned.includes(versionName)) return true;
+    const prefixes = getReleasePrefixesForTeam(teamId);
+    return prefixes.some((p) => p && versionName.startsWith(p));
+  }
+  // Any-team check for display sites that don't carry teamId
+  const pinnedAll = getAllActiveVersionNames();
+  if (pinnedAll.includes(versionName)) return true;
+  const prefixesAll = getAllReleasePrefixes();
+  return prefixesAll.some((p) => p && versionName.startsWith(p));
+}
+
 function getTeamField(teamId, fieldName) {
   const team = getTeamById(teamId);
   const value = team && team[fieldName] ? String(team[fieldName]).trim() : '';
@@ -230,4 +301,11 @@ module.exports = {
   getTeamBaseFilter,
   getTeamSprintBaseFilter,
   getTeamSosBaseFilter,
+  getReleasePrefixesForTeam,
+  getActiveVersionNamesForTeam,
+  getAllReleasePrefixes,
+  getAllActiveVersionNames,
+  inferTeamIdByVersion,
+  stripReleasePrefix,
+  isKnownReleaseVersion,
 };
