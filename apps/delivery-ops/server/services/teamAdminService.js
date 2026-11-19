@@ -52,18 +52,139 @@ function normalizeFeatureComponents(raw) {
   return out;
 }
 
+function normalizeStringArray(raw) {
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.map((v) => String(v || '').trim()).filter(Boolean))];
+}
+
+function normalizeReleasePrefixes(body) {
+  // Canonical is releasePrefixes[]. Accept singular releasePrefix as legacy compat.
+  if (body.releasePrefixes !== undefined) {
+    if (!Array.isArray(body.releasePrefixes)) throw httpError(400, 'releasePrefixes must be an array');
+    return normalizeStringArray(body.releasePrefixes);
+  }
+  if (body.releasePrefix !== undefined) {
+    const v = String(body.releasePrefix || '').trim();
+    return v ? [v] : [];
+  }
+  return undefined;
+}
+
+function normalizeReleaseRegexes(raw) {
+  if (!Array.isArray(raw)) throw httpError(400, 'releaseRegexes must be an array');
+  const out = [];
+  for (const r of raw) {
+    const s = String(r || '').trim();
+    if (!s) continue;
+    try {
+      new RegExp(s);
+    } catch {
+      throw httpError(400, `Invalid releaseRegex: ${s}`);
+    }
+    out.push(s);
+  }
+  return [...new Set(out)];
+}
+
+function normalizeLabels(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const key = String(k || '').trim();
+    if (!key) continue;
+    const val = String(v || '').trim();
+    if (val) out[key] = val;
+  }
+  return out;
+}
+
+function normalizeTcms(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError(400, 'tcms must be an object');
+  const out = {};
+  if (raw.projectSegment !== undefined) out.projectSegment = String(raw.projectSegment || '').trim();
+  if (raw.baseUrl !== undefined) out.baseUrl = String(raw.baseUrl || '').trim();
+  return out;
+}
+
+function normalizeQaEnv(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError(400, 'qaEnv must be an object');
+  const out = {};
+  if (raw.devUrl !== undefined) out.devUrl = String(raw.devUrl || '').trim();
+  if (raw.qaUrl !== undefined) out.qaUrl = String(raw.qaUrl || '').trim();
+  if (raw.prodUrl !== undefined) out.prodUrl = String(raw.prodUrl || '').trim();
+  return out;
+}
+
+function normalizeBranding(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError(400, 'branding must be an object');
+  const out = {};
+  if (raw.displayName !== undefined) out.displayName = String(raw.displayName || '').trim();
+  if (raw.shortName !== undefined) out.shortName = String(raw.shortName || '').trim();
+  return out;
+}
+
+function normalizeNotificationEmails(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError(400, 'notificationEmails must be an object');
+  const out = {};
+  for (const k of ['exec', 'techLeads', 'managers']) {
+    if (raw[k] !== undefined) out[k] = String(raw[k] || '').trim();
+  }
+  return out;
+}
+
+function normalizeCompanionDisciplines(raw) {
+  if (!Array.isArray(raw)) throw httpError(400, 'companionDisciplines must be an array');
+  return raw.map((row) => {
+    if (!row || typeof row !== 'object') throw httpError(400, 'companionDisciplines entries must be objects');
+    const projectKey = String(row.projectKey || '').trim().toUpperCase();
+    if (!projectKey || !PROJECT_KEY_PATTERN.test(projectKey)) throw httpError(400, 'companionDisciplines.projectKey is required');
+    const out = { projectKey, label: String(row.label || '').trim() };
+    if (row.hardGate !== undefined) {
+      if (row.hardGate !== 'PG' && row.hardGate !== 'GA') throw httpError(400, 'companionDisciplines.hardGate must be PG or GA');
+      out.hardGate = row.hardGate;
+    }
+    return out;
+  });
+}
+
 /** Managed fields present in the body; undefined means "not supplied". */
 function pickManagedFields(body) {
   const fields = {};
   if (body.name !== undefined) fields.name = String(body.name || '').trim();
+  if (body.displayName !== undefined) fields.displayName = String(body.displayName || '').trim();
   if (body.baseFilter !== undefined) fields.baseFilter = String(body.baseFilter || '').trim();
+  if (body.sosBaseFilter !== undefined) fields.sosBaseFilter = String(body.sosBaseFilter || '').trim();
   if (body.projectKey !== undefined) fields.projectKey = String(body.projectKey || '').trim().toUpperCase();
-  if (body.boardId !== undefined) {
-    const id = Number(body.boardId);
-    fields.boardId = Number.isInteger(id) && id > 0 ? id : null;
+  if (body.featureProjectKey !== undefined) {
+    const v = String(body.featureProjectKey || '').trim().toUpperCase();
+    fields.featureProjectKey = v || undefined;
   }
+  if (body.boardId !== undefined) {
+    if (body.boardId === null || body.boardId === '') {
+      fields.boardId = null;
+    } else {
+      const id = Number(body.boardId);
+      if (!Number.isInteger(id) || id <= 0) throw httpError(400, 'boardId must be a positive integer');
+      fields.boardId = id;
+    }
+  }
+  if (body.labelPrefix !== undefined) fields.labelPrefix = String(body.labelPrefix || '').trim().toLowerCase();
+  const prefixes = normalizeReleasePrefixes(body);
+  if (prefixes !== undefined) fields.releasePrefixes = prefixes;
+  if (body.releaseRegexes !== undefined) fields.releaseRegexes = normalizeReleaseRegexes(body.releaseRegexes);
+  if (body.homeProjects !== undefined) fields.homeProjects = normalizeStringArray(body.homeProjects).map((s) => s.toUpperCase());
+  if (body.activeVersionNames !== undefined) fields.activeVersionNames = normalizeStringArray(body.activeVersionNames);
   if (body.sprintCalendar !== undefined) fields.sprintCalendar = parseSprintCalendar(body.sprintCalendar);
   if (body.featureComponents !== undefined) fields.featureComponents = normalizeFeatureComponents(body.featureComponents);
+  if (body.companionDisciplines !== undefined) fields.companionDisciplines = normalizeCompanionDisciplines(body.companionDisciplines);
+  if (body.defaultRelease !== undefined) fields.defaultRelease = String(body.defaultRelease || '').trim();
+  if (body.defaultReleaseVersion !== undefined) fields.defaultReleaseVersion = String(body.defaultReleaseVersion || '').trim();
+  if (body.storyPointsField !== undefined) fields.storyPointsField = String(body.storyPointsField || '').trim();
+  if (body.labels !== undefined) fields.labels = normalizeLabels(body.labels);
+  if (body.tcms !== undefined) fields.tcms = normalizeTcms(body.tcms);
+  if (body.qaEnv !== undefined) fields.qaEnv = normalizeQaEnv(body.qaEnv);
+  if (body.branding !== undefined) fields.branding = normalizeBranding(body.branding);
+  if (body.notificationEmails !== undefined) fields.notificationEmails = normalizeNotificationEmails(body.notificationEmails);
   return fields;
 }
 
@@ -75,6 +196,10 @@ function assertValidTeam(team) {
   }
   if (!team.sprintCalendar) {
     throw httpError(400, 'sprintCalendar is required', 'Detect the sprint calendar from the team\'s scrum board.');
+  }
+  if (!team.labelPrefix) throw httpError(400, 'labelPrefix is required', 'Set a label prefix (e.g. ncn-) — derived from team id when onboarding via Detect.');
+  if (!Array.isArray(team.releasePrefixes) || team.releasePrefixes.length === 0) {
+    throw httpError(400, 'releasePrefixes is required', 'At least one release prefix is required (e.g. NCN-Konvoy-, AOS ).');
   }
 }
 
@@ -98,11 +223,17 @@ function listTeams() {
 
 function createTeam(body = {}) {
   const fields = pickManagedFields(body);
+  // Ergonomic defaults — Admin UI may not send every field explicitly
+  if (!fields.labelPrefix && fields.name) fields.labelPrefix = `${slugifyTeamId(fields.name)}-`;
+  if (!fields.homeProjects && fields.projectKey) fields.homeProjects = [fields.projectKey];
   const id = normalizeTeamId(body.id) || slugifyTeamId(fields.name);
   if (!TEAM_ID_PATTERN.test(id)) {
     throw httpError(400, 'Invalid team code', 'Use lowercase letters, digits, and dashes (max 40).');
   }
-  const team = stripLegacy({ id, ...fields });
+  const rawTeam = { id, ...fields };
+  // Canonicalise singular releasePrefix → plural if both slipped through
+  if (Array.isArray(rawTeam.releasePrefixes) && rawTeam.releasePrefixes.length > 0) delete rawTeam.releasePrefix;
+  const team = stripLegacy(rawTeam);
   assertValidTeam(team);
 
   const config = loadTeamBoardConfig();
@@ -126,7 +257,9 @@ function updateTeam(teamId, body = {}) {
   if (index === -1) throw httpError(404, 'Team not found', `Team with id "${teamId}" not found`);
 
   const existing = teams[index];
-  const team = stripLegacy({ ...existing, ...pickManagedFields(body), id: existing.id });
+  const merged = { ...existing, ...pickManagedFields(body), id: existing.id };
+  if (Array.isArray(merged.releasePrefixes) && merged.releasePrefixes.length > 0) delete merged.releasePrefix;
+  const team = stripLegacy(merged);
   assertValidTeam(team);
   teams[index] = team;
   saveTeamBoardConfig({ ...config, teams });

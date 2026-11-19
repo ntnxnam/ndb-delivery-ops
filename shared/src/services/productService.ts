@@ -122,11 +122,13 @@ export class ProductService {
 
   /**
    * Optional feature-root project key used by retrospective and feature-level
-   * analysis (NDB uses FEAT for Feature roots). Falls back to FEAT.
+   * analysis (NDB uses FEAT for Feature roots). Returns undefined for
+   * products that don't use a feature-root project (NCN, Prism-Infra)
+   * — callers must filter falsy before building JQL (D1).
    */
-  getFeatureProjectKey(productId: string): string {
+  getFeatureProjectKey(productId: string): string | undefined {
     const p = this.getProduct(productId);
-    return p.featureProjectKey ?? 'FEAT';
+    return p.featureProjectKey ?? undefined;
   }
 
   /**
@@ -237,16 +239,65 @@ export class ProductService {
   }
 
   /**
+   * Release-name prefixes — canonical, plural. Single-prefix products
+   * carry one entry; NCN carries 3 (NCN-Konvoy-/NCN-NDK-/CSI-).
+   * Falls back to singular `releasePrefix` then `${name}-` for legacy
+   * entries. Always returns a non-empty array (throws if registry entry
+   * has no prefix at all — misconfiguration).
+   */
+  getReleasePrefixes(productId: string): string[] {
+    const p = this.getProduct(productId);
+    if (Array.isArray(p.releasePrefixes) && p.releasePrefixes.length > 0) {
+      return [...p.releasePrefixes];
+    }
+    if (typeof p.releasePrefix === 'string' && p.releasePrefix.length > 0) {
+      return [p.releasePrefix];
+    }
+    if (typeof p.name === 'string' && p.name.length > 0) {
+      return [`${p.name}-`];
+    }
+    throw new Error(
+      `ProductService: product '${productId}' has no releasePrefixes/releasePrefix configured.`
+    );
+  }
+
+  /**
+   * Validated release regexes for this product. Invalid patterns are
+   * silently dropped (logged) so one bad regex doesn't break the whole
+   * product — callers get the valid subset; empty array means no
+   * regex scoping.
+   */
+  getReleaseRegexes(productId: string): string[] {
+    const p = this.getProduct(productId);
+    const raw: string[] = Array.isArray(p.releaseRegexes) ? p.releaseRegexes : [];
+    const out: string[] = [];
+    for (const pattern of raw) {
+      if (typeof pattern !== 'string' || !pattern.length) continue;
+      try {
+        // Validate — don't compile globally, just check syntax
+        new RegExp(pattern);
+        out.push(pattern);
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn(`ProductService: ignoring invalid releaseRegex '${pattern}' for '${productId}'`);
+      }
+    }
+    return out;
+  }
+
+  /**
    * Release-name prefix used by `releaseClassificationService` to strip
    * the product token off a version string (e.g. `'NDB-'` stripped from
    * `'NDB-2.11'` leaves `'2.11'`). MUST include the trailing separator
    * if one is used in the version-naming convention.
    *
    * Defaults to `${name}-` (e.g. NDB → `'NDB-'`, DataLens → `'DataLens-'`).
+   * @deprecated Prefer `getReleasePrefixes()[0]` — this exists only for
+   * NDB-compat callers that still assume a single prefix. For NCN it
+   * returns only the first of 3 (NCN-Konvoy-).
    */
   getReleasePrefix(productId: string): string {
-    const p = this.getProduct(productId);
-    return p.releasePrefix ?? `${p.name}-`;
+    return this.getReleasePrefixes(productId)[0] as string;
   }
 
   /**
@@ -281,13 +332,28 @@ export class ProductService {
   // ── internals ─────────────────────────────────────────────────────────────
 
   private normalise(parsed: ProductRegistry): ProductRegistry {
-    // The legacy file has minimal validation. Apply small sanity checks
-    // here so downstream code can assume a clean shape.
     if (!Array.isArray(parsed.teams) || parsed.teams.length === 0) {
       throw new Error('ProductService: registry has no teams/products.');
     }
     if (!parsed.defaultTeamId) {
       parsed.defaultTeamId = parsed.teams[0]!.id;
+    }
+    // Validate defaultTeamId actually exists — misconfig would silently
+    // route every unscoped request to a non-existent product.
+    const ids = new Set(parsed.teams.map((t) => t.id));
+    if (!ids.has(parsed.defaultTeamId)) {
+      throw new Error(
+        `ProductService: defaultTeamId '${parsed.defaultTeamId}' not found in teams [${[...ids].join(', ')}].`
+      );
+    }
+    // Duplicate id guard (case-insensitive — prevents shadow teams like Eng/eng)
+    const lower = new Map<string, string>();
+    for (const t of parsed.teams) {
+      const key = String(t.id).toLowerCase();
+      if (lower.has(key)) {
+        throw new Error(`ProductService: duplicate team id '${t.id}' collides with '${lower.get(key)}' (case-insensitive).`);
+      }
+      lower.set(key, t.id);
     }
     return parsed;
   }

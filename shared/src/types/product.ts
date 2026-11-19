@@ -92,8 +92,21 @@ export interface ProductConfig {
    * Uppercase release-name prefix used by `releaseClassificationService`
    * to parse `NDB-2.11`, `DataLens-X`, etc. Defaults to `name` when
    * absent (NDB → "NDB", DataLens → "DataLens").
+   * @deprecated Prefer `releasePrefixes` — singular is kept for backwards
+   * compat and returns `releasePrefixes[0]` when plural is present (NCN
+   * has 3: NCN-Konvoy-/NCN-NDK-/CSI-).
    */
   releasePrefix?: string;
+  /**
+   * Uppercase release-name prefixes — canonical source for version
+   * identity. Single-prefix products carry one entry; NCN carries
+   * `["NCN-Konvoy-","NCN-NDK-","CSI-"]`. Consumers must use
+   * `releasePrefixes.some(p => version.startsWith(p))` and strip the
+   * longest match (see `stripReleasePrefix` shape in WEAVE §7).
+   */
+  releasePrefixes?: string[];
+  /** Regexes that define which JIRA versions belong to this product */
+  releaseRegexes?: string[];
   /**
    * Exact JIRA version names that are always included in the sync,
    * regardless of whether they match `releasePrefix`. Used for special

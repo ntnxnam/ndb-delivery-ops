@@ -171,9 +171,7 @@
         "sprintDays": 14
       },
       "homeProjects": [
-        "ENG",
-        "ERA",
-        "FEAT"
+        "ENG"
       ],
       "releasePrefixes": [
         "AOS "
