@@ -2,7 +2,7 @@
  * Tool: convert_to_bin_packing_csv
  *
  * Normalise an arbitrary prioritization spreadsheet (CSV) into the canonical
- * NDB bin-packing CSV that `apps/bin-packing/` consumes. The canonical format
+ * bin-packing CSV that `apps/bin-packing/` consumes. The canonical format
  * is the Sheet1 header from `apps/bin-packing/data/sheet1.csv`:
  *   Sl No, FEAT NUMBER, SUMMARY, Priority, STATUS, % completed,
  *   3.0 Commitment Status, Total Months (1 person), Dev Resources, QA,

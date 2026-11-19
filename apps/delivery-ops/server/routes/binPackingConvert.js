@@ -18,6 +18,9 @@ const fsp = fs.promises;
 const os = require('os');
 const crypto = require('crypto');
 
+const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
+const { apiLimiter } = require('../middleware/security');
+
 const router = express.Router();
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -74,12 +77,7 @@ try {
   // Not available — inline fallback below handles conversion.
 }
 
-// ── Fallback inline header-alias + CSV logic ───────────────────────────────
-// TODO: remove this fallback once shared/src/services/csvConverterService.ts
-// is compiled to shared/dist (npm run build in shared/). It duplicates alias
-// mapping already in shared/src/services/productColumnAliases.ts /
-// shared/src/constants/binPackingSizing.ts to keep the route functional until
-// the next shared build.
+// ── Fallback inline header-alias + CSV logic (see TODO above) ─────────────
 
 const FALLBACK_CANONICAL_HEADERS = [
   'Sl No',
@@ -471,9 +469,9 @@ async function parseMultipart(req, maxBytes) {
   return { file, fields };
 }
 
-// ── Route handler ───────────────────────────────────────────────────────────
+// ── Route handler (authenticated — same pattern as ai, jiraDigging, dateMover) ──
 
-router.post('/convert', async (req, res) => {
+router.post('/convert', apiLimiter, validateJiraTokenMiddleware, async (req, res) => {
   let tmpDir = null;
   try {
     let file = null;
@@ -623,7 +621,7 @@ router.post('/convert', async (req, res) => {
         report = { ...fallback.report, fallbackError: msg, fallbackUsed: true };
       }
     } else {
-      // Inline fallback — TODO: remove once shared/dist ships csvConverterService
+      // Inline fallback (see TODO at top of file) — duplicates shared alias mapping
       const text = file.buffer.toString('utf8');
       // Quick xlsx magic sniff: PK\x03\x04 zip header
       const isXlsxMagic = file.buffer[0] === 0x50 && file.buffer[1] === 0x4b;
