@@ -64,11 +64,11 @@ export function generateFilterChain(version, excludeVersion) {
   ];
 }
 
-const COMPANION_RELEASE_PROJECTS = ['SDL', 'LBDR', 'TECHPUB', 'LEG', 'SR'];
+const COMPANION_RELEASE_PROJECTS = ['SDL', 'LBDR', 'TECHPUBS', 'LEG', 'SR'];
 
 /**
  * Version checkboxes for Release Setup. The first project is the selected
- * team's JIRA project (ENG for Cerebro / DR). SDL, LBDR, TECHPUB, LEG, SR
+ * team's JIRA project (ENG for Cerebro / DR). SDL, LBDR, TECHPUBS, LEG, SR
  * stay in the chain.
  */
 export function releaseProjectsForTeam(projectKey) {

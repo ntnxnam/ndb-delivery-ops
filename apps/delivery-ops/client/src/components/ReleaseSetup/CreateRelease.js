@@ -5,6 +5,7 @@ import { useTeam } from '../../contexts/TeamContext';
 import { STATUS, statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';
 import { JchFallbackBanner } from './JchFallbackBanner';
 
+// audience: rm — Release Manager creating fixVersions + saved filters; needs JCH fallback when not project admin
 function CreateRelease() {
   const { selectedTeam } = useTeam();
   const releaseProjects = useMemo(
@@ -18,13 +19,17 @@ function CreateRelease() {
 
   const [versionStatuses, setVersionStatuses] = useState({});
   const [versionErrors, setVersionErrors] = useState({});
+  const [selectedVersions, setSelectedVersions] = useState({});
 
   const [filterChain, setFilterChain] = useState([]);
   const [filterStatuses, setFilterStatuses] = useState({});
   const [filterErrors, setFilterErrors] = useState({});
   const [filterEdits, setFilterEdits] = useState({});
+  const [selectedFilters, setSelectedFilters] = useState({});
 
   const [checkError, setCheckError] = useState('');
+  const [bulkVersionsRunning, setBulkVersionsRunning] = useState(false);
+  const [bulkFiltersRunning, setBulkFiltersRunning] = useState(false);
 
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
@@ -35,12 +40,16 @@ function CreateRelease() {
     setPhase('input');
     setVersionStatuses({});
     setVersionErrors({});
+    setSelectedVersions({});
     setFilterChain([]);
     setFilterStatuses({});
     setFilterErrors({});
     setFilterEdits({});
+    setSelectedFilters({});
     setCheckError('');
     setJchStatus({});
+    setBulkVersionsRunning(false);
+    setBulkFiltersRunning(false);
   }, []);
 
   const handleCheck = useCallback(async () => {
@@ -57,21 +66,24 @@ function CreateRelease() {
 
     const newVersionStatuses = {};
     const newVersionErrors = {};
+    const newSelectedVersions = {};
 
     for (const proj of releaseProjects) {
       newVersionStatuses[proj] = STATUS.CHECKING;
       setVersionStatuses({ ...newVersionStatuses });
-
       try {
         const res = await authenticatedPost('/api/jira/check-version-exists', { projectKey: proj, versionName: version }, { jiraToken, username });
         newVersionStatuses[proj] = res.data?.exists ? STATUS.EXISTS : STATUS.MISSING;
+        if (newVersionStatuses[proj] === STATUS.MISSING) newSelectedVersions[proj] = true;
       } catch (err) {
         newVersionStatuses[proj] = STATUS.ERROR;
         newVersionErrors[proj] = err.response?.data?.error || err.message;
+        newSelectedVersions[proj] = true;
       }
       setVersionStatuses({ ...newVersionStatuses });
       setVersionErrors({ ...newVersionErrors });
     }
+    setSelectedVersions(newSelectedVersions);
 
     const chain = generateFilterChain(version, excludeVersion);
     setFilterChain(chain);
@@ -79,32 +91,32 @@ function CreateRelease() {
     const newFilterStatuses = {};
     const newFilterErrors = {};
     const newFilterEdits = {};
+    const newSelectedFilters = {};
 
     for (const f of chain) {
       newFilterStatuses[f.name] = STATUS.CHECKING;
       setFilterStatuses({ ...newFilterStatuses });
-
       try {
         const res = await authenticatedPost('/api/jira/check-filter-exists', { filterName: f.name }, { jiraToken, username });
         newFilterStatuses[f.name] = res.data?.exists ? STATUS.EXISTS : STATUS.MISSING;
+        if (newFilterStatuses[f.name] === STATUS.MISSING) newSelectedFilters[f.name] = true;
       } catch (err) {
         newFilterStatuses[f.name] = STATUS.ERROR;
         newFilterErrors[f.name] = err.response?.data?.error || err.message;
+        newSelectedFilters[f.name] = true;
       }
-
       newFilterEdits[f.name] = { name: f.name, jql: f.jql };
       setFilterStatuses({ ...newFilterStatuses });
       setFilterErrors({ ...newFilterErrors });
       setFilterEdits({ ...newFilterEdits });
     }
-
+    setSelectedFilters(newSelectedFilters);
     setPhase('checked');
   }, [version, excludeVersion, jiraToken, username, releaseProjects]);
 
   const handleCreateVersion = useCallback(async (proj) => {
     setVersionStatuses(prev => ({ ...prev, [proj]: STATUS.CREATING }));
     setVersionErrors(prev => ({ ...prev, [proj]: undefined }));
-
     try {
       await authenticatedPost('/api/jira/create-version', { projectKey: proj, versionName: version, releaseDate: releaseDate || undefined }, { jiraToken, username });
       setVersionStatuses(prev => ({ ...prev, [proj]: STATUS.CREATED }));
@@ -115,7 +127,6 @@ function CreateRelease() {
   }, [version, releaseDate, jiraToken, username]);
 
   const handleCreateJchTicket = useCallback(async (proj) => {
-    // Prevent double-submit if already creating/created
     if (jchStatus[proj]?.state === 'creating' || jchStatus[proj]?.state === 'created') return;
     const errDetail = String(versionErrors[proj] || '').slice(0, 1000);
     setJchStatus(prev => ({ ...prev, [proj]: { state: 'creating' } }));
@@ -135,10 +146,8 @@ function CreateRelease() {
     const edits = filterEdits[filterDef.name] || {};
     const finalName = (edits.name || filterDef.name).trim();
     const finalJql = (edits.jql || filterDef.jql).trim();
-
     setFilterStatuses(prev => ({ ...prev, [filterDef.name]: STATUS.CREATING }));
     setFilterErrors(prev => ({ ...prev, [filterDef.name]: undefined }));
-
     try {
       await authenticatedPost('/api/jira/create-filter', {
         filterName: finalName,
@@ -163,29 +172,56 @@ function CreateRelease() {
     }));
   }, []);
 
-  const allVersionsDone = releaseProjects.every(p => [STATUS.EXISTS, STATUS.CREATED, STATUS.SKIPPED, STATUS.ERROR].includes(versionStatuses[p]));
-  const allFiltersDone = filterChain.length > 0 && filterChain.every(f => [STATUS.EXISTS, STATUS.CREATED, STATUS.SKIPPED, STATUS.ERROR].includes(filterStatuses[f.name]));
+  // Bulk handlers — UX punch list: Create All Selected in 1 click
+  const handleBulkCreateVersions = useCallback(async () => {
+    const targets = releaseProjects.filter(p => selectedVersions[p] && (versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR));
+    if (!targets.length) return;
+    setBulkVersionsRunning(true);
+    for (const proj of targets) {
+      // eslint-disable-next-line no-await-in-loop
+      await handleCreateVersion(proj);
+    }
+    setBulkVersionsRunning(false);
+  }, [releaseProjects, selectedVersions, versionStatuses, handleCreateVersion]);
 
-  const getActiveVersionIdx = () => {
-    const idx = releaseProjects.findIndex(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR);
-    return idx >= 0 ? idx : releaseProjects.length;
-  };
+  const handleBulkCreateFilters = useCallback(async () => {
+    const targets = filterChain.filter(f => selectedFilters[f.name] && (filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR));
+    if (!targets.length) return;
+    setBulkFiltersRunning(true);
+    for (const f of targets) {
+      const s = filterStatuses[f.name];
+      const depsSkipped = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.SKIPPED);
+      const depsFailed = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.ERROR);
+      const depsMet = f.dependsOn.every(dep => {
+        const depStatus = filterStatuses[dep];
+        return depStatus === STATUS.EXISTS || depStatus === STATUS.CREATED;
+      });
+      if ((depsSkipped || depsFailed) && !depsMet) {
+        // skip auto-create if deps not met; user can uncheck or fix manually
+        // but still allow if they selected it — proceed with warning already shown
+      }
+      // sequential to respect chain order
+      // eslint-disable-next-line no-await-in-loop
+      await handleCreateFilter(f);
+    }
+    setBulkFiltersRunning(false);
+  }, [filterChain, selectedFilters, filterStatuses, handleCreateFilter]);
 
-  const getActiveFilterIdx = () => {
-    const idx = filterChain.findIndex(f => filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR);
-    return idx >= 0 ? idx : filterChain.length;
-  };
-
-  const hasMissingVersions = releaseProjects.some(p => versionStatuses[p] === STATUS.MISSING);
-  const hasMissingFilters = filterChain.some(f => filterStatuses[f.name] === STATUS.MISSING);
+  const hasMissingVersions = releaseProjects.some(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR);
+  const hasMissingFilters = filterChain.some(f => filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR);
   const everythingExists = phase === 'checked' && !hasMissingVersions && !hasMissingFilters
     && releaseProjects.every(p => versionStatuses[p] === STATUS.EXISTS)
     && filterChain.every(f => filterStatuses[f.name] === STATUS.EXISTS);
 
+  const missingVersionCount = releaseProjects.filter(p => versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR).length;
+  const missingFilterCount = filterChain.filter(f => filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR).length;
+  const selectedVersionCount = releaseProjects.filter(p => selectedVersions[p] && (versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR)).length;
+  const selectedFilterCount = filterChain.filter(f => selectedFilters[f.name] && (filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR)).length;
+
   return (
     <div>
       <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 0 }}>
-        Create fixVersions across JIRA projects and set up the saved filter chain for a new release.
+        Create fixVersions and the saved filter chain for a new release. Versions and filters are independent — you can create filters even if you lack admin for some projects (use JCH fallback for those versions).
       </p>
 
       <div style={cardStyle}>
@@ -243,7 +279,7 @@ function CreateRelease() {
         {checkError && <div style={{ color: '#dc3545', fontSize: '0.82rem', marginTop: 8 }}>{checkError}</div>}
       </div>
 
-      {(phase === 'checked' || phase === 'checking' || phase === 'versions' || phase === 'filters' || phase === 'done') && (
+      {(phase === 'checked' || phase === 'checking') && (
         <>
           {everythingExists && (
             <div style={{ ...cardStyle, background: '#d4edda', borderColor: '#28a745' }}>
@@ -254,259 +290,193 @@ function CreateRelease() {
             </div>
           )}
 
-          <div style={sectionHeading}>fixVersions ({version})</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-            {releaseProjects.map(proj => (
-              <div key={proj} style={{
-                ...cardStyle,
-                marginBottom: 0,
-                borderLeft: `4px solid ${statusColor(versionStatuses[proj])}`,
-                opacity: versionStatuses[proj] === STATUS.SKIPPED ? 0.6 : 1,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '0.85rem' }}>{proj}</strong>
-                  <span style={{ color: statusColor(versionStatuses[proj]), fontSize: '0.8rem', fontWeight: 500 }}>
-                    {statusIcon(versionStatuses[proj])} {statusLabel(versionStatuses[proj])}
-                  </span>
-                </div>
-                {versionErrors[proj] && (
-                  <div style={{ color: '#dc3545', fontSize: '0.75rem', marginTop: 4 }}>{versionErrors[proj]}</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div style={sectionHeading}>Saved Filters</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {filterChain.map((f, idx) => (
-              <div key={f.name} style={{
-                ...cardStyle,
-                marginBottom: 0,
-                borderLeft: `4px solid ${statusColor(filterStatuses[f.name])}`,
-                opacity: filterStatuses[f.name] === STATUS.SKIPPED ? 0.6 : 1,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.82rem' }}>
-                    <strong>{idx + 1}.</strong> {f.name}
-                  </span>
-                  <span style={{ color: statusColor(filterStatuses[f.name]), fontSize: '0.8rem', fontWeight: 500 }}>
-                    {statusIcon(filterStatuses[f.name])} {statusLabel(filterStatuses[f.name])}
-                  </span>
-                </div>
-                {filterErrors[f.name] && (
-                  <div style={{ color: '#dc3545', fontSize: '0.75rem', marginTop: 4 }}>{filterErrors[f.name]}</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {phase === 'checked' && (hasMissingVersions || hasMissingFilters) && (
-            <div style={{ marginTop: 16 }}>
-              <button
-                onClick={() => setPhase(hasMissingVersions ? 'versions' : 'filters')}
-                style={{
-                  padding: '8px 20px',
-                  backgroundColor: '#28a745',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                }}
-              >
-                {hasMissingVersions ? 'Proceed to Create Versions' : 'Proceed to Create Filters'}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {phase === 'versions' && (
-        <>
-          <div style={sectionHeading}>Create Missing fixVersions</div>
-          {releaseProjects.map((proj, idx) => {
-            const s = versionStatuses[proj];
-            if (s === STATUS.EXISTS || s === STATUS.CREATED || s === STATUS.SKIPPED) return null;
-            const isActive = idx === getActiveVersionIdx();
-            if (!isActive) return null;
-
-            return (
-              <div key={proj} style={{ ...cardStyle, borderColor: '#007bff', borderWidth: 2 }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem' }}>Create fixVersion in {proj}</h4>
-                <table style={{ fontSize: '0.82rem', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '3px 12px 3px 0', color: '#666' }}>Version name:</td><td><strong>{version}</strong></td></tr>
-                    <tr><td style={{ padding: '3px 12px 3px 0', color: '#666' }}>Project:</td><td><strong>{proj}</strong></td></tr>
-                    <tr><td style={{ padding: '3px 12px 3px 0', color: '#666' }}>Release date:</td><td>{releaseDate || <em style={{ color: '#999' }}>not set</em>}</td></tr>
-                  </tbody>
-                </table>
-                {s === STATUS.ERROR && (
-                  <JchFallbackBanner
-                    projectKey={proj}
-                    errorDetail={versionErrors[proj]}
-                    jchState={jchStatus[proj]}
-                    onFileJch={() => handleCreateJchTicket(proj)}
-                  />
-                )}
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => handleSkipVersion(proj)}
-                    disabled={s === STATUS.CREATING}
-                    style={{ padding: '6px 14px', border: '1px solid #ccc', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: '0.82rem' }}
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={() => handleCreateVersion(proj)}
-                    disabled={s === STATUS.CREATING}
-                    style={{
-                      padding: '6px 14px',
-                      backgroundColor: '#28a745',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 4,
-                      cursor: s === STATUS.CREATING ? 'not-allowed' : 'pointer',
-                      opacity: s === STATUS.CREATING ? 0.6 : 1,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    {s === STATUS.CREATING ? 'Creating\u2026' : s === STATUS.ERROR ? 'Retry' : 'Confirm & Create'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {allVersionsDone && (
-            <div style={{ marginTop: 12 }}>
-              {hasMissingFilters ? (
-                <button
-                  onClick={() => setPhase('filters')}
-                  style={{ padding: '8px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem' }}
-                >
-                  Proceed to Create Filters
-                </button>
-              ) : (
-                <div style={{ ...cardStyle, background: '#d4edda', borderColor: '#28a745' }}>
-                  <strong style={{ color: '#155724' }}>Done!</strong>
-                  <span style={{ color: '#155724', marginLeft: 8 }}>All versions created. Filters already exist.</span>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {phase === 'filters' && (
-        <>
-          <div style={sectionHeading}>Create Saved Filters (in dependency order)</div>
-          {filterChain.map((f, idx) => {
-            const s = filterStatuses[f.name];
-            if (s === STATUS.EXISTS || s === STATUS.CREATED || s === STATUS.SKIPPED) return null;
-            const activeIdx = getActiveFilterIdx();
-            const isActive = idx === activeIdx;
-            if (!isActive) return null;
-
-            const edits = filterEdits[f.name] || {};
-            const depsMet = f.dependsOn.every(dep => {
-              const depStatus = filterStatuses[dep];
-              return depStatus === STATUS.EXISTS || depStatus === STATUS.CREATED;
-            });
-            const depsSkipped = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.SKIPPED);
-            const depsFailed = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.ERROR);
-
-            return (
-              <div key={f.name} style={{ ...cardStyle, borderColor: '#007bff', borderWidth: 2 }}>
-                <h4 style={{ margin: '0 0 6px 0', fontSize: '0.9rem' }}>
-                  Filter {f.order} of {filterChain.length}
-                </h4>
-
-                {f.dependsOn.length > 0 && (
-                  <div style={{ fontSize: '0.78rem', marginBottom: 10, padding: '6px 10px', background: '#f8f9fa', borderRadius: 4 }}>
-                    <span style={{ color: '#666' }}>Depends on: </span>
-                    {f.dependsOn.map(dep => {
-                      const ds = filterStatuses[dep];
-                      return (
-                        <span key={dep} style={{ marginRight: 8, color: statusColor(ds), fontWeight: 500 }}>
-                          {statusIcon(ds)} {dep}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {(depsSkipped || depsFailed) && !depsMet && (
-                  <div style={{ color: '#856404', background: '#fff3cd', padding: '6px 10px', borderRadius: 4, fontSize: '0.78rem', marginBottom: 10 }}>
-                    Warning: One or more dependencies were {depsSkipped ? 'skipped' : 'failed'}. Creating this filter may produce errors in JIRA.
-                    You can still proceed if the dependency exists under a different name.
-                  </div>
-                )}
-
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, marginBottom: 3, color: '#555' }}>Filter Name</label>
+          {/* FixVersions checklist — bulk create in 1 click */}
+          <div style={{ ...sectionHeading, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span>fixVersions ({version || '—'}) {missingVersionCount ? `· ${missingVersionCount} missing` : ''}</span>
+            {hasMissingVersions && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer' }}>
                 <input
-                  type="text"
-                  value={edits.name ?? f.name}
-                  onChange={e => handleFilterEdit(f.name, 'name', e.target.value)}
-                  style={{ width: '100%', padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.82rem', marginBottom: 10, fontFamily: 'monospace' }}
-                />
-
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, marginBottom: 3, color: '#555' }}>JQL (review and edit if needed)</label>
-                <textarea
-                  value={edits.jql ?? f.jql}
-                  onChange={e => handleFilterEdit(f.name, 'jql', e.target.value)}
-                  rows={Math.max(3, Math.ceil((edits.jql || f.jql).length / 80))}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ccc',
-                    borderRadius: 4,
-                    fontSize: '0.8rem',
-                    fontFamily: 'monospace',
-                    lineHeight: 1.5,
-                    resize: 'vertical',
-                    marginBottom: 6,
+                  type="checkbox"
+                  checked={missingVersionCount > 0 && selectedVersionCount === missingVersionCount}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    const next = {};
+                    releaseProjects.forEach(p => {
+                      if (versionStatuses[p] === STATUS.MISSING || versionStatuses[p] === STATUS.ERROR) next[p] = checked;
+                    });
+                    setSelectedVersions(next);
                   }}
                 />
+                Select all
+              </label>
+            )}
+          </div>
 
-                {filterErrors[f.name] && (
-                  <div style={{ color: '#dc3545', fontSize: '0.8rem', margin: '6px 0' }}>{filterErrors[f.name]}</div>
-                )}
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button
-                    onClick={() => handleSkipFilter(f)}
-                    disabled={s === STATUS.CREATING}
-                    style={{ padding: '6px 14px', border: '1px solid #ccc', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: '0.82rem' }}
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={() => handleCreateFilter(f)}
-                    disabled={s === STATUS.CREATING}
-                    style={{
-                      padding: '6px 14px',
-                      backgroundColor: '#28a745',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 4,
-                      cursor: s === STATUS.CREATING ? 'not-allowed' : 'pointer',
-                      opacity: s === STATUS.CREATING ? 0.6 : 1,
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    {s === STATUS.CREATING ? 'Creating\u2026' : s === STATUS.ERROR ? 'Retry' : 'Confirm & Create'}
-                  </button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 }}>
+            {releaseProjects.map(proj => {
+              const s = versionStatuses[proj];
+              const selectable = s === STATUS.MISSING || s === STATUS.ERROR;
+              return (
+                <div key={proj} style={{
+                  ...cardStyle,
+                  marginBottom: 0,
+                  borderLeft: `4px solid ${statusColor(s)}`,
+                  opacity: s === STATUS.SKIPPED ? 0.6 : 1,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: selectable ? 'pointer' : 'default', flex: 1, minWidth: 0 }}>
+                      <input type="checkbox" disabled={!selectable} checked={!!selectedVersions[proj]} onChange={e => setSelectedVersions(prev => ({ ...prev, [proj]: e.target.checked }))} style={{ cursor: selectable ? 'pointer' : 'not-allowed' }} />
+                      <strong style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proj}</strong>
+                    </label>
+                    <span style={{ color: statusColor(s), fontSize: '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      {statusIcon(s)} {statusLabel(s)}
+                    </span>
+                  </div>
+                  {selectable && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                      <button onClick={() => handleCreateVersion(proj)} disabled={s === STATUS.CREATING} style={{ padding: '5px 10px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: 4, cursor: s === STATUS.CREATING ? 'not-allowed' : 'pointer', opacity: s === STATUS.CREATING ? 0.6 : 1, fontSize: '0.75rem' }}>{s === STATUS.CREATING ? 'Creating…' : s === STATUS.ERROR ? 'Retry' : 'Create'}</button>
+                      <button onClick={() => handleSkipVersion(proj)} disabled={s === STATUS.CREATING} style={{ padding: '5px 10px', border: '1px solid #ccc', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: '0.75rem' }}>Skip</button>
+                    </div>
+                  )}
+                  {s === STATUS.ERROR && (
+                    <>
+                      {versionErrors[proj] && <div style={{ color: '#dc3545', fontSize: '0.72rem', marginTop: 6, wordBreak: 'break-word' }}>{versionErrors[proj]}</div>}
+                      <JchFallbackBanner projectKey={proj} errorDetail={versionErrors[proj]} jchState={jchStatus[proj]} onFileJch={() => handleCreateJchTicket(proj)} />
+                    </>
+                  )}
+                  {(s === STATUS.CREATED || s === STATUS.EXISTS) && versionErrors[proj] && (
+                    <div style={{ color: '#dc3545', fontSize: '0.72rem', marginTop: 4 }}>{versionErrors[proj]}</div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {hasMissingVersions && (
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={handleBulkCreateVersions}
+                disabled={selectedVersionCount === 0 || bulkVersionsRunning}
+                style={{ padding: '8px 18px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: 4, cursor: selectedVersionCount === 0 || bulkVersionsRunning ? 'not-allowed' : 'pointer', opacity: selectedVersionCount === 0 || bulkVersionsRunning ? 0.6 : 1, fontSize: '0.85rem', fontWeight: 600 }}
+              >
+                {bulkVersionsRunning ? 'Creating…' : `Create Selected (${selectedVersionCount})`}
+              </button>
+              <span style={{ fontSize: '0.78rem', color: '#666' }}>Filters don’t need project admin — you can create them even if versions need JCH.</span>
+            </div>
+          )}
 
-          {allFiltersDone && (
+          {/* Saved Filters checklist — bulk + collapsed JQL */}
+          <div style={{ ...sectionHeading, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span>Saved Filters {missingFilterCount ? `· ${missingFilterCount} missing` : ''}</span>
+            {hasMissingFilters && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={missingFilterCount > 0 && selectedFilterCount === missingFilterCount}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    const next = {};
+                    filterChain.forEach(f => {
+                      if (filterStatuses[f.name] === STATUS.MISSING || filterStatuses[f.name] === STATUS.ERROR) next[f.name] = checked;
+                    });
+                    setSelectedFilters(next);
+                  }}
+                />
+                Select all
+              </label>
+            )}
+          </div>
+          {releaseProjects.some(p => versionStatuses[p] === STATUS.ERROR || versionStatuses[p] === STATUS.MISSING) && hasMissingFilters && (
+            <div style={{ fontSize: '0.78rem', color: '#856404', background: '#fff3cd', padding: '6px 10px', borderRadius: 4, marginBottom: 8 }}>
+              Filters create as JIRA saved filters — no project admin needed. You can create them even if some fixVersions need JCH.
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {filterChain.map((f, idx) => {
+              const s = filterStatuses[f.name];
+              const selectable = s === STATUS.MISSING || s === STATUS.ERROR;
+              const edits = filterEdits[f.name] || {};
+              const depsMet = f.dependsOn.every(dep => {
+                const depStatus = filterStatuses[dep];
+                return depStatus === STATUS.EXISTS || depStatus === STATUS.CREATED;
+              });
+              const depsSkipped = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.SKIPPED);
+              const depsFailed = f.dependsOn.some(dep => filterStatuses[dep] === STATUS.ERROR);
+              return (
+                <div key={f.name} style={{
+                  ...cardStyle,
+                  marginBottom: 0,
+                  borderLeft: `4px solid ${statusColor(s)}`,
+                  opacity: s === STATUS.SKIPPED ? 0.6 : 1,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: selectable ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
+                      <input type="checkbox" disabled={!selectable} checked={!!selectedFilters[f.name]} onChange={e => setSelectedFilters(prev => ({ ...prev, [f.name]: e.target.checked }))} style={{ cursor: selectable ? 'pointer' : 'not-allowed' }} />
+                      <span style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <strong>{idx + 1}.</strong> {f.name}
+                      </span>
+                    </label>
+                    <span style={{ color: statusColor(s), fontSize: '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      {statusIcon(s)} {statusLabel(s)}
+                    </span>
+                  </div>
+                  {f.dependsOn.length > 0 && (
+                    <div style={{ fontSize: '0.75rem', marginTop: 6, padding: '5px 8px', background: '#f8f9fa', borderRadius: 4 }}>
+                      <span style={{ color: '#666' }}>Depends on: </span>
+                      {f.dependsOn.map(dep => {
+                        const ds = filterStatuses[dep];
+                        return (
+                          <span key={dep} style={{ marginRight: 6, color: statusColor(ds), fontWeight: 500, fontSize: '0.72rem' }}>
+                            {statusIcon(ds)} {dep}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {(depsSkipped || depsFailed) && !depsMet && (
+                    <div style={{ color: '#856404', background: '#fff3cd', padding: '6px 8px', borderRadius: 4, fontSize: '0.75rem', marginTop: 6 }}>
+                      Warning: dependencies skipped/failed. Creating this filter may error in JIRA.
+                    </div>
+                  )}
+                  {selectable && (
+                    <details style={{ marginTop: 8, fontSize: '0.78rem' }}>
+                      <summary style={{ cursor: 'pointer', color: '#007bff' }}>Edit JQL</summary>
+                      <div style={{ marginTop: 8 }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, marginBottom: 3, color: '#555' }}>Filter Name</label>
+                        <input type="text" value={edits.name ?? f.name} onChange={e => handleFilterEdit(f.name, 'name', e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.82rem', marginBottom: 8, fontFamily: 'monospace' }} />
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, marginBottom: 3, color: '#555' }}>JQL</label>
+                        <textarea value={edits.jql ?? f.jql} onChange={e => handleFilterEdit(f.name, 'jql', e.target.value)} rows={Math.max(3, Math.ceil((edits.jql || f.jql).length / 80))} style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.8rem', fontFamily: 'monospace', lineHeight: 1.5, resize: 'vertical', marginBottom: 6 }} />
+                      </div>
+                    </details>
+                  )}
+                  {filterErrors[f.name] && (
+                    <div style={{ color: '#dc3545', fontSize: '0.75rem', marginTop: 6, wordBreak: 'break-word' }}>{filterErrors[f.name]}</div>
+                  )}
+                  {selectable && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <button onClick={() => handleCreateFilter(f)} disabled={s === STATUS.CREATING} style={{ padding: '5px 10px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: 4, cursor: s === STATUS.CREATING ? 'not-allowed' : 'pointer', opacity: s === STATUS.CREATING ? 0.6 : 1, fontSize: '0.75rem' }}>{s === STATUS.CREATING ? 'Creating…' : s === STATUS.ERROR ? 'Retry' : 'Create'}</button>
+                      <button onClick={() => handleSkipFilter(f)} disabled={s === STATUS.CREATING} style={{ padding: '5px 10px', border: '1px solid #ccc', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: '0.75rem' }}>Skip</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {hasMissingFilters && (
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={handleBulkCreateFilters}
+                disabled={selectedFilterCount === 0 || bulkFiltersRunning}
+                style={{ padding: '8px 18px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: 4, cursor: selectedFilterCount === 0 || bulkFiltersRunning ? 'not-allowed' : 'pointer', opacity: selectedFilterCount === 0 || bulkFiltersRunning ? 0.6 : 1, fontSize: '0.85rem', fontWeight: 600 }}
+              >
+                {bulkFiltersRunning ? 'Creating…' : `Create Selected Filters (${selectedFilterCount})`}
+              </button>
+              <span style={{ fontSize: '0.78rem', color: '#666' }}>Selected filters will be created in dependency order.</span>
+            </div>
+          )}
+          {phase === 'checked' && !hasMissingVersions && !hasMissingFilters && !everythingExists && (
             <div style={{ ...cardStyle, background: '#d4edda', borderColor: '#28a745', marginTop: 12 }}>
-              <strong style={{ color: '#155724' }}>Release setup complete.</strong>
-              <span style={{ color: '#155724', marginLeft: 8 }}>
-                All versions and filters for {version} have been processed.
-              </span>
+              <strong style={{ color: '#155724' }}>All processed.</strong>
+              <span style={{ color: '#155724', marginLeft: 8 }}>No more missing versions or filters for {version}.</span>
             </div>
           )}
         </>

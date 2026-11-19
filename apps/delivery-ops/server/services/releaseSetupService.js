@@ -87,7 +87,11 @@ async function createVersion(jiraToken, { projectKey, versionName, releaseDate }
       projectKey,
     };
   } catch (error) {
-    throw wrapJiraError(error, 'Failed to create version');
+    const wrapped = wrapJiraError(error, 'Failed to create version');
+    if (wrapped.statusCode === 403 || wrapped.statusCode === 401) {
+      wrapped.message = `${wrapped.message} — project admin required. Use JCH fallback to request this version.`;
+    }
+    throw wrapped;
   }
 }
 
@@ -192,7 +196,8 @@ async function createFilter(jiraToken, { filterName, jql, description }) {
 
 /**
  * Create a JCH ticket requesting version creation when direct creation failed.
- * Uses POST /rest/api/2/issue.
+ * Uses POST /rest/api/2/issue. If JCH mandates Component/s (or other required
+ * fields) we fetch createmeta + project components and retry once.
  */
 async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail, releaseDate }) {
   if (!versionName || !projectKey) {
@@ -200,7 +205,8 @@ async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail
     err.statusCode = 400;
     throw err;
   }
-  try {
+
+  async function doCreate(extraFields = null) {
     const jira = await getJira(jiraToken);
     const summary = `Request: Create fixVersion ${versionName} in ${projectKey}`;
     const safeError = errorDetail ? String(errorDetail).slice(0, 1000).replace(/\s+/g, ' ').trim() : '';
@@ -221,6 +227,7 @@ async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail
         summary,
         description,
         issuetype: { name: 'Task' },
+        ...extraFields,
       },
     };
     const createUrl = JIRA_API_V2.CREATE_ISSUE || `${JIRA_API_V2.BASE_URL}/rest/api/2/issue`;
@@ -230,8 +237,49 @@ async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail
       id: res.data?.id,
       url: res.data?.key ? `${JIRA_API_V2.BASE_URL}/browse/${res.data.key}` : null,
     };
+  }
+
+  try {
+    return await doCreate(null);
   } catch (error) {
-    throw wrapJiraError(error, 'Failed to create JCH ticket');
+    const msg = error.response?.data?.errors ? Object.values(error.response.data.errors).join(' ') : '';
+    const msg2 = (error.response?.data?.errorMessages || []).join(' ');
+    const combined = `${msg} ${msg2}`.toLowerCase();
+    const needsComponent = combined.includes('component') && combined.includes('required');
+    const is400 = error.response?.status === 400 || error.statusCode === 400;
+    if (is400 && needsComponent) {
+      try {
+        const jira = await getJira(jiraToken);
+        let compName = null;
+        try {
+          const compRes = await jira.get(`${JIRA_API_V2.BASE_URL}/rest/api/2/project/JCH/components`, { timeout: JIRA_TIMEOUT_MS });
+          const comps = Array.isArray(compRes.data) ? compRes.data : [];
+          if (comps.length) compName = comps[0].name || comps[0].id;
+        } catch (_) {}
+        if (!compName) {
+          try {
+            const metaRes = await jira.get(`${JIRA_API_V2.BASE_URL}/rest/api/2/issue/createmeta?projectKeys=JCH&issuetypeNames=Task&expand=projects.issuetypes.fields`, { timeout: JIRA_TIMEOUT_MS });
+            const projects = metaRes.data?.projects || [];
+            const issuetype = projects[0]?.issuetypes?.find(t => t.name === 'Task') || projects[0]?.issuetypes?.[0];
+            const fields = issuetype?.fields || {};
+            if (!compName && fields['components']?.required) {
+              const allowed = fields['components']?.allowedValues || [];
+              if (allowed.length) compName = allowed[0].name || allowed[0].id;
+            }
+          } catch (_) {}
+        }
+        if (compName) {
+          return await doCreate({ components: [{ name: compName }] });
+        }
+      } catch (_) {}
+    }
+    const wrapped = wrapJiraError(error, 'Failed to create JCH ticket');
+    if (wrapped.statusCode === 403) {
+      wrapped.message = `${wrapped.message} — you need Create permission in JCH. Contact a JCH admin or ask in Slack #jch.`;
+    } else if (wrapped.statusCode === 400 && combined.includes('component')) {
+      wrapped.message = `${wrapped.message} — JCH requires Component/s. Tried auto-fill; if this persists, set a Component manually in JIRA or contact JCH admin.`;
+    }
+    throw wrapped;
   }
 }
 
