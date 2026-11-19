@@ -1,8 +1,8 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-11-18
+lastUpdated: 2026-11-19
 coversVersion: "3.0"
-source: doc-user-guide @ 2026-11-18
+source: doc-user-guide @ 2026-11-19
 ---
 
 # User Guide
@@ -14,6 +14,7 @@ source: doc-user-guide @ 2026-11-18
 - [Sprint Report](#sprint-report)
 - [Release Brief](#release-brief)
 - [Quality Column (TCMS)](#quality-column-tcms)
+- [Bin-Packing CSV Converter](#bin-packing-csv-converter)
 - [Tips & FAQ](#tips--faq)
 
 ## Getting Started
@@ -61,6 +62,28 @@ feature.
   metrics until TCMS exposes a `test_category` filter. Do not read
   distinctness into the two rows yet. See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).
 
+## Bin-Packing CSV Converter
+
+**Who:** Portfolio Manager, TPM, Release Manager
+
+Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-column bin-packing CSV that the Bin-Packing capacity planner understands.
+
+**Steps:**
+
+1. Open **Bin-Packing** from the sidebar (opens in a new tab at `/bin-packing/`).
+2. Go to the **Upload CSV** tab and click **Convert any file (AI)** above the existing file picker.
+3. Select a file (`.csv`, `.xlsx`, `.xls`, `.pdf`, `.docx`, `.tsv` — up to 10 MB). You can also paste TSV/CSV text copied from Confluence or JIRA.
+4. Wait for conversion — the preview shows **mapped** headers (green), **unmapped** headers (yellow), and a **missing-mandatory** warning if `FEAT NUMBER` or `SUMMARY` could not be resolved. Warnings explain which alias to use.
+5. Click **Download CSV** to save the canonical file, or **Replace & Repack** to render the converted rows directly in the Gantt without a download step.
+
+**Details:** See [CSV Converter Guide](../product/CSV_CONVERTER_GUIDE.md) for the full 26-column header contract, alias table, sizing labels, dependency syntax, and duration priority rules. The legacy CSV/XLSX upload continues to work unchanged — the converter is additive.
+
+**Tips:**
+
+- JIRA-native headers (`Issue Key`, `Summary`, `Assignee`) resolve automatically via the product alias map — no manual renaming needed.
+- If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.
+- The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the `csv-to-binpacking` skill (prompt/orchestration only — deterministic logic stays in `shared`).
+
 ## OnCalls
 **Who:** EM, TPM
 **Steps:** Open KPIs → OnCalls → select release → review counts by period.
@@ -84,4 +107,5 @@ feature.
 ## Tips & FAQ
 
 - Missing tab? Check permissions in [ADMIN_GUIDE.md](./ADMIN_GUIDE.md).
+- Need to convert a spreadsheet for bin-packing? See [Bin-Packing CSV Converter](#bin-packing-csv-converter) and the detailed [CSV Converter Guide](../product/CSV_CONVERTER_GUIDE.md).
 - Caveats? See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).
