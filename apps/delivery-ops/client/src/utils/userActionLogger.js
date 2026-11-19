@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { authenticatedPost } from '../shared/services/apiService';
 
 /**
  * Logs a user action for audit purposes
@@ -17,7 +17,7 @@ export async function logUserAction(action, resource = '', metadata = {}) {
     }
 
     // Send to backend to log
-    await axios.post('/api/jira/log-user-action', {
+    await authenticatedPost('/api/jira/log-user-action', {
       action,
       resource,
       username,
@@ -26,11 +26,6 @@ export async function logUserAction(action, resource = '', metadata = {}) {
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         url: window.location.href
-      }
-    }, {
-      headers: {
-        'Authorization': `Bearer ${jiraToken}`,
-        'Content-Type': 'application/json'
       }
     });
   } catch (err) {

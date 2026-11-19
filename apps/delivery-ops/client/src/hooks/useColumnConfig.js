@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { authenticatedGet } from '../shared/services/apiService';
 
 // Module-level cache so release-versions-columns is only called once per app load
 // (avoids duplicate calls under React Strict Mode or when multiple consumers mount)
@@ -29,13 +29,7 @@ export function useColumnConfig() {
         return;
       }
       if (!columnsConfigPromise) {
-        columnsConfigPromise = axios
-          .get('/api/config/release-versions-columns', {
-            headers: {
-              Authorization: `Bearer ${jiraToken}`,
-              'Content-Type': 'application/json'
-            }
-          })
+        columnsConfigPromise = authenticatedGet('/api/config/release-versions-columns')
           .then((res) => {
             columnsConfigCache = res.data;
             return res.data;
