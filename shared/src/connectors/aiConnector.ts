@@ -95,7 +95,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   // aiConfig.json provides defaults for non-secret vars when env not set; missing values throw below.
 
   const envBaseUrl = process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || '';
-  const baseUrl = (override?.baseUrl ?? envBaseUrl ?? aiConfigFallback.baseUrl ?? '').trim();
+  const baseUrl = (override?.baseUrl || envBaseUrl || aiConfigFallback.baseUrl || '').trim();
   if (!baseUrl) {
     throw new Error(
       'NAI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
@@ -111,7 +111,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   }
 
   const envModel = process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
-  const defaultModel = (override?.defaultModel ?? envModel ?? aiConfigFallback.defaultModel ?? '').trim();
+  const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
   if (!defaultModel) {
     throw new Error(
       'NAI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'

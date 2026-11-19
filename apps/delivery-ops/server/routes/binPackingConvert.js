@@ -535,8 +535,6 @@ router.post('/convert', apiLimiter, validateJiraTokenMiddleware, async (req, res
 
     // D1 alias: 'default' historically means generic — accept and normalize.
     if (productId === 'default') productId = 'generic';
-    // D1 alias: 'default' historically means generic — accept and normalize.
-    if (productId === 'default') productId = 'generic';
     if (productId && !ALLOWED_PRODUCT_IDS.has(productId)) {
       return res.status(400).json({
         error: `Invalid productId "${productId}". Allowed: ${[...ALLOWED_PRODUCT_IDS].join(', ')}`,
