@@ -11,15 +11,15 @@
  */
 
 import React from 'react';
-import { getFieldValue, getFieldId } from './jiraFields';
 
-const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c' };
+export const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 
 /**
  * Reduce a raw select value / changelog string to its RAG word.
  * "Green - On Track" → "Green"; { value: "Red - ..." } → "Red".
+ * Single SoT for RAG word parsing — mirrors shared/src/services/riskIndicator.ts:extractRiskText+classify.
  */
-function riskWord(v) {
+export function riskWord(v) {
   if (v == null) return null;
   const s = typeof v === 'object' ? (v.value || v.name || '') : String(v);
   const trimmed = s.trim();
@@ -83,6 +83,48 @@ export function formatRiskWithHistory(itemKey, currentRisk, checkpointHistory) {
       ))}
     </span>
   );
+}
+
+/**
+ * Single SoT for RAG bucket — deduplicated from shared/riskIndicator.classifyRiskIndicator.
+ * Maps any raw Risk Indicator value to red/yellow/green/not_set.
+ */
+export function classifyRiskIndicator(raw) {
+  const w = riskWord(raw);
+  if (!w) return 'not_set';
+  const lower = w.toLowerCase();
+  // Match shared logic: red/critical/high, yellow/amber/moderate/medium/at risk, green/on track/low
+  const full = typeof raw === 'object' ? (raw?.value || raw?.name || w) : String(raw || w);
+  const fl = String(full).toLowerCase();
+  if (['red'].includes(lower) || fl.includes('critical') || fl.includes('high') || fl.includes('big risk')) return 'red';
+  if (['yellow'].includes(lower) || fl.includes('amber') || fl.includes('moderate') || fl.includes('medium') || fl.includes('at risk')) return 'yellow';
+  if (['green'].includes(lower) || fl.includes('on track') || fl.includes('low')) return 'green';
+  // Fallback: exact word match only
+  if (lower === 'red') return 'red';
+  if (lower === 'yellow') return 'yellow';
+  if (lower === 'green') return 'green';
+  return 'not_set';
+}
+
+export function getRagColor(raw) {
+  const w = riskWord(raw);
+  return RAG_COLORS[w] || RAG_COLORS.NotSet;
+}
+
+/**
+ * HTML equivalent of formatRiskWithHistory for email snapshots.
+ * Mirrors formatDateWithHistoryHTML pattern.
+ */
+export function formatRiskWithHistoryHTML(itemKey, currentRisk, checkpointHistory) {
+  const seq = buildRiskSequence(itemKey, currentRisk, checkpointHistory);
+  if (seq.length <= 1) return '';
+  const newestFirst = [...seq].reverse();
+  const parts = newestFirst.map((word, i) => {
+    const color = RAG_COLORS[word] || '#616161';
+    if (i === 0) return `<span style="color:${color};font-weight:700">${word}</span>`;
+    return `<span style="color:#999"> ← </span><span style="text-decoration:line-through;color:#9e9e9e">${word}</span>`;
+  });
+  return `<span style="font-size:10px;display:inline-block;line-height:1.35">${parts.join('')}</span>`;
 }
 
 export default formatRiskWithHistory;
