@@ -587,7 +587,7 @@
       "pattern": "{prefix}-not-por",
       "jql": "labels not in (\"{prefix}-not-por\")",
       "template": "labels not in (\"{label}\")",
-      "description": "POR exclusion label — ticket is not part of Plan-of-Record scope; filtered out of commit counts",
+      "description": "POR exclusion label — ticket is not part of Plan-of-Record scope; filtered out of commit counts. Empty-label tickets need (labels is EMPTY OR labels not in ...) wrapper at call site (releaseOutstandingDeferralService already does).",
       "usedIn": [
         "fetch",
         "commit-jql",
@@ -646,7 +646,7 @@
         "pattern": "{prefix}-{version}-code-complete-extension-recieved",
         "jql": "labels in (\"{prefix}-{version}-code-complete-extension-recieved\", \"{prefix}-{version}-code-complete-extention-recieved\")",
         "template": "labels = \"{label}\"",
-        "description": "Code-complete extension received — FEAT granted extra time beyond gate",
+        "description": "Code-complete extension received — FEAT granted extra time beyond gate. Note: recieved/extention are JIRA-canonical misspellings preserved for back-compat (correct received variant intentionally in variants if present).",
         "usedIn": [
           "fetch",
           "release-items"

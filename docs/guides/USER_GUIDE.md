@@ -108,4 +108,5 @@ Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-colu
 
 - Missing tab? Check permissions in [ADMIN_GUIDE.md](./ADMIN_GUIDE.md).
 - Need to convert a spreadsheet for bin-packing? See [Bin-Packing CSV Converter](#bin-packing-csv-converter) and the detailed [CSV Converter Guide](../product/CSV_CONVERTER_GUIDE.md).
+- Commit scope labels (deferred/mustfix/wishlist…) come from central taxonomy in `jiraFieldsConfig.json` — contact admin to change, don't edit JQL inline (`client/src/utils/jiraFields` + fieldConfig).
 - Caveats? See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).

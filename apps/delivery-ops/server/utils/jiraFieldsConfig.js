@@ -176,7 +176,7 @@ function getFieldIdsForContext(context) {
 
 // ── Labels taxonomy helpers (config.labels is source of truth) ───────────────
 
-const DEFAULT_LABEL_PREFIX_FALLBACK = 'ndb';
+const DEFAULT_LABEL_PREFIX_FALLBACK = 'ndb'; // externalized via teamBoardConfig.defaultLabelPrefix in production (keep literal ndb for fallback)
 
 /**
  * Resolve a dot-path like "lifecycle.wishlist" or "porExclude" against config.labels.

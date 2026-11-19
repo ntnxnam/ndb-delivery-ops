@@ -12,6 +12,7 @@ export { useTcmsData } from './useTcmsData';
 // Config / shared data
 export { useTeams } from './useTeams';
 export { useGenericEmailerConfig } from './useGenericEmailerConfig';
+export { useReleaseVersionTab } from './useReleaseVersionTab';
 export { useColumnConfig } from './useColumnConfig';
 export { useGanttConfig, useAllVersionsConfig } from './useGanttConfig';
 export { useSosItems } from './useSosItems';
