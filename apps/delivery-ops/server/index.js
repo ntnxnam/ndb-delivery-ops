@@ -117,6 +117,7 @@ const aiRoutes = require('./routes/ai');
 const jiraDiggingRoutes = require('./routes/jiraDigging');
 const featureRoutes = require('./routes/feature');
 const teamOverallReportRoutes = require('./routes/teamOverallReport');
+const binPackingConvertRoutes = require('./routes/binPackingConvert');
 
 // CORS preflight: ensure OPTIONS for all /api paths always succeeds.
 // Use RegExp to avoid path-to-regexp wildcard parsing issues.
@@ -152,6 +153,7 @@ const releaseOutstandingWorkRoutes = require('./routes/releaseOutstandingWork');
 app.use('/api/release-outstanding-work', releaseOutstandingWorkRoutes);
 // Legacy alias — same router (old clients / bookmarks)
 app.use('/api/deferral-workbench', releaseOutstandingWorkRoutes);
+app.use('/api/bin-packing', binPackingConvertRoutes); // File→CSV conversion (multipart, tmp-isolated)
 
 // Docs hub (product docs). Served at /docs per reorg (4fed099); keep /Documentation alias for old bookmarks.
 const docsRoot = path.join(__dirname, '..', '..', '..', 'docs');

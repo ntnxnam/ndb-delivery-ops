@@ -1,5 +1,46 @@
 # Conventions
 
+## Canonical CSV (Sheet1) — converter target
+
+The bin-packing app ingests a **26-column canonical CSV** whose header is Sheet1's header [source: apps/bin-packing/data/sheet1.csv] in `CANONICAL_HEADERS` order [source: shared/src/services/productColumnAliases.ts:115]. The converter (`POST /api/bin-packing/convert` [source: apps/bin-packing/js/csv-converter-agent.js:getConvertUrl]) accepts any alias header and emits this form. Guide: `docs/product/CSV_CONVERTER_GUIDE.md`.
+
+| # | Canonical header | Required | Notes |
+|---|---|---|---|
+| 1 | `Sl No` | Optional | Numeric row id; blank → `9000 + index` synthetic [source: apps/bin-packing/js/csv-parser.js:189] |
+| 2 | `FEAT NUMBER` | **Required** | JIRA key; `rowsToProjects` rejects file if missing [source: apps/bin-packing/js/csv-parser.js:128] |
+| 3 | `SUMMARY` | **Required** | Title; falls back to `FEAT NUMBER` if blank |
+| 4 | `Priority` | Optional | `P0` default when blank |
+| 5 | `STATUS` | Optional | `In Progress` detection via `/in\s*progress/i` |
+| 6 | `How much of this is Completed in % (do not add %, just put a number)` | Optional | Completion % |
+| 7 | `3.0 Commitment Status` | Optional | Commitment tier |
+| 8 | `Target Month` | Optional | Target/Due Date |
+| 9 | `Comment` | Optional | Free text |
+| 10 | `DRI` | Optional | Owner/assignee |
+| 11 | `Total Months Needed for 1 person by Dev (Everything from start to finish)` | Optional | Person-months; feeds duration priority 2 [source: apps/bin-packing/js/csv-parser.js:207] |
+| 12 | `Dev Resources required for max parallization` | Optional | FTE; 0 → 1 when Total Months known |
+| 13 | `Dev Resources required for max parallization and 60% productivity` | Optional | 60% capacity variant |
+| 14 | `Num of QA required(rule: 3:1, 1 QA for 3 dev)` | Optional | QA headcount |
+| 15 | `Num of QA required(rule: 3:1, 1 QA for 3 dev) with 60% productivity` | Optional | QA 60% variant |
+| 16 | `Number of Months (Dev)` | Optional | Explicit duration — priority 1 [source: apps/bin-packing/js/csv-parser.js:207] |
+| 17 | `Total resources required` | Optional | Computed total |
+| 18 | `sizing (refer sheet 2 for guidance)` | Optional | T-shirt: `XS=1, S=3, M=5, L=8, XL=13, XXL=21, 3L=34, 4L=55` [source: shared/src/constants/binPackingSizing.ts:13] |
+| 19 | `Additional Resources` | Optional | Extra resources |
+| 20 | `Sizing Comment` | Optional | Sizing notes |
+| 21 | `Dependency Numbers (Comma Separated List)` | Optional | `33 (dev-blocker)` syntax; split `,`/`;` [source: apps/bin-packing/js/csv-parser.js:73] |
+| 22 | `DEPENDENCY` | Optional | Dependency text |
+| 23 | `One line dependency description` | Optional | Dependency description |
+| 24 | `Resourcing done?` | Optional | Staffing flag |
+| 25 | `Any new software needed?` | Optional | Infra flag |
+| 26 | `Comments` | Optional | Extra comments |
+
+**Alias resolution**: `canonicalHeaderFor(cell, productId)` — exact alias match first (case-insensitive, BOM/quote/trim-tolerant), then substring fallback [source: shared/src/services/productColumnAliases.ts:144]. Unknown productId → NDB default, never throws [source: shared/src/services/productColumnAliases.ts:136].
+
+**Duration priority** (do not reorder [source: apps/bin-packing/js/csv-parser.js:207]): `Number of Months (Dev)` → `ceil(Total Months / Dev Resources)` → `SIZING_MONTHS[sizing]` [source: shared/src/constants/binPackingSizing.ts:13] → `0`.
+
+**Dependencies**: `33 (dev-blocker)` → `devBlockers=[33]`, `6 (rel-blocker)` → `relBlockers=[6]` [source: apps/bin-packing/js/csv-parser.js:73]. Deduplicated per row.
+
+---
+
 Terms used in the data and the app.
 
 | Term | Meaning |

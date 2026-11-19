@@ -107,8 +107,6 @@ export const NDB_COLUMN_ALIASES = {
 export const PRODUCT_COLUMN_ALIASES: Readonly<Record<string, ColumnAliasMap>> = {
   ndb: NDB_COLUMN_ALIASES,
   default: NDB_COLUMN_ALIASES,
-  // Example future tenant — DataLens overrides Issue Key canonical:
-  // datalens: { ...NDB_COLUMN_ALIASES, 'FEAT NUMBER': ['FEAT NUMBER', 'Issue Key', 'DL-Key'] },
 } as const;
 
 /** Canonical headers in Sheet1 order (for convertToCanonicalCsv output). */
@@ -154,8 +152,7 @@ export function canonicalHeaderFor(
       if (norm(syn) === needle) return canonical;
     }
   }
-  // Substring fallback: header contains canonical or alias (Excel variations like
-  // "Total Months Needed for 1 person by Dev (Everything from start to finish) - v2")
+  // Substring fallback: header contains canonical or alias (Excel variations)
   for (const [canonical, syns] of Object.entries(aliases)) {
     if (needle.includes(norm(canonical))) return canonical;
     for (const syn of syns as readonly string[]) {
@@ -190,10 +187,12 @@ export function normalizeHeaders(
   headerRow: string[],
   productId?: string | null
 ): string[] {
-  return headerRow.map((h) => canonicalHeaderFor(h, productId) ?? norm(h) ? ((): string => {
+  return headerRow.map((h) => {
+    const c = canonicalHeaderFor(h, productId);
+    if (c) return c;
     let s = (h ?? '').trim();
     if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1).trim();
     if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1).trim();
     return s;
-  })() : h);
+  });
 }

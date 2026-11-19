@@ -19,6 +19,25 @@
     </nav>
 
     <div id="uploadPanel" class="tab-panel" role="main">
+      <!-- Convert any file (AI) — additive, above existing upload -->
+      <section class="converter-card" aria-labelledby="converterTitle">
+        <h2 id="converterTitle" class="converter-title">Convert any file (AI)</h2>
+        <p class="converter-desc">Upload any supported file and convert it to the canonical bin-packing CSV. Supports CSV, XLSX, XLS, PDF, DOCX, TXT, TSV, and JSON — the AI maps columns to the 26-column Sheet1 header.</p>
+        <div class="converter-controls">
+          <label for="converterFileInput" class="converter-label">File</label>
+          <input type="file" id="converterFileInput" accept=".csv,.xlsx,.xls,.pdf,.docx,.txt,.tsv,.json" aria-label="Choose file to convert">
+          <label for="converterProductPicker" class="converter-label">Product</label>
+          <select id="converterProductPicker" aria-label="Product for column mapping">
+            <option value="ndb" selected>ndb</option>
+            <option value="datalens">datalens</option>
+            <option value="default">default</option>
+          </select>
+          <button type="button" id="converterConvertBtn" class="btn-submit" disabled>Convert</button>
+        </div>
+        <p class="upload-status-row"><span id="converterStatus" class="upload-status" role="status" aria-live="polite">Select a file above and click Convert.</span></p>
+        <div id="converterPreviewWrap" class="converter-preview-wrap" style="display: none;" aria-live="polite"></div>
+      </section>
+
       <div class="upload-section">
         <p class="upload-desc">Upload a prioritization spreadsheet (XLSX or CSV, same columns as Sheet1) or a previously exported project-data JSON. XLSX supports merged cells. Submit to use in Schedule. Data is kept in this browser and loaded from <code>data/projects.json</code> when present.</p>
         <div class="upload-controls">
