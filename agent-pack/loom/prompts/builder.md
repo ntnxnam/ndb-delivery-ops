@@ -50,7 +50,7 @@ DONE WHEN: <2–5 measurable outcomes>
 AGENT KPIs:
   Developer:        [ build green, no new hardcoding, tokens used, file-size OK, ... ]
   Impact Scout:     [ impact coverage — grep consumers, holistic vs isolated, Blocking if missed ]
-  Code Review:      [ correctness, layering, duplication, useEffect, dead code, no-localhost ]
+  Code Review:      [ correctness, layering, duplication, useEffect, dead code, no-localhost, comment hygiene (parallel comments-check agent) ]
   QA:               [ acceptance, edge, regression, live-JQL proof, link integrity, build green ]
   UX:               [ ui-density, visual-storyteller, persona-aware, metric-dual-click, sticky/scroll ]  # omit if no UI
   PM:               [ goal fit, AC testable, persona value, scope discipline, docs, prioritisation ]      # rarely omit
@@ -75,7 +75,7 @@ Rebuild the card if the user revises scope mid-run. Pass it to every sub-agent.
 
 ### Skill invocation (always from pack)
 
-- Code Review: `agent-pack/skills/multi-model-review/SKILL.md` (or `pack.skills.get(...)`) — bugbot default, multi-model for high-risk.
+- Code Review: `agent-pack/skills/multi-model-review/SKILL.md` (or `pack.skills.get(...)`) — bugbot default, multi-model for high-risk, **plus parallel `comments-check` sub-agent** (JSDoc, stale comments, commented-out code, TODO without ticket, redundant, missing Why; see `review/SKILL.md` §3b).
 - Exec: `agent-pack/skills/exec-perspective/SKILL.md` — high-level first, then drill-down.
 - Doc: doc-specialist, 5 surfaces + `docs/api`/`docs/pages`, then `docs-verify` + `docs-build`.
 
