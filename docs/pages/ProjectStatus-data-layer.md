@@ -74,6 +74,21 @@ Overall.
 
 ---
 
+### 3. Checkpoint date history + risk indicator trail
+
+All history comes from a single endpoint:
+
+```
+POST /api/jira/release-items-history
+Body: { fixVersion, teamId }
+```
+
+`checkpointHistory: Record<issueKey, { riskIndicator?: { value, changedAt }[], codeComplete?, commitGate?, promotionGate?, ... }>`
+
+- Risk movement uses `client/src/utils/riskHistoryDisplay.js` (SoT: `RAG_COLORS`, `riskWord`, `getRagColor`, `classifyRiskIndicator`/`classifyRiskWord`, `formatRiskWithHistory`/`formatRiskWithHistoryHTML`). Email/table cells append the trail via `checkpointHistory[key].riskIndicator`; single-value history renders no trail.
+- Project Status renders the trail in `ReleaseVersionTableCell:renderRiskDetails(item, checkpointHistory)`; EmailSender `emailTableGenerator:formatRiskDetailsHTML` mirrors it; SoS `SosSummaryPage` and `sosEmailHtml` do the same. FeatureDashboard uses derived `risk` without history (out of scope).
+- SoT adoption: `riskHistoryDisplay` is the sole RAG palette/derive per D41; duplicate local `RAG_COLORS` maps were removed.
+
 ### 3. Checkpoint date history (struck-through old dates)
 
 ```

@@ -90,7 +90,7 @@ async function getCheckpointHistory(jiraToken, { fixVersion, teamId } = {}) {
   const historyData = {};
 
   try {
-    const fieldHistoryResults = await fetchFieldHistoryForMultiple(itemKeys, jiraToken);
+    const fieldHistoryResults = await fetchFieldHistoryForMultiple(itemKeys, jiraToken, { includeRiskIndicator: true });
 
     // Persist a snapshot so the next call has a fallback if upstream flakes.
     try {

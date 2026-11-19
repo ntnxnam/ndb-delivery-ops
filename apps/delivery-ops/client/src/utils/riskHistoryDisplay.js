@@ -12,6 +12,7 @@
 
 import React from 'react';
 
+/** SoT RAG palette — single source for RAG hex colours per D41. Consumers (SoS, email, Project Status) must import from here; do not duplicate. */
 export const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };
 
 /**
@@ -106,14 +107,25 @@ export function classifyRiskIndicator(raw) {
   return 'not_set';
 }
 
+export const classifyRiskWord = classifyRiskIndicator;
+/** @param {*} raw - raw Risk Indicator value (string or {value}) @returns {string} hex colour for the badge */
 export function getRagColor(raw) {
   const w = riskWord(raw);
   return RAG_COLORS[w] || RAG_COLORS.NotSet;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /**
  * HTML equivalent of formatRiskWithHistory for email snapshots.
  * Mirrors formatDateWithHistoryHTML pattern.
+ * Words are escaped before interpolation to prevent HTML injection.
  */
 export function formatRiskWithHistoryHTML(itemKey, currentRisk, checkpointHistory) {
   const seq = buildRiskSequence(itemKey, currentRisk, checkpointHistory);
@@ -121,8 +133,8 @@ export function formatRiskWithHistoryHTML(itemKey, currentRisk, checkpointHistor
   const newestFirst = [...seq].reverse();
   const parts = newestFirst.map((word, i) => {
     const color = RAG_COLORS[word] || '#616161';
-    if (i === 0) return `<span style="color:${color};font-weight:700">${word}</span>`;
-    return `<span style="color:#999"> ← </span><span style="text-decoration:line-through;color:#9e9e9e">${word}</span>`;
+    if (i === 0) return `<span style="color:${color};font-weight:700">${escapeHtml(word)}</span>`;
+    return `<span style="color:#999"> ← </span><span style="text-decoration:line-through;color:#9e9e9e">${escapeHtml(word)}</span>`;
   });
   return `<span style="font-size:10px;display:inline-block;line-height:1.35">${parts.join('')}</span>`;
 }

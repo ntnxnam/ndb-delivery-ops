@@ -36,6 +36,11 @@
 <td>Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service <code>server/services/tcmsService.js</code> (time-filtered metrics via <code>/api/v1/all_test_cases/aggregate/metrics</code>, `time_filter=all</td>
 </tr>
 <tr>
+<td>Risk trail</td>
+<td><code>client/src/utils/riskHistoryDisplay.js</code> (SoT <code>RAG_COLORS</code>) + <code>server/services/releaseHistoryService.js</code> (<code>includeRiskIndicator:true</code>)</td>
+<td><code>POST /api/jira/release-items-history</code> → <code>checkpointHistory[key].riskIndicator</code>; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions)</td>
+</tr>
+<tr>
 <td>RBAC</td>
 <td><code>server/config/allowedUsers.json</code> + <code>server/routes/auth.js::LEGACY_PERMISSION_MAPPING</code></td>
 <td>Keep client mirror in sync</td>

@@ -41,6 +41,10 @@ callers must migrate; see `../tcms-rows-followup.md` (Endpoint migration).
 **Caching**: TCMS cache per `featKey:milestone` (TTL per simpleCache).
 **Error responses**: TCMS down → tables null, `tcmsQueryUrl` still set.
 
+### POST /api/jira/release-items-history — riskIndicator trail
+**Purpose**: Checkpoint history now includes `riskIndicator: [{ value, changedAt }]` (oldest→newest) alongside gate dates; consumed by `riskHistoryDisplay.formatRiskWithHistory`/`formatRiskWithHistoryHTML` on Project Status + SoS + email tables (FeatureDashboard/EmailSender out of scope).
+**Server**: `releaseHistoryService.getCheckpointHistory` forwards `{ includeRiskIndicator: true }` to `fetchFieldHistoryForMultiple`; fallback to on-disk snapshot preserved.
+
 ### POST /api/jira/risk-indicator-changes
 **Purpose**: Return risk-indicator change history for release snapshots.
 **Auth**: required (`releaseVersions`)
