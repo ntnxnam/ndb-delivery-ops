@@ -48,3 +48,6 @@ export * from './jqlBuilder.js';
 export * from './csvConverterService.js';
 export * from './productColumnAliases.js';
 export * from '../constants/binPackingSizing.js';
+export * from './tpmScope.js';
+export * from './tpmKpiService.js';
+export * from './tpmExecutionService.js';

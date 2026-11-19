@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tpm-execution",
+  "description": "Phase fetch contract for tpm-execution — reads all KPIs tagged with its phase.",
+  "type": "object",
+  "required": ["input", "output"],
+  "properties": {
+    "input": {
+      "type": "object",
+      "required": ["scope"],
+      "properties": {
+        "scope": { "$ref": "tpmScope.json#/definitions/TpmScope" },
+        "jqlExtra": { "type": ["string", "null"] }
+      }
+    },
+    "output": { "$ref": "tpmFetchResult.json#/definitions/TpmFetchResult" }
+  },
+  "examples": [{ "input": { "scope": { "kind": "release", "releaseVersion": "NDB-2.12", "teamId": "ndb" } } }]
+}
