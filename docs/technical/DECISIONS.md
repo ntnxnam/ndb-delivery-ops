@@ -5,6 +5,8 @@ Portfolio Manager (Namratha). Every entry is a **locked** decision; reversing
 one requires explicit re-litigation in chat. Use IDs (`D1`, `D2`, …) to
 reference decisions from other docs.
 
+> **Numbering note (2026-11-19 editorial pass):** Round numbers were re-sequenced to eliminate gaps and a duplicate "Round 7 — Pending" heading. Original numbers are preserved as `<!-- originally Round N -->` comments on each heading. Decision IDs (`D*`) are immutable and were never renumbered. `D24`/`D26` (decided 2026-10-05) were appended after `D43` out of numeric order; they remain in place with an out-of-sequence banner — see the note at the start of Round 6.
+
 ---
 
 ## Round 0 — Consolidation foundation (already executed)
@@ -137,8 +139,7 @@ boundaries until a non-NDB organisation actually signs up.
 - Default lens = the user's primary role.
 
 **Implications.**
-- The existing `client/src/auth/constants/permissions.js` `TAB_PERMISSIONS`
-  mechanism only filters admin tabs — non-admin tabs need no permission check.
+- The existing `apps/delivery-ops/client/src/auth/constants/permissions.js` `TAB_PERMISSIONS` mechanism (at the time `client/src/auth/constants/permissions.js`) only filters admin tabs — non-admin tabs need no permission check.
 - The `Sidebar.js` `visibleItems` filter applies the admin gate only.
 - Default-landing is a user-preference value (per-role default, overridable).
 - The role lens dropdown is a header-level component on every audience-sensitive page.
@@ -184,7 +185,7 @@ the Portfolio Manager would most like to never hand-produce again. It's the
 priority candidate for a deterministic **workflow** (vs an agent).
 
 **Implications.**
-- `.cursor/workflows/vp-executive-report.md` is the highest-value workflow
+- `agent-pack/lighthouse/workflows/quarterly-team-exec-report.md` is the highest-value workflow (at the time `.cursor/workflows/vp-executive-report.md` per D33)
 - Output formats (locked in later sub-decision): Markdown + email HTML +
   Confluence storage XML (pushable as a page directly)
 - Reuses `statusService`, `predictabilityService`, `chartService`
@@ -210,8 +211,7 @@ platform must support **both** workflows simultaneously:
   when to push back
 - "Escalate to Portfolio Manager" button on any agent response in Team Executive-lens
 - Audit log of which mode was used per Team Executive per question (helps tune trust)
-- Citation-first design is a global rule (not Team Executive-only) — promote to a rule
-  in `.cursor/rules/citation-first-output.mdc`
+- Citation-first design is a global rule (not Team Executive-only) — promote to a rule in `agent-pack/lighthouse/rules/citation-first-output.mdc` (at the time `.cursor/rules/citation-first-output.mdc`; now `agent-pack/lighthouse/rules/` via D38)
 
 ### D11 — Pages fetch live; Sync Hub is not a product surface
 
@@ -347,8 +347,7 @@ Same content. Three renderers. Solves the format-conversion repetitive task
 (D8) at the protocol level: the canonical answer is built once, never re-authored.
 
 **Implications.**
-- Becomes a `.cursor/skills/team-exec-status-answer/SKILL.md` so the protocol is
-  reproducible across sessions
+- Becomes a `agent-pack/lighthouse/skills/team-exec-status-answer/SKILL.md` so the protocol is reproducible across sessions (at the time `.cursor/skills/team-exec-status-answer/SKILL.md`)
 - `topBlockers` is a new method on `statusService` — ranks by `impact ×
   uncertainty × proximity-to-RTM`
 - The chart `chartService` must emit is "landing-date confidence + risk
@@ -360,7 +359,7 @@ Same content. Three renderers. Solves the format-conversion repetitive task
 
 ---
 
-## Round 4 — TPM persona + Agent design (locked this session)
+## Round 3 — TPM persona + Agent design (locked this session) <!-- originally Round 4 -->
 
 ### D16 — Agent design: orchestrator-workers (Anthropic pattern)
 
@@ -386,12 +385,11 @@ pattern:
 **Implications.**
 - Delete: existing `.cursor/agents/tpm-assistant.md` + `rm-assistant.md`
   (their content migrates into specialist sub-agents + skills)
-- Create: `.cursor/agents/ops-assistant.md` (orchestrator)
+- Create: `.cursor/agents/ops-assistant.md` (orchestrator) — now canonical at `agent-pack/lighthouse/identity/ops-assistant.md` per D38/D44; `.cursor/agents/` is a symlink adapter
 - Each specialist lives in `.cursor/agents/specialists/<name>.md` with a
-  tight scope
+  tight scope — now `agent-pack/lighthouse/identity/specialists/<name>.md` (and `agent-pack/loom/identity/specialists/` for builder specialists)
 - The orchestrator decides delegation; user never picks a specialist by name
-- Skills (`.cursor/skills/`) are the "how" — sub-agents reference skills
-  rather than re-implementing protocols
+- Skills (`.cursor/skills/` at the time — now `agent-pack/lighthouse/skills/` and `agent-pack/loom/skills/`) are the "how" — sub-agents reference skills rather than re-implementing protocols
 - Aligned with Anthropic guidance: "Start with one agent + tools. Add
   multi-agent only when the single-agent is insufficient." Sub-agents are
   the *next* tier, not the default.
@@ -410,7 +408,7 @@ tier of the email serves a different segment — Team Executives read the top, E
 the middle for their team, FEAT owners check the bottom for callouts.
 
 **Implications.**
-- New skill: `.cursor/skills/weekly-status-email/SKILL.md`
+- New skill: `.cursor/skills/weekly-status-email/SKILL.md` (now `agent-pack/lighthouse/skills/weekly-status-email/SKILL.md`)
 - Service calls (in parallel):
   - `statusService.releaseRagByActive(productIds)` for the top tier
   - `statusService.teamWeeklyDelta(teams)` for the middle tier
@@ -461,7 +459,7 @@ from the other places to surface untracked dependencies.
    - **Deferral responses** — a ticket / feature was proposed for deferral; the relevant owner hasn't confirmed.
 
 **Implications.**
-- 4 distinct triage skills under `.cursor/skills/`: `bug-triage`, `crisis-triage`, `stale-ticket-sweep`, `pending-response-chase`
+- 4 distinct triage skills under `.cursor/skills/` (now `agent-pack/lighthouse/skills/`): `bug-triage`, `crisis-triage`, `stale-ticket-sweep`, `pending-response-chase`
 - New service: `pendingResponseService` — tracks ask comments without a reply comment, ages them, surfaces stuck ones
 - This is the agent's job par excellence: scan the corpus daily, surface what's stuck, prompt the Portfolio Manager to chase. Saves time on the "all of the above" repetitive load (D8).
 - Detection mechanism is locked in **D24**: unreplied JIRA comment threads only.
@@ -497,31 +495,31 @@ D20 (Confluence pages). Pending-response detection is locked in D24
 
 ---
 
-## Round 6 — Phase A build plan (next session)
+## Round 4 — Phase A build plan (completed 2026-05-20, commit 54bb48a) <!-- originally Round 6 — "next session" -->
 
-Phase A is the **AI layer rebuild** — all markdown, no React code. Touches:
+Phase A is the **AI layer rebuild** — all markdown, no React code. Touches (historical checklist — completed in `54bb48a`; paths now `agent-pack/lighthouse/{identity,specialists,skills,rules}/` per D38/D44, with `.cursor/*` as generated adapters via `agent-pack/harness/`):
 
-- `.cursor/agents/ops-assistant.md` — the orchestrator (NEW)
-- `.cursor/agents/specialists/team-exec-specialist.md` (NEW)
-- `.cursor/agents/specialists/tpm-specialist.md` (NEW, replaces existing `tpm-assistant.md`)
-- `.cursor/agents/specialists/rm-specialist.md` (NEW, replaces existing `rm-assistant.md`)
-- `.cursor/agents/specialists/triage-specialist.md` (NEW)
-- `.cursor/agents/specialists/confluence-publisher-specialist.md` (NEW)
-- `.cursor/agents/specialists/dependency-tracker-specialist.md` (NEW)
-- `.cursor/skills/team-exec-status-answer/SKILL.md` (NEW — protocol from D15)
-- `.cursor/skills/weekly-status-email/SKILL.md` (NEW — protocol from D17)
-- `.cursor/skills/bug-triage/SKILL.md` (NEW)
-- `.cursor/skills/crisis-triage/SKILL.md` (NEW)
-- `.cursor/skills/stale-ticket-sweep/SKILL.md` (NEW)
-- `.cursor/skills/pending-response-chase/SKILL.md` (NEW)
-- `.cursor/skills/dependency-walk/SKILL.md` (NEW)
-- `.cursor/skills/confluence-width-cleanup/SKILL.md` (refresh existing)
-- `.cursor/rules/persona-aware-output.mdc` (NEW)
-- `.cursor/rules/citation-first-output.mdc` (NEW per D10)
-- `.cursor/rules/product-agnostic.mdc` (NEW per D1)
-- Existing rules: confirm they're copied into the monorepo (lost when `~/ndb-status-sender/` was deleted)
-- `~/.cursor/context/ndb-ops/audience.md` — refactor to be product-agnostic (D1)
-- `.cursor/AGENTS.md` — update to point to new structure
+- `.cursor/agents/ops-assistant.md` — the orchestrator (NEW) → now `agent-pack/lighthouse/identity/ops-assistant.md`
+- `.cursor/agents/specialists/team-exec-specialist.md` (NEW) → now `agent-pack/lighthouse/identity/specialists/team-exec-specialist.md`
+- `.cursor/agents/specialists/tpm-specialist.md` (NEW, replaces existing `tpm-assistant.md`) → now `agent-pack/lighthouse/identity/specialists/tpm-specialist.md`
+- `.cursor/agents/specialists/rm-specialist.md` (NEW, replaces existing `rm-assistant.md`) → now `agent-pack/lighthouse/identity/specialists/rm-specialist.md`
+- `.cursor/agents/specialists/triage-specialist.md` (NEW) → now `agent-pack/lighthouse/identity/specialists/triage-specialist.md`
+- `.cursor/agents/specialists/confluence-publisher-specialist.md` (NEW) → now `agent-pack/lighthouse/identity/specialists/confluence-publisher-specialist.md`
+- `.cursor/agents/specialists/dependency-tracker-specialist.md` (NEW) → now `agent-pack/lighthouse/identity/specialists/dependency-tracker-specialist.md`
+- `.cursor/skills/team-exec-status-answer/SKILL.md` (NEW — protocol from D15) → now `agent-pack/lighthouse/skills/team-exec-status-answer/SKILL.md`
+- `.cursor/skills/weekly-status-email/SKILL.md` (NEW — protocol from D17) → now `agent-pack/lighthouse/skills/weekly-status-email/SKILL.md`
+- `.cursor/skills/bug-triage/SKILL.md` (NEW) → now `agent-pack/lighthouse/skills/bug-triage/SKILL.md`
+- `.cursor/skills/crisis-triage/SKILL.md` (NEW) → now `agent-pack/lighthouse/skills/crisis-triage/SKILL.md`
+- `.cursor/skills/stale-ticket-sweep/SKILL.md` (NEW) → now `agent-pack/lighthouse/skills/stale-ticket-sweep/SKILL.md`
+- `.cursor/skills/pending-response-chase/SKILL.md` (NEW) → now `agent-pack/lighthouse/skills/pending-response-chase/SKILL.md`
+- `.cursor/skills/dependency-walk/SKILL.md` (NEW) → now `agent-pack/lighthouse/skills/dependency-walk/SKILL.md`
+- `.cursor/skills/confluence-width-cleanup/SKILL.md` (refresh existing) → now `agent-pack/lighthouse/skills/confluence-width-cleanup/SKILL.md`
+- `.cursor/rules/persona-aware-output.mdc` (NEW) → now `agent-pack/lighthouse/rules/persona-aware-output.mdc`
+- `.cursor/rules/citation-first-output.mdc` (NEW per D10) → now `agent-pack/lighthouse/rules/citation-first-output.mdc`
+- `.cursor/rules/product-agnostic.mdc` (NEW per D1) → now `agent-pack/lighthouse/rules/product-agnostic.mdc`
+- Existing rules: confirm they're copied into the monorepo (lost when `~/ndb-status-sender/` was deleted) — builder-only rules remain in `.cursor/rules/` per AGENTS.md:88
+- `~/.cursor/context/ndb-ops/audience.md` — refactor to be product-agnostic (D1) — now `agent-pack/lighthouse/context/audience.md` (`.cursor/context/` is a symlink stub)
+- `.cursor/AGENTS.md` — update to point to new structure — now `agent-pack/harness/` adapters
 - `AGENTS.md` (root) — update persona
 
 **Deferred to later phases** (not Phase A):
@@ -534,7 +532,7 @@ Phase A is the **AI layer rebuild** — all markdown, no React code. Touches:
 - New MCP-backed pages: Capacity Planner, Bin-Packing, Story Points page, Date Mover, Say vs Do (Phase G)
 - Gap features (Sprint Planner, Status Page Auto-Publisher, etc.) (Phase H)
 
-## Round 7 — Tab visibility revision + action authorization (2026-05-19)
+## Round 5 — Tab visibility revision + action authorization (2026-05-19) <!-- originally Round 7 -->
 
 D6 was revised this round (see updated text above).
 
@@ -555,7 +553,7 @@ Dashboard" if they prefer.
 
 ---
 
-## Round 8 — Consolidation porting (2026-05-19)
+## Round 6 — Consolidation porting (2026-05-19) <!-- originally Round 8 -->
 
 ### D33 — Drop "Team Executive" terminology; use "team-exec" (Team Executive)
 
@@ -584,27 +582,21 @@ Executive"). No backward-compatible aliases; the old term is dropped.
 | Old | New |
 |---|---|
 | audience id `vp` | `team-exec` |
-| display name "Team Executive" | "Team Executive" |
-| `team-exec-specialist` | `team-exec-specialist` |
-| `team-exec-status-answer` skill | `team-exec-status-answer` |
-| `team-exec-release-report` skill | `team-exec-release-report` |
-| `predictive-team-exec-analytics` skill | `predictive-team-exec-analytics` |
-| `quarterly-team-exec-report` workflow | `quarterly-team-exec-report` |
-| report file prefix `TeamExec-` | `TeamExec-` |
-| code identifiers `TeamExecReport*`, `TeamExecSpecialist`, etc. | `TeamExecReport*`, `TeamExecSpecialist`, etc. |
+| display name "Team Executive" | "Team Executive" *(display unchanged by design)* |
+| `vp-specialist` | `team-exec-specialist` |
+| `vp-status-answer` skill | `team-exec-status-answer` |
+| `vp-release-report` skill | `team-exec-release-report` |
+| `predictive-vp-analytics` skill | `predictive-team-exec-analytics` |
+| `quarterly-vp-report` workflow | `quarterly-team-exec-report` |
+| report file prefix `VP-` | `TeamExec-` |
+| code identifiers `VpReport*`, `VpSpecialist`, etc. | `TeamExecReport*`, `TeamExecSpecialist`, etc. |
 
 **Scope of the rename.**
 
-- All active files in the monorepo: `.cursor/`, `shared/`, `mcp-server/`,
-  `apps/delivery-ops/` (source + docs).
-- User-level skills at `~/.cursor/skills/` are renamed too — they are
-  read by the project agent and must match.
-- **NOT** renamed: historical reports in `reports/CrystalBall-Enhanced-Team Executive-Report-*.md`
-  and similar (per `documentation-consistency.mdc`: "files already in
-  `reports/`: leave them"). New reports use the `TeamExec-` prefix.
-- **NOT** renamed: legacy code in `apps/delivery-ops/crystalball-i/` and
-  similar archived sub-trees — that code is on the retirement list and
-  doesn't shape the consolidated platform's surface.
+- All active files in the monorepo: `agent-pack/{lighthouse,loom,harness}/`, `shared/`, `mcp/*/`, `apps/delivery-ops/` (source + docs) — at the time `.cursor/`, `shared/`, `mcp-server/` (see D44).
+- User-level skills at `~/.cursor/skills/` are renamed too — they are read by the project agent and must match (now via `agent-pack/harness/{cursor,claude,codex}.json`).
+- **NOT** renamed: historical reports in `reports/CrystalBall-Enhanced-Team Executive-Report-*.md` and similar (per `documentation-consistency.mdc`: "files already in `reports/`: leave them"). New reports use the `TeamExec-` prefix.
+- **NOT** renamed: archived code (e.g. `crystalball-i/` tarball in `~/NDB-Ops-Tools/_archive/` per D0.4) and similar archived sub-trees — that code is on the retirement list and doesn't shape the consolidated platform's surface.
 
 **Implications.**
 
@@ -663,7 +655,7 @@ when the right human is awake. Capturing the reason inline makes the
 delivery narrative reconstructable from the artifact itself, which is
 exactly the workflow product this platform is building toward.
 
-**Implications for the port (capability #10 in `CONSOLIDATION.md`).**
+**Implications for the port (capability #10 in `docs/architecture/CONSOLIDATION.md` — at the time bare `CONSOLIDATION.md`).**
 - `dateMoverService.ts` takes `{ ticketKey, fieldId, newValue, reason,
   actor }` and orchestrates JIRA + Confluence in one atomic-ish step.
 - The Confluence connector (`shared/connectors/confluenceConnector.ts`)
@@ -797,11 +789,11 @@ deployment.
   delivery-ops has another. The sidebar entry **opens the app in a new
   browser tab** (target=_blank) so the two UIs never have to share a
   viewport. Tried in-place navigation first; user-tested poorly because
-  in dev the React server (8888) and backend (6001) are different ports
+  in dev the React server (8888 at the time; now 8899) and backend (6001 at the time; now 8001) are different ports
   and CRA's string-proxy doesn't forward HTML requests. New tab sidesteps
   the dev/prod port asymmetry entirely.
-- The sidebar link's URL is computed dynamically: in dev (port 8888 React
-  server) it points at `${hostname}:${REACT_APP_BACKEND_PORT || 6001}/bin-packing/`;
+- The sidebar link's URL is computed dynamically: in dev (port 8888 at the time; now 8899 React
+  server) it points at `${hostname}:${REACT_APP_BACKEND_PORT || 6001}/bin-packing/` (now `|| 8001`);
   in prod (same origin) it's a relative `/bin-packing/`. Helper
   `getBinPackingUrl()` in `Sidebar.js`. No hardcoded localhost per
   `no-localhost.mdc` — hostname read from `window.location`.
@@ -840,18 +832,12 @@ web agent, MCP, and any future host are **adapters**. The product must
 be liftable to another agent host without rewriting SOPs.
 
 **Implications.**
-- Never add a new skill, identity, or workflow only under `.cursor/`
-- Any host loads the pack via `loadAgentPack()` in
-  `@portfolio-delivery-ops/shared` (or `AGENT_PACK_ROOT`)
+- Never add a new skill, identity, or workflow only under `.cursor/` — canonical packs are `agent-pack/lighthouse/` (product), `agent-pack/loom/` (builder), and `agent-pack/harness/` (adapter registry) per D44; `.cursor/{agents,skills,workflows}` are generated symlinks via `agent-pack/harness/`
+- Any host loads the pack via `loadAgentPack()` in `@portfolio-delivery-ops/shared` (or `AGENT_PACK_ROOT` — pass `lighthouse` vs `loom` tenancy)
 - Tools stay MCP + Layer 3 services — already host-agnostic
-- Builder-only Cursor rules (`minimal-architecture`, API/page doc
-  gates, Gerrit push) stay in `.cursor/rules/` and do **not** ship
-  with a lifted agent
-- A new host = a new file under `agent-pack/adapters/`, not a fork
-  of skills
-- Capability type (`deterministic` / `generative` / `agent` /
-  `agentic`) and tool class (`read` / `draft` / `mutate`) are
-  declared in `agent-pack/manifest.json`
+- Builder-only Cursor rules (`minimal-architecture`, API/page doc gates, Gerrit push, `weave.mdc`/`one-shot.mdc`) stay in `.cursor/rules/` and `agent-pack/loom/rules/` and do **not** ship with a lifted product agent
+- A new host = a new file under `agent-pack/adapters/`, not a fork of skills
+- Capability type (`deterministic` / `generative` / `agent` / `agentic`) and tool class (`read` / `draft` / `mutate`) are declared in `agent-pack/{lighthouse,loom}/manifest.json` (umbrella `agent-pack/manifest.json` at the time of D38)
 
 **What this is NOT.** Replacing Cursor as a builder. Developers may
 still edit markdown in the IDE. The IDE is not allowed to be the only
@@ -891,8 +877,7 @@ Center Personal Access Token** sent as `Authorization: Bearer <pat>`.
 Not Cloud email+API-token Basic auth, not OAuth, not `cloudId`.
 
 **Implications.**
-- `mcp-server` tools import `JiraConnector` from
-  `@portfolio-delivery-ops/shared`
+- `mcp/lighthouse` and `mcp/loom` tools import `JiraConnector` from `@portfolio-delivery-ops/shared` (at the time singular `mcp-server` per D44)
 - Express CJS hosts use `server/utils/jiraClient.js` (`getJira`,
   `searchPages`) onto the same connector. `jiraService.js` is
   risk-indicator UI only — no axios, no Bearer headers
@@ -957,9 +942,7 @@ is D26. Model routing (router vs reasoner). Unattended workflow engine.
 
 ### D43 — Multi-team registry after the app stabilized
 
-**Statement.** The 2026-05-20 NDB-only freeze (`ARCHITECTURE_TARGET.md` v2:
-`teamBoardConfig.json` has one entry; ProductService never resolves anything
-but NDB) is **lifted**. The app is stable enough to onboard other teams
+**Statement.** The 2026-05-20 NDB-only freeze (`docs/technical/ARCHITECTURE_TARGET.md` v2 — at the time bare `ARCHITECTURE_TARGET.md`: `teamBoardConfig.json` has one entry; ProductService never resolves anything but NDB) is **lifted**. The app is stable enough to onboard other teams
 (Prism-Infra, MSP, future) through Admin. Each team is one object in
 `teamBoardConfig.json`. NDB stays the default tenant (`defaultTeamId`).
 
@@ -974,9 +957,11 @@ but NDB) is **lifted**. The app is stable enough to onboard other teams
 **What this is NOT.** Full SaaS multi-tenancy (still D5). Re-adding the
 old DataLens/NCM blocks unless those teams are onboarded again through Admin.
 
+> **Out-of-sequence IDs (2026-10-05):** `D24` and `D26` were decided after `D43` (Round 6) and appended here out of numeric order for audit continuity. They are retained in place; see also `D19 → D24` (pending-response) and `D42 → D26` (HITL authorization). Round 6 was originally "Round 8" before the 2026-11-19 resequencing.
+
 ---
 
-### D24 — Pending-response detection is unreplied JIRA comments
+### D24 — Pending-response detection is unreplied JIRA comments — *out of numeric order, decided 2026-10-05; see D19*
 
 **Statement.** A dependency or deferral ask is stuck when a JIRA comment
 that requests a response has no reply comment. Labels, workflow status,
@@ -997,7 +982,7 @@ a Response Due Date field, Confluence checklists, or Slack acks.
 
 ---
 
-### D26 — Action-level authorization
+### D26 — Action-level authorization — *out of numeric order, decided 2026-10-05; see D42*
 
 **Statement.** Tab visibility is not the security boundary (D6). After
 HITL approval, a mutate executes only for a role that owns that action.
@@ -1024,16 +1009,152 @@ change.
 
 ---
 
-## Round 7 — Pending decisions (open)
+## Round 7 — Lighthouse / Loom tenancy + package scope (2026-11-18) <!-- originally Round 9 -->
 
-| ID | Decision needed | Blocked on |
+The late-2026 codebase split into **Lighthouse** (product) and **Loom** (builder)
+landed in code first (`ce2cbad`, `e2d1441`, `ab01097`, `b86b241`, …) without a
+decision entry. `ARCHITECTURE.md` was updated to describe the split; this round
+catches `DECISIONS.md` up. No new architecture is invented — these entries
+describe what exists on `weave/delivery-ops-all-phases-20261118`.
+
+### D44 — Lighthouse vs Loom tenancy — product and builder split
+
+**Statement.** The repo has two tenancies — **Lighthouse** (product: delivery-ops)
+and **Loom** (builder: dev tooling) — plus **shared** code they both consume.
+
+* **Lighthouse** owns the product surface:
+  `apps/delivery-ops/` (React on `:8899` + Express on `:8001`),
+  `mcp/lighthouse/` (product MCP server, bin `lighthouse-mcp`, 2
+  lighthouse-only tools — `build_jql`, `team_overall_report` — plus 8 shared
+  tools from `mcp/shared/`), `agent-pack/lighthouse/` (orchestrator
+  `ops-assistant`, 7 specialists, 19 skills, domain `context/`, production
+  `prompts/`, product `rules/`, `workflows/`, `memory/schema.json`),
+  and `scripts/lighthouse/` (see D46).
+* **Loom** owns the builder surface:
+  `mcp/loom/` (builder MCP server, bin `loom-mcp`, 8 shared tools only),
+  `agent-pack/loom/` (orchestrator `loom`, 3 builder specialists —
+  `frontend-dev`, `backend-dev`, `connector-dev` — 5 skills incl. `weave`,
+  builder `rules/` incl. `weave.mdc`/`one-shot.mdc`, `memory/schema.json`
+  independent of Lighthouse), `scripts/loom/` (see D46),
+  and the harness adapters in `agent-pack/harness/` (`mcp.json` now
+  registers both `mcp-lighthouse` and `mcp-loom` on distinct bins).
+* **Shared** (no tenancy prefix):
+  `shared/` (`@portfolio-delivery-ops/shared` — connectors, services,
+  `agentPack`, `agentRuntime`, domain derives), `mcp/shared/`
+  (`@portfolio-delivery-ops/mcp-shared` — 8 deduped tools + `config/env`
+  + `resources/ndbGlossary` — imported by both MCP servers, not copied),
+  `apps/bin-packing/` (static-mounted, `@portfolio-delivery-ops/bin-packing`),
+  `crystalball-i/` archived to `~/NDB-Ops-Tools/_archive/` per D0.4 (no active path), `_archive/`, `docs/`, and `scripts/open-pr.sh`.
+
+**Implications.**
+- `mcp-server/` is gone (replaced by `mcp/lighthouse`, `mcp/loom`, `mcp/shared`). Former single-server references in `AGENTS.md` and `ARCHITECTURE.md` were stale until the 2026-11-19 editorial pass; read them as `mcp/lighthouse|loom|shared` and `mcp/*/src/tools/` respectively.
+- A new MCP tool that is product-facing (JQL, status, forecast, capacity,
+  triage, publishing) is registered in `mcp/shared/tools/` and wired into
+  **both** servers from `mcp/{lighthouse,loom}/src/index.ts` when
+  appropriate; a lighthouse-only product tool lives in
+  `mcp/lighthouse/src/tools/` (`buildJql`, `teamOverallReport` today).
+- A new skill/rule/prompt/specialist that shapes product answers or
+  product pages lives in `agent-pack/lighthouse/`; a skill/rule that
+  shapes how we *build* the product (weave, review, exec, deploy,
+  csv-import) lives in `agent-pack/loom/`. Do not cross-mount.
+- `shared/` never imports from `mcp/` or `agent-pack/`; it is the
+  dependency sink (D41, D40).
+- `mcp/shared/tools/` is the single source for deduped tools — do not
+  re-fork a tool into a tenancy-local copy to "customise" it.
+
+**What this is NOT.**
+- A micro-repo split. One git repo, one `workspaces: [apps/*, shared, mcp/*]`
+  graph. Lighthouse and Loom share the same commit history and CI.
+- A runtime isolation boundary. Both MCP servers can run in the same host
+  today; the split is organisational, not a deployment requirement.
+
+### D45 — npm scope is `@portfolio-delivery-ops`; app package still `ndb-status-sender`
+
+**Statement.** The monorepo's published scope is
+`@portfolio-delivery-ops`. Packages that have been renamed already use it;
+the delivery-ops app package has not.
+
+**What's done.**
+
+| Package | Scope status |
+|---|---|
+| `shared/` | `@portfolio-delivery-ops/shared` |
+| `mcp/shared/` | `@portfolio-delivery-ops/mcp-shared` |
+| `mcp/lighthouse/` | `@portfolio-delivery-ops/mcp-lighthouse` (bin `lighthouse-mcp`) |
+| `mcp/loom/` | `@portfolio-delivery-ops/mcp-loom` (bin `loom-mcp`) |
+| `apps/bin-packing/` | `@portfolio-delivery-ops/bin-packing` |
+| `apps/delivery-ops/server/` | `@portfolio-delivery-ops/shared` consumer (`*` dep) |
+| `package.json:workspaces` | `mcp/*` (was `mcp-server`) |
+
+**What's still `ndb-*` (intentionally deferred with D2).**
+
+| Location | Current name | Why not renamed yet |
 |---|---|---|
-| D27 | Which legacy projects to permanently cut vs rebuild | Reconfirm cuts from FEATURE_CATALOG.md |
-| D28 | First gap to build (post-Phase-A) | Phase H planning |
-| D29 | Next role to deep-dive (RM / Director / EM) | After Phase A complete |
-| D31 | Exact Confluence target for date-change audit log (per-release page / section on status page / per-product shared log) | Build-time of #10, when PM points at the actual execution page format |
-| D32 | Whether date moves made outside our app (directly in JIRA) should also be audited to Confluence (via webhook or scheduled diff) | After #10 ships first cut |
-| D35 | Wiring every D1 consumer through `productService` — today `/api/jira/issue-breakdown` omits `projectKey` to match legacy behavior, and `releaseDatasetService` has no production caller yet. Will be addressed call-site by call-site as new consumers land. Tracked in `CONSOLIDATION.md`. | Resolve as each new consumer is added (Phase 3 of #1b, then #2 forward) |
+| `package.json:1` (root) | `ndb-delivery-ops` | Tracks D2 filesystem rename `~/NDB-Ops-Tools/ndb-delivery-ops/` → `portfolio-delivery-ops` |
+| `apps/delivery-ops/package.json:2` | `ndb-status-sender` | App package + `client/package.json` `ndb-status-sender-client` + `server/package.json` `ndb-status-sender-server` |
+| Git remote + GH repo name | `ndb-delivery-ops` | Same D2 deferral |
+
+**Implications.**
+- New workspaces MUST use `@portfolio-delivery-ops/<name>` (enforced by
+  `scripts/lighthouse/checks/check-product-agnostic.js` + convention). Do
+  not create a new `ndb-*` package.
+- `mcp:build` (`package.json:18`) builds `@portfolio-delivery-ops/shared`
+  then both MCP servers — the old `mcp-server` build target is gone.
+- Do not bulk-rename `ndb-status-sender` to `@portfolio-delivery-ops/delivery-ops`
+  outside the D2 rename session — it touches `client/package.json:proxy`,
+  deploy scripts, and the GH repo simultaneously.
+
+**What this is NOT.** A decision to keep `ndb-status-sender` forever. It is
+a waypoint: the scope migration is mid-flight and intentionally pauses at
+the D2 boundary.
+
+**Deferred to.** Dedicated D2 rename session (filesystem + root `package.json`
++ app `package.json` + GH repo) — same session that retires
+`~/NDB-Ops-Tools/ndb-delivery-ops` on disk.
+
+### D46 — Script tenancy follows the tenancy it serves
+
+**Statement.** `scripts/` split in `ce2cbad` to mirror the Lighthouse/Loom
+tenancy. A script lives where its consumer lives; top-level `scripts/`
+no longer exists (except `open-pr.sh`, which is repo-wide).
+
+| Tenancy | Scripts | Purpose |
+|---|---|---|
+| `scripts/lighthouse/checks/` | `check-no-localhost.js`, `check-product-agnostic.js` | Product guardrails; `npm run check` runs both |
+| `scripts/lighthouse/docs/` | `docs-build.js`, `docs-verify.sh` | Product docs hub + stale-path gate |
+| `scripts/lighthouse/jira/` | `fetch-field-history.js`, `seed-feature-components.js` | Product JIRA data maintenance |
+| `scripts/lighthouse/reports/` | `generate-past-release-report.mjs`, `nai-capability-summary.mjs` | Product report generation |
+| `scripts/loom/checks/` | `check-mcp-bins-unique.js` | Builder guardrail: `lighthouse-mcp` ≠ `loom-mcp` |
+| `scripts/loom/archive/` | `archive-decommissioned-projects.sh` | Builder archive hygiene |
+| `scripts/loom/jira/` | `fetch-jch-tickets.sh` | Builder JIRA sweep |
+| `scripts/` (root) | `open-pr.sh` | Repo-wide; stays put |
+
+**Implications.**
+- `npm run check` runs `check:no-localhost` + `check:product-agnostic`
+  (Lighthouse) + `check:mcp` (Loom) — see `package.json:14-17`.
+- A new product check/doc/jira/report script goes in
+  `scripts/lighthouse/<area>/`; a new builder/archive/check script goes
+  in `scripts/loom/<area>/`. Do not recreate a top-level `scripts/`
+  folder for tenanted code.
+- `docs-verify.sh` path is now `scripts/lighthouse/docs/docs-verify.sh`
+  — the only verified path; `scripts/docs-verify.sh` and
+  `scripts/lighthouse/docs-verify.sh` are stale per `ce2cbad`.
+
+**What this is NOT.** A ban on repo-wide scripts. `open-pr.sh` remains at
+`scripts/open-pr.sh` because it serves both tenancies equally.
+
+---
+
+## Pending decisions (open)
+
+| ID | Decision needed | Blocked on | Status |
+|---|---|---|---|
+| ~~D27~~ | ~~Which legacy projects to permanently cut vs rebuild~~ | — resolved in D0.2/D0.3 (Tier-B → MCP tools, Tier-D archived; see `docs/architecture/CONSOLIDATION.md`) | ~~retired 2026-11-19~~ |
+| ~~D28~~ | ~~First gap to build (post-Phase-A)~~ | — resolved: `apps/bin-packing` static mount (D37) + `dateMoverService` (D30) were the first gaps shipped | ~~retired 2026-11-19~~ |
+| ~~D29~~ | ~~Next role to deep-dive (RM / Director / EM)~~ | — superseded: Phase B/C (Sidebar, chat panel, `agentRuntime`) consumed the next cycles; RM persona partially covered in D30/D42 authorization | ~~retired 2026-11-19~~ |
+| D31 | Exact Confluence target for date-change audit log (per-release page / section on status page / per-product shared log) | Build-time of #10, when PM points at the actual execution page format (D30 Deferred) | open |
+| D32 | Whether date moves made outside our app (directly in JIRA) should also be audited to Confluence (via webhook or scheduled diff) | After #10 ships first cut | open |
+| D35 | Wiring every D1 consumer through `productService` — trunk landed (`fetchReleaseData` defaults to Release Payload with 3 groups + 6 buckets, `velocity`/`forecast` cache-first routes live); remaining call sites (`releaseGantt`, `execSummary`, ad-hoc JQL hand-rolls) still hardcode `projectKey`/`releasePrefix`. Tracked in `docs/architecture/CONSOLIDATION.md`. | Resolve call-site by call-site as new consumers land (Phase H / D34 sweep) | open |
 
 ---
 
@@ -1041,18 +1162,12 @@ change.
 
 These are non-negotiables baked into all future design:
 
-1. **One feature, one place** — services are shared; pages, MCP tools, and
-   agents are thin consumers (from `ARCHITECTURE.md`).
-2. **Product-agnostic by design** — never assume NDB. Every product-specific
-   value reads from config (D1).
-3. **Audience-aware output** — every artefact declares an audience and respects
-   the corresponding style (D4, D6, `audience.md`).
-4. **Agent-first for reactive load** — when in doubt about how a user finds
-   information, the answer is "they ask the agent" (D7, D8).
-5. **Workflow for recurring artefacts, agent for ad-hoc questions** — strict
-   adherence to Anthropic's pattern selection (D9 vs D7).
-6. **Single connector per external system** — no parallel implementations (D3).
-7. **Role lens is a presenter, not a filter** — never hide capability from a
-   user; only re-frame the output (D6).
-8. **Agent pack is portable** — cookbook lives in `agent-pack/`; every host
-   is an adapter (D38). Do not lock SOPs to Cursor.
+1. **One feature, one place** — services are shared; pages, MCP tools, and agents are thin consumers (D16, D41, `ARCHITECTURE.md`).
+2. **Product-agnostic by design** — never assume NDB. Every product-specific value reads from config; `productService` is the only source for `projectKey`/`labelPrefix`/`releasePrefix`/`sprintCalendar` (D1, D5, D34, D36, D43).
+3. **Audience-aware output** — every artefact declares an audience and respects the corresponding style; terminology itself is product-neutral per the team-exec rename (D4, D6, D10, D15, D33, `audience.md`).
+4. **Agent-first for reactive load** — when in doubt about how a user finds information, the answer is "they ask the agent" (D7, D8, D39).
+5. **Workflow for recurring artefacts, agent for ad-hoc questions** — strict adherence to Anthropic's pattern selection; the team-exec report (D9/D15) and weekly status email (D17) are workflows, triage/chat are agents (D9 vs D7, D15d, D17, D19).
+6. **Single connector per external system** — no parallel implementations; JIRA is Data Center `Authorization: Bearer` PAT only (D3, D40).
+7. **Role lens is a presenter, not a filter; action auth is the boundary** — never hide capability from a user; only re-frame the output. Mutations are gated by action-level authorization, not tab visibility (D6, D25, D26, D30).
+8. **Agent pack is portable** — cookbook lives in `agent-pack/`; every host is an adapter. Do not lock SOPs to Cursor; Lighthouse (`lighthouse`) and Loom (`loom`) are separate packs sharing one repo (D38, D44, D46).
+9. **Tenancy is organisational, not a repo split** — Lighthouse (product) and Loom (builder) share one repo and one `workspaces` graph; `mcp/shared` and `shared/` are the only cross-tenancy code. Scope `@portfolio-delivery-ops/*` is the tenanted scope — new packages use it, legacy `ndb-status-sender` remains only until the D2 filesystem/GH rename (D2, D44, D45, D46).

@@ -103,3 +103,7 @@ PgToGaWindow:
 - [ ] Every numeric metric has a clickable JIRA URL
 - [ ] Naughty score weights are visible in API response or UI legend
 - [ ] Companion rows are rendered in separate section (not merged into naughty scoring)
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

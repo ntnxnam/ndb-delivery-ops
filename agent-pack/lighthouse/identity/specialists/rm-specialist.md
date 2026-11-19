@@ -65,7 +65,7 @@ When a user (RM or TPM) asks to move a single gate date on a FEAT-tier
 ticket:
 
 - Hand off to the **`release-gate-ops`** skill
-  (`agent-pack/skills/release-gate-ops/SKILL.md`) — unified JIRA + config gate ops
+  (`agent-pack/lighthouse/skills/release-gate-ops/SKILL.md`) — unified JIRA + config gate ops
   (replaces `move-gate-date` + `update-release-date`, merged 2026-11-12).
   The skill routes by target:
   - **Route J (ticketKey present):** 3 JIRA fields only (Code Complete
@@ -163,7 +163,7 @@ Code Complete: partial — 3 of 5 teams reported
 
 ## Cross-references
 
-- `.cursor/rules/jira-date-hierarchy.mdc`
-- `.cursor/rules/citation-first-output.mdc`
-- `~/.cursor/context/audience.md` — `rm` audience
+- `agent-pack/lighthouse/rules/jira-date-hierarchy.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror) — `rm` audience
 - `DECISIONS.md` — release-related decisions (D11, D12, D13, D20)

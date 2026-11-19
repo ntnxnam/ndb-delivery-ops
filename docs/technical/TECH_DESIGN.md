@@ -749,7 +749,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@nutanix.com
 SMTP_PASS=your-app-password
-PORT=6001
+PORT=8001
 NODE_ENV=production|development
 REACT_APP_ENABLE_RELEASE_VERSIONS=true|false
 ```
@@ -852,8 +852,8 @@ Returns:
 
 ### 13.1 Development Environment
 
-- **Frontend**: React development server (port 6100)
-- **Backend**: Node.js server (port 6001)
+- **Frontend**: React development server (port 8899)
+- **Backend**: Node.js server (port 8001)
 - **Hot Reload**: Enabled for both frontend and backend
 
 ### 13.2 Production Environment

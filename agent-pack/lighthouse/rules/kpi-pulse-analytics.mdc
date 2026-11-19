@@ -11,7 +11,7 @@ globs:
   - apps/delivery-ops/**/*system-test*
   - apps/delivery-ops/**/*CfdCfi*
   - apps/delivery-ops/**/*cfdcfi*
-  - agent-pack/skills/kpi-pulse-analytics/**
+  - agent-pack/lighthouse/skills/kpi-pulse-analytics/**
 alwaysApply: false
 ---
 
@@ -26,7 +26,7 @@ Reusable exec pulse for any KPI-scoped page. **Same UI + service contract; only 
 | Service | `apps/delivery-ops/server/services/kpiPulseService.js` → `buildPulse({ token, baseJql, ... })` |
 | Quarters | `apps/delivery-ops/server/utils/nutanixQuarters.js` |
 | UI | `apps/delivery-ops/client/src/components/KpiPulse/` (`KpiPulseBand`) |
-| Skill | `agent-pack/skills/kpi-pulse-analytics/SKILL.md` |
+| Skill | `agent-pack/lighthouse/skills/kpi-pulse-analytics/SKILL.md` |
 
 ## Locked defaults
 

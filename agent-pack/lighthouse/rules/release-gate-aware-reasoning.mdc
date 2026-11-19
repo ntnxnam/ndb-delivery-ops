@@ -1,3 +1,8 @@
+---
+description: Per-feature gate feasibility — 4 questions, signal priority, maintenance/patch cadence
+alwaysApply: true
+---
+
 # Release Gate-Aware Reasoning
 
 Before forming any point of view about a feature's delivery health, the AI must

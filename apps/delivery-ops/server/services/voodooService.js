@@ -5,7 +5,16 @@
  * executive summaries and release predictions.
  */
 
-const fetch = require('node-fetch');
+function getFetch() {
+  try {
+    const m = require('node-fetch');
+    return m.default || m;
+  } catch (_) {
+    if (typeof globalThis.fetch === 'function') return globalThis.fetch.bind(globalThis);
+    return async () => { throw new Error('fetch not available in this environment'); };
+  }
+}
+const fetch = getFetch();
 
 const aiConfig = require('../config/aiConfig.json');
 const VOODOO_CONFIG = {

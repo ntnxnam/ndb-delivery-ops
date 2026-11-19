@@ -37,6 +37,8 @@ import DependencyViewPage from './components/DependencyViewPage';
 import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
 import TeamOverallReportPage from './components/TeamOverallReportPage';
 
+import './design-system/tokens.css';
+import './design-system/primitives.css';
 import './App.css';
 
 // Team configuration is now handled by TeamProvider context

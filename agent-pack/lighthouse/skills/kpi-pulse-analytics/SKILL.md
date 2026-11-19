@@ -135,3 +135,7 @@ UI: `<KpiPulseBand pulse={…} jiraBaseUrl={…} onHeroClick={…} />`.
 - [ ] Page docs + API docs updated when wiring a consumer
 - [ ] No silent JQL edits to existing builders
 - [ ] Multi-agent pipeline run for UI/metrics pages (Dev → CR → QA → UX → PM → Exec → JIRA → Fix → Security)
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

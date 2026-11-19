@@ -2,6 +2,7 @@
 description: No hardcoded hosts, ports, releases, or product strings in app code
 alwaysApply: true
 ---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/no-hardcoding.mdc -->
 
 # No Hardcoding
 
@@ -12,7 +13,7 @@ App code must not hardcode values that vary by environment or product.
 - **Hosts / ports / origins**: no `localhost`, `127.0.0.1`, `:8001`, `:8899`, `:6001`, `http://<host>:<port>` in `client/src` or `apps/delivery-ops/client/src` JSX/JS/TS fetch URLs. Use relative paths (`/api/...`, `/docs/`) or `process.env.REACT_APP_*` / `getApiBase()`. Dev proxy for `/docs` lives in `client/src/setupProxy.js`; `client/package.json:proxy` is dev-only.
 - **Release / product literals**: no hardcoded `NDB-2.11`, `NDB-3.0`, `DataLens`, `ERA` strings in services/routes that should be config-driven (`server/config/*`, `teamBoardConfig.json`, `releaseVersionsColumnsConfig.json`). Pass via `productId` / `releaseVersion` params (D1/D5 product-agnostic).
 - **Magic JQL fragments**: no inline `project = NDB AND fixVersion = "..."` strings outside `server/utils/jiraQueryUtils.js` / `shared/src/services/*` canonical builders. Use the builders.
-- **Doc paths**: no `apps/delivery-ops/docs/` or `Documentation/` — use `docs/` (see `scripts/docs-verify.sh` stale-path gate).
+- **Doc paths**: no `apps/delivery-ops/docs/` or `Documentation/` — use `docs/` (see `scripts/lighthouse/docs/docs-verify.sh` stale-path gate).
 
 ## Allowed exceptions
 
@@ -21,5 +22,5 @@ App code must not hardcode values that vary by environment or product.
 
 ## Enforcement
 
-- `bash scripts/check-no-localhost.js` / `scripts/docs-verify.sh` fail CI on violations.
+- `bash scripts/lighthouse/checks/check-no-localhost.js` / `scripts/lighthouse/docs/docs-verify.sh` fail CI on violations.
 - Code Review prompt essentials must list `no-hardcoding` as Blocking.

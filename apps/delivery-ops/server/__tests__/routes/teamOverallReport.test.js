@@ -1,6 +1,9 @@
-const request = require('supertest');
-const app = require('../../index');
-
+jest.mock('@portfolio-delivery-ops/shared', () => ({
+  buildWorkItemsJql: jest.fn().mockReturnValue('project = ERA'),
+  buildWorkItemsUrl: jest.fn().mockReturnValue('https://jira.example.com/browse/ERA-1'),
+  buildAllTicketsUrl: jest.fn().mockReturnValue('https://jira.example.com/secure/IssueNavigator.jspa?jql=project+%3D+ERA'),
+  isValidProjectKey: jest.fn().mockReturnValue(true),
+}));
 jest.mock('../../utils/jiraClient', () => ({
   getJira: jest.fn(),
 }));
@@ -18,6 +21,8 @@ jest.mock('../../services/authService', () => ({
   checkAuthorization: jest.fn().mockReturnValue({ authorized: true }),
 }));
 
+const request = require('supertest');
+const app = require('../../index');
 const { getJira } = require('../../utils/jiraClient');
 
 function fakeJira(issues = []) {

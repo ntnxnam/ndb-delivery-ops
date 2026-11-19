@@ -11,11 +11,11 @@
     "mcp/*"
   ],
   "scripts": {
-    "check:no-localhost": "node apps/delivery-ops/scripts/check-no-localhost.js",
-    "check:product-agnostic": "node apps/delivery-ops/scripts/check-product-agnostic.js",
-    "check:mcp": "node scripts/check-mcp-bins-unique.js",
+    "check:no-localhost": "node scripts/lighthouse/checks/check-no-localhost.js",
+    "check:product-agnostic": "node scripts/lighthouse/checks/check-product-agnostic.js",
+    "check:mcp": "node scripts/loom/checks/check-mcp-bins-unique.js",
     "check": "npm run check:no-localhost && npm run check:product-agnostic && npm run check:mcp",
-    "mcp:build": "npm --workspace @portfolio-delivery-ops/mcp-lighthouse run build && npm --workspace @portfolio-delivery-ops/mcp-loom run build",
+    "mcp:build": "npm --workspace @portfolio-delivery-ops/shared run build && npm --workspace @portfolio-delivery-ops/mcp-lighthouse run build && npm --workspace @portfolio-delivery-ops/mcp-loom run build",
     "mcp:start": "echo 'use mcp/lighthouse or mcp/loom'",
     "delivery-ops:dev": "npm --workspace apps/delivery-ops run dev",
     "delivery-ops:restart": "cd apps/delivery-ops && ./restart"

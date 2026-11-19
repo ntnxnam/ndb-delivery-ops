@@ -52,10 +52,11 @@ When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.
 
 | File | Prompt |
 |---|---|
-| `server/services/naiService.js` | `EXEC_SUMMARY_SYSTEM_PROMPT` — per-feature summaries |
-| `server/services/naiService.js` | `RELEASE_SUMMARY_SYSTEM_PROMPT` — release briefings |
-| `server/services/naiService.js` | `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` — Sprint Performance org-wide asks |
-| Any future AI summary service | Any prompt that produces bullet lists with ticket keys |
+| `apps/delivery-ops/server/services/naiService.js` | `EXEC_SUMMARY_SYSTEM_PROMPT` — per-feature summaries → canonical prompt: `agent-pack/lighthouse/prompts/production/feature-exec-summary.md` |
+| `apps/delivery-ops/server/services/naiService.js` | `RELEASE_SUMMARY_SYSTEM_PROMPT` — release briefings → canonical prompt: `agent-pack/lighthouse/prompts/production/release-health-briefing.md` |
+| `apps/delivery-ops/server/services/naiService.js` | `SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` — Sprint Performance org-wide asks → canonical prompt: `agent-pack/lighthouse/prompts/production/sprint-leadership-asks.md` |
+| `shared/src/connectors/aiConnector.ts` | Canonical connector — reads `NAI_API_KEY` only (no `AI_API_KEY` fallback) — see `ai-config-sync.mdc` |
+| Any future AI summary service | Any prompt that produces bullet lists with ticket keys | Must declare its canonical prompt under `agent-pack/lighthouse/prompts/production/` |
 
 ## RAG Verdict — Release-Level Rules
 

@@ -1,0 +1,42 @@
+---
+description: Fixed ports — no fallback — and env contracts (NAI_API_KEY canonical, no fallback)
+alwaysApply: true
+---
+
+# Port and Env Contracts
+
+## Fixed ports — no fallback
+
+| Surface | Port | Source of truth |
+|---|---|---|
+| React (delivery-ops client) | `8899` | `apps/delivery-ops/client/package.json` `PORT=8899` (`start` script) |
+| Express (delivery-ops server) | `8001` | `apps/delivery-ops/server/.env` `PORT=8001`, fallback `8001` in `server/index.js:25` |
+
+**No fallback / no auto-detect.** React is `8899`, Express is `8001`. Do not reintroduce `8888` or probe for a free port. This is per `AGENTS.md` Project defaults: fixed ports, no fallback; stale `8888` conflicts on shared hosts.
+
+- `client/package.json:proxy` → `http://localhost:8001` (dev-only, CRA proxy).
+- `server/index.js:25` → `PORT=8001` default (not `8888`).
+- `apps/bin-packing/` is static-mounted under the same Express server — no extra port.
+
+## Env contract — AI key is NAI, no fallback
+
+| Key | Value | Source |
+|---|---|---|
+| `NAI_API_KEY` | canonical — **no `AI_API_KEY` fallback** | `apps/delivery-ops/server/.env` from `tokens.corp.nutanix.com` |
+
+Files that must stay in sync on key name (per `ai-config-sync-nai-vs-ai-key.md` memory):
+
+- `shared/src/connectors/aiConnector.ts` — reads `NAI_API_KEY` only (canonical source)
+- `apps/delivery-ops/server/.env.example` — documents `NAI_API_KEY`
+- `apps/delivery-ops/server/config/aiConfig.json` — `description` field names `NAI_API_KEY`
+- `apps/delivery-ops/server/services/naiService.js` — error re-throw wording says `NAI_API_KEY`
+- Lighthouse worktree mirrors: `lighthouse/app/server/config/aiConfig.json`, `lighthouse/app/server/.env.example` (if present)
+
+**No fallback.** Per 2026-11-18 decision: `NAI_API_KEY` is the only name. Do not read `AI_API_KEY` as alias — `aiConnector.ts` reads `NAI_API_KEY` only. Adding a fallback reintroduces desync (see `never-hide-fix-root-cause-first.md`).
+
+## Cross-reference
+
+- `AGENTS.md` § Project defaults (fixed ports).
+- `ARCHITECTURE.md` § The five layers + Layer 4 (API+MCP).
+- `no-localhost.mdc` / `no-hardcoding.mdc` — enforce no hardcoded hosts/ports.
+- Memory: `ai-config-sync-nai-vs-ai-key.md` — canonical key decision.

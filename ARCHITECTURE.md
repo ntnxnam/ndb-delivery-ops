@@ -123,7 +123,7 @@ one domain's business logic. A service:
 
 Status legend: ● shipped (TS lives in `shared/services/`), ◐ partially
 shipped, ○ planned. Service names that ended up different from the original
-plan are noted in parens. See `CONSOLIDATION.md` for the per-capability port
+plan are noted in parens. See `docs/architecture/CONSOLIDATION.md` for the per-capability port
 status.
 
 | Service | Status | Owns | Used by |
@@ -141,8 +141,8 @@ status.
 | `landingForecastService` (#4) | ● | MVP landing date (`fallback_running`) from trunk outstanding + trailing velocity; live `searchCount` fallback. Shared `assembleLandingForecast`. | `GET /api/release-dataset/forecast`, Release Brief `LandingForecastPanel` |
 | `dateMoverService` (#10, D30/D31) | ● | Move gate date (JIRA FEAT + Confluence audit + rollback, or release-config slip + sprint extension) with **mandatory reason**. | `/api/date-mover/move-gate-date`, `release-gate-ops` skill (Route J/C) |
 | `confluenceConnector.appendStructuredRow` (used as a service primitive) | ● | Insert `<tr>` after a named anchor in a Confluence page; version-conflict retries. | `dateMoverService`, future #12 template engine |
-| `statusService`, `predictabilityService`, `chartService`, `dependencyService` | ○ | Original scaffolds — retired pending real ports (see CONSOLIDATION.md "Speculative stubs"). Throw on use. | none today |
-| Future ports (CONSOLIDATION.md #5–#9, #11–#16, #18) | ○ | Chart catalog, NAI chatbot, team-exec report service, predictive analytics, capacity, outstanding-work, Confluence template engine, release timeline, bin packing (algo extraction), say-vs-do, story points, sprint Gantt. | various |
+| `statusService`, `predictabilityService`, `chartService`, `dependencyService` | ○ | Original scaffolds — retired pending real ports (see `docs/architecture/CONSOLIDATION.md` "Speculative stubs"). Throw on use. | none today |
+| Future ports (`docs/architecture/CONSOLIDATION.md` #5–#9, #11–#16, #18) | ○ | Chart catalog, NAI chatbot, team-exec report service, predictive analytics, capacity, outstanding-work, Confluence template engine, release timeline, bin packing (algo extraction), say-vs-do, story points, sprint Gantt. | various |
 | `nlpQueryService` *(D4, not built)* | ○ | Natural language → dedicated query-plan object. **Wave 1 does not wait on this.** Web chat uses `agentRuntime` (perceive + tool loop). Keep this row for a future structured planner if intents outgrow tool-calling. | future planner, not the current chat path |
 | `agentPack` (`loadAgentPack`, D38) | ● | Load portable identity / skills / workflows / constitutional rules from `agent-pack/`. Host-agnostic. | web chat, Cursor adapter, future hosts |
 | `agentRuntime` (`runAgentTurn`, D39, D42) | ● | Perceive–plan–act loop + session/user/org memory, provenance, HITL pause for mutate. D26 open: approve does not execute writes. | `POST /api/ai/chat`, `GET/POST /api/ai/approvals` |
@@ -186,13 +186,11 @@ Two parallel surfaces over the services:
 - **Product picker** (D1, D5): top-level dropdown selects active product set
   (NDB / DataLens / NCM / …) for the user's view.
 
-**Agent pack** (`agent-pack/`, D38) — portable cookbook
-- Source of truth for identity, skills, workflows, constitutional rules,
-  and memory schema. Loaded by `loadAgentPack()` in `shared/`.
-- One orchestrator (`ops-assistant`) delegates to 6 specialists — D16.
-- Cursor is an adapter: `.cursor/agents|skills|workflows` are symlinks
-  into this pack. Web chat and any future host must load the same pack.
-- Capability type + tool class live in `agent-pack/manifest.json`.
+**Agent pack** (`agent-pack/`, D38, D44) — portable cookbook
+- Source of truth for identity, skills, workflows, constitutional rules, and memory schema. Product pack in `agent-pack/lighthouse/`, builder pack in `agent-pack/loom/`, adapter registry in `agent-pack/harness/`. Loaded by `loadAgentPack('lighthouse'|'loom')` in `shared/`.
+- One product orchestrator (`ops-assistant` in lighthouse) delegates to 6 product specialists — D16; one builder orchestrator (`loom` in loom) delegates to 3 builder specialists — D44.
+- Cursor is an adapter: `.cursor/agents|skills|workflows` are symlinks into the pack via `agent-pack/harness/`. Web chat and any future host must load the same pack.
+- Capability type + tool class live in `agent-pack/{lighthouse,loom}/manifest.json` (umbrella `agent-pack/manifest.json` for backward compat).
 - "VP" terminology is dropped everywhere per D33 — use "team-exec".
 
 **Static-mounted legacy apps (D37).** Mature standalone web apps that
@@ -290,23 +288,26 @@ blanket project filter on the fetch.
 │   ├── types/                           Release, Ticket, Persona, RAG, …
 │   └── utils/                           date logic, JQL builders, ID maps
 │
-├── crystalball-i/                       AI prediction engine (used by predictabilityService)
+├── crystalball-i/                       archived to ~/NDB-Ops-Tools/_archive/ per D0.4 (no active path; was AI prediction engine)
 │
-├── agent-pack/                          portable cookbook (D38) — SoT for every host
-│   ├── identity/                        orchestrator + specialists
-│   ├── skills/                          SKILL.md per capability
-│   ├── workflows/                       multi-step playbooks
-│   ├── rules/                           constitutional runtime rules
-│   ├── memory/                          schema only (store is runtime)
-│   ├── adapters/                        cursor / web / future-host notes
-│   └── manifest.json                    types, tool classes, paths
+├── agent-pack/                          portable cookbook (D38, D44) — SoT for every host
+│   ├── lighthouse/                      product pack — D44 (ops-assistant orchestrator, 7 specialists, 19 skills, context/prompts/rules/workflows)
+│   │   ├── identity/                    orchestrator + product specialists
+│   │   ├── skills/                      SKILL.md per product capability
+│   │   ├── context/ + prompts/ + rules/ + workflows/ + memory/
+│   │   └── manifest.json                types, tool classes, paths (lighthouse)
+│   ├── loom/                            builder pack — D44 (loom orchestrator, 3 builder specialists, weave skill)
+│   │   ├── identity/ + skills/ + rules/ + memory/ + manifest.json
+│   │   └── (builder-only)
+│   ├── harness/                         adapter registry — mcp.json (lighthouse-mcp + loom-mcp bins), cursor/claude/codex/opencode configs
+│   └── manifest.json                    umbrella — prefer per-tenancy manifest.json
 │
 ├── .cursor/                             Cursor adapter only — not the cookbook home
 │   ├── AGENTS.md                        Cursor-specific bootstrap
-│   ├── agents/ → ../agent-pack/identity
-│   ├── skills/ → ../agent-pack/skills
-│   ├── workflows/ → ../agent-pack/workflows
-│   ├── rules/                           builder rules + symlinks to pack rules
+│   ├── agents/ → ../agent-pack/lighthouse/identity (product; loom for builder)
+│   ├── skills/ → ../agent-pack/lighthouse/skills
+│   ├── workflows/ → ../agent-pack/lighthouse/workflows
+│   ├── rules/                           builder rules (weave/one-shot/minimal-architecture) + symlinks to pack rules
 │   └── harness/ → ../agent-pack/harness  MCP registration (mcp.json, cursor/claude/codex/opencode)
 │
 └── _archive/  ← actually at ~/NDB-Ops-Tools/_archive/   17 tarballs of decommissioned originals
@@ -347,7 +348,7 @@ existing per-permission allowlist.
 ## Migration strategy summary
 
 Status legend: ✅ done, 🟡 partial, ⏳ pending. Live tracker for the
-per-capability ports is `CONSOLIDATION.md`.
+per-capability ports is `docs/architecture/CONSOLIDATION.md`.
 
 | Phase | What | Status (as of Session 2026-05-20) |
 |---|---|---|
@@ -355,8 +356,8 @@ per-capability ports is `CONSOLIDATION.md`.
 | **B1. Connectors consolidation (JIRA)** | Pull JIRA into `shared/connectors/jiraConnector.ts`; route handlers use it | ✅ done — MCP private copy deleted (D40). Express reaches it via `server/utils/jiraClient.js`; MCP constructs `JiraConnector` directly. Data Center Bearer PAT only |
 | **B2. Connectors consolidation (Confluence)** | Pull Confluence into `shared/connectors/confluenceConnector.ts` with `appendStructuredRow` primitive | ✅ done — landed with D30 date-mover slice |
 | **B3. Other connectors (GitHub, Slack, Email, AI)** | Same pattern | 🟡 GitHub + Email + AI landed. Slack deferred until a real caller exists. Python Confluence client stays until Phase E. |
-| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as CONSOLIDATION.md #1–#20. | 🟡 ~7 of 20 capabilities done: #1a payload JQL, #1b dataset trunk, **#2 velocity (trunk + cache-first route)**, #3 insights first slice, **#4 landing forecast (trunk + cache-first route)**, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |
-| **D. Streamlit retirement (release-analytics)** | Rebuild Sync Hub / Insights / Sprint Analysis as React pages | 🟡 SyncHubPage simplified (one Sync Now button). Insights + Sprint Analysis still pending. |
+| **C. Service extraction (Python → TS port)** | The 17 archived apps + 5 user-level skills → TS services in `shared/`. Tracked as `docs/architecture/CONSOLIDATION.md` #1–#20. | 🟡 ~7 of 20 capabilities done: #1a payload JQL, #1b dataset trunk, **#2 velocity (trunk + cache-first route)**, #3 insights first slice, **#4 landing forecast (trunk + cache-first route)**, #10 date mover, #14 bin-packing (static-mounted), #17 ticket fetch (wired). Wave 3 (D41) also lifted exec-summary signals/analytics, release intelligence, sprint metrics, and bundle derives into `shared/`. |
+| **D. Streamlit retirement (release-analytics)** | Rebuild Insights / Sprint Analysis as React pages; Sync Hub UI removed per D11 (`/sync-hub` → `/project-status`, backend sync retained for cache warming) | 🟡 Sync Hub UI removed (D11); Insights + Sprint Analysis still pending. |
 | **E. Streamlit retirement (tpm-confluence-tools)** | Rebuild Bulk Page Creator + Template Editor as React pages | ⏳ pending |
 | **F. MCP-backed UI pages** | React pages for Capacity Planner, Bin-Packing, Story Points, Date Mover, Say vs Do | 🟡 only bin-packing has a sidebar entry today (static-mounted, opens in new tab). Date Mover backend ships but no React form. |
 | **G. New gaps** | Sprint Planner, Status Page Auto-Publisher, Cross-team dependency map, Triage UI | ⏳ pending |

@@ -10,7 +10,7 @@ audience: architect, team_mgr, portfolio_mgr
 - Config / env / deploy change (`teamBoardConfig.json`, `releaseConfig`, SMTP, ports, scripts/start.sh)
 - New route, connector, or MCP tool added
 - User asks "admin guide for deploy" / "how to configure X?" / "update admin guide"
-- Pipeline stage 8.5 when diff touches `server/config/`, `server/routes/`, `mcp-server/`, `shared/connectors/`
+- Pipeline stage 8.5 when diff touches `server/config/`, `server/routes/`, `mcp/*`, `shared/connectors/`
 
 ## Quick Start
 

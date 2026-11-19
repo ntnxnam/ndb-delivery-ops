@@ -1,478 +1,1039 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEVELOPER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEVELOPER_GUIDE</span></nav><div class="container"><article class="prose"><h1>NDB Status Update Sender – Developer Guide</h1>
-<p>This guide helps new developers assimilate the codebase quickly. For end-user usage, see <a href="../README.md">README.md</a>.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEVELOPER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEVELOPER_GUIDE</span></nav><div class="container"><article class="prose"><h1>Developer Guide — Portfolio Delivery Ops</h1>
+<blockquote>
+<p><strong>audience:</strong> <code>ic</code> · <code>team_lead</code> · <code>architect</code> — anyone who builds, reviews, or operates this monorepo.<br>
+<strong>Prerequisites:</strong> Node ≥ 20, JIRA Data Center PAT, familiarity with React 18 + Express. No NDB-specific knowledge required — the platform is product-agnostic (<a href="../../DECISIONS.md#d1--platform-is-product-agnostic">D1</a>).<br>
+<strong>Docs pipeline:</strong> this file is Markdown → HTML via <code>node scripts/docs-build.js</code> (header/breadcrumb wrapper) and verified by <code>bash scripts/docs-verify.sh</code>. Both are part of the weave link-integrity gate.</p>
+</blockquote>
+<p>For end-user usage see <a href="USER_GUIDE.md">USER_GUIDE.md</a>. For architecture decisions see <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a> and <a href="../../DECISIONS.md">DECISIONS.md</a>. For the full feature inventory see <a href="../architecture/FEATURE_CATALOG.md">FEATURE_CATALOG.md</a>.</p>
 <hr>
-<h2>1. Project Overview</h2>
-<p><strong>NDB Status Update Sender</strong> is a full-stack web application for the NDB team at Nutanix. It:</p>
-<ol>
-<li><strong>Sends status update emails</strong> – Confluence content, JIRA ticket data, and release info</li>
-<li><strong>Tracks JIRA release versions</strong> – Issues by fix version, checkpoint dates, Gantt charts</li>
-<li><strong>Generic JIRA Emailer</strong> – Run any JQL, choose columns, and email results</li>
-<li><strong>Scheduled emails</strong> – Cron-based reminders from JQL queries</li>
-<li><strong>KPIs and release trends</strong> – Team metrics and release trends</li>
-</ol>
-<p>It integrates with <strong>Confluence</strong>, <strong>JIRA</strong>, and <strong>SMTP</strong> (Nutanix mail relay). Data and config are stored in JSON files (no SQL database).</p>
+<h2>Contents</h2>
+<ul>
+<li><a href="#0--tldr-run-in-5-minutes">0 — TL;DR: Run in 5 Minutes</a></li>
+<li><a href="#1--where-things-live">1 — Where Things Live</a></li>
+<li><a href="#2--architecture-at-a-glance">2 — Architecture at a Glance</a></li>
+<li><a href="#3--layer-1-connectors">3 — Layer 1: Connectors</a></li>
+<li><a href="#4--layer-2-domain-models--shared-types">4 — Layer 2: Domain Models &amp; Shared Types</a></li>
+<li><a href="#5--layer-3-services">5 — Layer 3: Services</a></li>
+<li><a href="#6--layer-4-api--mcp">6 — Layer 4: API + MCP</a></li>
+<li><a href="#7--layer-5-ui--pack">7 — Layer 5: UI &amp; Pack</a></li>
+<li><a href="#8--common-tasks">8 — Common Tasks</a></li>
+<li><a href="#9--config--env-reference">9 — Config &amp; Env Reference</a></li>
+<li><a href="#10--troubleshooting">10 — Troubleshooting</a></li>
+<li><a href="#appendix-a--rules-index">Appendix A — Rules Index</a></li>
+<li><a href="#appendix-b--glossary--decision-map">Appendix B — Glossary &amp; Decision Map</a></li>
+</ul>
 <hr>
-<h2>2. Architecture</h2>
-<h3>High-Level Flow</h3>
-<pre><code>┌─────────────────────────────────────────────────────────────────┐
-│                     React Client (port 6100)                      │
-│  Email Sender | Release Versions | Generic Emailer | KPIs | etc.  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ proxy → localhost:6001
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Express Server (port 6001)                       │
-│  /api/config | /api/auth | /api/jira | /api/email | /api/status   │
-└──────┬──────────────┬──────────────┬──────────────┬─────────────┘
-       │              │              │              │
-       ▼              ▼              ▼              ▼
-  Confluence      JIRA API      SMTP Relay    JSON file DB
-  (optional)      (REST v2)     (Nutanix)     (emailHistory, etc.)
+<h2>0 — TL;DR: Run in 5 Minutes</h2>
+<p><strong>Fixed ports — no fallback</strong> (<a href="../../AGENTS.md#project-defaults">AGENTS.md</a>): React <strong>8899</strong>, Express <strong>8001</strong>. <code>8899 → 8001</code> proxy is <code>apps/delivery-ops/client/src/setupProxy.js</code> (dev-only). Do not reintroduce <code>8888</code> or auto-detect.</p>
+<pre><code class="language-bash"># 1. Install (from repo root)
+npm install
+
+# 2. Configure server env (copy and fill secrets — never commit)
+cp apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+# Required: JIRA_PAT (or JIRA_TOKEN) — Data Center PAT, sent as Authorization: Bearer
+# Recommended: JIRA_BASE_URL (default https://jira.nutanix.com)
+
+# 3. Run delivery-ops
+npm run delivery-ops:dev          # from repo root (runs server + client via concurrently)
+# — or — if you have the helper:
+# cd apps/delivery-ops &amp;&amp; ./restart
+
+# 4. Open
+# React app:  same origin as server in prod; in dev use the React dev server port 8899
+# Express:    port 8001 — serves /api/* and docs at /docs/*
+# Docs hub:   /docs/  (served from docs/ via server/index.js docsRoot)
 </code></pre>
-<h3>Mermaid Diagram</h3>
-<pre><code class="language-mermaid">flowchart TB
-    subgraph client [React Client :6100]
-        EmailSender
-        ReleaseVersionTab
-        GenericEmailer
-        SprintReportPage
-        KPIPage
-    end
-    
-    subgraph server [Express Server :6001]
-        subgraph routes [Routes]
-            AuthRoutes[&quot;/api/auth&quot;]
-            JiraRoutes[&quot;/api/jira&quot;]
-            EmailRoutes[&quot;/api/email&quot;]
-            ConfigRoutes[&quot;/api/config&quot;]
-        end
-        subgraph services [Services]
-            EmailService
-            JiraService
-            UserService
-        end
-        subgraph utils [Utils]
-            Logger
-            EmailHistoryDB
-            Formatters
-        end
-    end
-    
-    client --&gt;|proxy| server
-    server --&gt;|REST| JIRA[JIRA API]
-    server --&gt;|SMTP| MailRelay[Nutanix Mail Relay]
-    server --&gt;|file| JSONStorage[JSON Config/Data]
+<p>Verify:</p>
+<pre><code class="language-bash"># Docs hub and guides render
+node scripts/docs-build.js &amp;&amp; bash scripts/docs-verify.sh
+# No hardcoded localhost in shipped code
+npm run check:no-localhost &amp;&amp; npm run check:product-agnostic &amp;&amp; npm run check:mcp
+# Shared build
+npm --workspace @portfolio-delivery-ops/shared run build 2&gt;/dev/null || echo &quot;shared: no build step — consumed as source&quot;
+# MCP builds
+npm run mcp:build
 </code></pre>
-<h3>Directory Structure</h3>
-<pre><code>ndb-status-update-sender/
-├── client/                        # React 18 frontend
+<p><strong>What you get:</strong> the full delivery-ops React app (release versions, sprint reports, KPIs, exec dashboards, chatbot, email sender), the docs hub at <code>/docs/</code>, and the MCP surfaces if your host is wired (see §6). Bin-packing is served at <code>/bin-packing/</code> (new tab).</p>
+<hr>
+<h2>1 — Where Things Live</h2>
+<p>Monorepo root is <code>~/NDB-Ops-Tools/ndb-delivery-ops/</code> (future <code>portfolio-delivery-ops</code> per <a href="../../DECISIONS.md#d2--rename-to-portfolio-delivery-ops">D2</a>). Previous location was <code>ndb-status-update-sender/</code>; update any remaining references to <code>apps/delivery-ops/</code>.</p>
+<pre><code>ndb-delivery-ops/
+├── AGENTS.md                          # project persona — read second after ~/.cursor/AGENTS.md
+├── ARCHITECTURE.md                    # 5-layer model (this guide&#39;s source of truth)
+├── DECISIONS.md                       # D1…D43 locked decisions (cite by ID)
+├── README.md                          # workspace quick-start + repo lineage
+├── docs/
+│   ├── index.html                     # hub — generated + checked by docs-verify
+│   ├── README.md                      # docs SoT note
+│   ├── guides/                        # Markdown → HTML via scripts/docs-build.js (this file lives here)
+│   ├── api/                           # per-resource API contracts (one file per route group)
+│   ├── pages/                         # per-page requirements + data-layer specs
+│   ├── architecture/                  # FEATURE_CATALOG.md, CONSOLIDATION.md
+│   └── handover/ technical/ product/  # PRD, HLD, exec pitch
+├── apps/
+│   ├── delivery-ops/                  # THE single user runtime (React 8899 + Express 8001)
+│   │   ├── client/                    # React 18 — see §7 for src/ layout
+│   │   │   ├── src/
+│   │   │   │   ├── components/        # page-level + shared UI (render only)
+│   │   │   │   ├── hooks/             # data fetching (one hook per data need)
+│   │   │   │   ├── services/          # API wrappers (one fn per endpoint group)
+│   │   │   │   ├── contexts/          # TeamContext, SelectedReleaseContext, ReleaseDataContext
+│   │   │   │   ├── layout/            # Sidebar (persona-aware D6), Header
+│   │   │   │   ├── auth/              # JIRA PAT auth, role detection
+│   │   │   │   ├── release/           # ReleaseBriefPage, RetrospectivePage, ChatbotPage
+│   │   │   │   ├── feature/           # FeatureDashboardPage
+│   │   │   │   ├── design-system/     # DesignSystemDemo
+│   │   │   │   ├── shared/            # apiService.js (canonical; utils/api.js re-exports)
+│   │   │   │   └── setupProxy.js      # dev proxy: /docs → 8001
+│   │   │   └── package.json           # PORT=8899, proxy, react-scripts
+│   │   ├── server/                    # Express — see §6 for routes/
+│   │   │   ├── index.js               # entry: middleware, route mounting, docsRoot, PORT 8001
+│   │   │   ├── routes/                # thin handlers — validate → call service → respond
+│   │   │   ├── services/              # business logic per domain (mirrors shared/services)
+│   │   │   ├── middleware/            # security, validation, auth/jira
+│   │   │   ├── utils/                 # jiraClient.js (CJS adapter → shared JiraConnector), formatters
+│   │   │   ├── config/                # JSON configs — see §9
+│   │   │   └── .env / .env.example    # secrets + env overrides — never commit .env
+│   │   ├── bin-packing -&gt; ../bin-packing  # symlink for server static mount
+│   │   ├── package.json               # dev = concurrently server + client
+│   │   └── restart                    # one-shot dev launcher
+│   ├── bin-packing/                   # vanilla JS static app — served at /bin-packing/* (D37)
+│   └── tpm-confluence-tools/          # Python/Streamlit legacy — sunset pending Phase F
+├── shared/                            # cross-runtime TypeScript (ESM) — see §3-5
 │   ├── src/
-│   │   ├── App.js                 # Main app, routing, auth
-│   │   ├── components/            # UI components — render only, no direct fetch calls
-│   │   ├── constants/             # Shared UI constants (never inline in components)
-│   │   │   └── releaseStatus.js   # JIRA_COLOR_MAP, RISK_COLOR_MAP, status sets
-│   │   ├── hooks/                 # Custom hooks — all data fetching lives here
-│   │   │   ├── index.js           # Barrel export for all hooks
-│   │   │   ├── useTeams.js        # GET /api/config/teams (shared across 4 pages)
-│   │   │   ├── useGenericEmailerConfig.js
-│   │   │   ├── useReleaseItems.js
-│   │   │   ├── useTcmsData.js
-│   │   │   └── ...
-│   │   ├── services/              # API call wrappers — one function per endpoint group
-│   │   │   ├── confluenceService.js   # populate, extract Confluence pages
-│   │   │   ├── jiraQueryService.js    # ad-hoc JQL execution
-│   │   │   └── taskBreakdownService.js
-│   │   └── utils/
-│   │       ├── api.js             # authenticatedPost/Get helpers (use these, not axios)
-│   │       ├── jiraFields.js      # ALL customfield_NNNNN constants — import, never inline
-│   │       └── jiraConfig.js
-│   └── package.json
-├── server/                        # Node.js/Express backend
-│   ├── index.js                   # Entry point, middleware, route mounting
-│   ├── config/                    # JSON configs (email, JIRA, Confluence, allowedUsers, etc.)
-│   │   └── jiraFieldsConfig.json  # Server-side JIRA field registry (source of truth)
-│   ├── routes/                    # Thin route handlers — validate → call service → respond
-│   ├── services/                  # Business logic, orchestration
-│   ├── middleware/                # security, validation, auth/jira
-│   ├── utils/                     # Pure utilities — jiraQueryUtils, ganttChartEmailGenerator, etc.
-│   └── data/                      # emailHistory.json (JSON file DB)
-├── .cursor/
-│   ├── rules/                     # AI coding rules (always applied)
-│   │   ├── minimal-architecture.mdc          # Layer boundaries, file size limits, field ID constants
-│   │   ├── documentation-consistency.mdc     # Report naming, skill section standards
-│   │   ├── no-localhost.mdc                  # No hardcoded localhost in app code
-│   │   ├── nutanix-jira-date-hierarchy.mdc   # JIRA date field logic by issue type
-│   │   └── react-useeffect-infinite-loop-prevention.md
-│   └── skills/                    # AI task skills
-│       ├── team-exec-release-report/
-│       ├── ticket-insights/  # merged: fetch-project-tickets + issue-type-breakdown
-│       ├── sprint-gantt-chart/
-│       ├── predictive-team-exec-analytics/
-│       └── confluence-width-cleanup/
-├── reports/                       # Generated Team Executive/Sprint/Prediction reports (with frontmatter)
-├── docs/                          # REQUIREMENTS.md, TECH_DESIGN.md, TEST_PLAN.md
-└── package.json                   # Root: concurrently runs server + client
+│   │   ├── connectors/                # jiraConnector, confluenceConnector, githubConnector, emailConnector, aiConnector
+│   │   ├── domain/                    # D41 derives: execSummarySignals.cjs, bundleDerive.js, etc.
+│   │   ├── services/                  # productService, payloadJqlService, releaseDatasetService, …
+│   │   ├── agentPack/                 # loadAgentPack() — D38 portable pack loader
+│   │   ├── agentRuntime/              # runAgentTurn() — D39/D42 chat runtime
+│   │   ├── types/                     # Release, Ticket, Persona, RAG, AudienceId, ProductConfig
+│   │   └── utils/                     # date, JQL builders, ID maps
+│   └── package.json                   # @portfolio-delivery-ops/shared
+├── mcp/                               # MCP surfaces (stdio) — see §6
+│   ├── shared/                        # deduplicated env + glossary
+│   ├── lighthouse/                    # product tools only (bin: lighthouse-mcp)
+│   └── loom/                          # builder tools only (bin: loom-mcp)
+├── agent-pack/                        # portable cookbook — SoT for every host (D38)
+│   ├── loom/                          # Loom weaver pack (this guide&#39;s loom)
+│   │   ├── identity/                  # loom.md (orchestrator) + specialists/{frontend,backend,connector}-dev.md
+│   │   ├── skills/                    # weave, review, exec, csv-import, deploy
+│   │   ├── rules/                     # weave.mdc, no-localhost.mdc, minimal-architecture.mdc, …
+│   │   ├── connectors/                # loomAuth.ts
+│   │   ├── context/                   # architecture.md
+│   │   ├── prompts/                   # builder.md
+│   │   ├── memory/                    # schema.json
+│   │   └── manifest.json              # identities, rules, skills, toolClasses
+│   └── lighthouse/                    # product pack (ops-assistant + team-exec/tpm/rm specialists)
+├── scripts/
+│   ├── docs-build.js                  # Markdown → HTML wrapper (site header/breadcrumb)
+│   ├── docs-verify.sh                 # hub exists + required guides + stale refs + link check
+│   ├── check-no-localhost.js          # no hardcoded localhost in app code
+│   └── check-product-agnostic.js      # no hardcoded product strings
+└── package.json                       # root workspaces + delivery-ops:dev + mcp:build
 </code></pre>
+<p><strong>Key symlinks / adapters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Host path</th>
+<th>Points to</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.cursor/skills</code> → <code>agent-pack/...</code></td>
+<td>pack skills</td>
+<td>Cursor discovery — never fork a second copy</td>
+</tr>
+<tr>
+<td><code>.cursor/rules</code></td>
+<td>pack rules + builder-only rules</td>
+<td>Cursor enforcement</td>
+</tr>
+<tr>
+<td><code>.cursor/agents</code> → <code>agent-pack/identity</code></td>
+<td>pack identities</td>
+<td>orchestrator + specialists</td>
+</tr>
+<tr>
+<td><code>apps/delivery-ops/client/src/utils/api.js</code></td>
+<td><code>shared/services/apiService.js</code></td>
+<td>backward-compat re-export (canonical is <code>shared/services/apiService.js</code>)</td>
+</tr>
+</tbody></table>
 <hr>
-<h2>3. Main Features</h2>
-<h3>Email Sender (<code>/</code>)</h3>
-<ul>
-<li><strong>Auth</strong>: JIRA API token (validated via <code>/rest/api/2/myself</code>)</li>
-<li><strong>JIRA ticket</strong>: Enter JIRA key, fetch ticket, epics, issue breakdown</li>
-<li><strong>Highlights &amp; Lowlights</strong>: Rich text (ReactQuill) with required sections</li>
-<li><strong>Recipients</strong>: Semicolon-separated; normalized to <code>@nutanix.com</code></li>
-<li><strong>Send</strong>: HTML email with JIRA data, epics, issue breakdown; CC from config and JIRA people</li>
-<li><strong>Test / dry run</strong>: Send only to self or log without sending</li>
-<li><strong>Open in Outlook</strong>: Fallback to mailto or Outlook Web when SMTP is unreliable</li>
-</ul>
-<h3>Release Versions (<code>/all-status</code>)</h3>
-<ul>
-<li><strong>Release selector</strong>: Fetch versions from JIRA project (e.g. ERA)</li>
-<li><strong>Release items table</strong>: Configurable columns, checkpoint dates, history</li>
-<li><strong>Gantt chart</strong>: Timeline of items; can be embedded in email</li>
-<li><strong>Release email</strong>: Consolidated status with highlights, lowlights, call to action, table, Gantt</li>
-<li><strong>Access</strong>: <code>allowedUsers</code> in <code>allowedUsers.json</code>; <code>RELEASE_VERSIONS_PAGE_ACCESS</code> env</li>
-</ul>
-<h3>Generic Emailer (<code>/generic-emailer</code>)</h3>
-<ul>
-<li><strong>JQL</strong>: Run any JQL (e.g. <code>project = ERA AND statusCategory != Done</code>)</li>
-<li><strong>Column selection</strong>: Only fields with data; drag-and-drop reorder</li>
-<li><strong>Subject/body</strong>: Optional subject (date appended) and rich-text body</li>
-<li><strong>Recipients</strong>: To, CC from config, optional project team (assignee, QA, PM, etc.)</li>
-<li><strong>Send</strong>: One email with body + table; empty cells as N/A</li>
-<li><strong>Access</strong>: <code>genericEmailerAllowedUsers</code> (or allowlist)</li>
-</ul>
-<h3>Scheduled Emails</h3>
-<ul>
-<li><strong>Cron</strong>: <code>node-cron</code> every minute</li>
-<li><strong>Config</strong>: JQL, columns, recipients, schedule (day, hour, minute, timezone)</li>
-<li><strong>Token</strong>: <code>JIRA_SCHEDULED_EMAIL_TOKEN</code> for scheduled sends</li>
-<li><strong>Storage</strong>: <code>scheduledEmailsDB</code> (JSON file)</li>
-</ul>
-<h3>Sprint Report (<code>/sprint-report</code>)</h3>
-<ul>
-<li><strong>Report types</strong>: Past sprint, current sprint, or trends by team</li>
-<li><strong>Team</strong>: Selected from header; base filter from <code>teamBoardConfig.json</code> (e.g. board 2888)</li>
-<li><strong>Metrics</strong>: Total in sprint, added after start, removed, completed, pending QA, incomplete; CSV download</li>
-<li><strong>Access</strong>: <code>sprintReportAllowedUsers</code> in <code>allowedUsers.json</code>. See SPRINT_REPORT_CONTEXT (archived) for design and limits.</li>
-</ul>
-<h3>Other</h3>
-<ul>
-<li><strong>Email history</strong>: List/delete sent emails (for <code>emailHistoryAllowedUsers</code>)</li>
-<li><strong>Release trends</strong>: Status snapshots and trends</li>
-<li><strong>KPIs</strong>: Team KPIs from JQL; configurable per team</li>
-<li><strong>Release setup</strong>: Version creation, filters (for <code>releaseSetupAllowedUsers</code>)</li>
-</ul>
+<h2>2 — Architecture at a Glance</h2>
+<p><strong>One feature, one place.</strong> Each capability has a single canonical implementation in <code>shared/</code>; every surface (React page, Express route, MCP tool, agent skill) imports it. See <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a> for the full five-layer model.</p>
+<pre><code class="language-mermaid">flowchart TB
+    subgraph L5 [Layer 5 — UI &amp; Pack]
+        ReactApp[&quot;delivery-ops React :8899&lt;br/&gt;pages by domain + persona lens D6 + chat D7/D39&quot;]
+        Pack[&quot;agent-pack/loom + lighthouse&lt;br/&gt;weave/ops skills, rules, specialists&quot;]
+        Static[&quot;bin-packing :8001/bin-packing&lt;br/&gt;static mount D37&quot;]
+        Streamlit[&quot;tpm-confluence-tools&lt;br/&gt;Streamlit legacy — sunset&quot;]
+    end
+    subgraph L4 [Layer 4 — API + MCP]
+        Express[&quot;Express :8001&lt;br/&gt;routes/* thin handlers&quot;]
+        MCP[&quot;mcp/lighthouse + mcp/loom&lt;br/&gt;one tool per feature&quot;]
+    end
+    subgraph L3 [Layer 3 — Services]
+        Services[&quot;shared/services/*&lt;br/&gt;productService · payloadJqlService · releaseDatasetService&lt;br/&gt;velocity · landingForecast · dateMover · releaseIntelligence&lt;br/&gt;sprintMetrics · bundleDerive — see §5&quot;]
+    end
+    subgraph L2 [Layer 2 — Domain]
+        Domain[&quot;shared/types + shared/domain/*.cjs|js&lt;br/&gt;Release · Sprint · RAG · RiskScore · exec signals — see §4&quot;]
+    end
+    subgraph L1 [Layer 1 — Connectors]
+        Connectors[&quot;shared/connectors/*&lt;br/&gt;jira · confluence · github · email · ai&lt;br/&gt;+ slack deferred — see §3&quot;]
+    end
+    L5 --&gt; L4 --&gt; L3 --&gt; L2 --&gt; L1
+    L1 --&gt; JIRA[&quot;JIRA Data Center&lt;br/&gt;Bearer PAT D40&quot;]
+    L1 --&gt; CONF[&quot;Confluence&quot;]
+    L1 --&gt; GH[&quot;GitHub&quot;]
+    L1 --&gt; SMTP[&quot;SMTP relay&quot;]
+    L1 --&gt; LLM[&quot;Nutanix AI gateway&quot;]
+</code></pre>
+<p><strong>Guiding principles (from <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a>):</strong></p>
+<ol>
+<li>Product-agnostic by design (<a href="../../DECISIONS.md#d1--platform-is-product-agnostic">D1</a>) — NDB is one tenant; DataLens/NCM/future products are equally valid. Every NDB string is config-driven via <code>teamBoardConfig.json</code> + <code>productService</code>.</li>
+<li>Connectors are sacred (<a href="../../DECISIONS.md#d3--five-connectors-are-first-class">D3</a>) — no ad-hoc <code>axios.get(JIRA_URL)</code> outside a connector.</li>
+<li>Services own business logic — routes and pages are thin.</li>
+<li>One runtime for users — single React app on <code>8899</code> (<code>client/package.json</code> <code>PORT=8899</code>) + <code>8001</code> (<code>server/.env</code> <code>PORT=8001</code>, <code>server/index.js</code> default <code>8001</code>).</li>
+<li>Personas drive presentation, not access (<a href="../../DECISIONS.md#d6--tab-visibility-default-landing-and-role-lens-revised-2026-05-19">D6</a>) — role lens re-renders the same data.</li>
+<li>AI is a surface, not a separate product — MCP + skills + <code>agentRuntime</code> are the AI surface of the same features.</li>
+<li>Workflows for recurring artefacts, agents for ad-hoc questions.</li>
+</ol>
 <hr>
-<h2>4. Key Files Reference</h2>
-<h3>Server</h3>
+<h2>3 — Layer 1: Connectors</h2>
+<p>Lives in <code>shared/src/connectors/</code>. One TypeScript module per external system. Each owns auth, retries, error wrapping, and returns typed responses. No business logic — pure adapter.</p>
+<table>
+<thead>
+<tr>
+<th>Connector</th>
+<th>File</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>jiraConnector</code></td>
+<td><code>shared/src/connectors/jiraConnector.ts</code></td>
+<td><strong>Data Center PAT <code>Authorization: Bearer</code> only</strong> (<a href="../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only">D40</a>) — not Cloud Basic/OAuth</td>
+<td>All JIRA Data Center REST v2 + Agile calls: search, issue fetch, versions, sprints, boards. Exponential backoff on 429. Express reaches it via <code>apps/delivery-ops/server/utils/jiraClient.js</code> (<code>getJira</code>, <code>searchPages</code>); MCP constructs <code>JiraConnector</code> directly.</td>
+</tr>
+<tr>
+<td><code>confluenceConnector</code></td>
+<td><code>shared/src/connectors/confluenceConnector.ts</code></td>
+<td>PAT (may reuse <code>JIRA_PAT</code> if SSO)</td>
+<td>All Confluence REST calls + <code>appendStructuredRow</code> primitive (used by Date Mover audit)</td>
+</tr>
+<tr>
+<td><code>githubConnector</code></td>
+<td><code>shared/src/connectors/githubConnector.ts</code></td>
+<td><code>GITHUB_TOKEN</code> Bearer</td>
+<td>Commits / PRs / repos / CI signals</td>
+</tr>
+<tr>
+<td><code>emailConnector</code></td>
+<td><code>shared/src/connectors/emailConnector.ts</code></td>
+<td>SMTP <code>SMTP_HOST/PORT/USER/PASS</code></td>
+<td>Send digests; SMTP transport only — templates stay in <code>server/services/emailService.js</code></td>
+</tr>
+<tr>
+<td><code>aiConnector</code></td>
+<td><code>shared/src/connectors/aiConnector.ts</code></td>
+<td><code>AI_API_KEY</code> (NuToken)</td>
+<td>LLM transport only (<code>chatCompletion</code>/<code>completeChat</code>) — no domain prompts; delegates from <code>naiService</code></td>
+</tr>
+<tr>
+<td><code>slackConnector</code></td>
+<td><em>not yet</em></td>
+<td>—</td>
+<td>Deferred — no caller yet; do not add until needed (<a href="../../DECISIONS.md#d3--five-connectors-are-first-class">D3</a>)</td>
+</tr>
+<tr>
+<td><code>loomAuth</code></td>
+<td><code>agent-pack/loom/connectors/loomAuth.ts</code></td>
+<td>env-derived</td>
+<td>Loom-specific auth provider for weave</td>
+</tr>
+</tbody></table>
+<p><strong>Env loader:</strong> <code>shared/src/connectors/env.ts</code> — <code>loadEnv({ requirePat })</code>. <code>requirePat: true</code> (default) throws if no <code>JIRA_PAT</code>/<code>JIRA_TOKEN</code> in env — for batch/MCP. HTTP routes pass <code>requirePat: false</code> and override per-request from <code>Authorization: Bearer &lt;pat&gt;</code> header.</p>
+<p><strong>JIRA field IDs:</strong> never inline <code>customfield_NNNNN</code>. Server resolves via <code>productService</code> → <code>teamBoardConfig.json</code> (+ per-product overrides); client imports constants from <code>apps/delivery-ops/client/src/utils/jiraFields.js</code> (mirror of server&#39;s <code>jiraFieldsConfig.json</code>). See also <a href="../../agent-pack/loom/rules/minimal-architecture.mdc">minimal-architecture.mdc</a>.</p>
+<hr>
+<h2>4 — Layer 2: Domain Models &amp; Shared Types</h2>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>What</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>shared/src/types/</code></td>
+<td><code>Release</code>, <code>Sprint</code>, <code>Ticket</code>, <code>Persona</code>, <code>RAG</code>, <code>RiskScore</code>, <code>AudienceId</code>, <code>ProductConfig</code>, <code>ProductRegistry</code></td>
+<td>Pure TS types + small helpers, no IO. Both services and React import from here.</td>
+</tr>
+<tr>
+<td><code>shared/src/domain/</code></td>
+<td>Browser-safe derives lifted per <a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a></td>
+<td>CJS for Express <code>require()</code> (<code>.cjs</code>) + ESM for browser (<code>.js</code>). Not compiled — <code>shared/package.json</code> <code>exports</code> point at source; <code>tsconfig.json</code> excludes <code>src/domain</code>.</td>
+</tr>
+<tr>
+<td><code>shared/src/domain/README.md</code></td>
+<td>Conventions for adding a domain module</td>
+<td>Pick CJS if Express needs <code>require()</code>, ESM if CRA needs it; register in <code>shared/package.json</code> <code>exports</code></td>
+</tr>
+</tbody></table>
+<p><strong>Domain derives (<a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Shared home</th>
+<th>App leftover</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Exec-summary signals (<code>deriveSignals</code>)</td>
+<td><code>shared/src/domain/execSummarySignals.cjs</code></td>
+<td>CJS shim in <code>server/utils/execSummarySignals.js</code></td>
+</tr>
+<tr>
+<td>Exec-summary analytics</td>
+<td><code>shared/src/domain/execSummaryAnalytics.cjs</code></td>
+<td>Route injects <code>gateDates</code> + <code>formatDate</code></td>
+</tr>
+<tr>
+<td>Release intelligence buckets</td>
+<td><code>shared/src/services/releaseIntelligence.ts</code></td>
+<td>App service keeps JIRA fetch + existing JQL</td>
+</tr>
+<tr>
+<td>Sprint health rates</td>
+<td><code>shared/src/services/sprintMetrics.ts</code> (+ <code>.cjs</code>)</td>
+<td><code>sprintService</code> keeps live JIRA I/O</td>
+</tr>
+<tr>
+<td>Bundle-first page derives</td>
+<td><code>shared/src/domain/bundleDerive.js</code></td>
+<td>CRA adapter at <code>client/src/release/utils/bundleUtils.js</code> (CRA cannot import <code>@portfolio-delivery-ops/shared</code> without pulling Node connectors — smoke-checked)</td>
+</tr>
+</tbody></table>
+<p><strong>Product-agnostic types:</strong> <code>ProductConfig</code> carries <code>projectKey</code>, <code>labelPrefix</code>, <code>releasePrefix</code>, <code>sprintCalendar</code>, audience overrides, Confluence space. Defaults per <a href="../../DECISIONS.md#d34--productservice-is-the-only-source-of-projectkey-labelprefix-releaseprefix-sprintcalendar">D34</a>: <code>labelPrefix</code> → <code>product.id</code>; <code>releasePrefix</code> → <code>${product.name}-</code>; <code>sprintCalendar</code> has <strong>no default — throws</strong>.</p>
+<hr>
+<h2>5 — Layer 3: Services</h2>
+<p>Lives in <code>shared/src/services/</code> and <code>apps/delivery-ops/server/services/</code>. Stateless — every call self-contained. Each calls connectors (L1) and uses domain models (L2). Reusable from Express routes (L4) and MCP tools (L4).</p>
+<p>Status: ● shipped · ◐ partial · ○ planned (see <a href="../architecture/CONSOLIDATION.md">CONSOLIDATION.md</a> for per-capability tracker).</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Status</th>
+<th>Owns</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>productService</code> (<a href="../../DECISIONS.md#d1--platform-is-product-agnostic">D1</a>, <a href="../../DECISIONS.md#d34--productservice-is-the-only-source-of-projectkey-labelprefix-releaseprefix-sprintcalendar">D34</a>)</td>
+<td>●</td>
+<td>Resolve <code>productId</code> → <code>projectKey</code>, <code>labelPrefix</code>, <code>releasePrefix</code>, <code>sprintCalendar</code>, audience overrides. Reads <code>teamBoardConfig.json</code>. <strong>Only source</strong> for these D1 inputs. Multi-team registry per <a href="../../DECISIONS.md#d43--multi-team-registry-after-the-app-stabilized">D43</a> — NDB is default <code>defaultTeamId</code>.</td>
+<td>every service that touches external systems</td>
+</tr>
+<tr>
+<td><code>payloadJqlService</code> (<a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a>)</td>
+<td>●</td>
+<td><strong>6-bucket release JQL union</strong> (incl. Bucket 1B <code>epics_of_projects</code>). <code>buildEngineeringPayloadJql</code> (project-scoped, legacy) vs <code>buildReleasePayloadJql</code> (cross-project — <strong>default</strong> for <a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a>). Group 2 <code>getMovedOutQuery</code>, Group 3 <code>getLongTerm*Query</code>. See Payload concepts below.</td>
+<td><code>releaseDatasetService</code>, group 2/3 analytics, clickable JQL links</td>
+</tr>
+<tr>
+<td><code>ticketFetchService</code></td>
+<td>●</td>
+<td>8-clause cross-project FEAT-walk JQL; <code>projectKey</code> scoping optional; JIRA URL builder</td>
+<td><code>/api/jira/issue-breakdown</code> (live), <code>TaskBreakdownCell</code></td>
+</tr>
+<tr>
+<td><code>releaseDatasetService</code> (trunk + cache + sync, Phase 3)</td>
+<td>◐</td>
+<td><code>fetchReleaseData</code> fetches 3 groups / 6 Group-1 buckets in parallel, dedup within release; <code>processMaster</code> adds derived columns. <strong>Defaults to Release Payload</strong> (no project filter — ERA + FEAT + TECHPUBS + all contributors). Pass <code>projectKey</code> to <code>fetchBucket</code> for Engineering Payload (legacy EM/IC views). <code>ProcessedTicket</code> = 56 columns.</td>
+<td>analytics consumers, <code>SyncHubPage</code>, <code>GET /api/release-dataset/*</code></td>
+</tr>
+<tr>
+<td><code>velocityService</code> (#2)</td>
+<td>●</td>
+<td>3-stream velocity (Dev / QA-Verif ×0.33 / QA-Test) from cached tickets; <code>searchCount</code> fallback</td>
+<td><code>GET /api/release-dataset/velocity</code>, Release Brief</td>
+</tr>
+<tr>
+<td><code>landingForecastService</code> (#4)</td>
+<td>●</td>
+<td>MVP landing date (<code>fallback_running</code>) from trunk outstanding + trailing velocity; <code>assembleLandingForecast</code> shared</td>
+<td><code>GET /api/release-dataset/forecast</code>, <code>LandingForecastPanel</code></td>
+</tr>
+<tr>
+<td><code>dateMoverService</code> (<a href="../../DECISIONS.md#d30--date-mover-requires-a-reason-audited-to-confluence">D30</a>)</td>
+<td>●</td>
+<td>Move gate date (JIRA FEAT + Confluence audit + rollback, or release-config slip) <strong>with mandatory reason</strong>. RM/TPM + Portfolio Manager may execute per <a href="../../DECISIONS.md#d26--action-level-authorization">D26</a>.</td>
+<td><code>POST /api/date-mover/move-gate-date</code>, <code>move_jira_dates</code> MCP adapter (same Confluence audit)</td>
+</tr>
+<tr>
+<td><code>releaseInsightsService</code></td>
+<td>◐</td>
+<td><code>computePayloadMetrics</code> (planned_total / completion_pct / group shares) + <code>computeLabelAnchoredMetrics</code>. First slice shipped; remaining: flow/triage/cohort/cycle-time/pace/<code>computeReleaseMatrix</code>/<code>computeTeamMatrix</code></td>
+<td>future dashboards, <code>team-exec</code> reports</td>
+</tr>
+<tr>
+<td><code>releaseClassificationService</code></td>
+<td>●</td>
+<td>Parse/classify release names (<code>NDB-2.11</code> → Major/Minor/Patch/Pre-release). D1 via <code>productPrefix</code>.</td>
+<td>dataset assembly</td>
+</tr>
+<tr>
+<td><code>sprintsService</code></td>
+<td>●</td>
+<td>Enumerate sprints over fixed-cadence calendar. D1 via <code>SprintCalendar</code> (NDB = <code>2024-10-23 + 21d</code>).</td>
+<td>dataset assembly, sprint dashboards</td>
+</tr>
+<tr>
+<td><code>sprintMetrics</code> (<a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a>)</td>
+<td>●</td>
+<td><code>getSprintMetrics</code> — completion / pending-QA / carryover / scope-creep rates</td>
+<td><code>sprintService</code>, Sprint Report</td>
+</tr>
+<tr>
+<td><code>execSummarySignals</code> (<a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a>)</td>
+<td>●</td>
+<td><code>deriveSignals</code> + <code>PHASE_RELEVANCE</code></td>
+<td><code>POST /api/ai/exec-summary</code>, release briefing</td>
+</tr>
+<tr>
+<td><code>bundleDerive</code> (<a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a>)</td>
+<td>●</td>
+<td>Bundle-first page derives (retro, brief, component, past-sprint)</td>
+<td>Retrospective, Release Brief, Component Report</td>
+</tr>
+<tr>
+<td><code>riskIndicator</code></td>
+<td>●</td>
+<td><code>classifyRiskIndicator</code>, <code>computeReleaseHealthVerdict</code>, <code>countSelfReportedRisk</code>, <code>bucketCounts</code></td>
+<td>briefing, chat snapshot, <code>get_release_status</code></td>
+</tr>
+<tr>
+<td><code>releaseIntelligence</code> (<a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a>)</td>
+<td>●</td>
+<td><code>classifyFeature</code>, <code>buildFeatureRecord</code>, <code>assembleReleaseIntelligence</code></td>
+<td><code>releaseAiSummaryService</code>, chat snapshot</td>
+</tr>
+<tr>
+<td><code>agentPack</code> (<code>loadAgentPack</code>, <a href="../../DECISIONS.md#d38--agent-pack-is-portable-cursor-is-one-adapter">D38</a>)</td>
+<td>●</td>
+<td>Load portable identity/skills/workflows/rules from <code>agent-pack/</code>. Host-agnostic.</td>
+<td>web chat, Cursor adapter, future hosts</td>
+</tr>
+<tr>
+<td><code>agentRuntime</code> (<code>runAgentTurn</code>, <a href="../../DECISIONS.md#d39--web-chat-is-an-agent-runtime-not-a-mailbox">D39</a>/<a href="../../DECISIONS.md#d42--open-the-door-safely-memory-provenance-hitl-wave-4">D42</a>)</td>
+<td>●</td>
+<td>Perceive→plan→act loop + session/user/org memory, provenance, HITL pause for <code>mutate</code>. <a href="../../DECISIONS.md#d26--action-level-authorization">D26</a> gate still records <code>blocked_d26</code> until coded.</td>
+<td><code>POST /api/ai/chat</code>, <code>GET/POST /api/ai/approvals</code></td>
+</tr>
+</tbody></table>
+<p><strong>Payload concepts — Engineering vs Release (<a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a>):</strong> NDB is a portfolio — ERA (engineering), FEAT (intake), TECHPUBS (docs), PM, SDL, LEG etc. all set <code>fixVersion = NDB-2.11</code> on their tickets. Two payloads exist:</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>JQL shape</th>
+<th>Audience</th>
+<th>Default in</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Engineering Payload</strong></td>
+<td><code>project = ERA AND (6-bucket union)</code></td>
+<td>EM, IC, sprint burndown</td>
+<td>legacy chatbot; <code>buildEngineeringPayloadJql</code>; <code>fetchBucket({ projectKey })</code></td>
+</tr>
+<tr>
+<td><strong>Release Payload</strong></td>
+<td><code>(6-bucket union)</code> — <strong>no project filter</strong></td>
+<td>TPM, RM, Team Exec — &quot;are we shipping?&quot;</td>
+<td><code>buildReleasePayloadJql</code>; <code>fetchReleaseData</code> default (since 2026-06-13). No pollution guard — trust <code>fixVersion</code>.</td>
+</tr>
+<tr>
+<td><strong>Group 2 — Moved Out</strong></td>
+<td><code>fixVersion was {release} AND fixVersion not in ({release})</code></td>
+<td>hygiene analysis</td>
+<td><code>getMovedOutQuery</code> — every sync</td>
+</tr>
+<tr>
+<td><strong>Group 3 — Long-term Funded</strong></td>
+<td><code>issuetype in (Feature, Initiative) AND fixVersion in ({futureReleases})</code> + epics + work</td>
+<td>capacity planning</td>
+<td><code>getLongTerm*Query</code> — <code>futureReleases</code> from versions API at sync time</td>
+</tr>
+</tbody></table>
+<p><strong>Remaining ports:</strong> tracked in <a href="../architecture/CONSOLIDATION.md">CONSOLIDATION.md</a> — chart catalog, team-exec report service, capacity, Confluence template engine, say-vs-do, story points, etc. Prioritise via DECISIONS.md pending decisions (D28/D29).</p>
+<hr>
+<h2>6 — Layer 4: API + MCP</h2>
+<p>Two parallel surfaces over the same services. <strong>Routes are thin: validate → call service → respond.</strong> No JQL building, no HTML generation inline.</p>
+<h3>Express routes — <code>apps/delivery-ops/server/routes/</code></h3>
+<table>
+<thead>
+<tr>
+<th>Route file</th>
+<th>Prefix</th>
+<th>What it serves</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>jira/</code> (<code>index</code>, <code>auth</code>, <code>fetch</code>, <code>search</code>, <code>kpi</code>, <code>releaseVersions</code>)</td>
+<td><code>/api/jira/*</code></td>
+<td>validate, fetch, search-by-JQL, release versions, sprint-report, KPIs</td>
+</tr>
+<tr>
+<td><code>releaseDataset.js</code>, <code>releaseSync.js</code></td>
+<td><code>/api/release-dataset/*</code>, <code>/api/release-sync/*</code></td>
+<td>dataset fetch + cache-first sync (Group 1–3)</td>
+</tr>
+<tr>
+<td><code>releaseOutstandingWork.js</code></td>
+<td><code>/api/release-outstanding-work/*</code></td>
+<td>outstanding-work page (JIRA-backed)</td>
+</tr>
+<tr>
+<td><code>dateMover.js</code></td>
+<td><code>/api/date-mover/*</code></td>
+<td>gate-date move (D30 — mandatory reason + Confluence audit)</td>
+</tr>
+<tr>
+<td><code>dependency.js</code></td>
+<td><code>/api/dependency/*</code></td>
+<td>dep graph (JIRA <code>blocks</code>/<code>is blocked by</code> canonical D18)</td>
+</tr>
+<tr>
+<td><code>feature.js</code>, <code>component.js</code></td>
+<td><code>/api/feature/*</code>, <code>/api/component/*</code></td>
+<td>Feature Dashboard, Component Report</td>
+</tr>
+<tr>
+<td><code>email/</code></td>
+<td><code>/api/email/*</code>, <code>/api/team/*/status-email</code></td>
+<td>send, preview, history, scheduled</td>
+</tr>
+<tr>
+<td><code>ai.js</code></td>
+<td><code>/api/ai/chat</code>, <code>/api/ai/approvals</code>, <code>/api/ai/exec-summary</code></td>
+<td><code>agentRuntime</code> (D39/D42) + exec-summary signals</td>
+</tr>
+<tr>
+<td><code>admin.js</code>, <code>config.js</code>, <code>statusSnapshots.js</code>, …</td>
+<td><code>/api/admin/*</code>, <code>/api/config/*</code></td>
+<td>admin, team registry, status snapshots</td>
+</tr>
+<tr>
+<td><code>index.js</code> mounting</td>
+<td><code>/*</code> static + <code>/docs</code> + <code>/bin-packing</code></td>
+<td><code>docsRoot</code> serves <code>docs/</code> at <code>/docs/</code>; bin-packing mount per D37</td>
+</tr>
+</tbody></table>
+<p><strong>Docs + proxy:</strong> <code>server/index.js</code> mounts <code>docs/</code> at <code>/docs/</code> and <code>/Documentation</code> (both proxied in dev via <code>client/src/setupProxy.js</code> → <code>http://localhost:8001</code>). Pages should link with <strong>relative</strong> <code>/docs/guides/DEVELOPER_GUIDE.html</code> — never <code>http://localhost:8001</code> (violates <a href="../../agent-pack/loom/rules/no-localhost.mdc">no-localhost.mdc</a>).</p>
+<p><strong>Auth:</strong> <code>Authorization: Bearer &lt;jiraPat&gt;</code> (Data Center PAT) — all JIRA proxy routes. Username from header <code>X-Username</code>/<code>X-User-Email</code> or token validation (<code>/rest/api/2/myself</code>). Role checks are action-level per <a href="../../DECISIONS.md#d26--action-level-authorization">D26</a>, not tab visibility.</p>
+<h3>MCP servers — <code>mcp/</code></h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Bin</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mcp/shared</code></td>
+<td>—</td>
+<td>deduplicated env + glossary (single source)</td>
+</tr>
+<tr>
+<td><code>mcp/lighthouse</code></td>
+<td><code>lighthouse-mcp</code></td>
+<td>product tools only — <code>get_release_status</code>, <code>say_vs_do</code>, <code>plan_capacity</code>, <code>bin_pack_projects</code>, etc.</td>
+</tr>
+<tr>
+<td><code>mcp/loom</code></td>
+<td><code>loom-mcp</code></td>
+<td>builder tools only — <code>move_jira_dates</code> (thin adapter over <code>DateMoverService</code> D30), weave helpers</td>
+</tr>
+</tbody></table>
+<p>Each MCP tool calls the same <code>shared/connectors</code> + <code>shared/services</code> the Express route does. JIRA auth is Data Center PAT <code>Authorization: Bearer</code> only (<a href="../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only">D40</a>). Legacy MCP private JIRA client is deleted.</p>
+<p><strong>Registering:</strong> <code>.cursor/mcp.json</code> registers the servers for Cursor automatically. For Claude Desktop and other hosts, see <a href="../../README.md#wiring-mcp-into-hosts">README.md</a>.</p>
+<hr>
+<h2>7 — Layer 5: UI &amp; Pack</h2>
+<h3>React app — <code>apps/delivery-ops/client/src/</code> (port <strong>8899</strong>)</h3>
+<pre><code>src/
+├── App.js                     # BrowserRouter, AuthProvider + TeamProvider + SelectedReleaseContext, protected routes
+├── layout/components/Layout.js # Sidebar (persona-aware D6) + Header + role lens dropdown
+├── auth/                      # AuthContext, LoginForm (JIRA PAT validation), ProtectedRoute, permissions
+├── contexts/                  # TeamContext, SelectedReleaseContext, ReleaseDataContext
+├── components/                # page-level UI (render only — no direct axios/fetch)
+├── hooks/                     # data fetching — one hook per need (useTeams, useReleaseItems, useChat, …)
+├── services/                  # per-endpoint API wrappers (jiraQueryService, confluenceService, …)
+├── shared/services/apiService.js # canonical authenticatedPost/Get (utils/api.js re-exports)
+├── release/                   # ReleaseBriefPage, RetrospectivePage, ChatbotPage, utils/bundleUtils.js
+├── feature/                   # FeatureDashboardPage
+├── jira/                      # JQL digging, issue breakdown
+├── utils/                     # api helpers, jiraFields.js (field constants), requestGate
+├── design-system/             # DesignSystemDemo
+└── setupProxy.js              # dev proxy: /docs → 8001 (only place that mentions localhost)
+</code></pre>
+<p><strong>Layer rule (<a href="../../agent-pack/loom/rules/minimal-architecture.mdc">minimal-architecture.mdc</a>):</strong> components render, hooks fetch, services transform. If you delete the JSX from a component file, no network call should vanish. See file-size limits in <a href="#appendix-a--rules-index">Appendix A</a>.</p>
+<p><strong>Persona-aware sidebar (<a href="../../DECISIONS.md#d6--tab-visibility-default-landing-and-role-lens-revised-2026-05-19">D6</a>):</strong> every (non-admin) tab is visible to every user. Admin tabs gated by <code>admin</code> role only. Role lens dropdown in header re-renders current data in <code>team-exec</code>/<code>director)/</code>ic density — never hides data. Default landing per role (Team Exec → chat, TPM → Release Versions, RM → Sync Hub redirect → Project Status, EM → Team Profile) is a user-preference <code>defaultLandingPage</code>.</p>
+<p><strong>Chat panel (<a href="../../DECISIONS.md#d7--agent-surface--web-chat-embedded-in-delivery-ops">D7</a>, <a href="../../DECISIONS.md#d39--web-chat-is-an-agent-runtime-not-a-mailbox">D39</a>, <a href="../../DECISIONS.md#d42--open-the-door-safely-memory-provenance-hitl-wave-4">D42</a>):</strong> <code>Release/ChatbotPage</code> → <code>POST /api/ai/chat</code> runs <code>shared/agentRuntime</code> (<code>runAgentTurn</code>): load pack (D38), perceive from release snapshot, tool-loop over <code>read</code>/<code>draft</code> (Wave 4 — <code>mutate</code> HITL-paused per D26, Approve records <code>blocked_d26</code> until gate coded). Memory is JSON files under <code>AGENT_RUNTIME_DIR</code> (default <code>.cache/agent-runtime</code>); provenance logs <code>{tools, dataScopes, replySha256, unknownKeysInReply, mode}</code> per turn.</p>
+<p><strong>Pages fetch live (<a href="../../DECISIONS.md#d11--pages-fetch-live-sync-hub-is-not-a-product-surface">D11</a>):</strong> Project Status, Release Brief, SoS, chat grounding hit JIRA on load scoped to <code>team.baseFilter</code> (from <code>teamBoardConfig.json</code> via <code>productService</code>). No silent fallback to another team&#39;s cache. <code>/sync-hub</code> redirects to Project Status. Client in-memory TTL is 5 minutes; Refresh busts that TTL and re-hits live endpoints.</p>
+<h3>Loom pack — <code>agent-pack/loom/</code> (portable cookbook, <a href="../../DECISIONS.md#d38--agent-pack-is-portable-cursor-is-one-adapter">D38</a>)</h3>
+<p>The <strong>loom weaver</strong> is one-shot: discuss scope → draft plan in <code>~/.opencode/plan/</code> → execute full pipeline via <code>agent-pack/loom/rules/weave.mdc</code> (Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge).</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Files</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Orchestrator</td>
+<td><code>identity/loom.md</code></td>
+<td>&quot;weaves features across 5 layers; discuss → plan → pipeline&quot; — harness-agnostic (Opencode/Cursor/Claude/Codex via <code>agent-pack/harness/</code>)</td>
+</tr>
+<tr>
+<td>Specialists</td>
+<td><code>identity/specialists/{frontend,backend,connector}-dev.md</code></td>
+<td>delegated sub-agents owned by orchestrator; users never address by name</td>
+</tr>
+<tr>
+<td>Skills</td>
+<td><code>skills/weave/SKILL.md</code>, <code>review/SKILL.md</code>, <code>exec/SKILL.md</code>, <code>csv-import/SKILL.md</code>, <code>deploy/SKILL.md</code></td>
+<td>reusable capabilities — <code>weave</code> is the delivery pipeline, <code>review</code>/<code>exec</code> strengthen stages 2/6</td>
+</tr>
+<tr>
+<td>Rules</td>
+<td><code>rules/weave.mdc</code> (pipeline), <code>no-localhost</code>, <code>minimal-architecture</code>, <code>one-shot</code>, <code>api-docs-required</code>, <code>page-docs-required</code>, <code>no-hardcoding</code>, <code>gerrit-push-for-review</code></td>
+<td>constitutional rules — woven via <code>loadAgentPack()</code>; builder-only rules stay in <code>.cursor/rules/</code></td>
+</tr>
+<tr>
+<td>Context</td>
+<td><code>context/architecture.md</code></td>
+<td>5-layer summary (fixed ports, one feature one place)</td>
+</tr>
+<tr>
+<td>Prompt</td>
+<td><code>prompts/builder.md</code></td>
+<td>D1/D3/D38 builder prompt</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td><code>memory/schema.json</code></td>
+<td>shape for session/user/org memory (D42)</td>
+</tr>
+<tr>
+<td>Manifest</td>
+<td><code>manifest.json</code></td>
+<td>version <code>3.0.0</code>, identities, rules, skills with `toolClass: read</td>
+</tr>
+</tbody></table>
+<p><strong>Host adapters:</strong> Cursor is one adapter — <code>.cursor/</code> symlinks into <code>agent-pack/</code>. Web chat loads pack via <code>shared/agentPack/loadAgentPack()</code>; any new host adds a file under <code>agent-pack/adapters/</code>, not a fork of skills. See <code>agent-pack/loom</code> + <a href="../../DECISIONS.md#d38--agent-pack-is-portable-cursor-is-one-adapter">DECISIONS.md D38</a> for the cookbook contract.</p>
+<h3>Static-mounted Bin-Packing — <code>apps/bin-packing/</code> (<a href="../../DECISIONS.md#d37--bin-packing-app-ships-as-a-static-mount-not-a-react-port">D37</a>)</h3>
+<p>Legacy 7k-LOC vanilla JS app (bin-packing algorithm with resource pools, 3-tier display) served as static assets by Express at <code>/bin-packing/*</code>. Sidebar entry opens <strong>in a new tab</strong> (<code>target=&quot;_blank&quot;</code>) — the two UIs never share a viewport. In dev, URL computed via <code>getBinPackingUrl()</code> in <code>layout/components/Layout.js</code> (<code>${hostname}:${REACT_APP_BACKEND_PORT || 8001}/bin-packing/</code>); in prod, relative <code>/bin-packing/</code>. No auth on the mount (matches legacy port 3847). MCP tool <code>bin_pack_projects</code> is still a simpler First-Fit-Decreasing — not the real algorithm — until extraction to <code>shared/services/binPackingService.ts</code>.</p>
+<h3>TPM Confluence Tools — <code>apps/tpm-confluence-tools/</code></h3>
+<p>Python/Streamlit bulk page creator + template editor + Release Gates Checklist (<a href="../../DECISIONS.md#d20--tpm-confluence-pages-incl-data-driven-release-gates-checklist">D20</a>). Served separately (<code>streamlit run app.py</code> in own venv). Features move into <code>apps/delivery-ops/client/src/domains/confluence/</code> in Phase F (Streamlit → React). Python Confluence client stays until then.</p>
+<hr>
+<h2>8 — Common Tasks</h2>
+<h3>Add a new page (thin composition over existing services)</h3>
+<ol>
+<li><strong>Read</strong> <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a> layers + <a href="../architecture/FEATURE_CATALOG.md">FEATURE_CATALOG.md</a> to confirm the page is the right surface (vs MCP tool or skill).</li>
+<li><strong>Service first:</strong> if business logic doesn&#39;t exist, add it in <code>shared/src/services/&lt;domain&gt;Service.ts</code> (not in the route or component). Cover with tests. Respect <code>productService</code> for any <code>projectKey</code>/<code>labelPrefix</code> resolution — no hardcoded product strings.</li>
+<li><strong>Route (thin):</strong> <code>apps/delivery-ops/server/routes/&lt;domain&gt;.js</code> — validate → call service → respond. Keep under 80 lines (150 hard limit per <a href="../../agent-pack/loom/rules/minimal-architecture.mdc">minimal-architecture.mdc</a>).</li>
+<li><strong>Hook:</strong> <code>apps/delivery-ops/client/src/hooks/use&lt;Thing&gt;.js</code> — fetching via <code>shared/services/apiService.js</code> (<code>authenticatedGet/Post</code>), no JSX.</li>
+<li><strong>Component:</strong> <code>apps/delivery-ops/client/src/components/&lt;Page&gt;.js</code> — render only, no <code>axios</code>/<code>fetch</code>. Compose from <code>shared/components/</code>. Cap at 300 lines (600 hard).</li>
+<li><strong>Wire:</strong> add route in <code>client/src/App.js</code>; nav entry in <code>layout/components/Layout.js</code> if non-admin (admin tabs gated — see <a href="../../DECISIONS.md#d6--tab-visibility-default-landing-and-role-lens-revised-2026-05-19">D6</a>).</li>
+<li><strong>Docs:</strong> per <code>page-docs-required</code> rule — create <code>docs/pages/&lt;Page&gt;-requirements.md</code> + <code>docs/pages/&lt;Page&gt;-data-layer.md</code>. Update <a href="../README.md">docs/README.md</a> if new doc area.</li>
+<li><strong>Verify:</strong> <code>node scripts/docs-build.js &amp;&amp; bash scripts/docs-verify.sh</code> — link integrity gate before merge.</li>
+</ol>
+<h3>Add a JIRA-backed endpoint</h3>
+<ol>
+<li><strong>Connector:</strong> if new JIRA API, extend <code>shared/src/connectors/jiraConnector.ts</code> (Bearer PAT only — <a href="../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only">D40</a>). No ad-hoc axios in <code>server/routes/</code>.</li>
+<li><strong>Service:</strong> build JQL via <code>shared/src/services/payloadJqlService.ts</code> or <code>jqlBuilder.ts</code> — import builders, don&#39;t inline JQL. For release-scoped queries, use Release Payload (<code>buildReleasePayloadJql</code>) unless the consumer is EM/IC-only (then <code>buildEngineeringPayloadJql</code> with explicit <code>productId</code> via <code>productService</code>).</li>
+<li><strong>Route:</strong> thin wrapper per §6; inject <code>jiraPat</code> from <code>req.headers.authorization?.replace(/^Bearer\s+/i, &#39;&#39;)</code> (cleaned via <code>server/utils/jiraClient.js</code>).</li>
+<li><strong>Test:</strong> exercise JQL live against <code>https://jira.nutanix.com</code> where QA pipeline requires it (counts must match <code>total</code> from connector).</li>
+</ol>
+<h3>Author a Loom skill</h3>
+<ol>
+<li><strong>Where:</strong> <code>agent-pack/loom/skills/&lt;skill-name&gt;/SKILL.md</code> — this is SoT; <code>.cursor/skills/</code> is a symlink for discovery.</li>
+<li><strong>Required sections</strong> (per <code>documentation-consistency.mdc</code>): <code>## When to Use This Skill</code> → <code>## Quick Start</code> → <code>## Core Rules</code> → <code>## Output Format</code> → <code>## Quality Validation</code> — in that order.</li>
+<li><strong>Tool class:</strong> declare in <code>agent-pack/loom/manifest.json</code> skills array (<code>read</code> = read-only, <code>draft</code> = auto-persist, <code>mutate</code> = HITL-queued per <a href="../../DECISIONS.md#d26--action-level-authorization">D26</a>).</li>
+<li><strong>Reuse:</strong> reference the specialist that owns the skill (e.g. <code>tpm-specialist</code> for <code>weekly-status-email</code>). Orchestrator delegates; users never address specialist by name.</li>
+<li><strong>Hosts discover</strong> via <code>.cursor/skills</code>, <code>.claude/skills</code>, <code>.codex/skills</code>, <code>.agents/skills</code> symlinks (all into <code>agent-pack/loom/skills/</code>).</li>
+</ol>
+<h3>Add a connector call</h3>
+<ol>
+<li>Extend the one connector file in <code>shared/src/connectors/&lt;system&gt;.ts</code> — no parallel client.</li>
+<li>For JIRA fields, wire through <code>productService.getCustomFields(productId)</code> — never write <code>customfield_NNNNN</code> literal twice (client mirrors in <code>client/src/utils/jiraFields.js</code>).</li>
+<li>For AI calls, go through <code>shared/src/connectors/aiConnector.ts</code> (<code>chatCompletion</code>), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in <code>server/config/aiConfig.json</code>; secrets (<code>AI_API_KEY</code>) in env.</li>
+</ol>
+<h3>Docs pipeline (every change that touches <code>docs/</code> or <code>client/src</code> links)</h3>
+<pre><code class="language-bash"># 1. Edit markdown under docs/guides/, docs/api/, docs/pages/, etc.
+# 2. Rebuild HTML wrappers
+node scripts/docs-build.js
+# 3. Verify hub + guides + stale refs + link check
+bash scripts/docs-verify.sh
+# — fails on missing docs/index.html, missing USER_GUIDE.md/ADMIN_GUIDE.md,
+#   stale apps/delivery-ops/docs refs, or broken [label](*.md) basenames
+# 4. For full docs site, open docs/index.html (served at /docs/ in app)
+</code></pre>
+<p>Rules: use relative <code>/docs/guides/DEVELOPER_GUIDE.html</code> links in app code — never <code>http://localhost:8001/docs/...</code>. Add new docs pages to <code>docs/index.html</code> nav when creating them.</p>
+<hr>
+<h2>9 — Config &amp; Env Reference</h2>
+<h3>Server configs — <code>apps/delivery-ops/server/config/</code></h3>
 <table>
 <thead>
 <tr>
 <th>File</th>
 <th>Purpose</th>
+<th>Who writes</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>server/index.js</code></td>
-<td>Express app, middleware, route mounting</td>
+<td><code>teamBoardConfig.json</code></td>
+<td><strong>Multi-team registry</strong> (<a href="../../DECISIONS.md#d43--multi-team-registry-after-the-app-stabilized">D43</a>) — one object per team: <code>id</code>, <code>name</code>, <code>boardId</code>, <code>projectKey</code>, <code>featureProjectKey</code>, <code>baseFilter</code>, <code>labelPrefix</code>, <code>releasePrefix</code>, <code>sprintCalendar</code> (<code>s1StartIso + sprintDays</code>), <code>companionDisciplines</code>, <code>defaultReleaseVersion</code>. <code>productService</code> is the only consumer. Admin Save persists new teams to disk on the running server.</td>
+<td>Admin (UI) + dev</td>
 </tr>
 <tr>
-<td><code>server/routes/email/</code></td>
-<td>Email sending: sendEmail, sendReleaseVersions, sendGenericReminder, preview, schedules, history</td>
+<td><code>allowedUsers.json</code></td>
+<td><code>allowedUsers</code>, <code>releaseVersionsEmailSenders</code>, <code>emailHistoryAllowedUsers</code>, <code>kpiTabAllowedUsers</code>, <code>kpiAdminUsers</code>, <code>sprintReportAllowedUsers</code>, <code>superAdminUsers</code>, <code>adminUsers</code></td>
+<td>Admin</td>
 </tr>
 <tr>
-<td><code>server/routes/jira/index.js</code></td>
-<td>JIRA API proxy — validate, fetch, search-by-jql, release versions, sprint-report, KPIs</td>
+<td><code>aiConfig.json</code></td>
+<td>Non-secret AI defaults: <code>baseUrl</code>, <code>defaultModel</code> (<code>beam-1-501b</code>), <code>maxTokens</code> (8192), <code>requestTimeoutMs</code> (120000) — <a href="../../docs/guides/AI_API_CONFIGURATION.md">Lighthouse Docs</a>. Secrets in env.</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/services/emailService.js</code></td>
-<td>SMTP transporter, sendEmailDirect, wrapReleaseVersionsEmailHTML, parseEmailRecipients</td>
+<td><code>emailConfig.json</code></td>
+<td>SMTP host/port + <code>smtp.from</code> (service account)</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/utils/jiraClient.js</code></td>
-<td>CJS adapter onto shared <code>JiraConnector</code> (<code>getJira</code>, <code>searchPages</code>)</td>
+<td><code>emailSenderCCConfig.json</code></td>
+<td><code>defaultCC</code> for Email Sender</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/utils/confluenceClient.js</code></td>
-<td>CJS adapter onto shared <code>ConfluenceConnector</code></td>
+<td><code>releaseVersionsCCConfig.json</code></td>
+<td><code>defaultCC</code>, <code>versionDRIs</code> for Release Versions email</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/utils/emailClient.js</code></td>
-<td>CJS adapter onto shared <code>EmailConnector</code></td>
+<td><code>genericEmailerCCConfig.json</code></td>
+<td><code>defaultCC</code>, <code>optionalCCRecipients</code>, <code>projectTeamFields</code></td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/services/jiraService.js</code></td>
-<td>Risk-indicator presentation helpers only</td>
+<td><code>jiraFieldsConfig.json</code></td>
+<td>JIRA field IDs registry (server source of truth) — mirrored in <code>client/src/utils/jiraFields.js</code></td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/services/userService.js</code></td>
-<td>Username/email normalization, JIRA user extraction, auth checks</td>
+<td><code>releaseVersionsColumnsConfig.json</code></td>
+<td>Release table columns, checkpoint fields, <code>releaseBaseFilters</code></td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/config/jiraFieldsConfig.json</code></td>
-<td><strong>Single source of truth</strong> for all JIRA custom field IDs (server side)</td>
+<td><code>releaseVersionsEmailConfig.json</code></td>
+<td>Email notes order/labels for release email; consumed by <code>execSummaryAnalytics</code> via injected <code>gateDates</code></td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/utils/jiraQueryUtils.js</code></td>
-<td>JQL query builders — import here, don&#39;t inline JQL in route handlers</td>
-</tr>
-</tbody></table>
-<h3>Client</h3>
-<table>
-<thead>
-<tr>
-<th>File</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>client/src/App.js</code></td>
-<td>Routes, auth state, layout</td>
-</tr>
-<tr>
-<td><code>client/src/components/EmailSender/</code></td>
-<td>Main email form — JIRA key, highlights/lowlights, send</td>
-</tr>
-<tr>
-<td><code>client/src/components/ReleaseVersionTab.js</code></td>
-<td>Release versions UI (render only — fetching via hooks)</td>
-</tr>
-<tr>
-<td><code>client/src/components/GenericEmailer.js</code></td>
-<td>JQL-based emailer UI</td>
-</tr>
-<tr>
-<td><code>client/src/utils/api.js</code></td>
-<td><code>authenticatedPost</code>, <code>authenticatedGet</code> — <strong>use these, not raw axios</strong></td>
-</tr>
-<tr>
-<td><code>client/src/utils/jiraFields.js</code></td>
-<td><strong>Single source of truth</strong> for all <code>customfield_NNNNN</code> constants (client side)</td>
-</tr>
-<tr>
-<td><code>client/src/constants/releaseStatus.js</code></td>
-<td>JIRA colour maps, risk colour map, status keyword sets</td>
-</tr>
-<tr>
-<td><code>client/src/hooks/useTeams.js</code></td>
-<td>Shared hook: fetches <code>/api/config/teams</code> — used by KPI, Sprint, Trends, Emailer pages</td>
-</tr>
-<tr>
-<td><code>client/src/hooks/useGenericEmailerConfig.js</code></td>
-<td>Fetches <code>/api/config/generic-emailer</code></td>
-</tr>
-<tr>
-<td><code>client/src/services/confluenceService.js</code></td>
-<td><code>extractConfluencePage</code>, <code>populateJiraData</code>, <code>populateConfluencePage</code></td>
-</tr>
-<tr>
-<td><code>client/src/services/jiraQueryService.js</code></td>
-<td><code>runJqlQuery</code> — ad-hoc JQL via backend proxy</td>
-</tr>
-</tbody></table>
-<hr>
-<h2>5. Configuration Files</h2>
-<table>
-<thead>
-<tr>
-<th>Config</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>server/config/allowedUsers.json</code></td>
-<td>allowedUsers, releaseVersionsEmailSenders, emailHistoryAllowedUsers, kpiTabAllowedUsers, kpiAdminUsers, sprintReportAllowedUsers</td>
-</tr>
-<tr>
-<td><code>server/config/emailConfig.json</code></td>
-<td>SMTP host/port; optional smtp.from</td>
-</tr>
-<tr>
-<td><code>server/config/emailSenderCCConfig.json</code></td>
-<td>defaultCC for Email Sender</td>
-</tr>
-<tr>
-<td><code>server/config/releaseVersionsCCConfig.json</code></td>
-<td>defaultCC, versionDRIs for Release Versions email</td>
-</tr>
-<tr>
-<td><code>server/config/genericEmailerCCConfig.json</code></td>
-<td>defaultCC, optionalCCRecipients, projectTeamFields</td>
-</tr>
-<tr>
-<td><code>server/config/jiraFieldsConfig.json</code></td>
-<td>JIRA field IDs and display names</td>
-</tr>
-<tr>
-<td><code>server/config/releaseVersionsColumnsConfig.json</code></td>
-<td>Release table columns, checkpoint fields, releaseBaseFilters</td>
-</tr>
-<tr>
-<td><code>server/config/releaseVersionsEmailConfig.json</code></td>
-<td>Email notes order/labels for release email</td>
-</tr>
-<tr>
-<td><code>server/config/confluenceConfig.json</code></td>
+<td><code>confluenceConfig.json</code></td>
 <td>Confluence base URL</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/config/kpiConfig.json</code></td>
+<td><code>kpiConfig.json</code></td>
 <td>KPIs per team</td>
+<td>dev</td>
 </tr>
 <tr>
-<td><code>server/config/teamBoardConfig.json</code></td>
-<td>Teams, board IDs, sprint field</td>
+<td><code>api.js</code></td>
+<td><code>JIRA_API_V2</code>, <code>normalizeJiraBaseUrl</code> helper</td>
+<td>—</td>
 </tr>
 </tbody></table>
-<hr>
-<h2>6. Environment Variables</h2>
+<h3>Environment variables — <code>apps/delivery-ops/server/.env</code> (copy from <code>.env.example</code>)</h3>
 <table>
 <thead>
 <tr>
 <th>Variable</th>
+<th>Default</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>PORT</code></td>
-<td>Server port (default 6001)</td>
+<td><code>8001</code></td>
+<td>Express port — <strong>fixed, no fallback</strong></td>
 </tr>
 <tr>
 <td><code>NODE_ENV</code></td>
-<td>development / production</td>
+<td><code>development</code></td>
+<td><code>development</code> / <code>production</code> — drives CORS + keepAlive</td>
 </tr>
 <tr>
-<td><code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code></td>
-<td>SMTP relay (Nutanix)</td>
+<td><code>JIRA_PAT</code> / <code>JIRA_TOKEN</code></td>
+<td><em>(none)</em></td>
+<td><strong>Required</strong> Data Center PAT — Bearer only (<a href="../../DECISIONS.md#d40--one-jira-connector-data-center-pat-bearer-only">D40</a>). <code>JIRA_PAT</code> preferred.</td>
+</tr>
+<tr>
+<td><code>JIRA_BASE_URL</code></td>
+<td><code>https://jira.nutanix.com</code></td>
+<td>JIRA host (no trailing slash)</td>
+</tr>
+<tr>
+<td><code>CONFLUENCE_PAT</code> / <code>CONFLUENCE_BASE_URL</code></td>
+<td><code>JIRA_PAT</code> / —</td>
+<td>Confluence — may reuse JIRA PAT if SSO</td>
+</tr>
+<tr>
+<td><code>GITHUB_TOKEN</code></td>
+<td><em>(none)</em></td>
+<td>GitHub PAT (<code>api.github.com</code> Bearer)</td>
+</tr>
+<tr>
+<td><code>AI_API_KEY</code></td>
+<td><em>(none)</em></td>
+<td><strong>Required for AI</strong> — NuToken from <code>tokens.corp</code>. Non-secrets in <code>aiConfig.json</code>. See <a href="AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> + <a href="NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</td>
+</tr>
+<tr>
+<td><code>AI_API_BASE_URL</code> / <code>AI_DEFAULT_MODEL</code> / <code>AI_MAX_TOKENS</code> / <code>AI_REQUEST_TIMEOUT</code></td>
+<td>from <code>aiConfig.json</code></td>
+<td>Override aiConfig per-env (all required if set — no partial)</td>
+</tr>
+<tr>
+<td><code>SMTP_HOST</code> / <code>SMTP_PORT</code> / <code>SMTP_USER</code> / <code>SMTP_PASS</code></td>
+<td><code>secure-mailrelay.corp.nutanix.com:587</code></td>
+<td>Nutanix Secure eMail Relay (STARTTLS). Legacy <code>mailrelay.dyn.nutanix.com</code> deprecated. <code>SMTP_FROM</code> must be service account.</td>
 </tr>
 <tr>
 <td><code>SMTP_FROM</code></td>
-<td>Optional; From address (must be service account for relay). Default from emailConfig.smtp.from.</td>
-</tr>
-<tr>
-<td><code>JIRA_TOKEN</code></td>
-<td>JIRA API token (server-side for some flows)</td>
+<td><code>emailConfig.smtp.from</code></td>
+<td>Override From — must be service account for relay</td>
 </tr>
 <tr>
 <td><code>RELEASE_VERSIONS_PAGE_ACCESS</code></td>
-<td><code>all</code> | <code>allowlist</code> | <code>none</code></td>
+<td><code>all</code></td>
+<td><code>all</code> · <code>allowlist</code> · <code>none</code> — gates Release Versions API</td>
 </tr>
 <tr>
 <td><code>RELEASE_VERSIONS_EMAIL_ACCESS</code></td>
-<td><code>all</code> | <code>allowlist</code> | <code>none</code></td>
+<td><code>allowlist</code></td>
+<td><code>all</code> · <code>allowlist</code> · <code>none</code> — gates send</td>
 </tr>
 <tr>
 <td><code>JIRA_SCHEDULED_EMAIL_TOKEN</code></td>
-<td>Token for cron-triggered emails</td>
+<td><em>(none)</em></td>
+<td>Token for cron-triggered scheduled emails</td>
 </tr>
 <tr>
 <td><code>ALLOWED_ORIGINS</code></td>
-<td>CORS origins (production)</td>
+<td><em>(none)</em></td>
+<td>CORS allowlist (comma-separated) — prod only; dev allows all</td>
 </tr>
 <tr>
 <td><code>EMAIL_DRY_RUN</code></td>
-<td>If set, don&#39;t actually send email</td>
+<td><em>(none)</em></td>
+<td>If set, log but don&#39;t send email</td>
+</tr>
+<tr>
+<td><code>ENABLE_SELF_LEARNING_AGENT</code> + flags</td>
+<td><code>false</code></td>
+<td>Self-learning feature flags</td>
+</tr>
+<tr>
+<td><code>JIRA_PAT</code> (shared <code>loadEnv</code>)</td>
+<td>—</td>
+<td>Same as above — <code>shared/src/connectors/env.ts</code> canonical</td>
 </tr>
 </tbody></table>
-<hr>
-<h2>7. Email Sending Flow</h2>
-<ol>
-<li><strong>SMTP</strong>: Nutanix Secure eMail Relay (<code>secure-mailrelay.corp.nutanix.com:587</code>), STARTTLS, auth from env. The legacy relay (<code>mailrelay.dyn.nutanix.com</code>) is deprecated; use the secure relay with a service account.</li>
-<li><strong>emailService.js</strong>: All mail sent via <code>sendEmailDirect(mailOptions)</code>. <strong>From</strong> is always the service account (<code>getDefaultFromAddress()</code> from config/env) so the relay accepts mail; <strong>Reply-To</strong> is set to the requesting user where applicable.</li>
-<li><strong>To/CC by page</strong>: Email Sender: To = defaultTo + user-entered recipients, CC = sender + others. Release Version: sender in CC. Generic Emailer: sender in CC.</li>
-<li><strong>Endpoints</strong>:<ul>
-<li><code>POST /api/email/send</code> – Email Sender (JIRA ticket + highlights/lowlights)</li>
-<li><code>POST /api/email/send-release-versions</code> – Release Versions consolidated email</li>
-<li><code>POST /api/email/send-generic-reminder</code> – Generic Emailer (JQL table)</li>
-<li><code>POST /api/email/preview</code> – Returns to/cc/subject/body without sending (for &quot;Open in Outlook&quot;)</li>
-</ul>
-</li>
-<li><strong>Fallback</strong>: &quot;Open in Outlook&quot; uses mailto or Outlook Web link with preview data when SMTP is unreliable.</li>
-</ol>
-<hr>
-<h2>8. Authentication &amp; Authorization</h2>
-<ul>
-<li><strong>JIRA token</strong>: Client stores in localStorage; sent as <code>Authorization: Bearer &lt;token&gt;</code>; validated via <code>/api/jira/validate</code> or <code>/rest/api/2/myself</code>.</li>
-<li><strong>Username</strong>: From token validation (JIRA user email) or <code>X-Username</code> / <code>X-User-Email</code> header.</li>
-<li><strong>Release Versions</strong>: <code>checkReleaseVersionsAuthorization</code> + <code>RELEASE_VERSIONS_EMAIL_ACCESS</code>.</li>
-<li><strong>Email history</strong>: <code>emailHistoryAllowedUsers</code> in allowedUsers.json.</li>
-<li><strong>KPIs</strong>: <code>checkKpiViewAuthorization</code> (view), <code>checkKpiTabAuthorization</code> + <code>checkKpiAdminAuthorization</code> (edit).</li>
-<li><strong>Sprint Report</strong>: <code>checkSprintReportAuthorization</code> (uses <code>sprintReportAllowedUsers</code>). &quot;Removed from sprint&quot; metric is limited: Jira does not return issues that left the sprint; the value is often 0 unless history JQL (e.g. &quot;Sprint was X&quot;) is supported.</li>
-</ul>
-<hr>
-<h2>9. Local Development</h2>
-<pre><code class="language-bash">npm run install-all
-npm run dev
-</code></pre>
-<ul>
-<li>Backend: <a href="http://localhost:6001">http://localhost:6001</a>  </li>
-<li>Frontend: <a href="http://localhost:6100">http://localhost:6100</a> (proxies API to 6001)</li>
-</ul>
-<p>See <a href="../README.md">README.md</a> and <a href="HOW_TO_RUN.md">HOW_TO_RUN.md</a> for setup and running.</p>
-<hr>
-<h2>10. Testing</h2>
-<ul>
-<li><strong>Unit</strong>: <code>npm run test:unit</code> (Jest, <code>__tests__</code>)</li>
-<li><strong>Integration</strong>: <code>npm run test:integration</code></li>
-<li><strong>E2E</strong>: <code>npm run test:e2e</code></li>
-<li>Config: <code>jest.config.js</code>, <code>jest.setup.js</code></li>
-</ul>
-<hr>
-<h2>11. Logging &amp; Audit</h2>
-<ul>
-<li><strong>Logger</strong>: <code>server/utils/logger.js</code> – <code>logger.email.attempt/sent/failed</code>, <code>logger.audit.action</code></li>
-<li><strong>Email history</strong>: <code>server/utils/emailHistoryDB.js</code> → <code>server/data/emailHistory.json</code></li>
-<li><strong>Logging guide</strong>: <a href="LOGGING_GUIDE.md">LOGGING_GUIDE.md</a></li>
-</ul>
-<hr>
-<h2>12. Refactored Structure (Post-Plan)</h2>
-<p>After the refactor from the improvement plan:</p>
-<ul>
-<li><strong>Email routes</strong>: <code>server/routes/email/</code> (index, sendEmail, sendReleaseVersions, sendGenericReminder, schedules, history, middleware)</li>
-<li><strong>JIRA routes</strong>: <code>server/routes/jira/</code> (index, auth, fetch, releaseVersions, search, kpi, helpers)</li>
-<li><strong>EmailSender UI</strong>: <code>client/src/components/EmailSender/</code> (index, JiraTicketForm, JiraDataDisplay, EpicsSection, IssueBreakdown, HighlightsLowlightsEditor, EmailActions, hooks, utils)</li>
-<li><strong>Shared</strong>: <code>client/src/components/shared/OutlookFallback.js</code> for &quot;Open in Outlook&quot; (mailto + OWA)</li>
-</ul>
-<hr>
-<h2>13. Architecture Rules (AI + Human)</h2>
-<p>The cross-project rules live at the user level under <code>~/.cursor/rules/</code> and apply to every NDB-Ops repo. Project-specific deltas live in this repo&#39;s <code>.cursor/rules/</code>. Both layers are enforced by the AI coding agent and code review. See also <code>~/.cursor/AGENTS.md</code> for the layered loading order.</p>
-<h3>Layer boundaries — <code>minimal-architecture.mdc</code></h3>
+<p><strong>Client env</strong> (<code>apps/delivery-ops/client/.env</code> — optional): <code>REACT_APP_API_URL</code> (empty = same origin), <code>REACT_APP_BACKEND_PORT</code> (for bin-packing URL helper — <code>getBinPackingUrl()</code>). No hardcoded <code>localhost</code> in client code (<a href="../../agent-pack/loom/rules/no-localhost.mdc">no-localhost.mdc</a>).</p>
+<h3>Key file map — where to look up a behaviour</h3>
 <table>
 <thead>
 <tr>
-<th>Layer</th>
-<th>Responsibility</th>
-<th>Must NOT</th>
+<th>Question</th>
+<th>File</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>components/</code></td>
-<td>Render only</td>
-<td>Call <code>axios</code> or <code>fetch</code> directly</td>
+<td>Express entry + middleware + route mounting</td>
+<td><code>apps/delivery-ops/server/index.js</code></td>
 </tr>
 <tr>
-<td><code>hooks/</code></td>
-<td>Data fetching</td>
-<td>Contain JSX</td>
+<td>JIRA auth + per-request PAT extraction</td>
+<td><code>apps/delivery-ops/server/middleware/auth/jira.js</code>, <code>utils/jiraClient.js</code></td>
 </tr>
 <tr>
-<td><code>services/</code></td>
-<td>API call wrappers</td>
-<td>Contain state</td>
+<td>SMTP send + Reply-To = user, From = service account</td>
+<td><code>apps/delivery-ops/server/services/emailService.js</code>, <code>utils/emailClient.js</code> adapter</td>
 </tr>
 <tr>
-<td><code>server/routes/</code></td>
-<td>Validate + respond</td>
-<td>Contain business logic inline</td>
+<td>Risk/RAG scoring</td>
+<td><code>shared/src/services/riskIndicator.ts</code> + <code>apps/delivery-ops/server/services/jiraService.js</code> (presentation only)</td>
 </tr>
 <tr>
-<td><code>server/services/</code></td>
-<td>Business logic</td>
-<td>Contain route-level concerns</td>
+<td>JQL builders</td>
+<td><code>shared/src/services/payloadJqlService.ts</code>, <code>shared/src/services/jqlBuilder.ts</code></td>
+</tr>
+<tr>
+<td>Date mover + Confluence audit</td>
+<td><code>shared/src/services/dateMoverService.ts</code></td>
+</tr>
+<tr>
+<td>Chat runtime (perceive→tool loop→HITL)</td>
+<td><code>shared/src/agentRuntime/</code>, <code>apps/delivery-ops/server/routes/ai.js</code></td>
+</tr>
+<tr>
+<td>Release dataset cache + sync</td>
+<td><code>shared/src/services/releaseDatasetCache.ts</code>, <code>releaseDatasetSync.ts</code></td>
+</tr>
+<tr>
+<td>Client API wrappers</td>
+<td><code>apps/delivery-ops/client/src/shared/services/apiService.js</code> — <code>authenticatedGet/Post</code></td>
+</tr>
+<tr>
+<td>Client field constants</td>
+<td><code>apps/delivery-ops/client/src/utils/jiraFields.js</code> — import, never inline <code>customfield_</code></td>
 </tr>
 </tbody></table>
-<p><strong>File size limits:</strong></p>
+<hr>
+<h2>10 — Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ECONNREFUSED</code> on 8899 or 8001</td>
+<td>Port in use or wrong port in doc/config</td>
+<td><code>lsof -i :8899 -i :8001</code>; fixed ports are <strong>8899/8001</strong> — no fallback. Previous ports were 6100/6001.</td>
+</tr>
+<tr>
+<td><code>401 Unauthorized</code> from JIRA proxy</td>
+<td>Missing/invalid PAT</td>
+<td>Set <code>JIRA_PAT</code> in <code>server/.env</code>; client stores same token in <code>localStorage.jiraToken</code> and sends <code>Authorization: Bearer &lt;pat&gt;</code>. Validate via <code>POST /api/jira/validate</code> → <code>/rest/api/2/myself</code>.</td>
+</tr>
+<tr>
+<td><code>JIRA_PAT is required</code> on boot</td>
+<td><code>shared/loadEnv({ requirePat: true })</code> in batch/MCP without env</td>
+<td>Set <code>JIRA_PAT</code> in shell/env; HTTP routes use <code>requirePat: false</code> and override per-request.</td>
+</tr>
+<tr>
+<td>CORS blocked in prod</td>
+<td><code>ALLOWED_ORIGINS</code> not set</td>
+<td>Set <code>ALLOWED_ORIGINS</code> to comma-separated allowed origins in <code>server/.env</code>; dev allows all.</td>
+</tr>
+<tr>
+<td>Docs 404 at <code>/docs/</code></td>
+<td><code>docsRoot</code> not mounted or proxy missing</td>
+<td>Check <code>server/index.js</code> mounts <code>docs/</code> at <code>/docs</code> + <code>/Documentation</code>; <code>client/src/setupProxy.js</code> proxies <code>/docs</code> → <code>8001</code> in dev. Link with relative <code>/docs/guides/...html</code>.</td>
+</tr>
+<tr>
+<td><code>docs-verify.sh</code> FAIL</td>
+<td>Missing hub / guides or broken links</td>
+<td>Must have <code>docs/index.html</code> + <code>docs/README.md</code> + <code>docs/guides/USER_GUIDE.md</code> + <code>docs/guides/ADMIN_GUIDE.md</code>; run <code>node scripts/docs-build.js</code> first; fix any <code>[label](*.md)</code> basename not under <code>docs/</code>.</td>
+</tr>
+<tr>
+<td><code>No hardcoded localhost</code> CI fail</td>
+<td><code>localhost</code>/<code>127.0.0.1</code> in <code>client/src</code> or <code>server/</code> app code</td>
+<td>Remove — use relative <code>/api/...</code> or <code>process.env.REACT_APP_*</code> + <code>setupProxy.js</code>. Only <code>client/package.json</code> proxy, nginx, and <code>__tests__</code> may mention localhost.</td>
+</tr>
+<tr>
+<td>Stale <code>ndb-status-update-sender</code> path</td>
+<td>Doc/code still references old pre-monorepo layout</td>
+<td>Grep <code>ndb-status-update-sender</code>; replace with `apps/delivery-ops/client</td>
+</tr>
+<tr>
+<td>Bin-packing blank in dev</td>
+<td>Wrong URL helper</td>
+<td><code>getBinPackingUrl()</code> must use <code>window.location.hostname</code> + `REACT_APP_BACKEND_PORT</td>
+</tr>
+<tr>
+<td>Release Payload numbers look wrong</td>
+<td>Confusing Engineering vs Release Payload</td>
+<td>Engineering = <code>project = ERA AND (6 buckets)</code> (legacy <code>buildEngineeringPayloadJql</code>); Release = no project filter across ERA+FEAT+TECHPUBS (<code>buildReleasePayloadJql</code>) — <a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a>. Trust <code>fixVersion</code>; no pollution guard.</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Appendix A — Rules Index</h2>
+<p>Recovered + new rules — every change is checked against these by <code>npm run check</code> + review agents.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent-pack/loom/rules/weave.mdc</code></td>
+<td>Primary pipeline — Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge</td>
+<td>every non-trivial change</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/no-localhost.mdc</code></td>
+<td>No hardcoded <code>localhost</code>/<code>127.0.0.1</code> in prod code</td>
+<td><code>client/src</code>, <code>server/</code></td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/no-hardcoding.mdc</code></td>
+<td>No hardcoded product strings (D1) — use <code>productService</code></td>
+<td>all code</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/minimal-architecture.mdc</code></td>
+<td>Components render, hooks fetch, services transform; file size limits</td>
+<td>all layers</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/one-shot.mdc</code></td>
+<td>Loom never asks twice, never leaves open loop</td>
+<td>loom</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/api-docs-required.mdc</code></td>
+<td>Every new route needs <code>docs/api/&lt;resource&gt;.md</code></td>
+<td>API</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/page-docs-required.mdc</code></td>
+<td>Every new page needs <code>docs/pages/&lt;Page&gt;-*.md</code></td>
+<td>UI</td>
+</tr>
+<tr>
+<td><code>agent-pack/loom/rules/gerrit-push-for-review.mdc</code></td>
+<td>Use <code>refs/for/&lt;branch&gt;</code> for Gerrit</td>
+<td>git</td>
+</tr>
+<tr>
+<td><code>no-hardcoding</code> / <code>product-agnostic</code></td>
+<td>D1 enforcement</td>
+<td>shared + routes + client</td>
+</tr>
+<tr>
+<td>Builder-only <code>.cursor/rules/</code></td>
+<td><code>minimal-architecture</code>, <code>no-localhost</code>, plus Gerrit etc. — do <strong>not</strong> ship to lifted host per D38</td>
+<td>builder</td>
+</tr>
+</tbody></table>
+<p><strong>File size limits (<a href="../../agent-pack/loom/rules/minimal-architecture.mdc">minimal-architecture.mdc</a>):</strong></p>
 <table>
 <thead>
 <tr>
@@ -501,100 +1062,92 @@ npm run dev
 <td>200 lines</td>
 <td>500 lines</td>
 </tr>
+<tr>
+<td>MCP tool</td>
+<td>100 lines</td>
+<td>250 lines</td>
+</tr>
+<tr>
+<td>Connector</td>
+<td>200 lines</td>
+<td>500 lines</td>
+</tr>
 </tbody></table>
-<p><strong>JIRA custom field IDs:</strong></p>
-<ul>
-<li>Client: always import from <code>client/src/utils/jiraFields.js</code> — never write <code>customfield_NNNNN</code> inline</li>
-<li>Server: always use <code>server/utils/jiraFieldsConfig.js</code> or <code>server/config/jiraFieldsConfig.json</code></li>
-</ul>
-<p><strong>API calls in components:</strong></p>
-<ul>
-<li>Wrong: <code>import axios from &#39;axios&#39;</code> inside <code>components/</code></li>
-<li>Right: create a hook in <code>hooks/</code> or service in <code>services/</code> and consume it</li>
-</ul>
-<h3>Documentation standards — <code>documentation-consistency.mdc</code></h3>
-<p><strong>Report file naming</strong> (files in <code>reports/</code>):</p>
-<pre><code>{ReportType}-{Product}-{Release}-{YYYY-MM-DD}{-Variant}.{ext}
-</code></pre>
-<p>Example: <code>TeamExec-NDB-2.11-2026-05-08.md</code></p>
-<p><strong>Report frontmatter</strong> (required in every <code>.md</code> report):</p>
-<pre><code class="language-yaml">---
-report_type: Team Executive-Executive | Sprint | Detailed | KPI | Prediction
-product: NDB
-release: &quot;2.11&quot;
-generated: YYYY-MM-DD
-data_source: live | skill | manual
----
-</code></pre>
-<p><strong>Skill files</strong> (<code>.cursor/skills/*/SKILL.md</code>) must contain in order:</p>
-<ol>
-<li><code>## When to Use This Skill</code></li>
-<li><code>## Quick Start</code></li>
-<li><code>## Core Rules</code></li>
-<li><code>## Output Format</code></li>
-<li><code>## Quality Validation</code></li>
-</ol>
-<h3>Other active rules (all live at <code>~/.cursor/rules/</code>)</h3>
+<p>When a file approaches its hard limit, split before adding the next feature (extract sub-components, move logic to a service, compose smaller hooks).</p>
+<p><strong>JIRA field ID rule:</strong> client imports from <code>client/src/utils/jiraFields.js</code>; server via <code>productService</code>/<code>jiraFieldsConfig.json</code> — never inline <code>customfield_NNNNN</code> twice.</p>
+<p><strong>API call rule:</strong> components never <code>import axios</code> — hook/service via <code>shared/services/apiService.js</code> (<code>authenticatedGet/Post</code>).</p>
+<hr>
+<h2>Appendix B — Glossary &amp; Decision Map</h2>
 <table>
 <thead>
 <tr>
-<th>Rule file</th>
-<th>Enforces</th>
+<th>Term</th>
+<th>Means</th>
+<th>Decided in</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>no-localhost.mdc</code></td>
-<td>No hardcoded <code>localhost</code> in app code; use env vars or relative paths</td>
+<td><strong>Loom</strong></td>
+<td>Weaver agent — discusses scope, drafts plan in <code>.opencode/plan/</code>, executes pipeline alone via <code>weave.mdc</code></td>
+<td><a href="../../agent-pack/loom/identity/loom.md">loom.md</a></td>
 </tr>
 <tr>
-<td><code>nutanix-jira-date-hierarchy.mdc</code></td>
-<td>JIRA date logic by issue type: gate dates (X-FEAT/Feature), duedate (Epic), sprint end (everything else)</td>
+<td><strong>Weave</strong></td>
+<td>The pipeline skill: Discuss → plan → Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge (incl. link gate)</td>
+<td><a href="../../agent-pack/loom/skills/weave/SKILL.md">skills/weave/SKILL.md</a></td>
 </tr>
 <tr>
-<td><code>react-useeffect-infinite-loop-prevention.mdc</code></td>
-<td>All functions in <code>useEffect</code> deps → <code>useCallback</code>; all objects → <code>useMemo</code></td>
+<td><strong>Payload — Engineering</strong></td>
+<td><code>project = ERA AND (6-bucket union)</code> — dev-team view</td>
+<td><a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a></td>
 </tr>
 <tr>
-<td><code>confluence-cleanup-clarification.mdc</code></td>
-<td>Always ask before modifying Confluence HTML/XML content</td>
+<td><strong>Payload — Release</strong></td>
+<td>No project filter — every contributor project (ERA+FEAT+TECHPUBS+…) via <code>fixVersion</code></td>
+<td><a href="../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload">D36</a> — <strong>default</strong> since 2026-06-13</td>
 </tr>
 <tr>
-<td><code>sprint-system.mdc</code></td>
-<td>3-week sprints, Wednesday start, sequential naming (S1, S2…)</td>
+<td><strong>Static mount</strong></td>
+<td><code>apps/bin-packing/</code> vanilla JS served at <code>/bin-packing/*</code>, new-tab sidebar entry</td>
+<td><a href="../../DECISIONS.md#d37--bin-packing-app-ships-as-a-static-mount-not-a-react-port">D37</a></td>
 </tr>
 <tr>
-<td><code>sprint-velocity-types.mdc</code></td>
-<td>Three independent velocity streams: Dev, QA Verification, QA Test Tasks</td>
+<td><strong>Portable pack</strong></td>
+<td>Identity/skills/workflows/rules live in <code>agent-pack/</code>; <code>.cursor/</code> is symlink adapter</td>
+<td><a href="../../DECISIONS.md#d38--agent-pack-is-portable-cursor-is-one-adapter">D38</a></td>
 </tr>
 <tr>
-<td><code>velocity-resolution-categories.mdc</code></td>
-<td>Resolution-status categorization for velocity math</td>
+<td><strong>Agent runtime</strong></td>
+<td><code>POST /api/ai/chat</code> runs <code>runAgentTurn</code> (perceive→memory→pack→tool loop; <code>mutate</code> HITL-queued)</td>
+<td><a href="../../DECISIONS.md#d39--web-chat-is-an-agent-runtime-not-a-mailbox">D39</a>/<a href="../../DECISIONS.md#d42--open-the-door-safely-memory-provenance-hitl-wave-4">D42</a></td>
 </tr>
 <tr>
-<td><code>jira-authenticity-links.mdc</code></td>
-<td>Every displayed metric must be a JIRA hyperlink, not a bare number</td>
+<td><strong>Domain derives</strong></td>
+<td>Pure derivations in <code>shared/src/domain/</code> (CJS+ESM) — no IO, shared by MCP/web/chat</td>
+<td><a href="../../DECISIONS.md#d41--domain-derives-live-in-shared-not-in-pages-or-fat-routes">D41</a></td>
 </tr>
 <tr>
-<td><code>issue-type-grouping.mdc</code></td>
-<td>Portfolio (Feature/Initiative/Epic/X-FEAT/Capability) vs Work Items (Story/Task/Bug/Sub-task)</td>
+<td><strong>Multi-team registry</strong></td>
+<td><code>teamBoardConfig.json</code> <code>teams[]</code> — NDB default, Admin-onboarded teams persisted to disk</td>
+<td><a href="../../DECISIONS.md#d43--multi-team-registry-after-the-app-stabilized">D43</a></td>
 </tr>
 <tr>
-<td><code>release-types.mdc</code></td>
-<td>Dot notation classification of NDB releases (major / patch / RC)</td>
+<td><strong>Product-agnostic</strong></td>
+<td>No NDB literal in code — via <code>teamBoardConfig.json</code> + <code>productService</code></td>
+<td><a href="../../DECISIONS.md#d1--platform-is-product-agnostic">D1</a></td>
 </tr>
 <tr>
-<td><code>ui-density.mdc</code></td>
-<td>13&quot; laptop optimization for dashboards</td>
+<td><strong>Audience / lens</strong></td>
+<td>11 audiences (<code>team-exec</code>, <code>director</code>, <code>portfolio_mgr</code>, <code>tpm</code>, <code>rm</code>, <code>feat</code>, <code>team_lead</code>, <code>team_mgr</code>, <code>ic</code>, <code>qa_lead</code>, <code>architect</code>) — lens re-renders, never filters</td>
+<td><a href="../../DECISIONS.md#d6--tab-visibility-default-landing-and-role-lens-revised-2026-05-19">D6</a></td>
 </tr>
 <tr>
-<td><code>ai-metrics-documentation.mdc</code></td>
-<td>Structured <code>{value, source, jql}</code> format for every dashboard metric</td>
-</tr>
-<tr>
-<td><code>comprehensive-jql-and-metrics.mdc</code></td>
-<td>5-component release payload structure</td>
+<td><strong>HITL / D26</strong></td>
+<td>Mutate paused in inbox; only RM/TPM/PM/Admin may execute per role</td>
+<td><a href="../../DECISIONS.md#d26--action-level-authorization">D26</a></td>
 </tr>
 </tbody></table>
+<p><strong>Reading order for a new dev:</strong> this guide (§0-§2) → <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a> → <a href="../../DECISIONS.md#round-0--consolidation-foundation-already-executed">DECISIONS.md</a> → <a href="../architecture/FEATURE_CATALOG.md">FEATURE_CATALOG.md</a> → <a href="HOW_TO_RUN.md">HOW_TO_RUN.md</a> → your first <code>weave</code> under <a href="../../agent-pack/loom/skills/weave/SKILL.md">skills/weave/SKILL.md</a>.</p>
 <hr>
-<p>This guide is the single place for architecture, features, config, and file roles so new developers can onboard quickly.</p>
+<p><em>Maintained via Loom weave — <code>docs-verify</code> must PASS before merge. Last verified against monorepo at <code>shared/src/index.ts</code>, <code>apps/delivery-ops/server/index.js:PORT</code>, <code>client/package.json:PORT</code>, <code>agent-pack/loom/manifest.json:3.0.0</code>.</em></p>
 </article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

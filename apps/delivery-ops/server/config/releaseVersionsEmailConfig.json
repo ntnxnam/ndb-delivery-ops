@@ -34,7 +34,19 @@
     "2026-04-22",
     "2026-05-13",
     "2026-06-03",
-    "2026-06-24"
+    "2026-06-24",
+    "2026-07-15",
+    "2026-08-05",
+    "2026-08-26",
+    "2026-09-16",
+    "2026-10-07",
+    "2026-10-28",
+    "2026-11-18",
+    "2026-12-09",
+    "2026-12-30",
+    "2027-01-20",
+    "2027-02-10",
+    "2027-03-03"
   ],
   "releaseGateDates": {
     "NDB-2.10": {
@@ -371,13 +383,28 @@
         "label": "Commit Gate",
         "date": "2026-12-15",
         "color": "#ff9800",
-        "style": "solid"
+        "style": "dotted",
+        "reason": "Gate sequence compressed with NDB-3.0 CCM — superseded by 1-month slip"
+      },
+      "commitGate3": {
+        "label": "Commit Gate 3",
+        "date": "2027-01-15",
+        "color": "#ff9800",
+        "style": "solid",
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
       },
       "promotionGate1": {
         "label": "Promotion Gate (old)",
         "date": "2027-02-02",
         "color": "#9c27b0",
         "style": "dotted"
+      },
+      "promotionGate2": {
+        "label": "Promotion Gate 2",
+        "date": "2027-03-02",
+        "color": "#9c27b0",
+        "style": "solid",
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
       },
       "deferralComplete": {
         "label": "Deferral Complete",

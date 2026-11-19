@@ -5,6 +5,8 @@ alwaysApply: true
 
 # No hardcoded localhost in production code
 
+This rule covers the localhost-in-production concern specifically — a focused subset of the broader `no-hardcoding.mdc` (which also governs ports, releases, JQL, doc paths). See also: `no-hardcoding.mdc`.
+
 Code that is deployed or bundled for production must **never** use hardcoded
 `localhost` or `127.0.0.1`.
 
@@ -37,3 +39,7 @@ Code that is deployed or bundled for production must **never** use hardcoded
 
 When adding new features or APIs, use environment variables or relative
 paths so the same code works in dev and production without hardcoded hosts.
+
+## See also
+
+- `no-hardcoding.mdc` — broader hardcoding rule (hosts, ports, releases, JQL, doc paths)

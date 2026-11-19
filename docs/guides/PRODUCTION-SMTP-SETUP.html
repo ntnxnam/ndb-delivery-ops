@@ -3,7 +3,7 @@
 <p>The error <code>554 5.7.1 Relay access denied</code> occurs when the production server&#39;s IP address is not authorized to relay emails through the corporate SMTP server.</p>
 <h2>Quick Diagnosis</h2>
 <p>Run these diagnostic scripts on your production server:</p>
-<pre><code class="language-bash">cd /var/www/html/ndb-status-sender/server
+<pre><code class="language-bash">cd /var/www/html/ndb-delivery-ops/server
 
 # 1. Run comprehensive SMTP diagnostics
 node diagnose-smtp-production.js
@@ -62,7 +62,7 @@ SMTP_PASS=&lt;service-account-password&gt;        # comment out for port 25
 SMTP_FROM=smtp.ndb.team@nutanix.com
 
 # Server Configuration
-PORT=6001
+PORT=8001
 NODE_ENV=production
 
 # Other settings...
@@ -72,7 +72,7 @@ RELEASE_VERSIONS_EMAIL_ACCESS=allowlist
 <h2>Monitoring</h2>
 <p>After deployment, monitor the application logs:</p>
 <pre><code class="language-bash"># Check PM2 logs for SMTP success/failure
-ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com &#39;cd /var/www/html/ndb-status-sender &amp;&amp; pm2 logs&#39;
+ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com &#39;cd /var/www/html/ndb-delivery-ops &amp;&amp; pm2 logs&#39;
 
 # Look for these log messages:
 # ✓ Success: &quot;[EmailService] Email sent: &lt;message-id&gt;&quot;

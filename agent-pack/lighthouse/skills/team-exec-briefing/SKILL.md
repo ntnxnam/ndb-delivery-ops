@@ -122,7 +122,7 @@ Orchestrator parallel calls (via shared services / agentRuntime):
 Input: HTML or JIRA-derived project data for a release
 Processing: per-project risk escalation (ladder) + dense bullet + 6-section assembly
 Output: TeamExec-{Product}-{Release}-{YYYY-MM-DD}.md + -Email.html
-Service: shared/services/vpReportService.ts (CONSOLIDATION #7, port pending) ← ~/.cursor/skills/team-exec-release-report/
+Service: shared/services/vpReportService.ts (CONSOLIDATION #7, port pending) ← `agent-pack/lighthouse/skills/team-exec-briefing/` (consolidated from `team-exec-release-report`)
 ```
 
 ### Mode: briefing — generative briefing (POST /api/ai/release-summary)

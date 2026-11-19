@@ -1,0 +1,58 @@
+---
+description: AI config sync — canonical NAI_API_KEY with no fallback, files that must stay in sync
+alwaysApply: true
+---
+
+# AI Config Sync — NAI vs AI Key
+
+The Nutanix Enterprise AI key was originally `AI_API_KEY` and was renamed to `NAI_API_KEY` (NuTokens). Per 2026-11-18 decision: **NAI is the only name — no fallback**.
+
+## Canonical
+
+- **Env var:** `NAI_API_KEY` in `apps/delivery-ops/server/.env` (NuToken from `tokens.corp.nutanix.com`)
+- No `AI_API_KEY` fallback in code — single canonical name prevents desync (per `never-hide-fix-root-cause-first`)
+
+## Files that must stay in sync
+
+When the key name changes, update **all** of these in the same commit:
+
+| File | What to keep in sync |
+|---|---|
+| `shared/src/connectors/aiConnector.ts` | Canonical source — reads `process.env.NAI_API_KEY` only (no `AI_API_KEY` fallback) |
+| `apps/delivery-ops/server/.env.example` | Example env var name + comment pointing to `tokens.corp.nutanix.com` |
+| `apps/delivery-ops/server/config/aiConfig.json` | `description` field referencing `NAI_API_KEY` and `server/.env` |
+| `apps/delivery-ops/server/services/naiService.js` | Error re-throw wording (`NAI API key not configured. Set NAI_API_KEY in server/.env`) |
+| Worktree mirrors (if present) | `lighthouse/app/server/config/aiConfig.json` and `lighthouse/app/server/.env.example` — same as above |
+
+## How the connector reads config
+
+```typescript
+// shared/src/connectors/aiConnector.ts — canonical
+const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? process.env.NAI_API_BASE_URL ?? '').trim();
+const apiKey = (override?.apiKey ?? process.env.NAI_API_KEY ?? '').trim();
+if (!apiKey) throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
+const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '').trim();
+```
+
+- `baseUrl` has a fallback (`AI_API_BASE_URL` → `NAI_API_BASE_URL`) for endpoint migration — this is intentional
+- `apiKey` has **no fallback** — only `NAI_API_KEY` is read; `AI_API_KEY` is not accepted
+- `defaultModel` has a fallback (`AI_DEFAULT_MODEL` → `NAI_MODEL`) for model name migration
+
+## Enforcement
+
+- `shared/src/connectors/aiConnector.ts` is the **single source of truth** for env var names — routes and services delegate to it
+- CI must fail if any of the 4 primary files still reference `AI_API_KEY` as the key name (not baseUrl/model)
+- Docs (`docs/api/ai.md`, `docs/pages/*`, `docs/technical/*`) should reference `NAI_API_KEY` in new content; legacy `AI_API_KEY` mentions in docs are tech-debt to clean, not a code bug
+
+## Never Do
+
+- Add `process.env.AI_API_KEY` as a fallback for `apiKey` — the rename is intentional
+- Update one of the 4 files without the others — desync causes "key not configured" in prod while local works
+- Hide a desync behind a fallback — fix the root cause (single name) per `never-hide-fix-root-cause-first`
+
+## Cross-references
+
+- **Memory:** `ai-config-sync-nai-vs-ai-key.md` — canonical `NAI_API_KEY` with no fallback; files that must stay in sync
+- **`never-hide-fix-root-cause-first`** — single canonical name avoids desync vs hidden fallback
+- **`no-hardcoding.mdc`** — no hardcoded hosts/ports; `aiConnector.ts` enforces `AI_API_BASE_URL` not localhost in prod
+- **D44, D45** in `DECISIONS.md` — Lighthouse tenancy and `@portfolio-delivery-ops` scope

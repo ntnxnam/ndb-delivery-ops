@@ -5,11 +5,11 @@
  * Palette + density + typography ported from `apps/bin-packing/css/main.css`,
  * which the Portfolio Manager called out as "the UX is nice and usable."
  *
- * Strategy:
- *   - Tokens live under `.ds-scope` so the legacy Atlassian-light surface
- *     stays untouched. Any new page wraps itself in `<div className="ds-scope">`
- *     to opt in. When/if we re-skin the whole app, we lift `.ds-scope` rules
- *     to `:root`.
+ * Strategy (woven 2026-11-18 — global chrome now uses :root tokens;
+ * legacy pages keep their own card colours but inherit shell + type):
+ *   - Tokens live under `:root` (global) AND `.ds-scope` (back-compat).
+ *     Any new page can still wrap in `<div className="ds-scope">` but no
+ *     longer needs to — the app shell is already themed.
  *   - Status colors match the GitHub/bin-packing palette so error/success/
  *     warn read consistently across the new pages and the bin-packing app
  *     when it's embedded inside a parent shell later.
@@ -18,6 +18,7 @@
  *     the Gantt's revealed preference for dense layouts.
  */
 
+:root,
 .ds-scope {
   /* ── core surfaces ─────────────────────────────────────────────────── */
   --ds-bg: #0f1419;
@@ -100,7 +101,10 @@
   /* ── layout ────────────────────────────────────────────────────────── */
   --ds-max-width: 1400px;
 
-  /* ── apply base look ───────────────────────────────────────────────── */
+}
+
+/* ── apply base look — scoped so legacy cards that rely on #fff keep it ── */
+.ds-scope {
   background: var(--ds-bg);
   color: var(--ds-text);
   font-family: var(--ds-font-sans);
@@ -130,8 +134,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── focus ring (single rule for every focusable thing inside ds-scope) */
-.ds-scope :focus-visible {
+/* ── shell weave — app chrome lives in the new palette even outside .ds-scope ── */
+.app-layout {
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+}
+
+/* ── focus ring (single rule for every focusable thing inside ds-scope / shell) */
+.ds-scope :focus-visible,
+.app-layout :focus-visible {
   outline: 2px solid var(--ds-accent);
   outline-offset: 2px;
 }

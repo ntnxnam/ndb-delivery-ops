@@ -129,9 +129,13 @@ Procedure:
 - Pushing the Confluence variant without running width-cleanup
 - Sending without preview when not pre-authorised
 
+
+## Delegation
+
+Owner: `tpm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.
 ## Cross-references
 
-- `.cursor/agents/specialists/tpm-specialist.md`
-- `.cursor/skills/confluence-width-cleanup/SKILL.md` (for Confluence variant)
-- `~/.cursor/context/audience.md` — multi-section broad_leadership rendering
+- `agent-pack/lighthouse/identity/specialists/tpm-specialist.md`
+- `agent-pack/lighthouse/skills/confluence-width-cleanup/SKILL.md` (for Confluence variant)
+- `agent-pack/lighthouse/context/audience.md` (harness mirror: `~/.cursor/context/audience.md`) — multi-section broad_leadership rendering
 - `DECISIONS.md` — D8, D9, D17, D15d

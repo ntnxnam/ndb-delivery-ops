@@ -91,6 +91,15 @@ When you touch a file containing hardcoded NDB strings:
 
 Do not let the grandfathering tail grow.
 
+## Tenancy (D44 / D45)
+
+Product-agnosticism extends to Lighthouse / Loom tenancy split (D44):
+
+- Product-facing code lives in `agent-pack/lighthouse/` and `mcp/lighthouse/`; builder code lives in `agent-pack/loom/` and `mcp/loom/` — do not cross-mount.
+- Deduplicated tools live in `mcp/shared/` and `shared/` (`@portfolio-delivery-ops/*` scope per D45).
+- New packages must use `@portfolio-delivery-ops/<name>` (D45); `ndb-*` only remains at the D2 boundary.
+- Scripts follow tenancy: `scripts/lighthouse/` vs `scripts/loom/` (D46).
+
 ## Never Do
 
 - Add a new string literal `"NDB"` / `"ndb"` / `customfield_*` to non-config code
@@ -101,5 +110,6 @@ Do not let the grandfathering tail grow.
 
 ## Cross-references
 
-- **D1, D5** in `DECISIONS.md`
+- **D1, D5, D44, D45, D46** in `DECISIONS.md` — product-agnosticism, multi-product, tenancy, package scope, script tenancy
 - **`minimal-architecture.mdc`** hard line #3 — customfield IDs in one place
+- **`agent-pack/harness/`** — host-specific symlinks (harness handles adapter wiring)

@@ -1,31 +1,24 @@
-# Agent primer — ndb-status-sender
+# Agent primer — apps/delivery-ops
 
-## What this project is
+> **This file is a pointer.** The canonical project instructions are the **repo-root** [`AGENTS.md`](../../AGENTS.md) — read that first. This file only adds workspace-specific notes for `apps/delivery-ops`.
 
-The primary internal tool for sending NDB release-version status emails and dashboards to NDB Engineering. It's a React + Express stack:
+## What this workspace is
 
-- **Frontend**: React app served on `localhost:8899` in dev; talks to backend on `localhost:8001`
-- **Backend**: Node/Express server in `server/`; proxies JIRA, sends SMTP through Nutanix mail relay
-- **Data sources**: JIRA (Nutanix instance), TCMS, Confluence
+The web app — React (port 8899) + Express (port 8001) — for portfolio delivery operations. Product-agnostic per **D1**; NDB is one tenant via `teamBoardConfig.json` + `productService`.
 
-## Read first (in order)
-
-1. `~/.cursor/AGENTS.md` — the user's role, layered loading, recipient audiences
-2. `~/.cursor/context/ndb-ops/AGENTS.md` — domain primer (releases, customfields, teams, JQL)
-3. `.cursor/rules/minimal-architecture.mdc` — this repo's structural deltas (the hit-list of oversized files)
-4. `.cursor/rules/documentation-consistency.mdc` — this repo's report-naming deltas
-
-The user-level rules in `~/.cursor/rules/` are auto-applied and you don't need to re-read them every turn.
+- **Frontend**: `client/src/` — React, persona-aware sidebar (D6), embedded chat panel (D7)
+- **Backend**: `server/` — Express routes (thin), services, connectors via `@portfolio-delivery-ops/shared`
+- **Data**: JIRA Data Center (PAT Bearer per D40), Confluence, GitHub, TCMS, NAI/AI
 
 ## Running locally
 
 ```bash
-./scripts/start.sh          # starts backend on 8001 and frontend on 8899
-./scripts/stop.sh           # stops both
-./scripts/restart.sh        # restart
+./scripts/start.sh          # backend 8001 + frontend 8899
+./scripts/stop.sh
+./scripts/restart.sh
 ```
 
-Logs go to `/tmp/server.log` (backend) and `/tmp/client.log` (frontend). Hot-reload is on for both.
+Logs: `/tmp/server.log` (backend), `/tmp/client.log` (frontend). Hot-reload on both.
 
 ## Project structure
 
@@ -36,85 +29,31 @@ client/src/
   shared/services/    canonical HTTP wrapper (apiService.js)
   services/           domain services (jiraQueryService, taskBreakdownService)
   utils/              pure functions (no React, no axios)
-  constants/          magic strings
-  auth/               authentication module (LoginForm, AuthContext, permissions)
+  auth/               authentication (LoginForm, AuthContext, permissions)
   layout/             chrome (Sidebar, Layout)
+  release/ feature/   domain pages (ReleaseBrief, FeatureDashboard, …)
 
 server/
   routes/             thin Express handlers, one file per resource
-  services/           multi-step orchestration
+  services/           orchestration (releaseDataService, kpiService, …)
   utils/              single-purpose helpers
   config/             JSON config (jiraFieldsConfig, teamBoardConfig, allowedUsers)
   middleware/         auth, timeout, security
-
-reports/              generated artifacts (committed)
 ```
 
-## Permissions model (recently fixed)
+## Permissions model
 
-- Users defined in `server/config/allowedUsers.json` (one of: `allowedUsers`, `kpiTabAllowedUsers`, etc.)
-- Server maps legacy lists → fine-grained permissions in `server/routes/auth.js::LEGACY_PERMISSION_MAPPING`
-- Client mirror in `client/src/auth/constants/permissions.js::LEGACY_PERMISSION_MAPPING`
-- Sidebar items hidden if user lacks the permission for that tab
-- "Test Connection & Refresh Permissions" button forces a re-fetch (use this after backend `auth.js` changes)
+- Users in `server/config/allowedUsers.json` — mapped via `LEGACY_PERMISSION_MAPPING` in `server/routes/auth.js` + `client/src/auth/constants/permissions.js` (must agree).
+- Sidebar items gated on permission; use "Test Connection & Refresh Permissions" after backend auth changes.
 
-If a sidebar tab is missing for a user, check both legacy-mapping files (they must agree) and that the user appears in the corresponding `allowedUsers.json` list.
+## Need the bigger picture?
 
-## SMTP / email sending — sacred path
-
-`server/services/emailService.js`, `server/routes/email/sendEmailHandler.js`, `server/utils/sanitize.js`: preserve byte-for-byte unless the user approves. Current mail relay: `mailrelay.dyn.nutanix.com:25` (no auth). Several commits on `origin/main` are SMTP fixes; never rebase or squash them out.
-
-## Refactor state
-
-The codebase is in active refactor. Plan and progress:
-
-- **Phase 1** ✓ committed — dead code purge (App.clean.js, email/ folder, root scripts, redundant shell scripts, stale top-level markdown)
-- **AI architecture** ✓ committed at `48748a5` — generic rules/skills/agents promoted to user level; workspace `.cursor/` trimmed
-- **Phase 2** in-flight on branch `refactor/phase-2`:
-  - **2a** ✓ committed at `cd05f75` — extracted 17 pure helpers from `server/routes/jira/index.js` into 6 utility modules under `server/utils/`. File shrunk 7,397 → 7,149.
-  - **2b** next — service extraction. Five new services under `server/services/`: `releaseService.js`, `sprintService.js`, `kpiService.js`, `execSummaryService.js`, `jiraTicketService.js`. Target: index.js shrinks to ~3,000 lines.
-  - **2c** — split the now-thin index.js into 6 resource-scoped route files (`meta.js`, `releases.js`, `sprints.js`, `kpi.js`, `tickets.js`, `execSummary.js`). Target: every JIRA route file ≤250 lines.
-- **Phase 3** — extract fetch out of `EmailSender.js` (2,189 lines), `ReleaseTrendsPage.js`, `SprintReportPage.js`, `ReleaseVersionTab.js`, `ReleaseVersionGantt.js`
-- **Phase 4** — consolidate the two API wrappers (`utils/api.js` ↔ `shared/services/apiService.js`)
-- **Phase 5** — consolidate customfield references (currently 238 inline in client, 1,190 in server) onto `jiraFields.js` / `jiraFieldsConfig.json`
-- **Phase 6** — performance pass (memoize tables, virtualize long lists, batch JIRA calls)
-
-When adding code, do not regress against earlier phases.
-
-### Phase 2a utility files (already extracted — import from these)
-
-When working in the JIRA routes, do NOT inline these helpers — import them:
-
-| Symbol | Lives in |
-|---|---|
-| `extractTextFieldValue` | `server/utils/adfText.js` |
-| `extractQIFromItem` | `server/utils/tcmsHelpers.js` |
-| `classifySprintIssue`, `getAddedToSprintAt`, `getSprintsForBoard`, `resolveSprintState` | `server/utils/sprintCache.js` |
-| `normalizeTeamId`, `loadKpiConfigSync`, `getKpisForTeam`, `getTeamBaseFilter`, `getTeamSprintBaseFilter` | `server/utils/teamConfig.js` |
-| `upstreamStatus`, `getDefaultReleaseBaseFilter`, `getTeamConfig`, `getConfigOverride`, `getReleaseBaseFilter` | `server/utils/jiraRouteHelpers.js` |
-| `buildOptimizedProjectTicketsJQL`, `buildSprintReportJql`, plus the older `buildCommitItemsJQL`, `buildLongTermItemsJQL`, `buildTaskBreakdownJQL`, `buildAllTicketsJQL`, `getAllItemKeysForVersion` | `server/utils/jiraQueryUtils.js` |
-
-## JIRA quirks specific to this project
-
-- Sprint field is `customfield_10360` (not the default `customfield_10020`). See `~/.cursor/context/ndb-ops/customfields.md`.
-- Three team base filters: `NDB-All-Base-Filter`, `DataLens-All-Base-Filter`, filter ID `175938` (NCM). See `server/config/teamBoardConfig.json` and `~/.cursor/context/ndb-ops/teams.md`.
-- Use `runSearchByJql` from `server/utils/jiraSearchByJql.js` for paginated bulk fetches.
+- `../../AGENTS.md` — workspace table (lighthouse/loom/shared), 5 connectors, AI layer, phase plan
+- `../../ARCHITECTURE.md` / `../../docs/technical/ARCHITECTURE.md` — 5-layer model
+- `../../DECISIONS.md` — D1…D46, including D44 tenancy (lighthouse/loom/shared)
+- `../../docs/guides/DEVELOPER_GUIDE.md` — setup, conventions, ports
 
 ## Gotchas
 
-- Frontend dev port is `8899`; backend is `8001`. Old bookmarks on 6001/6100 will not work.
-- Some tabs (Release Trends, Release Analysis) are gated behind `release_trends_view`; only granted via legacy `allowedUsers` mapping.
-
-## Skills available
-
-The user-level skills under `~/.cursor/skills/` are all directly useful here:
-
-- `team-exec-release-report` — when the user asks for a Team Executive-style release summary
-- `sprint-gantt-chart` — when building a Gantt visualization
-- `ticket-insights` — when gathering ticket data using the NDB JIRA hierarchy (fetch + 6-group breakdown)
-- `confluence-width-cleanup` — when fixing Confluence HTML pasted into descriptions
-- `predictive-team-exec-analytics` — when predictive/forecasting analysis is requested
-
-## When in doubt
-
-The user is an Ops person, not an NDB engineer. She does not own JIRA configuration, customfield IDs, or release calendar — she consumes them. When something looks off (e.g. a customfield ID that doesn't resolve), she'll ask a TPM/PM; don't try to "fix" the JIRA side. Fix the tool to be resilient instead.
+- Ports are fixed: React `8899`, Express `8001` — no fallback, no auto-detect.
+- Sprint field is `customfield_10360` (not the default). See `server/config/teamBoardConfig.json` + `productService`.

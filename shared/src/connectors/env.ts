@@ -1,7 +1,7 @@
 /**
  * Environment + configuration for shared connectors.
  *
- * Shared between mcp-server and apps/delivery-ops/server. Each runtime
+ * Shared between mcp/* and apps/delivery-ops/server. Each runtime
  * loads env once and passes the resulting object to connector
  * constructors.
  *
@@ -38,7 +38,7 @@ export interface LoadEnvOptions {
   /**
    * Throw when no JIRA PAT is found in the process environment.
    *
-   * Default: `true` (backward compatible with mcp-server and any other
+   * Default: `true` (backward compatible with mcp servers and any other
    * batch-process caller where the PAT must be set at boot).
    *
    * HTTP server routes that accept a per-user PAT in the request should

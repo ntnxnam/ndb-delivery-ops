@@ -3,7 +3,7 @@
 // Uses marked if available, else minimal fallback.
 const fs = require('fs');
 const path = require('path');
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '../../..');
 const guidesDir = path.join(root, 'docs', 'guides');
 let marked;
 try { marked = require('marked'); } catch { marked = null; }

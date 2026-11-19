@@ -64,7 +64,7 @@ still embeds copies until runtime wiring uses `extractSystemPromptBody`.
 
 ## What does **not** live here
 
-Builder-only Cursor rules stay in `.cursor/rules/` (`minimal-architecture`,
+Builder-only rules live in `loom/rules/` (`minimal-architecture`,
 `api-docs-required`, `page-docs-required`, `documentation-consistency`,
 `gerrit-push-for-review`). Those are for people writing code in this
-repo. They do not ship with a lifted agent.
+repo. They do not ship with a lifted product agent (lighthouse).

@@ -4,22 +4,11 @@
  * QA Contact, Due Date, Fix Version — Status Sender value shapes.
  */
 
+import { formatDueDate } from '../../shared/utils/dateFormatter';
+
 const FEATURE_TYPES = new Set(['feature', 'initiative']);
 const LEVEL1_TYPES = new Set(['x-feat', 'capability']);
 const EPIC_TYPE = 'epic';
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** Match Status Sender / server dateFormatter: DD/Mon/YYYY */
-function formatDueDate(isoDay) {
-  if (!isoDay || typeof isoDay !== 'string') return 'Not Set';
-  const m = isoDay.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return 'Not Set';
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  const day = Number(m[3]);
-  if (!year || !month || !day) return 'Not Set';
-  return `${String(day).padStart(2, '0')}/${MONTHS[month - 1]}/${year}`;
-}
 
 function formatFixVersions(fixVersions) {
   if (Array.isArray(fixVersions)) {

@@ -2,6 +2,7 @@
 description: Always ask for clarification before modifying Confluence HTML/XML content
 alwaysApply: true
 ---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/confluence-cleanup-clarification.mdc -->
 
 # Confluence Content Cleanup Clarification
 

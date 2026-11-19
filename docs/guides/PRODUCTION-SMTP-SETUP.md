@@ -9,7 +9,7 @@ The error `554 5.7.1 Relay access denied` occurs when the production server's IP
 Run these diagnostic scripts on your production server:
 
 ```bash
-cd /var/www/html/ndb-status-sender/server
+cd /var/www/html/ndb-delivery-ops/server
 
 # 1. Run comprehensive SMTP diagnostics
 node diagnose-smtp-production.js
@@ -72,7 +72,7 @@ SMTP_PASS=<service-account-password>        # comment out for port 25
 SMTP_FROM=smtp.ndb.team@nutanix.com
 
 # Server Configuration
-PORT=6001
+PORT=8001
 NODE_ENV=production
 
 # Other settings...
@@ -86,7 +86,7 @@ After deployment, monitor the application logs:
 
 ```bash
 # Check PM2 logs for SMTP success/failure
-ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com 'cd /var/www/html/ndb-status-sender && pm2 logs'
+ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com 'cd /var/www/html/ndb-delivery-ops && pm2 logs'
 
 # Look for these log messages:
 # ✓ Success: "[EmailService] Email sent: <message-id>"

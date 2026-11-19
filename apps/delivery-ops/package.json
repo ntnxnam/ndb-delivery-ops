@@ -4,8 +4,8 @@
   "description": "NDB Status Update Sender - Extract Confluence content and send status emails",
   "main": "server/index.js",
   "scripts": {
-    "check:no-localhost": "node scripts/check-no-localhost.js",
-    "check:product-agnostic": "node scripts/check-product-agnostic.js",
+    "check:no-localhost": "node ../../scripts/lighthouse/checks/check-no-localhost.js",
+    "check:product-agnostic": "node ../../scripts/lighthouse/checks/check-product-agnostic.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && HOST=0.0.0.0 PORT=8899 npm start",

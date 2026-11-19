@@ -208,3 +208,7 @@ Before declaring any gate move done:
 - [ ] Routing was correct (ticketKey → J, releaseKey → C, ambiguous → asked)
 - [ ] On any error, underlying `code` and `message` surfaced (not swallowed)
 - [ ] References decision IDs D30 (JIRA audit) and D31 (release config) where applicable
+
+## Delegation
+
+Owner: `rm-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.

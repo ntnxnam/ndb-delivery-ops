@@ -1,8 +1,7 @@
 # Identity — orchestrator + specialists (D16, D38)
 
 This folder is the portable identity pack (`system.md` equivalent).
-Cursor sees it via `.cursor/agents` → this directory. Any other host
-loads it with `loadAgentPack()`.
+Hosts see it via generated adapters under `agent-pack/harness/` (e.g. `.cursor/agents` is a symlink to this directory). Any other host loads it with `loadAgentPack('lighthouse')`.
 
 Per **D16**, this project follows Anthropic's **orchestrator-workers**
 pattern. ONE user-facing agent (`ops-assistant.md`) is the front door.
@@ -29,6 +28,7 @@ not select these manually.
 | Triage Specialist | `specialists/triage-specialist.md` | 4 triage flavours (D19) |
 | Confluence Publisher Specialist | `specialists/confluence-publisher-specialist.md` | All Confluence writes |
 | Dependency Tracker Specialist | `specialists/dependency-tracker-specialist.md` | JIRA dep graph (D18) |
+| Doc Specialist | `specialists/doc-specialist.md` | Known issues, release notes, user/admin guides — stage 8.5 (Docs) |
 
 ## Authoring conventions
 
@@ -52,7 +52,11 @@ When the orchestrator boots a session:
 3. This pack’s orchestrator (`ops-assistant.md`)
 4. Per question: specialist + skill from `agent-pack/skills/`
 
+## Tenancy (D44 / D45)
+
+This pack is one half of a two-pack repo. Its MCP server is `mcp/lighthouse/` (bin `lighthouse-mcp`, 10 tools: 8 shared from `mcp/shared/tools/` + 2 product-only). Its sibling `agent-pack/loom/` (bin `loom-mcp`, 8 shared tools) shares `mcp/shared/` and `shared/` only. See `DECISIONS.md` D44/D45.
+
 ## Deprecated (deleted in Phase A)
 
-- `tpm-assistant.md` — replaced by `specialists/tpm-specialist.md` + skills
-- `rm-assistant.md` — replaced by `specialists/rm-specialist.md` + skills
+- `tpm-assistant.md` — replaced by `specialists/tpm-specialist.md` + skills (deleted — do not attempt to load)
+- `rm-assistant.md` — replaced by `specialists/rm-specialist.md` + skills (deleted — do not attempt to load)

@@ -21,11 +21,11 @@ Invoked by `ops-assistant`. Owns the five doc surfaces that ship with every rele
 
 | Skill | Path | Output |
 |---|---|---|
-| `doc-known-issues` | `agent-pack/skills/doc-known-issues/SKILL.md` | `Documentation/known-issues/KNOWN_ISSUES.md` (or versioned `Documentation/known-issues/<release>.md`) |
-| `doc-release-notes` | `agent-pack/skills/doc-release-notes/SKILL.md` | `Documentation/release-notes/RELEASE_NOTES.md` + per-release `Documentation/release-notes/<release>.md` |
-| `doc-user-guide` | `agent-pack/skills/doc-user-guide/SKILL.md` | `Documentation/guides/USER_GUIDE.md` |
-| `doc-admin-guide` | `agent-pack/skills/doc-admin-guide/SKILL.md` | `Documentation/guides/ADMIN_GUIDE.md` |
-| `doc-tech-guide` | `agent-pack/skills/doc-tech-guide/SKILL.md` | `Documentation/technical/` (HLD/LLD/TECH_DESIGN) |
+| `doc-known-issues` | `agent-pack/lighthouse/skills/doc-known-issues/SKILL.md` | `Documentation/known-issues/KNOWN_ISSUES.md` (or versioned `Documentation/known-issues/<release>.md`) |
+| `doc-release-notes` | `agent-pack/lighthouse/skills/doc-release-notes/SKILL.md` | `Documentation/release-notes/RELEASE_NOTES.md` + per-release `Documentation/release-notes/<release>.md` |
+| `doc-user-guide` | `agent-pack/lighthouse/skills/doc-user-guide/SKILL.md` | `Documentation/guides/USER_GUIDE.md` |
+| `doc-admin-guide` | `agent-pack/lighthouse/skills/doc-admin-guide/SKILL.md` | `Documentation/guides/ADMIN_GUIDE.md` |
+| `doc-tech-guide` | `agent-pack/lighthouse/skills/doc-tech-guide/SKILL.md` | `Documentation/technical/` (HLD/LLD/TECH_DESIGN) |
 
 All five are `toolClass: draft` — I produce markdown, never mutate without user approval. Merge stage (10) commits only after user ok.
 
@@ -70,11 +70,11 @@ Every doc claim cites:
 
 ## Cross-references
 
-- `agent-pack/skills/doc-known-issues/SKILL.md`
-- `agent-pack/skills/doc-release-notes/SKILL.md`
-- `agent-pack/skills/doc-user-guide/SKILL.md`
-- `agent-pack/skills/doc-admin-guide/SKILL.md`
-- `.cursor/rules/page-docs-required.mdc`
-- `.cursor/rules/api-docs-required.mdc`
-- `.cursor/rules/documentation-consistency.mdc`
-- `.cursor/rules/multi-agent-delivery-pipeline.mdc` — stage 8.5
+- `agent-pack/lighthouse/skills/doc-known-issues/SKILL.md`
+- `agent-pack/lighthouse/skills/doc-release-notes/SKILL.md`
+- `agent-pack/lighthouse/skills/doc-user-guide/SKILL.md`
+- `agent-pack/lighthouse/skills/doc-admin-guide/SKILL.md`
+- `agent-pack/lighthouse/rules/page-docs-required.mdc`
+- `agent-pack/lighthouse/rules/api-docs-required.mdc`
+- `agent-pack/lighthouse/rules/documentation-consistency.mdc`
+- `agent-pack/lighthouse/rules/multi-agent-delivery-pipeline.mdc` — stage 8.5

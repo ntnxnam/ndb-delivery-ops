@@ -60,7 +60,7 @@ For "create a status page for each team in this release":
 
 ### 4. Width cleanup (existing skill)
 
-`.cursor/skills/confluence-width-cleanup/SKILL.md` (pre-existing). Always
+`agent-pack/lighthouse/skills/confluence-width-cleanup/SKILL.md` (pre-existing). Always
 runs before any push to Confluence. Removes:
 
 - `style="width: ..."` attributes
@@ -120,8 +120,8 @@ multi-section with anchor links per audience section.
 
 ## Cross-references
 
-- `.cursor/skills/confluence-width-cleanup/SKILL.md`
-- `.cursor/rules/confluence-cleanup-clarification.mdc`
-- `.cursor/rules/citation-first-output.mdc`
-- `~/.cursor/context/audience.md`
+- `agent-pack/lighthouse/skills/confluence-width-cleanup/SKILL.md`
+- `agent-pack/lighthouse/rules/confluence-cleanup-clarification.mdc`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/context/` (`INDEX.md` entry point; `~/.cursor/context/audience.md` is the host-local mirror)
 - `DECISIONS.md` — D3 (Confluence connector), D9, D15d, D17, D20

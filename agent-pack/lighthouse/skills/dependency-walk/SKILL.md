@@ -131,16 +131,20 @@ The Post EC dependency view page uses user-facing wait language; map to this ski
 | They wait on me | `downstream` / `downstreamOf` | `blocks` |
 
 Release-level list queries (Q1–Q5 + Q7) live in
-`agent-pack/context/domain/cross-team-dependencies.md` and
+`agent-pack/lighthouse/context/domain/cross-team-dependencies.md` and
 `dependencyViewService`. Naming / hygiene SoT:
-`agent-pack/context/domain/dependency_rule.md`.
+`agent-pack/lighthouse/context/domain/dependency_rule.md`.
 This skill remains the **ticket graph walk** (Mode Dependency **live** `issuelinks`). Dependency View may also show **Previously linked** (removed links via changelog) — do not treat those as live walk edges unless the caller asks for history.
 
+
+## Delegation
+
+Owner: `dependency-tracker-specialist`. Triggered by `ops-assistant` via `loadAgentPack('lighthouse')`.
 ## Cross-references
 
-- `agent-pack/identity/specialists/dependency-tracker-specialist.md`
-- `agent-pack/context/domain/dependency_rule.md`
-- `agent-pack/context/domain/cross-team-dependencies.md`
-- `agent-pack/context/pages/dependency-view.md`
-- `.cursor/rules/citation-first-output.mdc`
+- `agent-pack/lighthouse/identity/specialists/dependency-tracker-specialist.md`
+- `agent-pack/lighthouse/context/domain/dependency_rule.md`
+- `agent-pack/lighthouse/context/domain/cross-team-dependencies.md`
+- `agent-pack/lighthouse/context/pages/dependency-view.md`
+- `agent-pack/lighthouse/rules/citation-first-output.mdc`
 - `DECISIONS.md` — D18
