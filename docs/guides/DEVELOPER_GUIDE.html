@@ -805,14 +805,14 @@ bash scripts/docs-verify.sh
 <td>GitHub PAT (<code>api.github.com</code> Bearer)</td>
 </tr>
 <tr>
-<td><code>AI_API_KEY</code></td>
+<td><code>NAI_API_KEY</code></td>
 <td><em>(none)</em></td>
 <td><strong>Required for AI</strong> — NuToken from <code>tokens.corp</code>. Non-secrets in <code>aiConfig.json</code>. See <a href="AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> + <a href="NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</td>
 </tr>
 <tr>
-<td><code>AI_API_BASE_URL</code> / <code>AI_DEFAULT_MODEL</code> / <code>AI_MAX_TOKENS</code> / <code>AI_REQUEST_TIMEOUT</code></td>
+<td><code>NAI_API_BASE_URL</code> / <code>NAI_DEFAULT_MODEL</code> / <code>NAI_MAX_TOKENS</code> / <code>NAI_REQUEST_TIMEOUT</code></td>
 <td>from <code>aiConfig.json</code></td>
-<td>Override aiConfig per-env (all required if set — no partial)</td>
+<td>Override aiConfig per-env (all required if set — no partial) — <code>AI_*</code> fallback kept during transition</td>
 </tr>
 <tr>
 <td><code>SMTP_HOST</code> / <code>SMTP_PORT</code> / <code>SMTP_USER</code> / <code>SMTP_PASS</code></td>
