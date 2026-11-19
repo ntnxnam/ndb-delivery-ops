@@ -131,7 +131,7 @@ async function getCheckpointHistory(jiraToken, { fixVersion, teamId } = {}) {
  * @param {{ fixVersion: string, itemKeys: string[], isLongTerm?: boolean }} input
  * @returns {Promise<Record<string, { tcmsQueryUrl: string|null, tcmsQI: object|null }>>}
  */
-async function getTcmsForItems(_jiraToken, { fixVersion, itemKeys, isLongTerm = false } = {}) {
+async function getTcmsForItems(_jiraToken, { fixVersion, itemKeys, isLongTerm = false, tcms, teamId, releasePrefixes } = {}) {
   if (!fixVersion || !Array.isArray(itemKeys) || itemKeys.length === 0) {
     const err = new Error('fixVersion and itemKeys[] are required');
     err.statusCode = 400;
@@ -139,12 +139,18 @@ async function getTcmsForItems(_jiraToken, { fixVersion, itemKeys, isLongTerm = 
   }
 
   const { enrichCommitItemsWithQI, enrichLongTermItemsWithQI } = require('./tcmsService');
+  let tcmsConfig = tcms || null;
+  if (!tcmsConfig && teamId) {
+    try { const { getTeamById } = require('../utils/teamResolver'); const team = getTeamById(teamId); if (team?.tcms) tcmsConfig = team.tcms; if (team?.releasePrefixes && !tcmsConfig?.releasePrefixes) tcmsConfig = { ...tcmsConfig, releasePrefixes: team.releasePrefixes }; } catch {}
+  }
+  if (releasePrefixes && tcmsConfig) tcmsConfig.releasePrefixes = releasePrefixes;
+  else if (releasePrefixes && !tcmsConfig) tcmsConfig = { releasePrefixes };
 
   const stubItems = itemKeys.map(key => ({ key }));
   if (isLongTerm) {
-    await enrichLongTermItemsWithQI(stubItems, fixVersion);
+    await enrichLongTermItemsWithQI(stubItems, fixVersion, tcmsConfig);
   } else {
-    await enrichCommitItemsWithQI(stubItems, fixVersion);
+    await enrichCommitItemsWithQI(stubItems, fixVersion, tcmsConfig);
   }
 
   const result = {};

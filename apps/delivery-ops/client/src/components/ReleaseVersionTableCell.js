@@ -13,6 +13,8 @@ import {
 } from '../utils/releaseVersionUtils';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
 import { RiskIndicatorCell } from '../shared/components/RiskIndicatorTrail';
+import { useTeam } from '../contexts/TeamContext';
+import { buildTcmsQueryUrl, getTcmsVersionNum } from '../utils/tcmsUtils';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ExecSummaryCell from './ExecSummaryCell';
 import './ReleaseVersionTableCell.css';
@@ -488,6 +490,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
   loadingBreakdowns,
   releaseContext = null,
 }) {
+  const { selectedTeam } = useTeam();
   // Memoize breakdown data calculations at the top level
   const breakdownData = useMemo(() => breakdownDataMap?.get(item.key) || null, [breakdownDataMap, item.key]);
   const isBreakdownLoading = useMemo(() => loadingBreakdowns && !breakdownData, [loadingBreakdowns, breakdownData]);
@@ -940,14 +943,9 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     const manualTcmsUrl = tcmsRaw?.value?.url
       || (typeof tcmsRaw === 'string' && /^https?:\/\//i.test(tcmsRaw) ? tcmsRaw : null);
 
-    // Constructed TCMS query URL — built client-side from item.key + selectedVersion
-    const tcmsVersion = (selectedVersion || '').replace(/^NDB-/i, '');
-    const tcmsSearch = encodeURIComponent(JSON.stringify([
-      { field: 'Requirements', op: '$eq', value: [item.key] }
-    ]));
-    const constructedTcmsUrl = tcmsVersion
-      ? `https://tcms.eng.nutanix.com/#/testcases/NDB/${tcmsVersion}/qcow2?search=${tcmsSearch}&tab=package_type&type=All`
-      : null;
+    // Constructed TCMS query URL — team-aware via tcmsUtils
+    const tcmsVersion = getTcmsVersionNum(selectedVersion, selectedTeam);
+    const constructedTcmsUrl = tcmsVersion ? buildTcmsQueryUrl(item.key, selectedVersion, selectedTeam) : null;
 
     // Warning: advanced status but no manual TCMS link set
     const statusStr = (typeof item.status === 'string' ? item.status : item.status?.name || '').toLowerCase().trim();

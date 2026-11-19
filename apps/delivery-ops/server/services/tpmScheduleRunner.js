@@ -84,6 +84,95 @@ async function invokeSkill(schedule) {
   }
 }
 
+/**
+ * Human phrase for "what runs when" — single source for toResponse + preview.
+ * @param {object} schedule
+ * @returns {string}
+ */
+function describeSchedule(schedule) {
+  const s = schedule.schedule || {};
+  const tz = schedule.tz || s.tz || 'UTC';
+  if (s.cron) return `cron ${s.cron} (${tz})`;
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const d = s.dayOfWeek != null ? days[s.dayOfWeek] : '—';
+  const h = s.hour != null ? String(s.hour).padStart(2, '0') : '09';
+  const m = s.minute != null ? String(s.minute).padStart(2, '0') : '00';
+  return `${d} ${h}:${m} ${tz}`;
+}
+
+/**
+ * Validate a schedule config and return per-check results for dry-run display.
+ * @param {object} schedule - schedule record (id, skill, tpmScope, schedule{cron|dayOfWeek|hour|minute}, tz, to)
+ * @returns {Array<{id:string,label:string,ok:boolean,detail:string}>} checks
+ */
+function validateScheduleForTest(schedule) {
+  const checks = [];
+  const push = (id, label, ok, detail) => checks.push({ id, label, ok, detail });
+  const expr = schedule.schedule?.cron;
+  if (expr) {
+    const ok = expr && typeof expr === 'string' && expr.trim().split(/\s+/).length === 5 && cron.validate(expr);
+    push('cron', 'Cron expression', ok, ok ? expr : `Invalid cron: ${expr || '—'}`);
+  } else {
+    const d = schedule.schedule?.dayOfWeek;
+    const h = schedule.schedule?.hour;
+    const m = schedule.schedule?.minute;
+    push('dayOfWeek', 'Day of week', d == null || (Number.isInteger(Number(d)) && Number(d) >= 0 && Number(d) <= 6), d != null ? String(d) : 'any');
+    push('hour', 'Hour', h == null || (Number.isInteger(Number(h)) && Number(h) >= 0 && Number(h) <= 23), String(h ?? '09'));
+    push('minute', 'Minute', m == null || (Number.isInteger(Number(m)) && Number(m) >= 0 && Number(m) <= 59), String(m ?? '00'));
+  }
+  try { new Intl.DateTimeFormat('en-US', { timeZone: schedule.tz || schedule.schedule?.tz || 'UTC' }); push('tz', 'Timezone', true, schedule.tz || schedule.schedule?.tz || 'UTC'); } catch { push('tz', 'Timezone', false, schedule.tz || 'unknown'); }
+  const scope = schedule.tpmScope || {};
+  push('scope', 'Scope (product/release)', !!(scope.productId && scope.release), scope.productId && scope.release ? `${scope.productId} / ${scope.release}` : 'productId and release required');
+  push('skill', 'Skill', !!schedule.skill, schedule.skill || 'missing');
+  const toOk = !schedule.to || String(schedule.to).includes('@');
+  push('to', 'Recipients (To)', toOk, schedule.to ? schedule.to : 'none — will use defaults');
+  return checks;
+}
+
+/**
+ * Dry-run validation for a schedule — never mutates lastRun, never sends email.
+ * @param {object} schedule
+ * @param {{triggeredBy?:string}} opts
+ * @returns {Promise<{ok:boolean,wouldSkip:boolean,testAt:string,testedAt:string,checks:Array,preview:object,dispatchResult:object|null,warnings:string[]}>}
+ */
+async function testSchedule(schedule, { triggeredBy } = {}) {
+  const checks = validateScheduleForTest(schedule);
+  const failed = checks.filter((c) => !c.ok);
+  const wouldSkip = !!(schedule.deferAfterPg && isAfterPg(schedule));
+  const preview = {
+    id: schedule.id || 'preview',
+    name: schedule.name || '',
+    skill: schedule.skill,
+    tpmScope: schedule.tpmScope,
+    when: describeSchedule(schedule),
+    tz: schedule.tz || schedule.schedule?.tz || 'UTC',
+    to: schedule.to || '',
+    cc: schedule.cc || '',
+    enabled: schedule.enabled !== false,
+    wouldSkip: !!wouldSkip,
+    wouldSkipReason: wouldSkip ? 'deferred after Promotion Gate' : null,
+  };
+  // If all checks pass and not skipped, optionally run dispatch in dry-run mode (no store mutation)
+  let dispatchResult = null;
+  if (failed.length === 0 && !wouldSkip) {
+    try {
+      const dispatch = global.__tpmSkillDispatch;
+      if (typeof dispatch === 'function') {
+        const maybe = await dispatch({ ...schedule, _test: true, _triggeredBy: triggeredBy });
+        dispatchResult = typeof maybe === 'object' && maybe !== null ? maybe : { ok: true };
+      }
+    } catch (e) {
+      const msg = e.message?.slice(0, 500) || 'dispatch failed';
+      checks.push({ id: 'dispatch', label: 'Skill dispatch (dry-run)', ok: false, detail: msg });
+      const at = new Date().toISOString();
+      return { ok: false, wouldSkip: false, testAt: at, testedAt: at, checks, preview, dispatchResult: { ok: false, error: msg }, warnings: [] };
+    }
+  }
+  const ok = failed.length === 0;
+  const at = new Date().toISOString();
+  return { ok, wouldSkip: !!wouldSkip, testAt: at, testedAt: at, checks, preview, dispatchResult, warnings: wouldSkip ? ['Schedule would be skipped — past Promotion Gate with deferAfterPg enabled.'] : [] };
+}
+
 async function tick() {
   const all = store.list().filter(s => s.enabled);
   for (const s of all) {
@@ -127,4 +216,4 @@ function stop() {
   console.log('[tpmScheduleRunner] stopped');
 }
 
-module.exports = { start, stop, tick, isDue, getNowInTz, invokeSkill, rebuildCronJobs };
+module.exports = { start, stop, tick, isDue, getNowInTz, invokeSkill, rebuildCronJobs, testSchedule, describeSchedule, validateScheduleForTest, isAfterPg };
