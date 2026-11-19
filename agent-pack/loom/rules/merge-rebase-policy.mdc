@@ -1,36 +1,40 @@
 ---
-description: Always rebase from main before merging; resolve conflicts elegantly with user choice, then merge to origin and delete branch
+description: Before any merge to main, sync worktree with origin/main, resolve all conflicts with user choice, then merge and push everything to main
 alwaysApply: true
 ---
 
-# Merge — Rebase from main, then merge to origin
+# Merge — Sync worktree with main, then merge and push
+
+**Invariant: no branch merges to `main` without first bringing `origin/main` into the worktree.**
 
 When merging any branch (feature, weave, fix) into `main`:
 
-1. **Always rebase from `main` first**
+1. **Always bring the latest `main` into the worktree first**
    - `git fetch origin main`
-   - `git rebase origin/main` (or `git rebase main` if already fetched)
-   - Never merge `main` into the feature branch as a merge commit to "catch up" — rebase keeps history linear.
+   - Bring `origin/main` into the worktree — `git rebase origin/main` (preferred, linear history) or `git merge origin/main` (when a merge commit is explicitly wanted). Either way the worktree must contain every commit that is on `origin/main`.
+   - Do this immediately before the merge to `main` — not hours earlier. If `origin/main` moved while you were resolving conflicts, fetch and sync again.
+   - This is what prevents overwrites (e.g. CSS/theme regressions): the worktree is proven to compile/test with `main`'s latest before `main` advances.
 
-2. **Resolve conflicts elegantly**
-   - If `git rebase` reports conflicts, stop — do not force through with `ours`/`theirs`.
-   - For each conflicted file/hunk, present the choice in **plain, simple language** — what `main` has vs what the branch has, and what each option means for the user.
+2. **Resolve all conflicts in the worktree — elegantly, with user choice**
+   - If `git rebase` or `git merge` reports conflicts, stop — do not force through with `ours`/`theirs`/`-X theirs`.
+   - For each conflicted file/hunk, present the choice in **plain, simple language** — what `main` has vs what the branch has, and what each option means.
    - Ask the user explicitly: *"What do you want to keep?"* — wait for their answer before continuing.
-   - Apply their choice, `git add` the resolved files, then `git rebase --continue` (repeat until clean).
+   - Apply their choice, `git add` the resolved files, then `git rebase --continue` or `git commit` (for a merge) — repeat until clean.
    - If the user is unsure, offer a safe default (e.g. keep both / keep main's version) but never decide silently.
+   - After resolution, verify: `npm run check` / `npm test` as applicable, and visually confirm the affected area (e.g. theme tokens).
 
-3. **Merge to origin and delete the branch**
-   - After a clean rebase with no conflicts (or all resolved with user approval):
-     - `git push origin <branch> --force-with-lease` if the rebase rewrote history
-     - `git checkout main && git merge --no-ff <branch>` (or `gh pr merge` if a PR exists)
-     - `git push origin main`
+3. **Merge all that code and push everything to `main`**
+   - After the worktree is clean (no conflicts, or all resolved with user approval):
+     - If you rebased: `git push origin <branch> --force-with-lease`
+     - Then: `git checkout main && git merge --no-ff <branch>` (or `gh pr merge` if a PR exists) — this brings both the branch work and the synced `main` commits together
+     - `git push origin main` — pushes everything (branch changes + the `main` commits you synced)
      - `git push origin --delete <branch>` and `git branch -d <branch>` locally
    - Never `git push --force` without `--lease`; never force-push `main` itself.
 
 ## Applies to
 
 - Every merge performed by the Loom builder pipeline (Stage 10 Merge in `weave.mdc`) and any manual merge the agent does on the user's behalf.
-- Overrides any shortcut that skips the rebase step — even if the branch appears "mergeable" in GitHub.
+- Overrides any shortcut that skips the sync step — even if the branch appears "mergeable" in GitHub.
 
 ## Cross-references
 
@@ -39,7 +43,8 @@ When merging any branch (feature, weave, fix) into `main`:
 
 ## Never do
 
-- Merge a feature branch into `main` without rebasing from `origin/main` first.
-- Auto-resolve rebase conflicts without asking the user in plain language.
+- Merge a feature branch into `main` without first bringing `origin/main` into the worktree and resolving all conflicts.
+- Auto-resolve rebase/merge conflicts without asking the user in plain language.
 - Push a rebased branch with `--force` (use `--force-with-lease`) or force-push `main`.
 - Leave the feature branch alive on `origin` after a successful merge.
+- Merge with a stale view of `main` (fetched earlier but not re-fetched before the final merge).
