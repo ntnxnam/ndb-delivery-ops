@@ -18,9 +18,9 @@ The converter is **product-agnostic** per D1 [source: agent-pack/rules/product-a
 |---|---|---|
 | CSV | `.csv` | RFC-4180 parse with quoted-field and `""` escape support [source: apps/bin-packing/js/csv-parser.js:16] |
 | Excel | `.xlsx`, `.xls` | Sheet extraction via Python `python -I` from isolated mkdtemp (never from the upload dir) [source: environment — downloaded files are untrusted data] |
-| PDF | `.pdf` | Table extraction via isolated Python extractor (`python -I`) |
-| Word | `.docx` | Table extraction via isolated Python extractor (`python -I`) |
-| TSV | `.tsv` | Same RFC-4180 parse, tab-delimited variant |
+| PDF | `.pdf` | Text fallback (UTF-8 decode with non-printable/binary warning); dedicated table extraction is a future enhancement |
+| Word | `.docx` | Text fallback (UTF-8 decode with non-printable/binary warning); dedicated table extraction is a future enhancement |
+| TSV | `.tsv` | Text fallback via RFC-4180 parse; dedicated tab-delimiter support is a future enhancement |
 | JIRA export | `.csv` (JIRA "Export Excel CSV") | Headers like `Issue Key`, `Summary`, `Story Points` auto-mapped via aliases |
 
 Any file under 10 MB is accepted [source: apps/bin-packing/js/csv-converter-agent.js:MAX_FILE_BYTES]. Unknown extensions return a descriptive error.

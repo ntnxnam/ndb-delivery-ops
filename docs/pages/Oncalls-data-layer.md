@@ -87,5 +87,5 @@ Config: `oncallConfig.escalation.kpiNamePattern` (default `CFD|CFI`).
 | 403 | Show access denied |
 | JIRA timeout / partial count errors | Surface `errors` map; show zeros with warning |
 | `errors.pulse` | KpiPulseBand error; rest of page loads |
-| NAI missing key | 400 `AI_API_KEY not configured` |
+| NAI missing key | 400 `NAI_API_KEY is not set` |
 | NAI / About timeout | Drawer banner once; pathHint on rows; AI panel error for briefing |

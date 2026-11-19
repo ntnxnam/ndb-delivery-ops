@@ -32,13 +32,21 @@ const ALLOWED_MIMES = new Set([
   'application/csv',
   'text/plain',
   'text/comma-separated-values',
+  'text/tab-separated-values',
+  'text/html',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   // Some browsers/clients send generic binary for xlsx/csv
   'application/octet-stream',
 ]);
 
-const ALLOWED_EXTS = new Set(['.csv', '.xlsx', '.xls']);
+// .tsv/.pdf/.docx/.html accepted — TSV parsed as CSV variant (tab delimiter),
+// PDF/DOCX/HTML decoded as text fallback (same as MCP tool); dedicated
+// extractors are a future enhancement (KNOWN_ISSUES.md tracks the gap).
+const ALLOWED_EXTS = new Set(['.csv', '.xlsx', '.xls', '.tsv', '.pdf', '.docx', '.html', '.htm']);
 
 // ── Shared service resolution (with inline fallback) ────────────────────────
 // TODO(W-xxx): remove inline fallback once shared/dist is re-exported via

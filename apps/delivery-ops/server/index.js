@@ -80,7 +80,7 @@ app.use(cors(corsOptions));
 
 // Body parser with size limits to prevent DoS
 app.use(bodyParser.json({
-  limit: '15mb', // 15 MB for bin-packing JSON base64 (10 MB binary ≈ 13.3 MB b64)
+  limit: '15mb', // 15 MB: JSON base64 path for bin-packing (10 MB binary ≈ 13.3 MB b64)
   verify: (req, res, buf) => {
     // Sanitize JSON input
     try {
@@ -93,7 +93,7 @@ app.use(bodyParser.json({
 }));
 app.use(bodyParser.urlencoded({
   extended: true,
-  limit: '15mb',
+  limit: '15mb', // 15 MB: urlencoded path (separate parser, same cap as json)
   parameterLimit: 50 // Limit number of parameters
 }));
 
