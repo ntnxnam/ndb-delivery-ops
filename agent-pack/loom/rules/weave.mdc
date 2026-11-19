@@ -1,5 +1,5 @@
 ---
-description: Primary delivery-ops pipeline — goal-derived KPIs per agent (incl. PM); Dev → Code Review → QA → UX → PM → Exec → JIRA → fix → security → merge → back to user loop until KPIs met; Code Review may use /multi-model-review
+description: Primary delivery-ops pipeline — goal-derived KPIs per agent (incl. PM); Stage 0 worktree isolation (one tab/feature = one branch+worktree) → Dev → Code Review → QA → UX → PM → Exec → JIRA → fix → security → merge → back to user loop until KPIs met; Code Review may use /multi-model-review
 alwaysApply: true
 aliases: [multi-agent-delivery-pipeline]
 ---
@@ -14,6 +14,94 @@ than doing every stage alone.
 
 Trivial one-liners (typo, single-line config, pure Q&A with no code change) may
 skip the pipeline. When in doubt, run it.
+
+## Stage 0 — Workspace isolation (mandatory before Goal KPI Card)
+
+**One tab = one feature/bugfix = one isolated branch + worktree.** The agent must
+never pile a new feature, bugfix, or unrelated change onto whatever branch is
+currently checked out. Each user tab/request gets its own worktree so work can be
+tested, reviewed, and merged independently.
+
+### 0.1 Detect where you are
+
+At the very start of every non-trivial request, run:
+
+```bash
+git status --porcelain
+git branch --show-current
+git worktree list
+```
+
+- If `git status` is dirty (uncommitted changes) on the current branch → **STOP**. Do not append new work. Tell the user: current branch `<name>` has uncommitted changes for a different goal — needs a new worktree.
+- If the current branch already carries commits for a different GOAL/feature → **STOP**. Do not reuse it.
+
+### 0.2 Create an isolated worktree + branch for this GOAL
+
+Derive a short slug from the user's ask (kebab-case, ≤40 chars) and create a new
+branch + worktree from the **correct base** (see 0.2.1 for base selection):
+
+```bash
+git fetch origin main
+# preferred: via OpenCode tool
+# tools.opencode.worktree_create({ name: "<slug>" })
+# fallback: git worktree
+git worktree add ../ndb-delivery-ops-<slug> -b <type>/<slug> <base>
+# then move session into it:
+# tools.opencode.session_move({ directory: "../ndb-delivery-ops-<slug>" })
+```
+
+Branch naming:
+
+| Type | Prefix | Example | Base |
+|---|---|---|---|
+| Feature | `feat/` | `feat/sprint-planner-drag-drop` | `origin/main` |
+| Bug fix on `main` | `fix/` | `fix/oncall-count-mismatch` | `origin/main` |
+| Bug fix on a feature | `fix/` | `fix/feat-foo-null-check` off `feat/foo` | `feat/foo` |
+| Weave / pipeline run | `weave/` | `weave/email-digest-rate-limit` | `origin/main` |
+| Docs only | `docs/` | `docs/api-teams-endpoint` | `origin/main` |
+
+- Worktree directory: `../<repo>-<slug>` (sibling to the main checkout) — never nest inside the main repo.
+- Record the chosen base in the Goal KPI Card `SCOPE` (e.g. `SCOPE: fix on feat/tpm-report-sender → base feat/tpm-report-sender`).
+
+#### 0.2.1 Choosing the base — `main → feature → bug` vs `main → feature2`
+
+```
+main ──► feat/foo ──► fix/bug-on-foo   (bug/iteration that belongs to feat/foo)
+main ──► feat/bar                      (new unrelated feature — always from main)
+```
+
+| Situation | Correct base | Action |
+|---|---|---|
+| **New feature, unrelated to current branch** | `origin/main` | New worktree + `feat/<slug>` from `origin/main`. Never pile onto the current `feat/*` branch. |
+| **Bug fix / iteration that belongs to the feature you are currently testing** (`main → feature → bug`) | Current feature branch (e.g. `feat/foo`) | Either (a) continue on the same `feat/foo` worktree if the fix is small, **or** (b) create `fix/<slug>` **off `feat/foo`** as a child worktree so the feature remains independently testable. Prefer (b) when the bug fix needs isolated review/QA. |
+| **Bug fix on `main` / production** | `origin/main` | New worktree + `fix/<slug>` from `origin/main`. |
+| **Already on `main`, any new work** | `origin/main` | New worktree + branch from `origin/main`. |
+
+**When unsure, ask the user — one question, then act.** Use this exact prompt:
+
+> "You're on `<current-branch>` (`<one-line what it holds>`). Is this new ask a follow-up/bug on that feature (so I branch off `<current-branch>`), or a new unrelated feature (so I branch from `main`)? Reply `feature-bug` or `new-feature`."
+
+Do not guess. Wait for the answer, then create the worktree from the confirmed base. Capture the answer in `SCOPE`.
+
+### 0.3 Rules for the entire pipeline run
+
+1. **All stages (1–11) run inside that worktree.** Developer, Fix, Compile Gate, Merge — all execute with the worktree as cwd. Never `cd` back to another worktree to edit files.
+2. **One GOAL per worktree, but `feature → bug` stays linked.** A bug/iteration that belongs to the feature under test may live on the same feature worktree or on a child `fix/*` worktree off that feature — both are valid (see 0.2.1). A new unrelated feature must **always** get its own worktree from `origin/main`, never on top of the feature worktree. If the user changes the ask mid-thread to a different feature, **rebuild the Goal KPI Card** and spin a *second* worktree from `origin/main` for the new GOAL (loop rule 5; PM flags drift).
+3. **Independent testability:** the worktree must be runnable on its own (`npm run check:compile`, client on `8899` / server on `8001` per `port-and-env-contracts.mdc`). Do not rely on uncommitted changes from another worktree.
+4. **Merge to the worktree's parent/base (contextual).** When user says "merge", merge to that worktree's base — not always `main`:
+   - `feat/*` (base `origin/main`) → Stage 10 merges to `main` (via `merge-rebase-policy.mdc`).
+   - `fix/*` off `feat/foo` (base `feat/foo`) → Stage 10 merges **into `feat/foo`**, not `main` — this is `main → feature → bug` collapsing the bug into its feature. The feature later merges to `main` as a whole.
+   - `fix/*` off `main` → merges to `main`.
+   Do not merge or cherry-pick across unrelated worktrees without user approval. If merge target is ambiguous, ask: "Merge `<branch>` into `<parent>` or `main`?" and wait.
+5. **Cleanup:** after Stage 10 merge succeeds, remove the worktree (`git worktree remove ../ndb-delivery-ops-<slug>` + `tools.opencode.worktree_remove` if used). Leave `main` clean.
+
+### 0.4 When Stage 0 may be skipped
+
+- Trivial one-liners (same exemption as the pipeline).
+- User explicitly says "continue on this branch / same worktree" — record `WAIVED: stage-0-isolation — "<user quote>"`.
+- Pure Q&A / read-only investigation with no file writes.
+
+Otherwise Stage 0 is **Blocking** — pipeline does not proceed to Goal KPI Card without it. The orchestrator is responsible for running the git/worktree commands (via `shell` / `tools.opencode.worktree_create` / `tools.opencode.session_move`); sub-agents must not create branches themselves.
 
 ## Goal → KPI contract (mandatory before stage 1)
 
@@ -220,10 +308,11 @@ or invent a parallel copy under `~/.cursor/skills/` as authoritative.
 ## Stage order (do not reorder)
 
 ```
-1. Developer  →  1.5. Impact Scout  →  1.7. Compile Gate  →  2. Code Review  →  3. QA  →  4. UX sign-off  →  5. PM sign-off
+0. Workspace Isolation (new worktree+branch per GOAL) → 1. Developer  →  1.5. Impact Scout  →  1.7. Compile Gate  →  2. Code Review  →  3. QA  →  4. UX sign-off  →  5. PM sign-off
        →  6. Exec sign-off  →  7. JIRA Query Checker  →  8. Fix issues
        →  8.5. Doc sign-off  →  8.6. Final Acceptance (QA owns UX)  →  9. Security (PAUSED)  →  10. Merge  →  11. Back to user
        <!-- PAUSED: 9. Final security checks (`security-review` sub-agent) — skip until re-enabled -->
+       <!-- Stage 0 Isolation: one tab/feature = one worktree+branch from origin/main; never reuse a dirty/other-goal branch -->
        <!-- Stage 10 Merge: commit + push + merge to git ONLY after user says ok + KPIs MET (skip only if no code change or user opts out) -->
 ```
 
@@ -236,6 +325,7 @@ Cursor / Claude Code / Codex discover it via host skill symlinks.
 
 | Stage | Who | Mandate | KPI role |
 |---|---|---|---|
+| **0. Workspace Isolation** | Orchestrator (main agent) | **One tab = one worktree+branch.** Check `git status` / `git branch --show-current`; if dirty or carrying another GOAL → stop and create new worktree+branch. Base = `origin/main` for new features, or current `feat/*` for `main → feature → bug` follow-ups (ask user if ambiguous: `feature-bug` vs `new-feature`). `tools.opencode.worktree_create` + `tools.opencode.session_move` (fallback `git worktree add ../ndb-delivery-ops-<slug> -b <type>/<slug> <base>`). All subsequent stages run inside that worktree. Skip only for trivial one-liners or when user explicitly says "continue on this branch" (record waiver). | Gate: worktree clean + branch matches GOAL; base matches 0.2.1; Blocking if violated. |
 | **1. Developer** | Implementer (main agent or `generalPurpose` / `explore`) | Design + implement. Match `minimal-architecture`, `page-docs-required`, `api-docs-required`. No JQL edits without explicit user approval (`jql-edit-approval`). **Must run `bash scripts/loom/checks/check-compile.sh` locally before handing off — zero errors.** | Own implementation KPIs on Goal KPI Card incl. `compile-gate`; re-implement when `FEEDBACK_TO: Developer`. |
 | **1.5. Impact Scout** | impact-scout sub-agent (`generalPurpose`) | After Dev lands, grep (ripgrep) for each changed file import path, each changed `customfield_*`, each changed label pattern, each changed config key; produce **Impact Map**: `holistic fix required vs isolated`; list all consumers (importers, JQL consumers, config readers, UI callers). **Blocking** if any consumer missed — require holistic fix before Code Review. | Score **Impact Coverage** KPIs; **FAIL** if grep shows unpatched consumers; flag incomplete holistic fix as Blocking. |
 | **1.7. Compile Gate** | Developer (inline) + QA verifier | **Automated zero-tolerance gate.** Run `bash scripts/loom/checks/check-compile.sh` (`npm run check:compile`) → `tsc --noEmit` for `shared` + `mcp/lighthouse` + `mcp/loom` (+ `node --check` canary for `server/index.js`). Any TS error or syntax error = **Blocking MISS** (`compile-gate`). No waivers. Re-run after any Fix touching TS/JS. | Score **Compile Gate KPIs**: `compile-gate: 0 errors` MET only with `check:compile PASS` log; MISS → `FEEDBACK_TO: Developer`. |
@@ -249,7 +339,7 @@ Cursor / Claude Code / Codex discover it via host skill symlinks.
 | **8.5. Doc sign-off** | `doc-specialist` sub-agent (`generalPurpose`, doc lens) | When any code/doc change ships: update the 5 doc surfaces — **Known Issues** (`→ docs/known-issues/KNOWN_ISSUES.md`), **Release Notes** (`→ docs/release-notes/RELEASE_NOTES.md` + versioned), **User Guide** (`→ docs/guides/USER_GUIDE.md` + HTML), **Admin Guide** (`→ docs/guides/ADMIN_GUIDE.md` + HTML), **Tech Guide** (`→ docs/technical/`) — plus `docs/api/` + `docs/pages/` per `page-docs-required`/`api-docs-required`. **AI Audit trail:** for every page touched in this weave (per `aiAudit.config.json`), ensure its `ai-audit-docs/` folder exists, scaffold `YYYY-MM-DD__kebab-slug__weave-<slug>.md` via `scripts/loom/ai-audit/new-entry.sh`, fill all required sections incl. **Mistakes & Corrections** (see `ai-audit-docs.mdc`), append to `docs/ai-audit/LEARNINGS.md` when cross-page, and regenerate per-folder `INDEX.md` + `docs/ai-audit/timeline.md`. After guide+audit changes run `node scripts/lighthouse/docs/docs-build.js`. Verify `bash scripts/lighthouse/docs/docs-verify.sh` passes and every `href`/markdown link in `docs/` + `client/src` resolves (no broken/DOA links, `/docs/` served by `server/index.js:docsRoot` + `client/src/setupProxy.js`). Return a punch list, not a rewrite. | Score Doc KPIs (all 5 surfaces + api/pages complete, accurate, linked; guides have HTML; **docs-verify PASS, zero broken links**; **AI Audit KPIs: audit folder exists per touched page, journal file follows naming+template+frontmatter, INDEX.md + timeline regenerated, LEARNINGS.md updated when cross-page mistake identified**); MISS → `FEEDBACK_TO: Developer`. Infra/config-only weaves mark AI Audit N/A with reason. |
 | **8.6. Final Acceptance (QA owns UX)** | QA specialist sub-agent (owns end-to-end UX acceptance) | After Fix + Doc land, **QA re-runs Compile Gate (`bash scripts/loom/checks/check-compile.sh` must still PASS) + light UX sweep even if UX stage 4 already passed** — catches regressions introduced by Fix: readability (contrast ≥4.5:1, no invisible text on any touched surface), responsive (375/768/1440 no horiz scroll except tables), chrome collapse/overlay, sticky/scroll, visual density, link integrity re-check (`docs-verify` + `docs-build` if docs touched). If UX was skipped (no UI), do minimal chrome sanity (banner, sidebar, login). Blocking if any touched UI regresses. This is the last gate before Merge. | Score **Final Acceptance KPIs**: all prior QA + UX KPIs still MET post-Fix; no new regressions. |
 | **9. Final security checks** | ~~`security-review` sub-agent~~ **PAUSED** | ~~Auth, secrets, injection, localhost leakage, unsafe HTML/email, data exposure.~~ **Do not spawn `security-review`.** Skip stage 9; note "Security skipped — paused" in handoff. | ~~Score Security KPIs~~ N/A while paused. |
-| **10. Merge to git** | `merge-agent` sub-agent (`generalPurpose`) or orchestrator direct | **Gated on explicit user approval + Compile Gate PASS — do not run until user says ok / approve / lgtm / merge / ship it.** Only after all applicable KPIs MET/WAIVED (incl. `compile-gate` PASS), Fix complete, **and** user ok received: commit staged + unstaged changes with conventional message (`<type>: <goal>` + Co-authored-by if needed), verify `git status` clean, push to `origin` current branch; if on feature branch and user asked to merge, merge to `main` (or target branch) via `git merge --no-ff` or `gh pr merge` — never force-push `main`. Skip if no code change or user explicitly opts out (`--no-merge` / "don't push"). On failure, return `FEEDBACK_TO: Developer` with git error. | Score Merge KPIs: committed, pushed, status clean; MISS blocks stage 11. |
+| **10. Merge to git** | `merge-agent` sub-agent (`generalPurpose`) or orchestrator direct | **Gated on explicit user approval + Compile Gate PASS — do not run until user says ok / approve / lgtm / merge / ship it.** Only after all applicable KPIs MET/WAIVED (incl. `compile-gate` PASS), Fix complete, **and** user ok received: commit staged + unstaged changes with conventional message (`<type>: <goal>` + Co-authored-by if needed), verify `git status` clean, push to `origin` current branch; then merge to **contextual parent** — `feat/*` → `main`, `fix/*` off `feat/foo` → `feat/foo` (bug merges into its feature, not `main`; feature later merges to `main`), `fix/*` off `main` → `main` — via `git merge --no-ff` or `gh pr merge`. Follow `merge-rebase-policy.mdc` (sync `origin/main` before any merge to `main`; sync `feat/foo` before merging fix into it). Never force-push `main`. Skip if no code change or user opts out (`--no-merge` / "don't push"). If target ambiguous, ask user. On failure, return `FEEDBACK_TO: Developer` with git error. | Score Merge KPIs: committed, pushed, merged to correct parent, status clean; MISS blocks stage 11. |
 | **11. Back to user → wait for ok → Merge** | Orchestrator only | **Human-readable handoff only** — plain English, no stage dump, no jargon: (1) What you asked in one line, (2) What shipped (2-3 bullets, user-facing outcome), (3) KPI scorecard as ✓/✗ with one-line evidence, (4) What needs your decision (if any). **Explicitly ask for merge approval** in one line ("Reply ok to merge"). Only after user ok, run stage 10 Merge, then report merge result as: `merged to <branch> @ <short SHA> — <one-line what changed>` | Pipeline exit only when DONE WHEN + all applicable agent KPIs (incl. PM) are MET or waived; Merge (10) runs only after user ok. |
 
 ## Code Review modes (stage 2)
@@ -316,13 +406,15 @@ If a better agent/model becomes available mid-run, re-evaluate and switch.
 
 - A stage that returns **blocking** findings **or any applicable KPI MISS** stops the pipeline until stage 8 clears them and the stage re-scores MET.
 - Non-blocking nits may be listed for the user without blocking stage 11 **only if** all applicable KPIs are MET.
-- If a stage is skipped, say so in one line in the final handoff (e.g. "UX skipped — no UI change"; "PM skipped — pure typo/infra"; "Exec skipped — no product UI"; "Security skipped — paused"; "Merge skipped — no code change / user opted out"; "Multi-model Code Review used — consensus 3 Blocking").
+- If a stage is skipped, say so in one line in the final handoff (e.g. "Stage 0 skipped — trivial one-liner / user waived to continue on this branch"; "UX skipped — no UI change"; "PM skipped — pure typo/infra"; "Exec skipped — no product UI"; "Security skipped — paused"; "Merge skipped — no code change / user opted out"; "Multi-model Code Review used — consensus 3 Blocking").
 - Skipping Code Review is **not** allowed when code ships (same bar as QA). Stage 9 Security is paused — always skip with the handoff note above.
 - Skipping **PM** is **not** allowed when product behaviour, user-facing copy, metrics, or requirements/docs ship.
 - Declaring "done" without a Goal KPI Card scorecard is **not** allowed for non-trivial work.
 
 ## Never do
 
+- Reuse the current branch/worktree for a new feature/bugfix — always Stage 0: new worktree+branch per GOAL/tab so work is independently testable
+- Pile unrelated changes onto a dirty branch or a branch already carrying another feature's commits
 - Ship code changes to the user as "done" without Compile Gate PASS + Code Review + QA when code shipped
 - Waive `compile-gate` — it is never waivable; fix the type error
 - <!-- PAUSED: do not spawn `security-review` / stage 9 until explicitly re-enabled -->
