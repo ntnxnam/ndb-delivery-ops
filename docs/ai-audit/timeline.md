@@ -1,0 +1,32 @@
+# AI Audit Timeline — All Pages
+
+> Chronological across every page. Each row links to that page's journal entry.
+
+| Date | Page | File | Weave | Goal |
+|------|------|------|-------|------|
+| 2026-11-20 | EmailSender | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for EmailSender |
+| 2026-11-20 | ProjectStatus | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ProjectStatus |
+| 2026-11-20 | FeatureDashboard | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/feature/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for FeatureDashboard |
+| 2026-11-20 | Retrospective | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/release/ai-audit-docs/Retrospective/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for Retrospective |
+| 2026-11-20 | ReleaseSetup | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ReleaseSetup/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ReleaseSetup |
+| 2026-11-20 | JiraEmailer | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/JiraEmailer/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for JiraEmailer |
+| 2026-11-20 | EmailHistory | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/EmailHistory/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for EmailHistory |
+| 2026-11-20 | SprintReport | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/SprintReport/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for SprintReport |
+| 2026-11-20 | SprintPerformance | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/SprintPerformancePage/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for SprintPerformance |
+| 2026-11-20 | ComponentReport | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ComponentReport/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ComponentReport |
+| 2026-11-20 | DependencyView | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/DependencyViewPage/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for DependencyView |
+| 2026-11-20 | ReleaseOutstandingWork | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseOutstandingWork/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ReleaseOutstandingWork |
+| 2026-11-20 | TeamOverallReport | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/TeamOverallReport/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for TeamOverallReport |
+| 2026-11-20 | Chatbot | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/release/ai-audit-docs/Chatbot/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for Chatbot |
+| 2026-11-20 | KPIPage | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/KPIPage/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for KPIPage |
+| 2026-11-20 | SystemTestScale | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/SystemTestScale/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for SystemTestScale |
+| 2026-11-20 | Oncalls | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for Oncalls |
+| 2026-11-20 | CfdCfi | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/CfdCfi/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for CfdCfi |
+| 2026-11-20 | SosSummary | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for SosSummary |
+| 2026-11-20 | SosLeaderSummary | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosLeaderSummary/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for SosLeaderSummary |
+| 2026-11-20 | ReleaseBrief | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/release/ai-audit-docs/ReleaseBrief/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ReleaseBrief |
+| 2026-11-20 | WeeklySkim | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for WeeklySkim |
+| 2026-11-20 | ReleaseConfig | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for ReleaseConfig |
+| 2026-11-20 | AdminPanel | [2026-11-20__initial__weave-backfill.md](../../apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs/2026-11-20__initial__weave-backfill.md) | `weave-backfill` | Seed initial audit trail for AdminPanel |
+
+_Generated by `scripts/loom/ai-audit/rebuild-indexes.js`._

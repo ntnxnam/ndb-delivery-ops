@@ -1,0 +1,95 @@
+---
+description: AI audit trail per page — chronological journal under every page, mistake log, and anti-repeat learning for Loom
+alwaysApply: true
+---
+
+# AI Audit Docs — Per-Page Chronicle + Mistake Learning
+
+> **See also:** `weave.mdc` § Stage 8.5 (Doc gate), `page-docs-required.mdc` (requirements + data-layer), `apps/delivery-ops/server/config/aiAudit.config.json` (registry), `agent-pack/loom/prompts/builder.md` (builder prompt).
+
+## What this rule enforces
+
+Every page (route entry in `routeConfig.js`) carries a chronological AI audit trail. Weave documents **what was done, what went wrong, and what to never repeat**.
+
+### 1. Location
+
+- The registry `apps/delivery-ops/server/config/aiAudit.config.json` is the source of truth — `pages.<PageName>.auditPath` declares where that page's trail lives.
+- **Folder-pages** (source is a directory): `<source>/ai-audit-docs/`
+- **File-pages** (source is a single `FooPage.js`): bucketed as `<parent>/ai-audit-docs/<PageName>/` (avoids `FooPage.js` vs `FooPage/` collision)
+- Never create an audit folder outside the registry's `auditPath` — update the registry first.
+
+### 2. Naming
+
+- Pattern: `YYYY-MM-DD__kebab-slug__weave-<slug>.md`
+  - `YYYY-MM-DD` — local date the weave's Dev stage completed
+  - `kebab-slug` — short human slug for the change (`add-p0-drill`, `fix-sticky-header`)
+  - `weave-<slug>` — the plan file slug from `~/.opencode/plan/weave-<slug>.md` (ties audit to weave plan)
+- Dedup on same day: append `__02`, `__03` (e.g. `2026-11-20__fix-header__weave-foo__02.md`)
+- Initial seed: `YYYY-MM-DD__initial__weave-backfill.md`
+- Case: all lowercase, no spaces, no special chars beyond `-` and `_` and `.`
+
+### 3. Template
+
+Every journal file **must** have YAML frontmatter + the sections below. Frontmatter is machine-parseable for linting and timeline generation.
+
+```yaml
+---
+page: ProjectStatus
+route: /project-status
+source: apps/delivery-ops/client/src/components/ReleaseVersionTab
+weave: weave-p0-drill
+date: 2026-11-20
+author: Namratha Singh (human) + claude-sonnet-4 (AI)
+models: [claude-sonnet-4, gpt-5-reviewer]
+goal: "Add clickable count for open P0s"
+kpiCard: docs/plans/weave-p0-drill-kpis.md
+audience: tpm
+---
+```
+
+Required body sections (in order):
+
+1. **Prompt (verbatim)** — the user's ask that triggered this weave
+2. **Goal → Done When** — GOAL + DONE WHEN from the Goal KPI Card
+3. **AI Config Snapshot** — `aiConfig.json` @ SHA + models used + connectors touched + NAI env presence
+4. **Changes** — table of files changed + intent per file
+5. **Decisions & Alternatives Considered** — why this approach, what was rejected
+6. **Mistakes & Corrections** — what went wrong in this weave (if anything), how it was fixed, and what to do differently next time (links to `docs/ai-audit/LEARNINGS.md` when cross-page)
+7. **Verification** — Review/QA/JIRA proof, docs-verify result
+8. **Links** — plan file, PR, related docs
+9. **Config Delta** — JSON snippet of registry/config changes made in this weave
+10. **Follow-ups / Waivers** — open items, waived KPIs with user quote
+
+Append-only: never edit an old journal file. Add a new one.
+
+### 4. Per-folder INDEX.md
+
+Each `ai-audit-docs/` folder has an `INDEX.md` (auto-generated header + chronological table). The helper `scripts/loom/ai-audit/new-entry.sh` regenerates it — never hand-edit the table rows.
+
+### 5. Cross-page learning log
+
+- `docs/ai-audit/LEARNINGS.md` — append-only log of mistakes that should never repeat, grouped by category (e.g. `jql`, `layout`, `config`, `naming`, `process`).
+- When a weave's **Mistakes & Corrections** reveals a pattern applicable beyond one page, the Doc stage **must** also append an entry to `LEARNINGS.md` with: date, page, mistake, correction, and preventive rule.
+- Loom's builder prompt (`agent-pack/loom/prompts/builder.md`) must instruct the builder to **read `LEARNINGS.md` before starting any weave**.
+
+### 6. How Loom uses the trail
+
+- **Before a weave:** read `aiAudit.config.json` to find affected page(s), read that page's `ai-audit-docs/INDEX.md` for recent history, and read `docs/ai-audit/LEARNINGS.md` for anti-patterns.
+- **During a weave:** note mistakes in the journal's **Mistakes & Corrections** section as they happen — don't wait until Doc stage to recall them.
+- **After a weave:** scaffold the new journal file via `scripts/loom/ai-audit/new-entry.sh --page <Page> --slug <kebab> --weave <slug>`, fill it, regenerate indexes and timeline.
+
+## Hard rules
+
+- Do not add or edit a page without creating/updating its audit trail in the same weave
+- Do not commit a journal file with missing frontmatter or wrong naming pattern — `docs-verify` will fail
+- Do not duplicate audit content across pages — cross-page lessons go in `LEARNINGS.md`, page-specific detail stays in that page's trail
+- Do not treat `docs/pages/` specs as a substitute for the audit trail — they serve different purposes (specs vs chronicle)
+- When a weave touches infra/config only (no page), the Doc stage marks AI Audit as N/A with reason — no journal file needed
+
+## Never do
+
+- Create an audit folder not listed in `aiAudit.config.json`
+- Use spaces, uppercase, or special characters in journal filenames
+- Edit historical journal entries — they are immutable
+- Skip the **Mistakes & Corrections** section — even "no mistakes this weave" must be stated explicitly
+- Append to `LEARNINGS.md` without also documenting the full context in the page's own journal

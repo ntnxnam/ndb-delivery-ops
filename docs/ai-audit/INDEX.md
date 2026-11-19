@@ -1,0 +1,36 @@
+# AI Audit — Hub
+
+Per-page chronological AI audit trails. See [`LEARNINGS.md`](./LEARNINGS.md) for cross-page mistakes that must not repeat.
+
+| Page | Route | Audit Path |
+|------|-------|------------|
+| EmailSender | `/` | [`apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs`](../../apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs/INDEX.md) |
+| ProjectStatus | `/project-status` | [`apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus`](../../apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/INDEX.md) |
+| FeatureDashboard | `/feature-dashboard` | [`apps/delivery-ops/client/src/feature/ai-audit-docs`](../../apps/delivery-ops/client/src/feature/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/feature/ai-audit-docs/INDEX.md) |
+| Retrospective | `/release/retrospective` | [`apps/delivery-ops/client/src/release/ai-audit-docs/Retrospective`](../../apps/delivery-ops/client/src/release/ai-audit-docs/Retrospective/) · [INDEX](../../apps/delivery-ops/client/src/release/ai-audit-docs/Retrospective/INDEX.md) |
+| ReleaseSetup | `/release-setup` | [`apps/delivery-ops/client/src/components/ReleaseSetup/ai-audit-docs`](../../apps/delivery-ops/client/src/components/ReleaseSetup/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/ReleaseSetup/ai-audit-docs/INDEX.md) |
+| JiraEmailer | `/generic-emailer` | [`apps/delivery-ops/client/src/components/ai-audit-docs/JiraEmailer`](../../apps/delivery-ops/client/src/components/ai-audit-docs/JiraEmailer/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/JiraEmailer/INDEX.md) |
+| EmailHistory | `/email-history` | [`apps/delivery-ops/client/src/components/ai-audit-docs/EmailHistory`](../../apps/delivery-ops/client/src/components/ai-audit-docs/EmailHistory/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/EmailHistory/INDEX.md) |
+| SprintReport | `/sprint-report` | [`apps/delivery-ops/client/src/components/ai-audit-docs/SprintReport`](../../apps/delivery-ops/client/src/components/ai-audit-docs/SprintReport/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/SprintReport/INDEX.md) |
+| SprintPerformance | `/sprint-performance` | [`apps/delivery-ops/client/src/components/SprintPerformancePage/ai-audit-docs`](../../apps/delivery-ops/client/src/components/SprintPerformancePage/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/SprintPerformancePage/ai-audit-docs/INDEX.md) |
+| ComponentReport | `/component-report` | [`apps/delivery-ops/client/src/components/ai-audit-docs/ComponentReport`](../../apps/delivery-ops/client/src/components/ai-audit-docs/ComponentReport/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/ComponentReport/INDEX.md) |
+| DependencyView | `/dependency-view` | [`apps/delivery-ops/client/src/components/DependencyViewPage/ai-audit-docs`](../../apps/delivery-ops/client/src/components/DependencyViewPage/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/DependencyViewPage/ai-audit-docs/INDEX.md) |
+| ReleaseOutstandingWork | `/release-outstanding-work` | [`apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseOutstandingWork`](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseOutstandingWork/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseOutstandingWork/INDEX.md) |
+| TeamOverallReport | `/team-overall-report` | [`apps/delivery-ops/client/src/components/ai-audit-docs/TeamOverallReport`](../../apps/delivery-ops/client/src/components/ai-audit-docs/TeamOverallReport/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/TeamOverallReport/INDEX.md) |
+| Chatbot | `/chatbot` | [`apps/delivery-ops/client/src/release/ai-audit-docs/Chatbot`](../../apps/delivery-ops/client/src/release/ai-audit-docs/Chatbot/) · [INDEX](../../apps/delivery-ops/client/src/release/ai-audit-docs/Chatbot/INDEX.md) |
+| KPIPage | `/kpis` | [`apps/delivery-ops/client/src/components/ai-audit-docs/KPIPage`](../../apps/delivery-ops/client/src/components/ai-audit-docs/KPIPage/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/KPIPage/INDEX.md) |
+| SystemTestScale | `/system-test-scale` | [`apps/delivery-ops/client/src/components/SystemTestScale/ai-audit-docs`](../../apps/delivery-ops/client/src/components/SystemTestScale/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/SystemTestScale/ai-audit-docs/INDEX.md) |
+| Oncalls | `/oncalls` | [`apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs`](../../apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs/INDEX.md) |
+| CfdCfi | `/cfdcfi` | [`apps/delivery-ops/client/src/components/CfdCfi/ai-audit-docs`](../../apps/delivery-ops/client/src/components/CfdCfi/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/CfdCfi/ai-audit-docs/INDEX.md) |
+| SosSummary | `/sos-summary` | [`apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary`](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary/INDEX.md) |
+| SosLeaderSummary | `/sos-leader-summary` | [`apps/delivery-ops/client/src/components/ai-audit-docs/SosLeaderSummary`](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosLeaderSummary/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/SosLeaderSummary/INDEX.md) |
+| ReleaseBrief | `/release/brief` | [`apps/delivery-ops/client/src/release/ai-audit-docs/ReleaseBrief`](../../apps/delivery-ops/client/src/release/ai-audit-docs/ReleaseBrief/) · [INDEX](../../apps/delivery-ops/client/src/release/ai-audit-docs/ReleaseBrief/INDEX.md) |
+| WeeklySkim | `/release/weekly-skim` | [`apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim`](../../apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim/) · [INDEX](../../apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim/INDEX.md) |
+| ReleaseConfig | `/release-config` | [`apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig`](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig/INDEX.md) |
+| AdminPanel | `/team-management` | [`apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs`](../../apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs/INDEX.md) |
+
+- Timeline: [timeline.md](./timeline.md) — all pages chronological
+- Learnings: [LEARNINGS.md](./LEARNINGS.md) — anti-repeat log
+- Registry: [`aiAudit.config.json`](../../apps/delivery-ops/server/config/aiAudit.config.json)
+
+_Generated by `scripts/loom/ai-audit/rebuild-indexes.js`._

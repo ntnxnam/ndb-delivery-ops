@@ -33,4 +33,14 @@ for (const f of files) {
   fs.writeFileSync(out, html);
   console.log(`Built ${path.relative(root, out)}`);
 }
+
+// Rebuild AI audit indexes (if registry exists) — keeps docs/ai-audit/timeline.md + per-page INDEX.md fresh
+const auditRebuild = path.join(root, 'scripts/loom/ai-audit/rebuild-indexes.js');
+if (fs.existsSync(auditRebuild)) {
+  try {
+    require(auditRebuild);
+  } catch (e) {
+    console.log(`WARN: ai-audit rebuild failed: ${e.message}`);
+  }
+}
 console.log('docs-build done');

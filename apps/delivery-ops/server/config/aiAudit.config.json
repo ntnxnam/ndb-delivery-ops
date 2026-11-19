@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "naming": {
+    "pattern": "YYYY-MM-DD__kebab-slug__weave-<slug>.md",
+    "example": "2026-11-20__add-p0-drill__weave-p0-drill.md",
+    "dedupSuffix": "__02",
+    "indexFile": "INDEX.md"
+  },
+  "indexFile": "INDEX.md",
+  "pages": {
+    "EmailSender": {
+      "route": "/",
+      "title": "Email Sender",
+      "source": "apps/delivery-ops/client/src/components/EmailSender",
+      "auditPath": "apps/delivery-ops/client/src/components/EmailSender/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "ProjectStatus": {
+      "route": "/project-status",
+      "title": "Project Status",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "ReleaseVersionTab.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus",
+      "kind": "file-page"
+    },
+    "FeatureDashboard": {
+      "route": "/feature-dashboard",
+      "title": "Feature Dashboard",
+      "source": "apps/delivery-ops/client/src/feature",
+      "auditPath": "apps/delivery-ops/client/src/feature/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "Retrospective": {
+      "route": "/release/retrospective",
+      "title": "Retrospective",
+      "source": "apps/delivery-ops/client/src/release",
+      "auditPath": "apps/delivery-ops/client/src/release/ai-audit-docs/Retrospective",
+      "kind": "file-page"
+    },
+    "ReleaseSetup": {
+      "route": "/release-setup",
+      "title": "Release Setup",
+      "source": "apps/delivery-ops/client/src/components/ReleaseSetup",
+      "auditPath": "apps/delivery-ops/client/src/components/ReleaseSetup/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "JiraEmailer": {
+      "route": "/generic-emailer",
+      "title": "JIRA Emailer",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "GenericEmailer.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/JiraEmailer",
+      "kind": "file-page"
+    },
+    "EmailHistory": {
+      "route": "/email-history",
+      "title": "Email History",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "EmailHistoryTab.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/EmailHistory",
+      "kind": "file-page"
+    },
+    "SprintReport": {
+      "route": "/sprint-report",
+      "title": "Sprint Report",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "SprintReportPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/SprintReport",
+      "kind": "file-page"
+    },
+    "SprintPerformance": {
+      "route": "/sprint-performance",
+      "title": "Sprint Performance",
+      "source": "apps/delivery-ops/client/src/components/SprintPerformancePage",
+      "auditPath": "apps/delivery-ops/client/src/components/SprintPerformancePage/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "ComponentReport": {
+      "route": "/component-report",
+      "title": "Component Report",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "ComponentReport.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/ComponentReport",
+      "kind": "file-page"
+    },
+    "DependencyView": {
+      "route": "/dependency-view",
+      "title": "Post EC Dependency View",
+      "source": "apps/delivery-ops/client/src/components/DependencyViewPage",
+      "auditPath": "apps/delivery-ops/client/src/components/DependencyViewPage/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "ReleaseOutstandingWork": {
+      "route": "/release-outstanding-work",
+      "title": "Release Outstanding Work",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "ReleaseOutstandingWorkPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseOutstandingWork",
+      "kind": "file-page"
+    },
+    "TeamOverallReport": {
+      "route": "/team-overall-report",
+      "title": "Team Overall Report",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "TeamOverallReportPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/TeamOverallReport",
+      "kind": "file-page"
+    },
+    "Chatbot": {
+      "route": "/chatbot",
+      "title": "AI Chatbot",
+      "source": "apps/delivery-ops/client/src/release",
+      "auditPath": "apps/delivery-ops/client/src/release/ai-audit-docs/Chatbot",
+      "kind": "file-page"
+    },
+    "KPIPage": {
+      "route": "/kpis",
+      "title": "KPIs",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "KPIPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/KPIPage",
+      "kind": "file-page"
+    },
+    "SystemTestScale": {
+      "route": "/system-test-scale",
+      "title": "System-Test Scale",
+      "source": "apps/delivery-ops/client/src/components/SystemTestScale",
+      "auditPath": "apps/delivery-ops/client/src/components/SystemTestScale/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "Oncalls": {
+      "route": "/oncalls",
+      "title": "OnCalls",
+      "source": "apps/delivery-ops/client/src/components/Oncalls",
+      "auditPath": "apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "CfdCfi": {
+      "route": "/cfdcfi",
+      "title": "CFD / CFI",
+      "source": "apps/delivery-ops/client/src/components/CfdCfi",
+      "auditPath": "apps/delivery-ops/client/src/components/CfdCfi/ai-audit-docs",
+      "kind": "folder-page"
+    },
+    "SosSummary": {
+      "route": "/sos-summary",
+      "title": "SoS Summary",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "SosSummaryPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/SosSummary",
+      "kind": "file-page"
+    },
+    "SosLeaderSummary": {
+      "route": "/sos-leader-summary",
+      "title": "SoS by Leader",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "SosLeaderSummaryPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/SosLeaderSummary",
+      "kind": "file-page"
+    },
+    "ReleaseBrief": {
+      "route": "/release/brief",
+      "title": "Release Brief",
+      "source": "apps/delivery-ops/client/src/release",
+      "auditPath": "apps/delivery-ops/client/src/release/ai-audit-docs/ReleaseBrief",
+      "kind": "file-page"
+    },
+    "WeeklySkim": {
+      "route": "/release/weekly-skim",
+      "title": "Weekly Skim",
+      "source": "apps/delivery-ops/client/src/release",
+      "auditPath": "apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim",
+      "kind": "file-page"
+    },
+    "ReleaseConfig": {
+      "route": "/release-config",
+      "title": "Release Config",
+      "source": "apps/delivery-ops/client/src/components",
+      "file": "ReleaseConfigPage.js",
+      "auditPath": "apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig",
+      "kind": "file-page"
+    },
+    "AdminPanel": {
+      "route": "/team-management",
+      "title": "Team Management",
+      "source": "apps/delivery-ops/client/src/components/AdminPanel",
+      "auditPath": "apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs",
+      "kind": "folder-page"
+    }
+  },
+  "learnings": {
+    "path": "docs/ai-audit/LEARNINGS.md",
+    "description": "Cross-page mistake log — Loom reads this before every weave to avoid repeating errors"
+  },
+  "timeline": {
+    "path": "docs/ai-audit/timeline.md",
+    "description": "Cross-page chronological index — generated by docs-build"
+  }
+}

@@ -39,7 +39,8 @@
     "rules/port-and-env-contracts.mdc",
     "rules/documentation-consistency.mdc",
     "rules/api-docs-required.mdc",
-    "rules/page-docs-required.mdc"
+    "rules/page-docs-required.mdc",
+    "rules/ai-audit-docs.mdc"
   ],
   "skills": [
     {
