@@ -286,7 +286,7 @@ expect(sentMail[0].html).toContain('<table');
 ### 5.3 NAI Mock (nock)
 
 ```javascript
-nock(process.env.NAI_API_URL)
+nock(process.env.NAI_API_BASE_URL)
   .post('/chat/completions')
   .reply(200, {
     choices: [{

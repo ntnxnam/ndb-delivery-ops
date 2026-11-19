@@ -3,7 +3,7 @@
 ## Goal
 
 Fix "AI_API_KEY/AI_API_BASE_URL not configured" on CFD/CFI and Email Sender surfaces by making
-`NAI_*` canonical for all 5 AI vars (keep `AI_*` fallback during transition), plus ship the
+`NAI_*` canonical for all 5 AI vars (no `AI_*` fallback), plus ship the
 universal file→bin-packing CSV converter (UI + API + MCP) through the full delivery pipeline.
 
 ## Branch
@@ -11,7 +11,7 @@ universal file→bin-packing CSV converter (UI + API + MCP) through the full del
 `weave/feature-dashboard-shared-views` → merge to `main` (currently 5ef4c2e on 3c2c457).
 Rebased from origin/main per merge-rebase-policy (clean, no conflicts). History:
 - 60e328a feat(bin-packing): universal file→canonical CSV converter (15 files, 2731 ins)
-- 5ef4c2e fix(ai): make NAI_* canonical for all 5 vars, keep AI_* fallback (9 files, cherry-picked 52d2533)
+- 5ef4c2e fix(ai): make NAI_* canonical for all 5 vars, no AI_* fallback (9 files, cherry-picked 52d2533)
 
 ## KPI Card (from weave.mdc mandatory Goal→KPI contract)
 
@@ -21,7 +21,7 @@ SCOPE: shared/src/connectors/aiConnector.ts, apps/delivery-ops/server/{config/ai
 DONE WHEN:
   1. POST /api/bin-packing/convert accepts multipart + productId and returns canonical CSV (or structured error) with temp-dir cleanup + size/MIME gates.
   2. mcp/shared/tools/convertToBinPackingCsv + agent-pack/lighthouse/skills/csv-to-binpacking/ delegations work from loom/lighthouse MCP.
-  3. shared aiConnector reads NAI_* first, falls back to AI_*, then aiConfig.json; no localhost default; all 5 vars have NAI_* canonical naming (NAI_API_KEY has no AI_* fallback per D40/secret rule).
+  3. shared aiConnector reads NAI_* only (no AI_* fallback), then aiConfig.json; no localhost default; all 5 vars have NAI_* canonical naming.
   4. All pipeline gates pass: build, tests, docs-verify, link integrity, no-localhost, merge-rebase.
 
 AGENT KPIs:
@@ -60,7 +60,7 @@ AGENT KPIs:
 
 - `merge-rebase-policy`: already rebased on origin/main (3c2c457) clean; next merge must still `git fetch` + confirm.
 - `no-localhost`: client uses relative /docs/ + dev proxy setupProxy.js; fail if any localhost/127.0.0.1 in client/src.
-- `ai-config-sync`: 5 vars NAI_* canonical, NAI_API_KEY no AI_* fallback; aiConfig.json stays non-secret; .env.example mirrors.
+- `ai-config-sync`: 5 vars NAI_* canonical, no AI_* fallback; aiConfig.json stays non-secret; .env.example mirrors.
 - Link integrity: broken/DOA href gate — docs-verify.sh + docs-build.js must PASS.
 - `one-shot.mdc`: skills csv-to-binpacking under agent-pack/lighthouse/skills/ must stay one-shot hygiene.
 

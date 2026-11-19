@@ -27,16 +27,16 @@ When the key name changes, update **all** of these in the same commit:
 ## How the connector reads config
 
 ```typescript
-// shared/src/connectors/aiConnector.ts — canonical
-const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? process.env.NAI_API_BASE_URL ?? '').trim();
+// shared/src/connectors/aiConnector.ts — canonical (NAI only, no AI_* fallback)
+const baseUrl = (override?.baseUrl || process.env.NAI_API_BASE_URL || '').trim();
 const apiKey = (override?.apiKey ?? process.env.NAI_API_KEY ?? '').trim();
 if (!apiKey) throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
-const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '').trim();
+const defaultModel = (override?.defaultModel || process.env.NAI_DEFAULT_MODEL || '').trim();
 ```
 
-- `baseUrl` has a fallback (`AI_API_BASE_URL` → `NAI_API_BASE_URL`) for endpoint migration — this is intentional
-- `apiKey` has **no fallback** — only `NAI_API_KEY` is read; `AI_API_KEY` is not accepted
-- `defaultModel` has a fallback (`AI_DEFAULT_MODEL` → `NAI_MODEL`) for model name migration
+- `baseUrl` — `NAI_API_BASE_URL` only (no `AI_*` fallback)
+- `apiKey` — `NAI_API_KEY` only (no `AI_*` fallback)
+- `defaultModel` — `NAI_DEFAULT_MODEL` only (no `AI_*`/`NAI_MODEL` fallback)
 
 ## Enforcement
 
@@ -54,5 +54,5 @@ const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? 
 
 - **Memory:** `ai-config-sync-nai-vs-ai-key.md` — canonical `NAI_API_KEY` with no fallback; files that must stay in sync
 - **`never-hide-fix-root-cause-first`** — single canonical name avoids desync vs hidden fallback
-- **`no-hardcoding.mdc`** — no hardcoded hosts/ports; `aiConnector.ts` enforces `AI_API_BASE_URL` not localhost in prod
+- **`no-hardcoding.mdc`** — no hardcoded hosts/ports; `aiConnector.ts` enforces `NAI_API_BASE_URL` not localhost in prod
 - **D44, D45** in `DECISIONS.md` — Lighthouse tenancy and `@portfolio-delivery-ops` scope

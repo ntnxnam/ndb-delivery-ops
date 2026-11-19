@@ -85,7 +85,7 @@ export class AiConnectorError extends Error {
  *   completeChat(messages, { model: "ntnx-beam" })  // model defaults to aiConfig.json:defaultModel
  */
 function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
-  // NAI_* is canonical; AI_* kept as fallback for transition. aiConfig.json provides
+  // Only NAI_* env vars are read (no AI_* fallback). aiConfig.json provides
   // defaults for non-secret vars when env is not set (matches voodooService behaviour).
   let aiConfigFallback: { baseUrl?: string; defaultModel?: string; maxTokens?: number; requestTimeoutMs?: number } = {};
   try {
@@ -94,7 +94,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   } catch {}
   // aiConfig.json provides defaults for non-secret vars when env not set; missing values throw below.
 
-  const envBaseUrl = process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || '';
+  const envBaseUrl = process.env.NAI_API_BASE_URL || '';
   const baseUrl = (override?.baseUrl || envBaseUrl || aiConfigFallback.baseUrl || '').trim();
   if (!baseUrl) {
     throw new Error(
@@ -110,7 +110,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
   }
 
-  const envModel = process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
+  const envModel = process.env.NAI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
   const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
   if (!defaultModel) {
     throw new Error(
@@ -118,7 +118,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     );
   }
 
-  const envMaxTokens = process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '';
+  const envMaxTokens = process.env.NAI_MAX_TOKENS || '';
   if (envMaxTokens && isNaN(parseInt(envMaxTokens, 10))) {
     throw new Error(`NAI_MAX_TOKENS is set but not a number: "${envMaxTokens}"`);
   }
@@ -128,7 +128,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.');
   }
 
-  const envTimeout = process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT || '';
+  const envTimeout = process.env.NAI_REQUEST_TIMEOUT || '';
   if (envTimeout && isNaN(parseInt(envTimeout, 10))) {
     throw new Error(`NAI_REQUEST_TIMEOUT is set but not a number: "${envTimeout}"`);
   }
