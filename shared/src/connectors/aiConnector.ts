@@ -92,14 +92,15 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     aiConfigFallback = require('../../../apps/delivery-ops/server/config/aiConfig.json');
   } catch {}
-  try {
-    if (!aiConfigFallback.baseUrl) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      aiConfigFallback = { ...aiConfigFallback, ...require('../../apps/delivery-ops/server/config/aiConfig.json') };
-    }
-  } catch {}
+  // Second require is intentional fallback deduplication guard — path was previously
+  // '../../apps/...' (wrong, resolved to shared/apps); now uses the correct
+  // '../../../apps/...' so the first try always succeeds when config exists.
+  // Keeping the single correct require avoids dead-code confusion.
+  if (!aiConfigFallback.baseUrl) {
+    // baseUrl missing — caller will throw with actionable NAI_API_BASE_URL message below
+  }
 
-  const envBaseUrl = process.env.NAI_API_BASE_URL ?? process.env.AI_API_BASE_URL ?? '';
+  const envBaseUrl = process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || '';
   const baseUrl = (override?.baseUrl || envBaseUrl || aiConfigFallback.baseUrl || '').trim();
   if (!baseUrl) {
     throw new Error(
@@ -115,7 +116,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
   }
 
-  const envModel = process.env.NAI_DEFAULT_MODEL ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '';
+  const envModel = process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
   const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
   if (!defaultModel) {
     throw new Error(
@@ -123,13 +124,13 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     );
   }
 
-  const envMaxTokens = process.env.NAI_MAX_TOKENS ?? process.env.AI_MAX_TOKENS ?? '';
+  const envMaxTokens = process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '';
   const maxTokensRaw = override?.maxTokens || (envMaxTokens ? parseInt(envMaxTokens, 10) : NaN) || aiConfigFallback.maxTokens;
   if (!maxTokensRaw || isNaN(maxTokensRaw as number)) {
     throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env.');
   }
 
-  const envTimeout = process.env.NAI_REQUEST_TIMEOUT ?? process.env.AI_REQUEST_TIMEOUT ?? '';
+  const envTimeout = process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT || '';
   const timeoutRaw = override?.timeoutMs || (envTimeout ? parseInt(envTimeout, 10) : NaN) || aiConfigFallback.requestTimeoutMs;
   if (!timeoutRaw || isNaN(timeoutRaw as number)) {
     throw new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.');

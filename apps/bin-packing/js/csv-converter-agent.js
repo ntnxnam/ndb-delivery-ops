@@ -118,17 +118,30 @@ export function fileToBase64(file) {
 
 async function tryServerConvert({ file, productId, base64 }) {
   const url = getConvertUrl();
-  const payload = {
-    filename: file.name || 'upload',
-    contentBase64: base64,
-    mimeType: file.type || 'application/octet-stream',
-    productId: productId || 'ndb',
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getJiraAuthHeaders() },
-    body: JSON.stringify(payload),
-  });
+  // Prefer multipart FormData (streaming, 10 MB guard, no b64 overhead). Server also accepts JSON.
+  let res;
+  try {
+    const form = new FormData();
+    form.append('file', file, file.name || 'upload');
+    form.append('productId', productId || 'ndb');
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { ...getJiraAuthHeaders() },
+      body: form,
+    });
+  } catch (formErr) {
+    const payload = {
+      filename: file.name || 'upload',
+      contentBase64: base64,
+      mimeType: file.type || 'application/octet-stream',
+      productId: productId || 'ndb',
+    };
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getJiraAuthHeaders() },
+      body: JSON.stringify(payload),
+    });
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     let detail = text;

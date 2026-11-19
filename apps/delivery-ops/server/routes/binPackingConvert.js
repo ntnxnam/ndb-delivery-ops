@@ -43,9 +43,8 @@ let CsvConverterService = null;
 let sharedAvailable = false;
 try {
   // Try compiled shared dist first (ESM re-export may not include csvConverter yet).
-  // Attempt dynamic require of the service file directly if it exists after build.
   // eslint-disable-next-line import/no-unresolved, global-require
-  const maybe = require('../../../shared/dist/services/csvConverterService.js');
+  const maybe = require('../../../../shared/dist/services/csvConverterService.js');
   if (maybe && maybe.CsvConverterService) {
     CsvConverterService = maybe.CsvConverterService;
     sharedAvailable = true;
@@ -473,21 +472,53 @@ async function parseMultipart(req, maxBytes) {
 router.post('/convert', async (req, res) => {
   let tmpDir = null;
   try {
-    // Parse multipart manually (no multer required)
-    let parsed;
-    try {
-      parsed = await parseMultipart(req, MAX_BYTES);
-    } catch (e) {
-      if (e.status === 413 || e.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: e.message || `File too large. Max ${MAX_BYTES} bytes.` });
-      }
-      // Let outer catch handle other parse errors as 400
-      throw e;
-    }
+    let file = null;
+    let productId = 'ndb';
 
-    const file = parsed.file;
-    const productIdRaw = parsed.fields.productId || parsed.fields.product_id || '';
-    const productId = String(productIdRaw || '').trim().toLowerCase() || 'ndb';
+    const ct = String(req.headers['content-type'] || '').toLowerCase();
+    const isJson = ct.includes('application/json');
+
+    if (isJson) {
+      // JSON path: { filename, contentBase64, mimeType, productId } — from bodyParser (15 MB limit)
+      const body = req.body || {};
+      const filename = String(body.filename || body.fileName || body.originalFileName || 'upload.csv').trim() || 'upload.csv';
+      const contentBase64 = body.contentBase64 || body.fileContentBase64 || body.content || '';
+      const mimeType = String(body.mimeType || body.mime || '').trim() || 'application/octet-stream';
+      const pidRaw = body.productId || body.product_id || '';
+      productId = String(pidRaw || '').trim().toLowerCase() || 'ndb';
+
+      if (!contentBase64 || typeof contentBase64 !== 'string') {
+        return res.status(400).json({ error: 'file is required (JSON field "contentBase64")' });
+      }
+      let b64 = contentBase64.trim();
+      const commaIdx = b64.indexOf(',');
+      if (b64.startsWith('data:') && commaIdx !== -1) b64 = b64.slice(commaIdx + 1);
+      let buffer;
+      try {
+        buffer = Buffer.from(b64, 'base64');
+      } catch {
+        return res.status(400).json({ error: 'Invalid base64 in contentBase64' });
+      }
+      if (!buffer.length) return res.status(400).json({ error: 'file is required (decoded base64 is empty)' });
+      if (buffer.length > MAX_BYTES) {
+        return res.status(413).json({ error: `File too large. Max ${MAX_BYTES} bytes (${MAX_BYTES / (1024 * 1024)} MB).` });
+      }
+      file = { originalname: filename, mimetype: mimeType.toLowerCase(), buffer, size: buffer.length };
+    } else {
+      // Multipart path (primary for browser FormData)
+      let parsed;
+      try {
+        parsed = await parseMultipart(req, MAX_BYTES);
+      } catch (e) {
+        if (e.status === 413 || e.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: e.message || `File too large. Max ${MAX_BYTES} bytes.` });
+        }
+        throw e;
+      }
+      file = parsed.file;
+      const productIdRaw = parsed.fields.productId || parsed.fields.product_id || '';
+      productId = String(productIdRaw || '').trim().toLowerCase() || 'ndb';
+    }
 
     // ── Validations ──
     if (!file || !file.buffer || file.size === 0) {
