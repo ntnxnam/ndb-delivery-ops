@@ -18,9 +18,9 @@ const fetch = getFetch();
 
 const aiConfig = require('../config/aiConfig.json');
 const VOODOO_CONFIG = {
-  endpoint: (process.env.AI_API_BASE_URL || aiConfig.baseUrl).replace(/\/$/, '') + '/chat/completions',
-  model: process.env.AI_DEFAULT_MODEL || aiConfig.defaultModel,
-  maxTokens: parseInt(process.env.AI_MAX_TOKENS, 10) || aiConfig.maxTokens,
+  endpoint: (process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || aiConfig.baseUrl).replace(/\/$/, '') + '/chat/completions',
+  model: process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || aiConfig.defaultModel,
+  maxTokens: parseInt(process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS, 10) || aiConfig.maxTokens,
   temperature: 0.7
 };
 

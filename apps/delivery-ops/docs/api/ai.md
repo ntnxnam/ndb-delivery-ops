@@ -176,7 +176,7 @@ No.
 |---|---|---|
 | 400 | `item.key` missing | Fix the request body |
 | 502 | NAI returned empty or failed | Show retry button; log `naiDebug` |
-| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` | Retry; raise timeout if frequent |
+| 504 | NAI call exceeded `NAI_REQUEST_TIMEOUT` | Retry; raise timeout if frequent |
 
 **Caching**: No — summaries are generated on demand and written to JIRA via the PUT endpoint.
 
@@ -442,7 +442,7 @@ Route → `generateSosTierSummary(payload)` → empty-tier short-circuit OR NAI 
 | 400 | `release` / `tier` missing or invalid | Fix request |
 | 400 | `AI_API_KEY` not configured | Admin must set env |
 | 502 | NAI empty / upstream failure | Retry that tier |
-| 504 | NAI call exceeded `AI_REQUEST_TIMEOUT` (default 120s) | Retry that tier; if frequent, raise timeout |
+| 504 | NAI call exceeded `NAI_REQUEST_TIMEOUT` (default 120s) | Retry that tier; if frequent, raise timeout |
 
 **Caching**: No — on demand. One call per tier; client runs tiers sequentially per release.
 

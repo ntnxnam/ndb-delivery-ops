@@ -459,8 +459,8 @@ Rules: use relative `/docs/guides/DEVELOPER_GUIDE.html` links in app code — ne
 | `JIRA_BASE_URL` | `https://jira.nutanix.com` | JIRA host (no trailing slash) |
 | `CONFLUENCE_PAT` / `CONFLUENCE_BASE_URL` | `JIRA_PAT` / — | Confluence — may reuse JIRA PAT if SSO |
 | `GITHUB_TOKEN` | *(none)* | GitHub PAT (`api.github.com` Bearer) |
-| `AI_API_KEY` | *(none)* | **Required for AI** — NuToken from `tokens.corp`. Non-secrets in `aiConfig.json`. See [AI_API_CONFIGURATION.md](AI_API_CONFIGURATION.md) + [NAI_API_SETUP.md](NAI_API_SETUP.md). |
-| `AI_API_BASE_URL` / `AI_DEFAULT_MODEL` / `AI_MAX_TOKENS` / `AI_REQUEST_TIMEOUT` | from `aiConfig.json` | Override aiConfig per-env (all required if set — no partial) |
+| `NAI_API_KEY` | *(none)* | **Required for AI** — NuToken from `tokens.corp`. Non-secrets in `aiConfig.json`. See [AI_API_CONFIGURATION.md](AI_API_CONFIGURATION.md) + [NAI_API_SETUP.md](NAI_API_SETUP.md). |
+| `NAI_API_BASE_URL` / `NAI_DEFAULT_MODEL` / `NAI_MAX_TOKENS` / `NAI_REQUEST_TIMEOUT` | from `aiConfig.json` | Override aiConfig per-env (all required if set — no partial) — `AI_*` fallback kept during transition |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | `secure-mailrelay.corp.nutanix.com:587` | Nutanix Secure eMail Relay (STARTTLS). Legacy `mailrelay.dyn.nutanix.com` deprecated. `SMTP_FROM` must be service account. |
 | `SMTP_FROM` | `emailConfig.smtp.from` | Override From — must be service account for relay |
 | `RELEASE_VERSIONS_PAGE_ACCESS` | `all` | `all` · `allowlist` · `none` — gates Release Versions API |

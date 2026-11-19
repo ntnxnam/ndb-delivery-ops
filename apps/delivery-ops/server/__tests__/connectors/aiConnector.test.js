@@ -81,14 +81,14 @@ describe('.env.example — updated values', () => {
     'utf8'
   );
 
-  test('UT-ENVEX-001: AI_API_BASE_URL points to NuTokens gateway', () => {
+  test('UT-ENVEX-001: NAI_API_BASE_URL points to NuTokens gateway', () => {
     expect(envExample).toContain(
-      'AI_API_BASE_URL=https://tokens.corp.nutanix.com/enterpriseai/gateway/v1'
+      'NAI_API_BASE_URL=https://tokens.corp.nutanix.com/enterpriseai/gateway/v1'
     );
   });
 
-  test('UT-ENVEX-002: AI_DEFAULT_MODEL is beam-1-501b', () => {
-    expect(envExample).toContain('AI_DEFAULT_MODEL=beam-1-501b');
+  test('UT-ENVEX-002: NAI_DEFAULT_MODEL is beam-1-501b', () => {
+    expect(envExample).toContain('NAI_DEFAULT_MODEL=beam-1-501b');
   });
 
   test('UT-ENVEX-003: old dpro-nai endpoint is gone', () => {
@@ -101,12 +101,12 @@ describe('.env.example — updated values', () => {
     expect(envExample).not.toContain('nemotron3-fp4-uni');
   });
 
-  test('UT-ENVEX-005: AI_MAX_TOKENS is max (8192)', () => {
-    expect(envExample).toContain('AI_MAX_TOKENS=8192');
+  test('UT-ENVEX-005: NAI_MAX_TOKENS is max (8192)', () => {
+    expect(envExample).toContain('NAI_MAX_TOKENS=8192');
   });
 
-  test('UT-ENVEX-006: AI_REQUEST_TIMEOUT is present', () => {
-    expect(envExample).toMatch(/AI_REQUEST_TIMEOUT=\d+/);
+  test('UT-ENVEX-006: NAI_REQUEST_TIMEOUT is present', () => {
+    expect(envExample).toMatch(/NAI_REQUEST_TIMEOUT=\d+/);
   });
 });
 
@@ -157,35 +157,35 @@ describe('aiConnector — no-fallback contract (error message assertions)', () =
     await expect(chatCompletion([], {})).rejects.toThrow('NAI_API_KEY is not set');
   });
 
-  test('UT-AICNX-AI_API_BASE_URL: error message names the missing variable', async () => {
+  test('UT-AICNX-NAI_API_BASE_URL: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
+      new Error('NAI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
     );
-    await expect(chatCompletion([], {})).rejects.toThrow('AI_API_BASE_URL is not set');
+    await expect(chatCompletion([], {})).rejects.toThrow('NAI_API_BASE_URL is not set');
   });
 
-  test('UT-AICNX-AI_DEFAULT_MODEL: error message names the missing variable', async () => {
+  test('UT-AICNX-NAI_DEFAULT_MODEL: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
+      new Error('NAI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.')
     );
-    await expect(chatCompletion([], {})).rejects.toThrow('AI_DEFAULT_MODEL is not set');
+    await expect(chatCompletion([], {})).rejects.toThrow('NAI_DEFAULT_MODEL is not set');
   });
 
-  test('UT-AICNX-AI_MAX_TOKENS: error message names the missing variable', async () => {
+  test('UT-AICNX-NAI_MAX_TOKENS: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_MAX_TOKENS is not set. Set it in server/.env.')
+      new Error('NAI_MAX_TOKENS is not set. Set it in server/.env.')
     );
-    await expect(chatCompletion([], {})).rejects.toThrow('AI_MAX_TOKENS is not set');
+    await expect(chatCompletion([], {})).rejects.toThrow('NAI_MAX_TOKENS is not set');
   });
 
-  test('UT-AICNX-AI_REQUEST_TIMEOUT: error message names the missing variable', async () => {
+  test('UT-AICNX-NAI_REQUEST_TIMEOUT: error message names the missing variable', async () => {
     const { chatCompletion } = require('@portfolio-delivery-ops/shared');
     chatCompletion.mockRejectedValueOnce(
-      new Error('AI_REQUEST_TIMEOUT is not set. Set it in server/.env.')
+      new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.')
     );
-    await expect(chatCompletion([], {})).rejects.toThrow('AI_REQUEST_TIMEOUT is not set');
+    await expect(chatCompletion([], {})).rejects.toThrow('NAI_REQUEST_TIMEOUT is not set');
   });
 });

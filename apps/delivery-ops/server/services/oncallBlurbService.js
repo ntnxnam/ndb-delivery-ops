@@ -158,7 +158,7 @@ async function enrichAboutWithNai(packets) {
     const batch = packets.slice(i, i + NAI_BATCH_SIZE);
     const partial = await withTimeout(
       (async () => {
-        // Do not cap below default AI_MAX_TOKENS — reasoning models burn small
+        // Do not cap below default NAI_MAX_TOKENS — reasoning models burn small
         // caps to empty output (finish_reason=length).
         const text = await chatCompletion(
           [

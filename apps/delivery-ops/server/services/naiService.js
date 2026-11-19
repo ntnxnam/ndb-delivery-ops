@@ -10,7 +10,7 @@
  * model from rambling about earlier-phase fields that no longer matter.
  */
 
-const NAI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS || '4096', 10);
+const NAI_MAX_TOKENS = parseInt(process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '4096', 10);
 
 const MAX_STATUS_TEXT_CHARS = 1500;
 
