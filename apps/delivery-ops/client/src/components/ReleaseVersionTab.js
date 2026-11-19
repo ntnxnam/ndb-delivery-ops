@@ -1,10 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PageLoading } from '../shared/components/PageLoading';
-import html2canvas from 'html2canvas';
 import { createPortal } from 'react-dom';
-import { authenticatedPost } from '../shared/services/apiService';
-import { generateTableHTMLForEmail } from '../utils/emailTableGenerator';
 import { logUserAction, UserActions } from '../utils/userActionLogger';
 import { useReleaseVersionTab } from '../hooks/useReleaseVersionTab';
 import ReleaseVersionSelector from './ReleaseVersionSelector';
@@ -14,12 +11,11 @@ import ReleaseVersionGantt from './ReleaseVersionGantt';
 import ReleaseVersionTableSection, { sortItems } from './ReleaseVersionTableSection';
 import ReleaseVersionLegend from './ReleaseVersionLegend';
 import ReleaseVersionFilterBar from './ReleaseVersionFilterBar';
-import { downloadGantt, downloadExcel, downloadHTML, downloadPDF, downloadBoth } from '../utils/downloadUtils';
 import { GateChipStrip } from '../design-system';
 import ReleaseSummaryPanel from './ReleaseSummaryPanel';
 import ExecPageBriefing from './ExecPageBriefing';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
-import { checkReleaseLevelMissingDates, formatJiraWikiMarkup, extractExecutiveSummaryText, getExtensionLabelInfo, getExtensionColor } from '../services/releaseVersionService';
+import { checkReleaseLevelMissingDates } from '../services/releaseVersionService';
 import './ReleaseVersionTab.css';
 import './EmailSender/EmailSender.css';
 
@@ -34,59 +30,8 @@ function ReleaseVersionTab({ releaseVersionsEmailSenders = [] }) {
     if (c) refreshButtonContainerRef.current = c;
   }, []);
 
-  const renderNotSet = () => <span style={{ backgroundColor: '#fff3cd', fontWeight: 600 }}>Not Set</span>;
-
-  const extractExecutiveSummary = (statusUpdate) => {
-    const lines = extractExecutiveSummaryText(statusUpdate);
-    if (!lines) return renderNotSet();
-    const fullText = (statusUpdate || '').replace(/\{color:[^}]+\}(.*?)\{color\}/g,'$1').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/\[([^\]]+)\|([^\]]+)\]/g,'').replace(/\[([^\]]+)\]/g,'').replace(/\{[^}]+\}/g,'').replace(/\s+/g,' ').trim();
-    return (
-      <div title={fullText.length > lines.join(' ').length ? fullText : undefined} style={{ fontSize:'12px', lineHeight:'1.5', color:'#212529', cursor: fullText.length>lines.join(' ').length?'help':'default' }}>
-        {lines.map((line,idx)=><div key={idx} style={{ marginBottom: idx<lines.length-1?'6px':'0', paddingBottom: idx<lines.length-1?'4px':'0', borderBottom: idx<lines.length-1?'1px solid #e9ecef':'none' }}>{line}</div>)}
-      </div>
-    );
-  };
-
-  const fmtJira = (text) => formatJiraWikiMarkup(text, h.jiraBaseUrl);
-
-  const handleDownload = async (type) => {
-    if (h.downloading) return;
-    h.setDownloading(true); h.setError('');
-    try {
-      const opts={ filteredItems: h.filteredItems, checkpointHistory: h.checkpointHistory, version: h.selectedVersion, jiraBaseUrl: h.jiraBaseUrl };
-      if (type==='gantt') await downloadGantt(ganttChartRef, h.selectedVersion);
-      else if (type==='excel') downloadExcel(opts);
-      else if (type==='html') downloadHTML(opts);
-      else if (type==='pdf') await downloadPDF(pdfContentRef, h.selectedVersion);
-      else if (type==='both') await downloadBoth({ ganttRef: ganttChartRef, ...opts });
-    } catch(err){ h.setError('Download failed: '+(err.message||'Unknown error')); }
-    finally{ h.setDownloading(false); }
-  };
-
-  const handleSendEmail = async (previewOnly=false) => {
-    if (!previewOnly) await logUserAction(UserActions.EMAIL_SEND_CLICKED, h.selectedVersion, { hasHighlights:!!h.highlights, hasLowlights:!!h.lowlights, hasCallToAction:!!h.callToAction, recipientsCount: h.emailRecipients?h.emailRecipients.split(/[,;]/).filter(r=>r.trim()).length:0 });
-    if (!h.username){ if(!previewOnly) h.setError('User email is required to send email'); if(previewOnly) throw new Error('User email is required'); return; }
-    if ((h.items.commit?.length||0)===0 && (h.items.longTermFunded?.length||0)===0){ if(!previewOnly) h.setError('No items to send in email'); if(previewOnly) throw new Error('No items to send in email'); return; }
-    if (!previewOnly){ h.setSendingEmail(true); h.setError(''); h.setEmailSuccess(false); }
-    try {
-      if (h.emailRecipients?.trim()){
-        const recipients=h.emailRecipients.split(',').map(r=>r.trim()).filter(Boolean);
-        const uRx=/^[a-z0-9._-]+$/i, eRx=/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
-        for(let i=0;i<recipients.length;i++){ const r=recipients[i]; const ok=r.includes('@')?eRx.test(r):uRx.test(r); if(!ok){ h.setError(`Invalid recipient format at position ${i+1}: "${r}".`); h.setSendingEmail(false); return; } }
-      }
-      if (!h.columnsConfig){ h.setError('Column configuration not loaded. Please refresh the page.'); h.setSendingEmail(false); return; }
-      const tableHTML=generateTableHTMLForEmail(h.items, h.checkpointHistory, h.selectedVersion, h.columnsConfig, fmtJira, extractExecutiveSummary, getExtensionLabelInfo, getExtensionColor, h.jiraBaseUrl, h.sectionMetadata);
-      let ganttChartImageData=null;
-      if (ganttChartRef.current && h.ganttConfig){
-        try { const canvas=await html2canvas(ganttChartRef.current,{backgroundColor:'#f0f0f0',scale:2,logging:false,useCORS:true,allowTaint:false}); ganttChartImageData=canvas.toDataURL('image/png'); } catch{}
-      }
-      const payload={ selectedVersion: h.selectedVersion, tableHTML, lowlights: h.lowlights, highlights: h.highlights, callToAction: h.callToAction, emailRecipients: h.emailRecipients||'', ganttConfig: h.ganttConfig, items: h.enrichedItems.commit||[], ganttChartImageData };
-      if (previewOnly){ const {ganttChartImageData:_,...pp}=payload; const pr=await authenticatedPost('/api/email/send-release-versions',{...pp,previewOnly:true},{jiraToken:h.jiraToken,username:h.username}); return pr.data; }
-      const response=await authenticatedPost('/api/email/send-release-versions',payload,{jiraToken:h.jiraToken,username:h.username});
-      if (response.data.success){ h.setEmailSuccess(true); setTimeout(()=>h.setEmailSuccess(false),5000); } else h.setError(response.data.error||'Failed to send email');
-    } catch(err){ if(!previewOnly) h.setError(err.response?.data?.error||err.message||'Failed to send email'); if(previewOnly) throw err; }
-    finally{ if(!previewOnly) h.setSendingEmail(false); }
-  };
+  const handleDownload = (type) => h.handleDownload(type, { ganttRef: ganttChartRef, pdfRef: pdfContentRef });
+  const handleSendEmail = (previewOnly=false) => h.handleSendEmail(previewOnly, { ganttRef: ganttChartRef });
 
   const totalCount=(h.items.commit?.length||0)+(h.items.longTermFunded?.length||0);
   const filteredCount=(h.filteredItems.commit?.length||0)+(h.filteredItems.longTermFunded?.length||0);
