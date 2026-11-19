@@ -51,8 +51,8 @@ export function ReopenQualityPanel({ qualityMetrics }) {
           { label: 'Max Reopens (single ticket)', value: maxReopens },
         ].map(({ label, value }) => (
           <div key={label} style={{
-            background: 'var(--ds-surface-raised, #1e2230)',
-            border: '1px solid var(--ds-border, #2a2f45)',
+            background: 'var(--ds-surface-raised)',
+            border: '1px solid var(--ds-border)',
             borderRadius: '6px',
             padding: '0.5rem 0.9rem',
             minWidth: '9rem',

@@ -11,59 +11,59 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--ds-space-5);
-  gap: var(--ds-space-3);
+  margin-bottom: var(--space-5);
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .retro-header__title-row {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-2);
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .retro-header h2 {
   margin: 0;
-  font-size: var(--ds-fs-page);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-page);
+  font-weight: var(--fw-semibold);
   color: var(--ds-text-strong);
 }
 
 .retro-hint {
   color: var(--ds-muted);
-  font-size: var(--ds-fs-muted);
-  margin-top: 2px;
+  font-size: var(--fs-muted);
+  margin-top: var(--space-1);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
-  font-weight: var(--ds-fw-semi);
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--fw-semibold);
 }
 
 /* ── Actions (release selector + refresh) ────────────────────────────── */
 .retro-actions {
   display: flex;
-  gap: var(--ds-space-2);
+  gap: var(--space-2);
   align-items: center;
 }
 
 .retro-actions label {
-  font-size: var(--ds-fs-muted);
+  font-size: var(--fs-muted);
   color: var(--ds-muted);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
-  font-weight: var(--ds-fw-semi);
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--fw-semibold);
 }
 
 .retro-actions select {
   background: var(--ds-surface-raised);
   border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
+  border-radius: var(--radius);
   color: var(--ds-text);
-  font-size: var(--ds-fs-small);
-  padding: 0.3rem 0.65rem;
+  font-size: var(--fs-small);
+  padding: var(--space-1) var(--space-3);
   outline: none;
   cursor: pointer;
-  transition: border-color var(--ds-transition);
+  transition: border-color var(--transition);
 }
 
 .retro-actions select:focus {
@@ -73,17 +73,18 @@
 .retro-actions button {
   background: var(--ds-accent-soft);
   border: 1px solid var(--ds-accent-border);
-  border-radius: var(--ds-radius);
+  border-radius: var(--radius);
   color: var(--ds-accent);
-  font-size: var(--ds-fs-small);
-  font-weight: var(--ds-fw-medium);
-  padding: 0.3rem 0.75rem;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  padding: var(--space-1) var(--space-3);
   cursor: pointer;
-  transition: background var(--ds-transition), border-color var(--ds-transition);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .retro-actions button:hover:not(:disabled) {
-  background: rgba(88, 166, 255, 0.2);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
 }
 
 .retro-actions button:disabled {
@@ -95,54 +96,54 @@
 .retro-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--ds-space-3);
-  margin-bottom: var(--ds-space-5);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 /* ── Gate compliance card ─────────────────────────────────────────────── */
 .retro-card {
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-lg);
-  padding: var(--ds-space-4);
-  box-shadow: var(--ds-shadow-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
 }
 
 .retro-card-head {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-2);
-  margin-bottom: var(--ds-space-1);
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .retro-card-head h4 {
   margin: 0;
-  font-size: var(--ds-fs-section);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
   color: var(--ds-text-strong);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-label);
 }
 
 .retro-card-contract {
   color: var(--ds-muted);
-  font-size: var(--ds-fs-small);
-  margin-bottom: var(--ds-space-3);
-  line-height: var(--ds-lh-body);
+  font-size: var(--fs-small);
+  margin-bottom: var(--space-3);
+  line-height: var(--lh-body);
 }
 
 .retro-card-metrics {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .retro-metric-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: var(--ds-space-2);
+  gap: var(--space-2);
   align-items: center;
-  padding: 6px 0;
+  padding: var(--space-2) 0;
   border-top: 1px solid var(--ds-divider);
 }
 
@@ -151,13 +152,13 @@
 }
 
 .retro-metric-label {
-  font-size: var(--ds-fs-small);
+  font-size: var(--fs-small);
   color: var(--ds-muted);
 }
 
 .retro-metric-value {
-  font-size: var(--ds-fs-small);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
   color: var(--ds-text-strong);
   font-variant-numeric: tabular-nums;
 }
@@ -173,12 +174,12 @@
 
 /* ── RAG pills (dark-theme safe) ──────────────────────────────────────── */
 .retro-rag {
-  padding: 0.1rem 0.55rem;
-  border-radius: var(--ds-radius-pill);
-  font-size: var(--ds-fs-muted);
-  font-weight: var(--ds-fw-semi);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
+  letter-spacing: var(--tracking-label);
   white-space: nowrap;
 }
 
@@ -190,7 +191,7 @@
 /* ── Gate timeline ruler ──────────────────────────────────────────────── */
 .retro-timeline-row {
   display: flex;
-  gap: var(--ds-space-3);
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -199,30 +200,30 @@
   min-width: 100px;
   background: var(--ds-surface-raised);
   border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
-  padding: var(--ds-space-3) var(--ds-space-3);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .retro-timeline-kind {
-  font-size: var(--ds-fs-muted);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
+  letter-spacing: var(--tracking-label);
   color: var(--ds-accent);
 }
 
 .retro-timeline-date {
-  font-size: var(--ds-fs-body);
+  font-size: var(--fs-body);
   color: var(--ds-text-strong);
-  font-weight: var(--ds-fw-medium);
+  font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
 }
 
 .retro-timeline-style {
-  font-size: var(--ds-fs-muted);
+  font-size: var(--fs-muted);
   color: var(--ds-muted);
 }
 
@@ -238,21 +239,21 @@
 }
 
 .retro-table th {
-  font-size: var(--ds-fs-muted);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
+  letter-spacing: var(--tracking-label);
   color: var(--ds-muted);
   text-align: left;
-  padding: var(--ds-space-2) var(--ds-space-3);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--ds-border);
   white-space: nowrap;
 }
 
 .retro-table td {
   text-align: left;
-  padding: var(--ds-space-2) var(--ds-space-3);
-  font-size: var(--ds-fs-small);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
   color: var(--ds-text);
   border-bottom: 1px solid var(--ds-divider);
   white-space: nowrap;
@@ -261,7 +262,7 @@
 
 .retro-table tbody tr {
   cursor: pointer;
-  transition: background var(--ds-transition);
+  transition: background var(--transition);
 }
 
 .retro-table tbody tr:hover {
@@ -280,13 +281,13 @@
 .retro-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: var(--ds-radius-pill);
-  font-size: var(--ds-fs-muted);
-  font-weight: var(--ds-fw-semi);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-label);
   white-space: nowrap;
 }
 
@@ -297,40 +298,40 @@
 
 /* ── PG→GA & companion panels ─────────────────────────────────────────── */
 .retro-panel {
-  margin-bottom: var(--ds-space-3);
+  margin-bottom: var(--space-3);
 }
 
 .retro-panel h3 {
-  margin: 0 0 var(--ds-space-2);
-  font-size: var(--ds-fs-section);
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-section);
   color: var(--ds-text-strong);
 }
 
 .retro-window-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--ds-space-3);
+  gap: var(--space-3);
 }
 
 .retro-window-tile {
   background: var(--ds-surface-raised);
   border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
-  padding: var(--ds-space-3);
+  border-radius: var(--radius);
+  padding: var(--space-3);
 }
 
 .retro-window-label {
   color: var(--ds-muted);
-  font-size: var(--ds-fs-muted);
+  font-size: var(--fs-muted);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
-  font-weight: var(--ds-fw-semi);
-  margin-bottom: 4px;
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--space-1);
 }
 
 .retro-window-value {
-  font-size: 1.5rem;
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
   color: var(--ds-text-strong);
   font-variant-numeric: tabular-nums;
 }
@@ -343,12 +344,12 @@
 .cmp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--ds-fs-small);
+  font-size: var(--fs-small);
 }
 
 .cmp-table th,
 .cmp-table td {
-  padding: 6px 10px;
+  padding: var(--space-2) var(--space-3);
   text-align: right;
   border-bottom: 1px solid var(--ds-border);
   white-space: nowrap;
@@ -356,10 +357,10 @@
 
 .cmp-table thead th {
   color: var(--ds-muted);
-  font-weight: var(--ds-fw-semi);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
-  font-size: var(--ds-fs-muted);
+  letter-spacing: var(--tracking-label);
+  font-size: var(--fs-muted);
   border-bottom: 2px solid var(--ds-border);
 }
 
@@ -375,22 +376,22 @@
 .cmp-group-row td {
   text-align: left;
   color: var(--ds-accent);
-  font-weight: var(--ds-fw-semi);
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--ds-tracking-label);
-  font-size: var(--ds-fs-muted);
+  letter-spacing: var(--tracking-label);
+  font-size: var(--fs-muted);
   background: var(--ds-surface-raised);
-  padding-top: 8px;
-  padding-bottom: 4px;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-1);
 }
 
 .cmp-cell-main {
   font-variant-numeric: tabular-nums;
-  font-weight: var(--ds-fw-semi);
+  font-weight: var(--fw-semibold);
   color: var(--ds-text-strong);
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .cmp-cell-main a {
@@ -404,7 +405,7 @@
 
 .cmp-cell-sub {
   color: var(--ds-muted);
-  font-size: var(--ds-fs-muted);
+  font-size: var(--fs-muted);
 }
 
 .cmp-cell--empty {
@@ -412,8 +413,8 @@
 }
 
 .cmp-delta {
-  font-size: var(--ds-fs-muted);
-  font-weight: var(--ds-fw-semi);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
 }
 
 .cmp-delta--up {
@@ -429,7 +430,7 @@
 }
 
 .cmp-caption {
-  margin-top: 8px;
+  margin-top: var(--space-2);
   color: var(--ds-muted);
-  font-size: var(--ds-fs-muted);
+  font-size: var(--fs-muted);
 }

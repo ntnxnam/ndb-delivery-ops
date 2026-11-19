@@ -1,13 +1,208 @@
-/* styles/shared.css — shared utility classes consumed by multiple layers (utils + components).
- * Keeps layering clean: utils shouldn't import components CSS.
+/* styles/shared.css — shared utilities consumed across pages.
+ * All values via var(--*) — no hardcoded palette.
  */
 
+/* ── notset badge (imported by table cells & utils) ───────────────────── */
 .rv-notset {
+  display: inline-block;
   background: var(--notset-bg);
   color: var(--notset-text);
   font-weight: var(--fw-semibold);
-  padding: 2px 4px;
-  border-radius: 2px;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-xs);
   border: 1px solid var(--notset-border);
+  line-height: 1.4;
+}
+
+/* ── page header plate ─────────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.page-header__titles {
+  min-width: 0;
+  flex: 1 1 18rem;
+}
+
+.page-header__title {
+  margin: 0;
+  font-size: var(--fs-page);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+}
+
+.page-header__subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-body);
+  color: var(--muted);
+  line-height: var(--lh-body);
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ── filter bar ────────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+}
+
+.filter-bar__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.filter-bar__label {
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
+  color: var(--muted-label);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.filter-bar__control {
+  min-height: 2rem;
+  padding: 0.35rem 0.6rem;
+  font-size: var(--fs-small);
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.filter-bar__control:focus {
+  border-color: var(--accent-border);
+  box-shadow: var(--focus-ring);
+}
+
+/* ── stat row ──────────────────────────────────────────────────────────── */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stat-card {
+  flex: 1 1 10rem;
+  min-width: 0;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-xs);
+}
+
+.stat-card__label {
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  margin-bottom: var(--space-1);
+}
+
+.stat-card__value {
+  font-size: var(--fs-kpi-number);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+.stat-card__caption {
+  margin-top: var(--space-1);
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* ── table polish ──────────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.table-wrap thead th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
+  color: var(--muted-label);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table-wrap tbody td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+  color: var(--text);
+}
+
+.table-wrap tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrap tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+/* ── empty / error ─────────────────────────────────────────────────────── */
+.page-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+.page-error {
+  padding: var(--space-3) var(--space-4);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-size: var(--fs-body);
+  margin-bottom: var(--space-4);
+}
+
+/* ── section divider ───────────────────────────────────────────────────── */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: var(--space-5) 0;
 }

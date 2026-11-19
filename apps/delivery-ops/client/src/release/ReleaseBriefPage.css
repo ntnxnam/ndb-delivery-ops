@@ -2,16 +2,16 @@
 
 .ds-scope .ds-page {
   min-height: 100vh;
-  background: var(--ds-bg-page, #f8f9fa);
+  background: var(--ds-bg-page);
 }
 
 .ds-scope .ds-page__inner {
-  max-width: 1400px;
+  max-width: var(--max-width-wide);
   margin: 0 auto;
-  padding: var(--ds-space-4, 1rem) var(--ds-space-6, 1.5rem);
+  padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-6, 1.5rem);
+  gap: var(--space-6);
 }
 
 /* Page header */
@@ -20,55 +20,60 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--ds-space-3, 0.75rem);
+  gap: var(--space-3);
 }
 
 .rb-header__title-row {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-2, 0.5rem);
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .rb-header__title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ds-text-primary, #111);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ds-text-primary);
 }
 
 .rb-header__controls {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-2, 0.5rem);
+  gap: var(--space-2);
 }
 
 /* Meta strip */
 .rb-meta {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-3, 0.75rem);
+  gap: var(--space-3);
   flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: var(--ds-text-muted, #666);
+  font-size: var(--fs-small);
+  color: var(--ds-text-muted);
 }
 
 .rb-meta__divider {
-  color: var(--ds-border, #ddd);
+  color: var(--ds-border);
 }
 
 /* KPI grid */
 .ds-grid-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--ds-space-3, 0.75rem);
+  gap: var(--space-3);
 }
 
 /* Skeleton loading placeholder */
 .rb-skeleton {
   height: 120px;
-  border-radius: var(--ds-radius-md, 8px);
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--border-subtle) 50%,
+    var(--surface) 75%
+  );
   background-size: 400% 100%;
   animation: rb-shimmer 1.4s ease infinite;
 }
@@ -80,37 +85,37 @@
 
 /* Empty / error states */
 .rb-empty {
-  color: var(--ds-text-muted, #888);
-  font-size: 0.9rem;
-  padding: var(--ds-space-4, 1rem) 0;
+  color: var(--ds-text-muted);
+  font-size: var(--fs-small);
+  padding: var(--space-4) 0;
 }
 
 .rb-error {
-  color: var(--ds-rag-red, #d32f2f);
-  background: #fff5f5;
-  border: 1px solid #fcc;
-  border-radius: var(--ds-radius-sm, 4px);
-  padding: var(--ds-space-3, 0.75rem) var(--ds-space-4, 1rem);
-  font-size: 0.9rem;
+  color: var(--ds-rag-red);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-small);
 }
 
 /* Refresh button */
 .rb-refresh-btn {
   background: none;
-  border: 1px solid var(--ds-border, #ddd);
-  border-radius: var(--ds-radius-sm, 4px);
-  padding: 0.3rem 0.75rem;
-  font-size: 0.85rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-small);
   cursor: pointer;
-  color: var(--ds-text-primary, #333);
+  color: var(--ds-text-primary);
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  transition: background 0.15s;
+  gap: var(--space-1);
+  transition: background var(--transition);
 }
 
 .rb-refresh-btn:hover {
-  background: var(--ds-bg-hover, #f0f0f0);
+  background: var(--ds-bg-hover);
 }
 
 .rb-refresh-btn:disabled {
@@ -120,12 +125,12 @@
 
 /* Release picker select */
 .rb-release-select {
-  border: 1px solid var(--ds-border, #ddd);
-  border-radius: var(--ds-radius-sm, 4px);
-  padding: 0.3rem 0.5rem;
-  font-size: 0.9rem;
-  background: #fff;
-  color: var(--ds-text-primary, #333);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+  background: var(--surface-raised);
+  color: var(--ds-text-primary);
   cursor: pointer;
   min-width: 130px;
 }

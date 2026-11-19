@@ -1,60 +1,60 @@
 .kpi-pulse {
-  margin-bottom: 1rem;
-  border-radius: 10px;
-  padding: 0.75rem 0.85rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .kpi-pulse h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
-  font-weight: 650;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-bold);
 }
 
 .kpi-pulse-story {
-  margin: 0 0 0.65rem;
-  font-size: 0.82rem;
-  color: #475569;
-  line-height: 1.35;
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--muted-label);
+  line-height: var(--lh-body);
 }
 
 .kpi-pulse-window {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  margin: 0 0 0.5rem;
+  font-size: var(--fs-muted);
+  color: var(--muted-faint);
+  margin: 0 0 var(--space-2);
 }
 
 .kpi-pulse-heroes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .kpi-pulse-hero {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.5rem 0.6rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
 }
 
 .kpi-pulse-hero .label {
-  font-size: 0.7rem;
-  color: #64748b;
-  margin-bottom: 0.1rem;
+  font-size: var(--fs-muted);
+  color: var(--muted);
+  margin-bottom: var(--space-1);
 }
 
 .kpi-pulse-hero .value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: var(--fs-kpi-number);
+  font-weight: var(--fw-bold);
+  color: var(--text-strong);
   text-decoration: none;
 }
 
 .kpi-pulse-hero a.value:hover {
   text-decoration: underline;
-  color: #0f766e;
+  color: var(--success);
 }
 
 button.kpi-pulse-hero-open {
@@ -65,9 +65,9 @@ button.kpi-pulse-hero-open {
   background: transparent;
   cursor: pointer;
   font: inherit;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f766e;
+  font-size: var(--fs-kpi-number);
+  font-weight: var(--fw-bold);
+  color: var(--success);
   text-align: left;
 }
 
@@ -77,10 +77,10 @@ button.kpi-pulse-hero-open:hover {
 
 .kpi-pulse-hero-jira-hint {
   display: inline-block;
-  margin-top: 0.2rem;
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #0052cc;
+  margin-top: var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -89,20 +89,20 @@ button.kpi-pulse-hero-open:hover {
 }
 
 .kpi-pulse-hero .sub {
-  font-size: 0.68rem;
-  color: #94a3b8;
-  margin-top: 0.1rem;
+  font-size: var(--fs-xs);
+  color: var(--muted-faint);
+  margin-top: var(--space-1);
 }
 
-.kpi-pulse-hero.net-neg .value { color: #c2410c; }
-.kpi-pulse-hero.net-pos .value { color: #15803d; }
+.kpi-pulse-hero.net-neg .value { color: var(--warning); }
+.kpi-pulse-hero.net-pos .value { color: var(--success); }
 
 .kpi-pulse-chart {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.5rem 0.35rem 0.25rem;
-  margin-bottom: 0.65rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  margin-bottom: var(--space-3);
   max-height: 280px;
 }
 
@@ -111,138 +111,138 @@ button.kpi-pulse-hero-open:hover {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-  padding: 0 0.4rem 0.25rem;
+  gap: var(--space-1) var(--space-3);
+  padding: 0 var(--space-2) var(--space-1);
 }
 
 .kpi-pulse-chart-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #334155;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--text-soft);
 }
 
 .kpi-pulse-chart-toggles {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .kpi-pulse-toggle {
   display: inline-flex;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .kpi-pulse-toggle button {
   border: 0;
-  background: #fff;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.7rem;
+  background: var(--surface-raised);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-muted);
   cursor: pointer;
-  color: #475569;
+  color: var(--muted-label);
   min-height: 1.75rem;
 }
 
 .kpi-pulse-toggle button.kpi-pulse-toggle-active {
-  background: #0f766e;
-  color: #fff;
-  font-weight: 600;
+  background: var(--success);
+  color: var(--text-inverse);
+  font-weight: var(--fw-semibold);
 }
 
 .kpi-pulse-dwell {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.65rem;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
 }
 
 .kpi-pulse-dwell-chip {
-  font-size: 0.72rem;
-  color: #334155;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
+  font-size: var(--fs-muted);
+  color: var(--text-soft);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-2);
   text-decoration: none;
 }
 
 .kpi-pulse-dwell-chip:hover {
-  border-color: #0f766e;
-  color: #0f766e;
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .kpi-pulse-muted {
-  font-size: 0.82rem;
-  color: #94a3b8;
-  margin: 0.35rem 0;
+  font-size: var(--fs-small);
+  color: var(--muted-faint);
+  margin: var(--space-1) 0;
 }
 
 .kpi-pulse-warn {
-  font-size: 0.78rem;
-  color: #b45309;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  border-radius: 6px;
-  padding: 0.35rem 0.55rem;
-  margin: 0 0 0.55rem;
+  font-size: var(--fs-small);
+  color: var(--warning-text);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-2);
 }
 
 .kpi-pulse-chart-caption {
-  font-size: 0.78rem;
-  color: #334155;
-  margin: 0 0.4rem 0.15rem;
+  font-size: var(--fs-small);
+  color: var(--text-soft);
+  margin: 0 var(--space-2) var(--space-1);
 }
 
 .kpi-pulse-chart-hint {
-  font-size: 0.68rem;
-  color: #94a3b8;
-  margin: 0 0.4rem 0.25rem;
+  font-size: var(--fs-xs);
+  color: var(--muted-faint);
+  margin: 0 var(--space-2) var(--space-1);
 }
 
 .kpi-pulse-dwell-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #475569;
-  margin: 0 0 0.35rem;
+  font-size: var(--fs-muted);
+  font-weight: var(--fw-semibold);
+  color: var(--muted-label);
+  margin: 0 0 var(--space-1);
 }
 
 .kpi-pulse-impact {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.65rem 0.75rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-3);
 }
 
 .kpi-pulse-impact h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.88rem;
-  font-weight: 650;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-bold);
 }
 
 .kpi-pulse-impact-body {
-  font-size: 0.82rem;
-  color: #334155;
-  line-height: 1.4;
+  font-size: var(--fs-small);
+  color: var(--text-soft);
+  line-height: var(--lh-body);
   white-space: pre-wrap;
 }
 
 .kpi-pulse-impact-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: center;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 .kpi-pulse-btn {
-  padding: 0.375rem 0.875rem;
-  min-height: 2rem;
-  font-size: 0.82rem;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
+  padding: var(--space-1) var(--space-4);
+  min-height: var(--space-6);
+  font-size: var(--fs-small);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text-soft);
   cursor: pointer;
 }
 
@@ -252,12 +252,12 @@ button.kpi-pulse-hero-open:hover {
 }
 
 .kpi-pulse-btn-primary {
-  background: #0f766e;
-  border-color: #0f766e;
-  color: #fff;
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--text-inverse);
 }
 
 .kpi-pulse-impact-meta {
-  font-size: 0.7rem;
-  color: #94a3b8;
+  font-size: var(--fs-muted);
+  color: var(--muted-faint);
 }

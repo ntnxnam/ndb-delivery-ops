@@ -1,45 +1,52 @@
-/* Layout.css — shell layout (token-driven). Extracted from Layout.js <style> block. */
+/* Layout.css — shell layout */
 
 .app-layout {
   min-height: 100vh;
   display: flex;
-  background: var(--surface);
+  background: var(--canvas);
 }
 
+/* ── JIRA connectivity banner ───────────────────────────────────────────── */
 .jira-banner {
   position: sticky;
   top: 0;
   z-index: var(--z-toast);
   background: var(--notset-bg);
   border-bottom: 1px solid var(--notset-border);
-  padding: var(--space-2) 20px;
+  padding: var(--space-2) var(--space-5);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: 13px;
+  font-size: var(--fs-small);
   color: var(--notset-text);
   font-weight: var(--fw-medium);
+  line-height: var(--lh-body);
 }
 
-.jira-banner__icon { font-size: 16px; }
+.jira-banner__icon { font-size: var(--fs-section); line-height: 1; }
 
 .jira-banner__retry {
   margin-left: auto;
   background: var(--warning);
   border: none;
   border-radius: var(--radius-sm);
-  padding: 3px 12px;
-  font-size: 12px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-muted);
   font-weight: var(--fw-semibold);
-  color: var(--text-strong);
+  color: var(--text-inverse);
   cursor: pointer;
+  transition: background var(--transition);
 }
 
+.jira-banner__retry:hover { background: var(--accent-hover); }
+.jira-banner__retry:focus-visible { box-shadow: var(--focus-ring); }
+
+/* ── main content area ──────────────────────────────────────────────────── */
 .main-content {
   flex: 1;
   min-width: 0;
   padding: var(--space-6);
-  transition: margin-left 0.3s ease;
+  transition: margin-left var(--transition-slow);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -54,6 +61,7 @@
 }
 
 .main-content.main-content-wide > * { max-width: var(--max-width); }
+
 .main-content.main-content-fluid > * {
   max-width: min(100%, var(--max-width-fluid));
   margin-left: auto;
@@ -66,7 +74,6 @@
   .main-content { margin-left: 0 !important; padding: var(--space-4); }
   .main-content.sidebar-collapsed { margin-left: 0 !important; }
   .main-content > * { margin-bottom: var(--space-4); }
-  /* overlay mode: main inert while drawer open — Esc closes drawer for a11y */
   .main-content.sidebar-expanded { pointer-events: none; }
 }
 

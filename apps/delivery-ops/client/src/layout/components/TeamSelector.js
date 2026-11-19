@@ -11,10 +11,10 @@ const PAGE_SELECT_STYLE = {
 const PAGE_CHOOSE_STYLE = {
   height: '32px',
   padding: '0 14px',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  background: '#f9fafb',
-  color: '#374151',
+  border: '1px solid var(--border, #d1d5db)',
+  borderRadius: 'var(--radius-sm, 6px)',
+  background: 'var(--surface, #f9fafb)',
+  color: 'var(--text, #374151)',
   fontSize: '13px',
   fontWeight: 500,
   cursor: 'pointer',
@@ -56,7 +56,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
     return (
       <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
-        <span style={{ fontSize: '0.85rem', color: isSidebar ? '#ccc' : '#6c757d', fontStyle: 'italic' }}>
+        <span style={{ fontSize: '0.85rem', color: isSidebar ? 'var(--sidebar-text-muted, #ccc)' : 'var(--muted, #6c757d)', fontStyle: 'italic' }}>
           Loading teams…
         </span>
       </div>
@@ -67,7 +67,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
     return (
       <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
-        <span style={{ fontSize: '0.8rem', color: isSidebar ? '#f8d7da' : '#721c24' }}>
+        <span style={{ fontSize: '0.8rem', color: isSidebar ? 'var(--danger-soft, #f8d7da)' : 'var(--danger, #721c24)' }}>
           Couldn’t load teams
         </span>
         <button
@@ -77,9 +77,9 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
             padding: '0.25rem 0.6rem',
             fontSize: '0.8rem',
             cursor: 'pointer',
-            border: isSidebar ? '1px solid #adb5bd' : '1px solid #ced4da',
-            background: isSidebar ? 'transparent' : '#fff',
-            color: isSidebar ? '#fff' : '#333',
+            border: isSidebar ? '1px solid var(--sidebar-border, #adb5bd)' : '1px solid var(--border, #ced4da)',
+            background: isSidebar ? 'transparent' : 'var(--surface-raised, #fff)',
+            color: isSidebar ? 'var(--sidebar-text, #fff)' : 'var(--text, #333)',
             borderRadius: '4px',
           }}
         >
@@ -93,7 +93,7 @@ export function TeamSelector({ variant = 'page', id = 'team-select' }) {
     return (
       <div className={isSidebar ? 'team-selector' : undefined} style={wrapperStyle}>
         {label}
-        <span style={{ fontSize: '0.85rem', color: isSidebar ? '#ccc' : '#6c757d' }}>
+        <span style={{ fontSize: '0.85rem', color: isSidebar ? 'var(--sidebar-text-muted, #ccc)' : 'var(--muted, #6c757d)' }}>
           No teams configured
         </span>
       </div>

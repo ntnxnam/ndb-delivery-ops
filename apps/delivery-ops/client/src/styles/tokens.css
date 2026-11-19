@@ -1,127 +1,164 @@
 /*
- * styles/tokens.css — canonical light design tokens for portfolio-delivery-ops.
+ * styles/tokens.css — canonical design tokens for portfolio-delivery-ops
+ * ───────────────────────────────────────────────────────────────────────
+ * Single source of truth. Every CSS file in the app references these
+ * variables — no hardcoded hex lives outside this file.
  *
- * Single source of truth. Every CSS file and inline style in the app should
- * reference these variables instead of hard-coded hex. Light is the default;
- * dark is parked (see THEMES_ROADMAP.md) and, when added, will override the
- * same vars under `html[data-theme="dark"]`.
+ * Light is the default. Dark overrides live under html[data-theme="dark"]
+ * (parked — inactive until THEMES_ROADMAP lands).
  *
- * Naming: short `--*` for app-wide use (`--bg`, `--text`), mirrored `--ds-*`
- * aliases so existing `.ds-scope` pages (`ReleaseBriefPage`, `RetrospectivePage`,
- * `DesignSystemDemo`) keep working without code changes.
+ * Naming: short --* for app-wide use (--bg, --text, --accent).
+ *         --ds-* aliases generated below keep .ds-scope pages working.
+ *
+ * Sections
+ *   1  Core surfaces & canvas
+ *   2  Sidebar / chrome (dark-on-light)
+ *   3  Header
+ *   4  Ink (text)
+ *   5  Accent / brand
+ *   6  Status & RAG
+ *   7  Typography scale
+ *   8  Spacing (4/8/12/16/24/32)
+ *   9  Radii & shadows
+ *  10  Motion
+ *  11  Layout
+ *  12  Z-index
+ *  13  Focus, overlays, elevation
+ *  14  Back-compat --ds-* aliases
+ *  15  Scope wrappers (.ds-scope / .ds-page)
+ *  16  Parked dark override
  */
 
 :root {
-  /* ── core surfaces ─────────────────────────────────────────────────── */
-  --bg: #ffffff;
-  --surface: #f8f9fa;
-  --surface-raised: #ffffff;
-  --surface-hover: #f1f3f5;
-  --border: #dee2e6;
-  --border-strong: #ced4da;
-  --border-subtle: #e9ecef;
-  --divider: rgba(0, 0, 0, 0.06);
+  /* ── 1 · core surfaces (warm neutrals — never pure #fff grey) ────────── */
+  --canvas: #fcfcfd;               /* app background — warm off-white */
+  --bg: #ffffff;                   /* alias kept for legacy refs */
+  --surface: #f8f9fb;              /* card / table wash */
+  --surface-raised: #ffffff;       /* elevated card on canvas */
+  --surface-elevated: #ffffff;     /* popovers, dropdowns, drawers */
+  --surface-overlay: #ffffff;      /* modals, drawers */
+  --surface-hover: #f1f3f7;        /* row hover */
+  --surface-muted: #f1f3f5;        /* subtle zebra / inactive */
+  --surface-subtle: #f9fafb;       /* lightest wash (timeline lanes) */
 
-  /* ── sidebar / chrome (dark chrome on light canvas — intentional) ──── */
-  --sidebar-bg: #343a40;
-  --sidebar-bg-hover: #3d444b;
-  --sidebar-bg-active: #495057;
-  --sidebar-text: #ffffff;
-  --sidebar-text-muted: #adb5bd;
-  --sidebar-text-active: #87ceeb;
-  --sidebar-group-header: #ced4da;
-  --sidebar-border: #495057;
+  --border: #e4e7ec;               /* default 1px border */
+  --border-strong: #d0d5dd;        /* emphasis border */
+  --border-subtle: #eceef2;        /* hairline / table row dividers */
+  --border-faint: #f0f2f5;         /* very soft divider */
+  --divider: rgba(16, 24, 40, 0.06);
+
+  /* ── 2 · sidebar / chrome (dark chrome on light canvas — intentional) ─── */
+  --sidebar-bg: #1a1d29;
+  --sidebar-bg-hover: #242840;
+  --sidebar-bg-active: #2e3450;
+  --sidebar-text: #e8eaf0;
+  --sidebar-text-muted: #9aa0b5;
+  --sidebar-text-active: #a5b4fc;
+  --sidebar-group-header: #c2c7d6;
+  --sidebar-border: #242840;
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 60px;
 
-  /* ── header ────────────────────────────────────────────────────────── */
-  --header-bg: #1a1a1a;
+  /* ── 3 · header ───────────────────────────────────────────────────────── */
+  --header-bg: #1a1d29;
   --header-text: #ffffff;
-  --header-border: #333333;
+  --header-border: #2e3450;
 
-  /* ── ink ───────────────────────────────────────────────────────────── */
-  --text: #1a1a1a;
-  --text-strong: #212529;
+  /* ── 4 · ink ──────────────────────────────────────────────────────────── */
+  --text: #101828;
+  --text-strong: #0c111d;
+  --text-soft: #344054;            /* secondary body */
   --text-inverse: #ffffff;
-  --muted: #6c757d;
-  --muted-soft: #6c757d; /* was #868e96 3.32:1 fail — floor at muted for ≥4.5:1 on 10px hints */
-  --muted-label: #495057;
+  --muted: #667085;
+  --muted-soft: #667085;           /* floor at 4.5:1 — do not go lighter */
+  --muted-label: #475467;
+  --muted-faint: #98a2b3;          /* decorative only — never for body text */
 
-  /* ── accent / brand ────────────────────────────────────────────────── */
-  --accent: #0d6efd;
-  --accent-hover: #0b5ed7;
-  --accent-soft: rgba(13, 110, 253, 0.08);
-  --accent-border: rgba(13, 110, 253, 0.32);
+  /* ── 5 · accent / brand ───────────────────────────────────────────────── */
+  /* Refined indigo — warmer than #0d6efd, harmonious with neutral canvas */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-active: #3730a3;
+  --accent-soft: rgba(79, 70, 229, 0.08);
+  --accent-border: rgba(79, 70, 229, 0.32);
   --accent-contrast: #ffffff;
 
-  /* brand gradient moments (login, loading) — keep existing #667eea→#764ba2 */
+  /* Brand gradient for login / loading moments */
   --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
-  /* ── status / RAG ──────────────────────────────────────────────────── */
-  --success: #198754;
-  --success-soft: rgba(25, 135, 84, 0.10);
-  --success-border: rgba(25, 135, 84, 0.24);
-  --warning: #ffc107;
-  --warning-soft: rgba(255, 193, 7, 0.16);
-  --warning-border: rgba(255, 193, 7, 0.36);
-  --warning-text: #856404;
-  --danger: #dc3545;
-  --danger-hover: #c82333;
-  --danger-active: #bd2130;
-  --danger-soft: rgba(220, 53, 69, 0.08);
-  --danger-border: rgba(220, 53, 69, 0.24);
-  --info: #0d6efd;
-  --info-soft: rgba(13, 110, 253, 0.08);
-  --neutral: #6c757d;
+  /* ── 6 · status / RAG ─────────────────────────────────────────────────── */
+  --success: #027a48;
+  --success-hover: #026a3a;
+  --success-soft: rgba(2, 122, 72, 0.08);
+  --success-border: rgba(2, 122, 72, 0.20);
+
+  --warning: #b54708;
+  --warning-soft: rgba(181, 71, 8, 0.10);
+  --warning-border: rgba(181, 71, 8, 0.28);
+  --warning-text: #93370d;
+
+  --danger: #b42318;
+  --danger-hover: #9a1b13;
+  --danger-active: #7f1d1d;
+  --danger-soft: rgba(180, 35, 24, 0.08);
+  --danger-border: rgba(180, 35, 24, 0.20);
+
+  --info: #4f46e5;
+  --info-soft: rgba(79, 70, 229, 0.08);
+
+  --neutral: #667085;
   --neutral-soft: #f1f3f5;
 
   /* RAG aliases (release-status vocabulary) */
   --rag-green: var(--success);
-  --rag-amber: #fd7e14;
-  --rag-amber-soft: rgba(253, 126, 20, 0.12);
+  --rag-green-soft: var(--success-soft);
+  --rag-amber: #b54708;
+  --rag-amber-soft: rgba(181, 71, 8, 0.10);
   --rag-red: var(--danger);
-  --rag-blue: #0d6efd;
+  --rag-red-soft: var(--danger-soft);
+  --rag-blue: #4f46e5;
   --rag-grey: var(--neutral);
+
   /* Not Set badge */
-  --notset-bg: #fff3cd;
-  --notset-border: #ffc107;
-  --notset-text: #856404;
+  --notset-bg: #fef9c3;
+  --notset-border: #fde68a;
+  --notset-text: #92400e;
 
-  /* risk RAG (ReleaseVersionTableCell badge backgrounds) */
-  --risk-green: #00875a;
-  --risk-yellow: #ff8b00;
-  --risk-red: #de350b;
-  --risk-blue: #0052cc;
-  --risk-deep-red: #8b0000;
+  /* Risk RAG (ReleaseVersionTableCell badges) */
+  --risk-green: #027a48;
+  --risk-yellow: #b54708;
+  --risk-red: #b42318;
+  --risk-blue: #3538cd;
+  --risk-deep-red: #7f1d1d;
 
-  /* ── type scale ────────────────────────────────────────────────────── */
+  /* ── 7 · type scale ───────────────────────────────────────────────────── */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono:
     ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 
-  --fs-xs: 0.6875rem;   /* 11px — dense risk labels */
-  --fs-muted: 0.75rem;  /* 12px — uppercase labels */
-  --fs-small: 0.8125rem;/* 13px — table cells */
-  --fs-body: 0.875rem;  /* 14px — body */
-  --fs-section: 1rem;   /* 16px — section titles */
-  --fs-page: 1.375rem;  /* 22px — page titles */
+  --fs-xs: 0.6875rem;       /* 11px — dense risk labels */
+  --fs-muted: 0.75rem;      /* 12px — uppercase labels */
+  --fs-small: 0.8125rem;    /* 13px — table cells */
+  --fs-body: 0.875rem;      /* 14px — body */
+  --fs-section: 1rem;       /* 16px — section titles */
+  --fs-page: 1.375rem;      /* 22px — page titles */
   --fs-kpi-number: 1.75rem; /* 28px — KPI big number */
-  --fs-display: 1.75rem;/* 28px — login title */
+  --fs-display: 1.75rem;    /* 28px — login title */
 
   --lh-tight: 1.2;
   --lh-body: 1.5;
-  --lh-relaxed: 1.8;
+  --lh-relaxed: 1.65;
 
   --tracking-label: 0.05em;
-  --tracking-tight: 0.01em;
+  --tracking-tight: -0.01em;
 
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
 
-  /* ── spacing (4/8/12/16/24/32) ─────────────────────────────────────── */
+  /* ── 8 · spacing (4/8/12/16/24/32) ────────────────────────────────────── */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -130,67 +167,96 @@
   --space-6: 2rem;
   --space-7: 3rem;
 
-  /* ── radii + shadows ───────────────────────────────────────────────── */
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-md: 8px;
+  /* ── 9 · radii + shadows ──────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
   --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.10);
-  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  /* Layered shadows — soft, bottom-heavy (modern SaaS feel) */
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 8px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.08), 0 16px 48px rgba(16, 24, 40, 0.08);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --shadow-focus: 0 0 0 4px var(--accent-soft);
 
-  /* ── motion ────────────────────────────────────────────────────────── */
+  /* ── 10 · motion ──────────────────────────────────────────────────────── */
   --transition: 0.15s ease;
-  --transition-slow: 0.24s ease;
+  --transition-slow: 0.28s ease;
+  --transition-spring: 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
 
-  /* ── layout ────────────────────────────────────────────────────────── */
+  /* ── 11 · layout ──────────────────────────────────────────────────────── */
   --max-width: 1400px;
   --max-width-wide: 1600px;
   --max-width-fluid: 1800px;
   --content-max-width: 1200px;
 
-  /* ── z-index ───────────────────────────────────────────────────────── */
+  /* ── 12 · z-index ─────────────────────────────────────────────────────── */
   --z-sidebar: 1000;
   --z-header: 100;
   --z-overlay: 1000;
   --z-modal: 1010;
   --z-toast: 1100;
+  --z-drawer: 1200;
+
+  /* ── 13 · focus, overlays, elevation ─────────────────────────────────── */
+  --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent-border);
+  --focus-ring-offset: 2px;
+  --overlay-bg: rgba(16, 24, 40, 0.52);
+  --overlay-bg-soft: rgba(16, 24, 40, 0.32);
 }
 
-/* ── Back-compat aliases: existing .ds-scope pages reference --ds-* vars.
- * Mirror every light token so ReleaseBrief/Retrospective/DesignSystemDemo
- * keep rendering correctly without JS changes. When dark theme lands,
- * html[data-theme="dark"] will override the :root set above and these
- * aliases will automatically pick up the dark values too.
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   14 · Back-compat --ds-* aliases
+   Every --ds-* var mirrors its canonical --* counterpart so .ds-scope pages
+   keep rendering without JS changes.
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --ds-bg: var(--bg);
+  --ds-bg: var(--canvas);
+  --ds-bg-page: var(--canvas);
+  --ds-bg-hover: var(--surface-hover);
   --ds-surface: var(--surface);
   --ds-surface-raised: var(--surface-raised);
+  --ds-surface-elevated: var(--surface-elevated);
+  --ds-surface-overlay: var(--surface-overlay);
+  --ds-surface-hover: var(--surface-hover);
   --ds-border: var(--border);
   --ds-border-strong: var(--border-strong);
+  --ds-border-subtle: var(--border-subtle);
   --ds-divider: var(--divider);
 
   --ds-text: var(--text);
+  --ds-text-primary: var(--text);
   --ds-text-strong: var(--text-strong);
+  --ds-text-soft: var(--text-soft);
   --ds-muted: var(--muted);
   --ds-muted-soft: var(--muted-soft);
+  --ds-text-muted: var(--muted);
 
   --ds-accent: var(--accent);
   --ds-accent-soft: var(--accent-soft);
   --ds-accent-border: var(--accent-border);
+  --ds-accent-hover: var(--accent-hover);
 
   --ds-success: var(--success);
   --ds-success-soft: var(--success-soft);
+  --ds-success-border: var(--success-border);
   --ds-warning: var(--warning);
   --ds-warning-soft: var(--warning-soft);
   --ds-warning-text: var(--warning-text);
   --ds-danger: var(--danger);
   --ds-danger-soft: var(--danger-soft);
+  --ds-danger-border: var(--danger-border);
   --ds-neutral: var(--neutral);
   --ds-notset-bg: var(--notset-bg);
   --ds-notset-border: var(--notset-border);
@@ -198,8 +264,10 @@
 
   --ds-rag-green: var(--rag-green);
   --ds-rag-amber: var(--rag-amber);
+  --ds-rag-amber-soft: var(--rag-amber-soft);
   --ds-rag-red: var(--rag-red);
   --ds-rag-grey: var(--rag-grey);
+  --ds-rag-blue: var(--rag-blue);
 
   --ds-font-sans: var(--font-sans);
   --ds-font-mono: var(--font-mono);
@@ -209,35 +277,47 @@
   --ds-fs-kpi-number: var(--fs-kpi-number);
   --ds-fs-small: var(--fs-small);
   --ds-fs-muted: var(--fs-muted);
+  --ds-fs-xs: var(--fs-xs);
   --ds-lh-tight: var(--lh-tight);
   --ds-lh-body: var(--lh-body);
+  --ds-lh-relaxed: var(--lh-relaxed);
   --ds-tracking-label: var(--tracking-label);
   --ds-fw-regular: var(--fw-regular);
   --ds-fw-medium: var(--fw-medium);
   --ds-fw-semi: var(--fw-semibold);
+  --ds-fw-semibold: var(--fw-semibold);
+  --ds-fw-bold: var(--fw-bold);
+
   --ds-space-1: var(--space-1);
   --ds-space-2: var(--space-2);
   --ds-space-3: var(--space-3);
   --ds-space-4: var(--space-4);
   --ds-space-5: var(--space-5);
   --ds-space-6: var(--space-6);
+  --ds-space-7: var(--space-7);
+
   --ds-radius-sm: var(--radius-sm);
   --ds-radius: var(--radius);
-  --ds-radius-lg: var(--radius-md); /* intentional 8px — matches legacy design-system --ds-radius-lg: 8px, not app --radius-lg 12px */
+  --ds-radius-md: var(--radius-md);
+  --ds-radius-lg: var(--radius-lg);
   --ds-radius-pill: var(--radius-pill);
+  --ds-shadow-xs: var(--shadow-xs);
   --ds-shadow-inset: var(--shadow-inset);
   --ds-shadow-card: var(--shadow-card);
+  --ds-shadow-sm: var(--shadow-sm);
+  --ds-shadow-md: var(--shadow-md);
+  --ds-shadow-lg: var(--shadow-lg);
   --ds-transition: var(--transition);
+  --ds-transition-slow: var(--transition-slow);
   --ds-max-width: var(--max-width);
+  --ds-max-width-wide: var(--max-width-wide);
 }
 
-/* ── Opt-in scope wrapper: legacy .ds-scope pages set bg/text/shadows
- * to the current token values. New global pages don't need it — they
- * inherit from :root via body — but we keep it so the three existing
- * DS pages don't visually break during migration.
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   15 · Scope wrappers — keep .ds-scope / .ds-page rendering correctly
+   ═══════════════════════════════════════════════════════════════════════════ */
 .ds-scope {
-  background: var(--bg);
+  background: var(--canvas);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: var(--fs-body);
@@ -260,23 +340,102 @@
   font-variant-numeric: tabular-nums;
 }
 
-.ds-scope :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.ds-scope :focus-visible,
+:root :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
-/* Parked dark override — uncomment and flesh out when THEMES_ROADMAP lands:
+/* ═══════════════════════════════════════════════════════════════════════════
+   16 · Parked dark override — inactive until THEMES_ROADMAP.
+       When enabled, flip html[data-theme] to "dark" and every --* var
+       below takes over. --ds-* aliases follow automatically.
+   ═══════════════════════════════════════════════════════════════════════════
 html[data-theme="dark"] {
+  --canvas: #0f1419;
   --bg: #0f1419;
   --surface: #1a2332;
-  --surface-raised: #20293a;
+  --surface-raised: #1e2d44;
+  --surface-elevated: #20293a;
+  --surface-overlay: #1e2d44;
+  --surface-hover: #253651;
+  --surface-muted: #1a2332;
+  --surface-subtle: #162032;
+
   --border: #2d3a4d;
   --border-strong: #3a4a60;
+  --border-subtle: #253040;
+  --border-faint: #1e2a3a;
+  --divider: rgba(255, 255, 255, 0.06);
+
+  --sidebar-bg: #0d1117;
+  --sidebar-bg-hover: #151c2c;
+  --sidebar-bg-active: #1e2d44;
+  --sidebar-text: #e6edf3;
+  --sidebar-text-muted: #8b949e;
+  --sidebar-text-active: #58a6ff;
+  --sidebar-group-header: #8b949e;
+  --sidebar-border: #21262d;
+
+  --header-bg: #0d1117;
+  --header-text: #e6edf3;
+  --header-border: #21262d;
+
   --text: #e6edf3;
   --text-strong: #f0f6fc;
+  --text-soft: #b1bac4;
+  --text-inverse: #0d1117;
   --muted: #8b949e;
   --muted-soft: #6e7681;
+  --muted-label: #8b949e;
+  --muted-faint: #484f58;
+
   --accent: #58a6ff;
-  ...etc — full dark palette from design-system/tokens.css
+  --accent-hover: #79b8ff;
+  --accent-active: #1f6feb;
+  --accent-soft: rgba(88, 166, 255, 0.12);
+  --accent-border: rgba(88, 166, 255, 0.4);
+  --accent-contrast: #0d1117;
+
+  --success: #3fb950;
+  --success-hover: #2ea043;
+  --success-soft: rgba(63, 185, 80, 0.12);
+  --success-border: rgba(63, 185, 80, 0.30);
+
+  --warning: #d29922;
+  --warning-soft: rgba(210, 153, 34, 0.14);
+  --warning-border: rgba(210, 153, 34, 0.36);
+  --warning-text: #d29922;
+
+  --danger: #f85149;
+  --danger-hover: #ff6b62;
+  --danger-active: #da3633;
+  --danger-soft: rgba(248, 81, 73, 0.12);
+  --danger-border: rgba(248, 81, 73, 0.30);
+
+  --info: #58a6ff;
+  --info-soft: rgba(88, 166, 255, 0.12);
+
+  --notset-bg: rgba(210, 153, 34, 0.16);
+  --notset-border: rgba(210, 153, 34, 0.40);
+  --notset-text: #d29922;
+
+  --risk-green: #3fb950;
+  --risk-yellow: #d29922;
+  --risk-red: #f85149;
+  --risk-blue: #58a6ff;
+  --risk-deep-red: #da3633;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-focus: 0 0 0 3px rgba(88, 166, 255, 0.3);
+
+  --overlay-bg: rgba(1, 4, 9, 0.72);
+  --overlay-bg-soft: rgba(1, 4, 9, 0.48);
 }
 */

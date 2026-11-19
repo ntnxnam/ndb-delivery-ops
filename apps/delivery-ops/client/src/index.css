@@ -1,4 +1,4 @@
-/* index.css — global base. Tokens live in styles/tokens.css (imported first). */
+/* index.css — global base. Tokens load first via styles/tokens.css. */
 
 *,
 *::before,
@@ -13,25 +13,44 @@
 
 html {
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg);
+  text-rendering: optimizeLegibility;
+  background: var(--canvas);
   color: var(--text);
   line-height: var(--lh-body);
-  font-size: 14px;
+  font-size: var(--fs-body);
+  min-height: 100vh;
 }
 
-code {
+code,
+kbd,
+pre,
+samp {
   font-family: var(--font-mono);
+  font-size: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
+  text-underline-offset: 2px;
 }
 
 a:hover {
@@ -40,10 +59,33 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
 ::selection {
   background: var(--accent-soft);
+  color: var(--text-strong);
+}
+
+/* thin token scrollbar — Firefox + WebKit */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-pill); }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* respect reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

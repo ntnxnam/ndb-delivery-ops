@@ -1,149 +1,145 @@
 /*
- * design-system/tokens.css — single source of truth for the new
- * portfolio-delivery-ops visual language.
+ * design-system/tokens.css — thin re-export for --ds-* consumers
+ * ────────────────────────────────────────────────────────────────
+ * Does NOT define a palette. Every --ds-* var aliases its canonical --*
+ * counterpart declared in styles/tokens.css (which must load first).
  *
- * Palette + density + typography ported from `apps/bin-packing/css/main.css`,
- * which the Portfolio Manager called out as "the UX is nice and usable."
- *
- * Strategy (woven 2026-11-18 — global chrome now uses :root tokens;
- * legacy pages keep their own card colours but inherit shell + type):
- *   - Tokens live under `:root` (global) AND `.ds-scope` (back-compat).
- *     Any new page can still wrap in `<div className="ds-scope">` but no
- *     longer needs to — the app shell is already themed.
- *   - Status colors match the GitHub/bin-packing palette so error/success/
- *     warn read consistently across the new pages and the bin-packing app
- *     when it's embedded inside a parent shell later.
- *   - Type scale is intentionally compact (12px base muted, 14px body,
- *     16px section title, 22px page title) — per `ui-density.mdc` and
- *     the Gantt's revealed preference for dense layouts.
+ * Consumers: ReleaseBriefPage, RetrospectivePage, and any component
+ * wrapped in .ds-scope / .ds-page. When styles/tokens.css flips to its
+ * parked html[data-theme="dark"] block, these aliases follow automatically.
  */
 
-:root,
-.ds-scope {
-  /* ── core surfaces ─────────────────────────────────────────────────── */
-  --ds-bg: #0f1419;
-  --ds-surface: #1a2332;
-  --ds-surface-raised: #20293a;
-  --ds-border: #2d3a4d;
-  --ds-border-strong: #3a4a60;
-  --ds-divider: rgba(255, 255, 255, 0.06);
+:root {
+  /* surfaces */
+  --ds-bg: var(--canvas);
+  --ds-bg-page: var(--canvas);
+  --ds-bg-hover: var(--surface-hover);
+  --ds-surface: var(--surface);
+  --ds-surface-raised: var(--surface-raised);
+  --ds-surface-elevated: var(--surface-elevated);
+  --ds-surface-overlay: var(--surface-overlay);
+  --ds-surface-hover: var(--surface-hover);
+  --ds-border: var(--border);
+  --ds-border-strong: var(--border-strong);
+  --ds-border-subtle: var(--border-subtle);
+  --ds-divider: var(--divider);
 
-  /* ── ink ───────────────────────────────────────────────────────────── */
-  --ds-text: #e6edf3;
-  --ds-text-strong: #f0f6fc;
-  --ds-muted: #8b949e;
-  --ds-muted-soft: #6e7681;
+  /* ink */
+  --ds-text: var(--text);
+  --ds-text-primary: var(--text);
+  --ds-text-strong: var(--text-strong);
+  --ds-text-soft: var(--text-soft);
+  --ds-text-muted: var(--muted);
+  --ds-muted: var(--muted);
+  --ds-muted-soft: var(--muted-soft);
 
-  /* ── one accent ────────────────────────────────────────────────────── */
-  --ds-accent: #58a6ff;
-  --ds-accent-soft: rgba(88, 166, 255, 0.12);
-  --ds-accent-border: rgba(88, 166, 255, 0.4);
+  /* accent */
+  --ds-accent: var(--accent);
+  --ds-accent-soft: var(--accent-soft);
+  --ds-accent-border: var(--accent-border);
+  --ds-accent-hover: var(--accent-hover);
 
-  /* ── status ────────────────────────────────────────────────────────── */
-  --ds-success: #3fb950;
-  --ds-success-soft: rgba(63, 185, 80, 0.12);
-  --ds-warning: #d29922;
-  --ds-warning-soft: rgba(210, 153, 34, 0.12);
-  --ds-danger: #f85149;
-  --ds-danger-soft: rgba(248, 81, 73, 0.12);
-  --ds-neutral: #6e7681;
+  /* status */
+  --ds-success: var(--success);
+  --ds-success-soft: var(--success-soft);
+  --ds-success-border: var(--success-border);
+  --ds-warning: var(--warning);
+  --ds-warning-soft: var(--warning-soft);
+  --ds-warning-text: var(--warning-text);
+  --ds-danger: var(--danger);
+  --ds-danger-soft: var(--danger-soft);
+  --ds-danger-border: var(--danger-border);
+  --ds-neutral: var(--neutral);
+  --ds-notset-bg: var(--notset-bg);
+  --ds-notset-border: var(--notset-border);
+  --ds-notset-text: var(--notset-text);
 
-  /* ── RAG (release-status) ──────────────────────────────────────────── */
-  --ds-rag-green: var(--ds-success);
-  --ds-rag-amber: var(--ds-warning);
-  --ds-rag-red: var(--ds-danger);
-  --ds-rag-grey: var(--ds-neutral);
+  /* RAG */
+  --ds-rag-green: var(--rag-green);
+  --ds-rag-amber: var(--rag-amber);
+  --ds-rag-amber-soft: var(--rag-amber-soft);
+  --ds-rag-red: var(--rag-red);
+  --ds-rag-grey: var(--rag-grey);
+  --ds-rag-blue: var(--rag-blue);
 
-  /* ── type scale ────────────────────────────────────────────────────── */
-  --ds-font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --ds-font-mono:
-    ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+  /* typography */
+  --ds-font-sans: var(--font-sans);
+  --ds-font-mono: var(--font-mono);
+  --ds-fs-page: var(--fs-page);
+  --ds-fs-section: var(--fs-section);
+  --ds-fs-body: var(--fs-body);
+  --ds-fs-kpi-number: var(--fs-kpi-number);
+  --ds-fs-small: var(--fs-small);
+  --ds-fs-muted: var(--fs-muted);
+  --ds-fs-xs: var(--fs-xs);
+  --ds-lh-tight: var(--lh-tight);
+  --ds-lh-body: var(--lh-body);
+  --ds-lh-relaxed: var(--lh-relaxed);
+  --ds-tracking-label: var(--tracking-label);
+  --ds-fw-regular: var(--fw-regular);
+  --ds-fw-medium: var(--fw-medium);
+  --ds-fw-semi: var(--fw-semibold);
+  --ds-fw-semibold: var(--fw-semibold);
+  --ds-fw-bold: var(--fw-bold);
 
-  --ds-fs-page: 1.375rem; /* 22px — page titles */
-  --ds-fs-section: 1rem; /* 16px — section titles */
-  --ds-fs-body: 0.875rem; /* 14px — body */
-  --ds-fs-kpi-number: 1.75rem; /* 28px — the big number on KPI cards */
-  --ds-fs-small: 0.8125rem; /* 13px — table cells, dense */
-  --ds-fs-muted: 0.75rem; /* 12px — uppercase muted labels */
+  /* spacing */
+  --ds-space-1: var(--space-1);
+  --ds-space-2: var(--space-2);
+  --ds-space-3: var(--space-3);
+  --ds-space-4: var(--space-4);
+  --ds-space-5: var(--space-5);
+  --ds-space-6: var(--space-6);
+  --ds-space-7: var(--space-7);
 
-  --ds-lh-tight: 1.2;
-  --ds-lh-body: 1.5;
+  /* radii & shadows */
+  --ds-radius-sm: var(--radius-sm);
+  --ds-radius: var(--radius);
+  --ds-radius-md: var(--radius-md);
+  --ds-radius-lg: var(--radius-lg);
+  --ds-radius-pill: var(--radius-pill);
+  --ds-shadow-xs: var(--shadow-xs);
+  --ds-shadow-sm: var(--shadow-sm);
+  --ds-shadow-inset: var(--shadow-inset);
+  --ds-shadow-card: var(--shadow-card);
+  --ds-shadow-md: var(--shadow-md);
+  --ds-shadow-lg: var(--shadow-lg);
 
-  --ds-tracking-label: 0.05em;
+  /* motion */
+  --ds-transition: var(--transition);
+  --ds-transition-slow: var(--transition-slow);
 
-  --ds-fw-regular: 400;
-  --ds-fw-medium: 500;
-  --ds-fw-semi: 600;
-
-  /* ── spacing (compact-by-default; per ui-density.mdc) ──────────────── */
-  --ds-space-1: 0.25rem; /* 4 */
-  --ds-space-2: 0.5rem; /* 8 */
-  --ds-space-3: 0.75rem; /* 12 */
-  --ds-space-4: 1rem; /* 16 */
-  --ds-space-5: 1.5rem; /* 24 */
-  --ds-space-6: 2rem; /* 32 */
-
-  /* ── radii + shadows ───────────────────────────────────────────────── */
-  --ds-radius-sm: 4px;
-  --ds-radius: 6px;
-  --ds-radius-lg: 8px;
-  --ds-radius-pill: 999px;
-
-  --ds-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  --ds-shadow-card:
-    0 1px 0 rgba(255, 255, 255, 0.02),
-    0 1px 2px rgba(0, 0, 0, 0.4);
-
-  /* ── motion ────────────────────────────────────────────────────────── */
-  --ds-transition: 0.15s ease;
-
-  /* ── layout ────────────────────────────────────────────────────────── */
-  --ds-max-width: 1400px;
-
+  /* layout */
+  --ds-max-width: var(--max-width);
+  --ds-max-width-wide: var(--max-width-wide);
 }
 
-/* ── apply base look — scoped so legacy cards that rely on #fff keep it ── */
+/* ── scope wrappers ──────────────────────────────────────────────────── */
 .ds-scope {
-  background: var(--ds-bg);
-  color: var(--ds-text);
-  font-family: var(--ds-font-sans);
-  font-size: var(--ds-fs-body);
-  line-height: var(--ds-lh-body);
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/*
- * Full-page scope wrapper. Use when an entire route's main content sits
- * inside the new design language. Pads the container; layers wrap their
- * own content widths internally.
- */
 .ds-page {
   min-height: 100vh;
-  padding: var(--ds-space-5);
+  padding: var(--space-5);
 }
 
 .ds-page__inner {
-  max-width: var(--ds-max-width);
+  max-width: var(--max-width);
   margin: 0 auto;
 }
 
-/* ── inline numeric niceness ─────────────────────────────────────────── */
 .ds-num {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── shell weave — app chrome lives in the new palette even outside .ds-scope ── */
-.app-layout {
-  background: var(--ds-bg);
-  color: var(--ds-text);
-  font-family: var(--ds-font-sans);
-}
-
-/* ── focus ring (single rule for every focusable thing inside ds-scope / shell) */
-.ds-scope :focus-visible,
-.app-layout :focus-visible {
-  outline: 2px solid var(--ds-accent);
-  outline-offset: 2px;
+.ds-scope :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
