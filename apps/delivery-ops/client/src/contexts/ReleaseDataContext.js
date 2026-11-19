@@ -27,7 +27,8 @@ function readReleaseCache(productId, release) {
 
 function isJiraUnreachable(err) {
   const status = err?.response?.status;
-  if (status === 503) return true;
+  if (status === 408 || status === 503 || status === 504) return true;
+  if (err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '')) return true;
   const reason = err?.response?.data?.reason;
   return reason === 'jira_unreachable';
 }

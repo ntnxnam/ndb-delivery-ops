@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
+const { aiTimeout, jiraTimeout } = require('../middleware/timeout');
 const {
   generateExecSummary,
   generateReleaseSummary,
@@ -624,7 +625,7 @@ router.post('/sos-leader-coaching', validateJiraTokenMiddleware, async (req, res
  * Multi-release ADHD email skim: outstanding tiles + serial NAI release summaries.
  * Body: { productId?: string, releases: string[] }
  */
-router.post('/weekly-skim', validateJiraTokenMiddleware, async (req, res) => {
+router.post('/weekly-skim', aiTimeout, validateJiraTokenMiddleware, async (req, res) => {
   const releases = Array.isArray(req.body?.releases) ? req.body.releases : [];
   const productId = (req.body?.productId || 'ndb').toString().trim() || 'ndb';
   const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
