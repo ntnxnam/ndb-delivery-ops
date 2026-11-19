@@ -32,6 +32,14 @@ function validatePayload(body, isUpdate = false) {
     const d = Number(body.schedule.dayOfWeek);
     if (!Number.isInteger(d) || d < 0 || d > 6) errors.push('schedule.dayOfWeek must be 0-6');
   }
+  if (body.schedule?.hour != null) {
+    const h = Number(body.schedule.hour);
+    if (!Number.isInteger(h) || h < 0 || h > 23) errors.push('schedule.hour must be 0-23');
+  }
+  if (body.schedule?.minute != null) {
+    const m = Number(body.schedule.minute);
+    if (!Number.isInteger(m) || m < 0 || m > 59) errors.push('schedule.minute must be 0-59');
+  }
   if (body.tz) {
     try { new Intl.DateTimeFormat('en-US', { timeZone: body.tz }); } catch { errors.push('tz is not a valid IANA timezone'); }
   }
@@ -40,23 +48,48 @@ function validatePayload(body, isUpdate = false) {
 }
 
 function toResponse(s) {
-  // human phrase for "what runs when"
-  const rec = s.schedule || {};
-  let when = '';
-  if (rec.cron) when = `cron ${rec.cron} (${s.tz})`;
-  else {
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const d = rec.dayOfWeek != null ? days[rec.dayOfWeek] : '—';
-    const h = rec.hour != null ? String(rec.hour).padStart(2,'0') : '09';
-    const m = rec.minute != null ? String(rec.minute).padStart(2,'0') : '00';
-    when = `${d} ${h}:${m} ${s.tz}`;
-  }
-  return { ...s, when };
+  return { ...s, when: runner.describeSchedule(s) };
 }
 
 router.get('/', (req, res) => {
   const all = store.list();
   res.json({ schedules: all.map(toResponse) });
+});
+
+router.post('/test-preview', express.json(), requireAuth, async (req, res) => {
+  const body = req.body || {};
+  const draft = {
+    id: 'preview',
+    name: body.name || '',
+    skill: body.skill,
+    tpmScope: body.tpmScope || { productId: body.productId || 'ndb', release: body.release || '' },
+    schedule: body.schedule || {},
+    tz: body.tz || body.schedule?.tz || 'UTC',
+    enabled: body.enabled !== false,
+    deferAfterPg: !!body.deferAfterPg,
+    to: body.to || '',
+    cc: body.cc || '',
+  };
+  // For preview, allow missing product/release but report as check failure via validateScheduleForTest, not 400
+  try {
+    const result = await runner.testSchedule(draft, { triggeredBy: req.headers['x-username'] || body.username || 'unknown' });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message?.slice(0, 500) || 'test failed' });
+  }
+});
+
+router.post('/:id/test', express.json(), requireAuth, async (req, res) => {
+  const id = req.params.id;
+  const existing = store.getById(id);
+  if (!existing) return res.status(404).json({ error: 'Schedule not found' });
+  try {
+    const result = await runner.testSchedule(existing, { triggeredBy: req.headers['x-username'] || req.body?.username || 'unknown' });
+    // Do not mutate lastRun on test; keep separate audit if needed
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message?.slice(0, 500) || 'test failed' });
+  }
 });
 
 router.post('/', express.json(), requireAuth, (req, res) => {

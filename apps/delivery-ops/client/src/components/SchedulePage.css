@@ -1,13 +1,28 @@
-.schedule-page { max-width: 1100px; margin: 0 auto; }
-.schedule-page h1 { font-size: 1.4rem; margin-bottom: 1rem; }
+.schedule-page { max-width: var(--max-width); margin: 0 auto; padding: var(--space-4); }
 .sched-toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
 .sched-table { width:100%; border-collapse:collapse; background:var(--surface-raised); border-radius:var(--radius); overflow:hidden; }
 .sched-table th, .sched-table td { padding:8px 10px; border-bottom:1px solid var(--border-subtle); font-size:13px; text-align:left; }
 .sched-table th { background:var(--surface); font-weight:600; }
 .sched-badge { padding:2px 6px; border-radius:var(--radius-sm); font-size:11px; font-weight:600; }
 .sched-badge.on { background:var(--success-soft); color:var(--success); } .sched-badge.off { background:var(--danger-soft); color:var(--danger); }
-.sched-form { background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.sched-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.sched-form--ds { background: transparent; border: none; padding: 0; margin: 0; }
 .sched-form .full { grid-column:1/-1; }
 .sched-form label { font-size:12px; font-weight:600; color:var(--muted-label); display:flex; flex-direction:column; gap:4px; }
-.sched-form input, .sched-form select { padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; }
-.sched-when { color:var(--muted); font-size:12px; }
+.sched-when { color:var(--muted); font-size: var(--fs-muted); }
+.page-success { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); }
+.page-warning { background: var(--warning-soft); border: 1px solid var(--warning-border); color: var(--warning-text); padding: var(--space-3) var(--space-4); border-radius: var(--radius); font-size: var(--fs-body); margin-bottom: var(--space-4); }
+.sched-test-result { border-color: var(--accent-border); }
+.sched-test-preview { display:flex; flex-direction:column; gap: var(--space-2); }
+.sched-test-preview__row { display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3); }
+.sched-test-meta { display:flex; gap: var(--space-4); flex-wrap:wrap; font-size: var(--fs-small); color: var(--muted); }
+.sched-test-meta strong { color: var(--text); font-weight:600; }
+.sched-form__check { display:flex; flex-direction:row; align-items:center; gap: var(--space-2); }
+.sched-form__actions { display:flex; gap: var(--space-2); flex-wrap:wrap; margin-top: var(--space-1); }
+/* no double-frame: ds-section provides surface/border/padding */
+.sched-form--ds { background: transparent; border: none; padding: 0; margin: 0; }
+
+@media (max-width: 720px) {
+  .sched-form { grid-template-columns: 1fr; }
+  .schedule-page { padding: var(--space-3); }
+}
