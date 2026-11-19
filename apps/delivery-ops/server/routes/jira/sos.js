@@ -24,6 +24,7 @@ const express = require('express');
 const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { apiLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
+const { jiraTimeout, aiTimeout } = require('../../middleware/timeout');
 const { getTeamSosBaseFilter, getTeamBaseFilter } = require('../../utils/teamConfig');
 const { resolveKpiJql } = require('../../services/kpiService');
 const { makeJiraSearchFetcher } = require('../../services/jiraService');
@@ -39,7 +40,7 @@ const {
 // rate-limit / timeout no longer blanks the movement overlay.
 const SOS_HISTORY_SNAPSHOT_PATH = path.join(__dirname, '..', '..', 'JIRA-fields-history-for-sos.json');
 
-router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
+router.post('/sos-items', jiraTimeout, validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   try {
     const { teamId, forceLive = false } = req.body || {};
     const data = await fetchSosItems({
@@ -59,9 +60,7 @@ router.post('/sos-items', validateJiraTokenMiddleware, apiLimiter, async (req, r
   }
 });
 
-router.post('/sos-items-history', validateJiraTokenMiddleware, checkpointHistoryLimiter, async (req, res) => {
-  req.setTimeout(180000);
-  res.setTimeout(180000);
+router.post('/sos-items-history', aiTimeout, validateJiraTokenMiddleware, checkpointHistoryLimiter, async (req, res) => {
   try {
     const { teamId, keys } = req.body || {};
 

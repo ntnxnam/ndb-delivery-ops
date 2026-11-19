@@ -100,6 +100,10 @@ app.use(bodyParser.urlencoded({
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
 
+// Global request timeout — 30s default, overridden per-router by jiraTimeout/aiTimeout
+const { generalTimeout } = require('./middleware/timeout');
+app.use(generalTimeout);
+
 // Trust proxy (if behind reverse proxy)
 app.set('trust proxy', 1);
 

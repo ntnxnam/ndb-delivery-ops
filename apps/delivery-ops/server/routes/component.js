@@ -11,6 +11,7 @@ const express = require('express');
 const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { jiraTimeout } = require('../middleware/timeout');
 const { fetchComponentsFromERA, fetchComponentPayload } = require('../services/componentReportService');
 const { getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
 
@@ -23,7 +24,7 @@ const auth = [apiLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersi
  * Components for the selected team's JIRA project.
  * Query: productId (or team). Omitted → default team. Cache is per project.
  */
-router.get('/list', auth, async (req, res) => {
+router.get('/list', jiraTimeout, auth, async (req, res) => {
   try {
     const jiraToken = req.jiraToken;
 
@@ -67,7 +68,7 @@ router.get('/list', auth, async (req, res) => {
  * GET /api/component/health
  * Return health card data for a component
  */
-router.get('/health', auth, async (req, res) => {
+router.get('/health', jiraTimeout, auth, async (req, res) => {
   try {
     const { component, releaseFilter = 'current', team = 'ndb' } = req.query;
     const jiraToken = req.jiraToken;
@@ -475,7 +476,7 @@ function buildProjectBreakdown(payload) {
  * GET /api/component/data
  * Return full component data (issues, projects, metrics)
  */
-router.get('/data', auth, async (req, res) => {
+router.get('/data', jiraTimeout, auth, async (req, res) => {
   try {
     const { component, releaseFilter = 'current' } = req.query;
     const jiraToken = req.jiraToken;
