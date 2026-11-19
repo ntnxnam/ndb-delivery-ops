@@ -12,6 +12,7 @@ import {
   getColumnMinWidth,
 } from '../utils/releaseVersionUtils';
 import { formatDateWithHistory } from '../utils/dateHistoryDisplay';
+import { RiskIndicatorCell } from '../shared/components/RiskIndicatorTrail';
 import TaskBreakdownCell from './TaskBreakdownCell';
 import ExecSummaryCell from './ExecSummaryCell';
 import './ReleaseVersionTableCell.css';
