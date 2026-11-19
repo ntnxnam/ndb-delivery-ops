@@ -4,7 +4,7 @@
  * Mirrors server/utils/dateFormatter.js logic exactly.
  */
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
 export function normalizeDateStr(dateValue: unknown): string | null {
   if (!dateValue) return null;
