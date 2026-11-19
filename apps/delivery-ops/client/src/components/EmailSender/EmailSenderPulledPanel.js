@@ -307,7 +307,7 @@ export default function EmailSenderPulledPanel({
                 </table>
               )}
 
-              {/* Note: customfield_23560 (Risk Indicator) is already displayed in Row 1, so we skip it here */}
+              {/* Note: riskIndicator (Risk Indicator) is already displayed in Row 1, so we skip it here */}
 
               {/* Row for cf[11068] - Only show if it's not a date field */}
               {getFieldValue(jiraData,'testPlan') && !isDateField(getFieldValue(jiraData,'testPlan')) && (

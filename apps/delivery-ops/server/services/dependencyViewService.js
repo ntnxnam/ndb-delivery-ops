@@ -13,22 +13,22 @@ const jiraFieldsConfig = require('../config/jiraFieldsConfig.json');
 const CONFIG_PATH = path.join(__dirname, '../config/dependencyViewConfig.json');
 const RELEASE_CFG_PATH = path.join(__dirname, '../config/releaseVersionsEmailConfig.json');
 const RELEASE_COMMIT_FIELD =
-  jiraFieldsConfig?.fields?.indicators?.releaseCommit?.id || 'customfield_11061';
+  jiraFieldsConfig?.fields?.indicators?.releaseCommit?.id || getFieldId('releaseCommit');
 const CODE_COMPLETE_FIELD =
-  jiraFieldsConfig?.fields?.checkpointDates?.codeComplete?.id || 'customfield_11067';
+  jiraFieldsConfig?.fields?.checkpointDates?.codeComplete?.id || getFieldId('codeComplete');
 const COMMIT_GATE_FIELD =
-  jiraFieldsConfig?.fields?.checkpointDates?.commitGate?.id || 'customfield_35863';
+  jiraFieldsConfig?.fields?.checkpointDates?.commitGate?.id || getFieldId('commitGate');
 const PROMOTION_GATE_FIELD =
-  jiraFieldsConfig?.fields?.checkpointDates?.promotionGate?.id || 'customfield_35864';
+  jiraFieldsConfig?.fields?.checkpointDates?.promotionGate?.id || getFieldId('promotionGate');
 const EPIC_LINK_FIELD =
-  jiraFieldsConfig?.fields?.relationships?.epicLink?.id || 'customfield_10361';
+  jiraFieldsConfig?.fields?.relationships?.epicLink?.id || getFieldId('epicLink');
 const PARENT_LINK_FIELD =
-  jiraFieldsConfig?.fields?.relationships?.parentLink?.id || 'customfield_20363';
+  jiraFieldsConfig?.fields?.relationships?.parentLink?.id || getFieldId('parentLink');
 /** Sprint custom fields — 10020/10021 from config; 10360 is Nutanix board sprint. */
 const SPRINT_FIELD_IDS = [
-  jiraFieldsConfig?.fields?.agile?.sprint?.id || 'customfield_10020',
-  jiraFieldsConfig?.fields?.agile?.sprints?.id || 'customfield_10021',
-  'customfield_10360',
+  jiraFieldsConfig?.fields?.agile?.sprint?.id || getFieldId('sprint'),
+  jiraFieldsConfig?.fields?.agile?.sprints?.id || getFieldId('sprints'),
+  getFieldId('sprintNdb'),
 ];
 /** Extra search fields so sprint/CC are always present even if config drifts. */
 const DEPENDENCY_EXTRA_FIELDS = [

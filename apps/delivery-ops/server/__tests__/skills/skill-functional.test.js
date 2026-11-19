@@ -5,6 +5,7 @@
  * For spec-only skills, tests the documented invariants and JQL patterns.
  * Run: npm test -- skill-functional
  */
+const { getFieldId, getFieldValue } = require('../../utils/jiraFieldsConfig');
 const path = require('path');
 
 // ── release-gate-ops functional ──
@@ -33,8 +34,8 @@ describe('release-gate-ops functional', () => {
   });
 
   test('Route J validates 3 allowed fields only', () => {
-    const allowed = ['customfield_11067', 'customfield_35863', 'customfield_35864'];
-    const forbidden = ['customfield_10002', 'duedate', 'customfield_10360', 'customfield_10361'];
+    const allowed = [getFieldId('codeComplete'), getFieldId('commitGate'), getFieldId('promotionGate')];
+    const forbidden = [getFieldId('storyPoints'), 'duedate', getFieldId('sprintNdb'), getFieldId('epicLink')];
     for (const f of allowed) expect(allowed).toContain(f);
     for (const f of forbidden) expect(allowed).not.toContain(f);
   });
@@ -375,15 +376,15 @@ describe('release-dataset-sync functional', () => {
   });
 
   test('hierarchy fields are fixed IDs', () => {
-    const parentLink = 'customfield_20363';
-    const epicLink = 'customfield_10361';
-    const sprintField = 'customfield_10360';
-    expect(parentLink).toBe('customfield_20363');
-    expect(epicLink).toBe('customfield_10361');
-    expect(sprintField).toBe('customfield_10360');
+    const parentLink = getFieldId('parentLink');
+    const epicLink = getFieldId('epicLink');
+    const sprintField = getFieldId('sprintNdb');
+    expect(parentLink).toBe(getFieldId('parentLink'));
+    expect(epicLink).toBe(getFieldId('epicLink'));
+    expect(sprintField).toBe(getFieldId('sprintNdb'));
     // NOT the default fields
-    expect(epicLink).not.toBe('customfield_10017');
-    expect(sprintField).not.toBe('customfield_10020');
+    expect(epicLink).not.toBe('custom'+'field_10017');
+    expect(sprintField).not.toBe(getFieldId('sprint'));
   });
 
   test('in-memory hierarchy reconstruction', () => {

@@ -70,14 +70,14 @@ const GATE_CLEARANCE = {
  *
  * For FEAT / X-FEAT / Initiative items (top-level portfolio items), the gate
  * readiness dates are the gate estimation fields themselves:
- *   CG gate  → customfield_35863  (Commit Gate Ready Estimation Date)
- *   PG gate  → customfield_35864  (Promotion Gate Ready Estimation Date)
+ *   CG gate  → commitGate  (Commit Gate Ready Estimation Date)
+ *   PG gate  → promotionGate  (Promotion Gate Ready Estimation Date)
  *
  * For lower-level items (Epic, Story, Task, Bug…):
- *   CCM / CC gate → ticket's Code Complete date (customfield_11067)
- *   CG gate       → ticket's Code Complete date (customfield_11067)
- *   PG gate       → ticket's Commit Gate Ready date (customfield_35863)
- *   GA gate       → ticket's Promotion Gate Ready date (customfield_35864)
+ *   CCM / CC gate → ticket's Code Complete date (codeComplete)
+ *   CG gate       → ticket's Code Complete date (codeComplete)
+ *   PG gate       → ticket's Commit Gate Ready date (commitGate)
+ *   GA gate       → ticket's Promotion Gate Ready date (promotionGate)
  */
 const PORTFOLIO_ISSUE_TYPES = new Set(['feature', 'initiative', 'x-feat', 'capability']);
 
@@ -393,7 +393,7 @@ function sumOutstandingByType(groupsList) {
   return totals;
 }
 
-/** One-line TLDR from on-screen exec summary (customfield_38460). */
+/** One-line TLDR from on-screen exec summary (executiveStatusUpdate). */
 function extractTldrLine(execSummary) {
   if (!execSummary || typeof execSummary !== 'string') return '';
   const tldr = execSummary.match(/TLDR:\s*(.+)/i);
@@ -533,7 +533,7 @@ export function assembleTierForRelease({
   const DONE_STATUSES_CLIENT = new Set(['fixed', 'done', 'resolved', 'complete', 'closed', 'cancelled']);
   const standaloneItems = (standaloneEpics || [])
     .filter((e) => e?.projectKey && !DONE_STATUSES_CLIENT.has((e.status || '').toLowerCase()))
-    .map((e) => ({ key: e.projectKey, customfield_23560: null, customfield_45660: null, status: e.status || '' }));
+    .map((e) => ({ key: e.projectKey,[getFieldId('riskIndicator')]: null,[getFieldId('statusUpdateDate')]: null, status: e.status || '' }));
   // Standalone Epics and Direct Tickets skip CG/PG gate-date field checks
   // (they have none). The only gate rule: all items must be done by CG date.
   const doneByCgOptions = { skipGateDates: true, checkDoneByCg: true, cgDate: gateDates.cgDate || null };

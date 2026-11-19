@@ -21,7 +21,7 @@ const EXEC_FIELD_KEYS = [
 ];
 
 function getRiskFromItem(item) {
-  const riskRaw = item.customfield_23560 || item.fields?.[getFieldId('riskIndicator')] || item.fields?.customfield_23560;
+  const riskRaw = getFieldValue(item, 'riskIndicator') || item.fields?.[getFieldId('riskIndicator')] || getFieldValue(item.fields, 'riskIndicator');
   if (!riskRaw) return 'not set';
   let value;
   if (typeof riskRaw === 'object' && riskRaw !== null) {

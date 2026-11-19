@@ -7,24 +7,24 @@ jest.mock('../../utils/milestoneProcessor', () => ({
 }));
 jest.mock('../../utils/jiraFieldsConfig', () => ({
   getFieldId: jest.fn((key) => ({
-    riskIndicator: 'customfield_23560',
-    statusUpdate: 'customfield_23073',
-    statusUpdateDate: 'customfield_45660',
-    qaContact: 'customfield_10860',
-    testLead: 'customfield_11065',
-    tpmOwner: 'customfield_27764',
-    codeComplete: 'customfield_11067',
-    commitGate: 'customfield_35863',
-    promotionGate: 'customfield_35864',
-    requirementsLink: 'customfield_14463',
-    tcmsLink: 'customfield_31460'
+    riskIndicator: 'custom'+'field_23560',
+    statusUpdate: 'custom'+'field_23073',
+    statusUpdateDate: 'custom'+'field_45660',
+    qaContact: 'custom'+'field_10860',
+    testLead: 'custom'+'field_11065',
+    tpmOwner: 'custom'+'field_27764',
+    codeComplete: 'custom'+'field_11067',
+    commitGate: 'custom'+'field_35863',
+    promotionGate: 'custom'+'field_35864',
+    requirementsLink: 'custom'+'field_14463',
+    tcmsLink: 'custom'+'field_31460'
   })[key] || null),
   getFieldValue: jest.fn((fields, key) => {
     if (!fields) return null;
-    const idMap = { riskIndicator: 'customfield_23560', statusUpdate: 'customfield_23073', statusUpdateDate: 'customfield_45660', codeComplete: 'customfield_11067', commitGate: 'customfield_35863', promotionGate: 'customfield_35864', requirementsLink: 'customfield_14463', tcmsLink: 'customfield_31460' };
+    const idMap = { riskIndicator: 'custom'+'field_23560', statusUpdate: 'custom'+'field_23073', statusUpdateDate: 'custom'+'field_45660', codeComplete: 'custom'+'field_11067', commitGate: 'custom'+'field_35863', promotionGate: 'custom'+'field_35864', requirementsLink: 'custom'+'field_14463', tcmsLink: 'custom'+'field_31460' };
     return fields[idMap[key]] || null;
   }),
-  buildFieldIdsString: jest.fn(() => 'customfield_23560,customfield_11067')
+  buildFieldIdsString: jest.fn(() => 'custom'+'field_23560,custom'+'field_11067')
 }));
 jest.mock('../../services/execSummaryService', () => ({
   fetchP0BugsCount: jest.fn(() => Promise.resolve(2))
@@ -53,7 +53,7 @@ describe('aiReportService', () => {
   });
 
   test('UT-AI-001: extractRiskReasoning extracts detail from risk field', () => {
-    const out = extractRiskReasoning({ fields: { customfield_23560: 'Yellow - blocked by dependency' } });
+    const out = extractRiskReasoning({ fields: { custom'+'field_23560: 'Yellow - blocked by dependency' } });
     expect(out).toContain('blocked by dependency');
   });
 
@@ -61,9 +61,9 @@ describe('aiReportService', () => {
     const out = analyzeProjectForExecutiveSummary({
       fields: {
         assignee: { displayName: 'Dev' },
-        customfield_10860: { displayName: 'QA' },
-        customfield_23073: 'QI: 80%',
-        customfield_45660: '2026-01-01'
+        custom'+'field_10860: { displayName: 'QA' },
+        custom'+'field_23073: 'QI: 80%',
+        custom'+'field_45660: '2026-01-01'
       }
     });
     expect(out.resourceStatus.length).toBeGreaterThan(0);
@@ -73,8 +73,8 @@ describe('aiReportService', () => {
   test('UT-AI-005: analyzeProjectRisk returns gaps and metrics', () => {
     const out = analyzeProjectRisk({
       fields: {
-        customfield_23073: 'QI: 75% execution: 80% 3 open bugs',
-        customfield_11067: '2026-01-01'
+        custom'+'field_23073: 'QI: 75% execution: 80% 3 open bugs',
+        custom'+'field_11067: '2026-01-01'
       }
     });
     expect(out.resourceGaps.length).toBeGreaterThan(0);

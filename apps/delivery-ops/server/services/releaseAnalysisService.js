@@ -4,11 +4,11 @@
  * Trends page.
  *
  * Functions in this module:
- *   - updateExecutiveSummary        — write customfield_38460 on a JIRA issue.
+ *   - updateExecutiveSummary        — write executiveStatusUpdate on a JIRA issue.
  *                                      Powers PUT  /update-executive-summary.
  *   - getRiskIndicatorChanges       — walk every commit + long-term + extension
  *                                      item in a release and extract every
- *                                      customfield_23560 change from its
+ *                                      riskIndicator change from its
  *                                      changelog. Powers POST /risk-indicator-changes.
  *
  * Errors thrown carry { statusCode, message } so the route shell can map
@@ -27,11 +27,12 @@ const {
 const { getAllItemKeysForVersion } = require('../utils/jiraQueryUtils');
 const { fetchAllChangelogHistories } = require('../utils/changelogPagination');
 const { upstreamStatus, resolveTeam } = require('../utils/jiraRouteHelpers');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
-const RISK_INDICATOR_FIELD_ID = 'customfield_23560';
+const RISK_INDICATOR_FIELD_ID = getFieldId('riskIndicator');
 
 /**
- * Update customfield_38460 (Executive Status Update) on a single JIRA issue.
+ * Update executiveStatusUpdate (Executive Status Update) on a single JIRA issue.
  * Empty / null values clear the field (JIRA treats null as "remove").
  *
  * @param {string} jiraToken
@@ -55,7 +56,7 @@ async function updateExecutiveSummary(jiraToken, { jiraKey, executiveSummary } =
   const updateUrl = `/rest/api/2/issue/${jiraKey}`;
   const updatePayload = {
     // Empty string -> null clears the field in JIRA
-    fields: { customfield_38460: executiveSummary || null },
+    fields: {[getFieldId('executiveStatusUpdate')]: executiveSummary || null },
   };
 
   try {
@@ -71,7 +72,7 @@ async function updateExecutiveSummary(jiraToken, { jiraKey, executiveSummary } =
 
 /**
  * For every item in a release, walk the full changelog and emit one record
- * per customfield_23560 (Risk Indicator) change. Sorted newest-first by
+ * per riskIndicator (Risk Indicator) change. Sorted newest-first by
  * `changedAt`. 300ms delay between items to be polite to JIRA changelog API.
  *
  * @param {string} jiraToken

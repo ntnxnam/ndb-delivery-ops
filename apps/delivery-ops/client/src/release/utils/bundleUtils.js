@@ -65,7 +65,7 @@ function lastDate(dates) {
  *   typeByKey   : issue key → issue type string
  *   epicToFeat  : epic key  → FEAT key
  *
- * The FEAT→Epic link comes from Portfolio Parent Key (customfield_20363)
+ * The FEAT→Epic link comes from Portfolio Parent Key (parentLink)
  * or falls back to Parent Key.
  */
 export function buildHierarchyMaps(releaseTickets) {
@@ -196,7 +196,7 @@ export function deriveRetroProjectsFromBundle(bundle, release) {
   if (featTickets.length === 0) return null;
 
   // Guard: if the bundle was built before the Epic Link field ID was corrected
-  // to customfield_10361 (Nutanix JIRA), all Epic Link Key values will be null
+  // to epicLink (Nutanix JIRA), all Epic Link Key values will be null
   // and resolveFeat() will return null for every ticket. Detect this and fall
   // back to the server API so stale caches don't silently show empty columns.
   const workTowardProject = releaseTickets.filter(
@@ -230,7 +230,7 @@ export function deriveRetroProjectsFromBundle(bundle, release) {
   const projects = featTickets.map((feat) => {
     const children = childrenByFeat[feat['Issue Key']] ?? [];
     // Pass null for plannedCcDate — CC slip is now computed client-side against the
-    // release-level CCM gate date (bootstrap.gateDates.ccmDate), not customfield_11067.
+    // release-level CCM gate date (bootstrap.gateDates.ccmDate), not codeComplete.
     const { cc, cg, pg } = computeFeatCompliance(feat['Issue Key'], null, children);
     return {
       key: feat['Issue Key'],

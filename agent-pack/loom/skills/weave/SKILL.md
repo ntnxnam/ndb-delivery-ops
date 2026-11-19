@@ -6,7 +6,17 @@ aliases: [multi-agent-delivery-pipeline]
 
 # Weave — Orchestrator (invoked by Loom)
 
-Invoked by **Loom** (thinker) with a locked Goal Contract + Decomposition Memo. Produce/confirm plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
+Invoked by **Loom** (thinker) with a locked Goal Contract + Decomposition Memo. Produce/confirm plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
+
+## Compile gate — zero compile-time errors (stage 1.7, re-checked at 8.6 and before Merge)
+
+Every weave that touches code **must** pass a compile gate before Merge — no broken types or syntax ship:
+
+- **Developer must run** `bash scripts/loom/checks/check-compile.sh` (aka `npm run check:compile`) locally before requesting review. This runs `tsc --noEmit` for `shared`, `mcp/lighthouse`, `mcp/loom` plus a `node --check` canary for `server/index.js`.
+- **QA must verify** the gate output — `check:compile PASS` is required for the `compile-gate` KPI to be MET. Any `TSxxxx` error is a **Blocking MISS**.
+- **Fix must re-run** the gate when it touches any `.ts`/`.js` file; **Final Acceptance (8.6)** re-runs it to catch post-Fix regressions.
+- **Merge is blocked** until the gate is green on the final commit. `compile-gate` is never waivable — fix the type.
+- Client is JS/JSX today (no `tsconfig.json`); heavy `react-scripts build` is only run when client bundling is in scope (QA decides). If a client `tsconfig.json` appears, the gate typechecks it too.
 
 ## Link integrity gate (applies to Loom and Lighthouse — including lighthouse docs)
 

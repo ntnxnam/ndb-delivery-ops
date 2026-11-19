@@ -1,4 +1,5 @@
 import {
+import { getFieldId, getFieldValue } from '../../utils/jiraFields';
   buildEpicsFromFeatureDashboard,
   buildTotalEpicsJql,
   toStatusSenderEpicRow,
@@ -54,8 +55,7 @@ describe('buildEpicsFromFeatureDashboard', () => {
       resolution: 'N/A',
       assignee: 'Alice',
       duedate: '16/Oct/2026',
-      fixVersions: 'NDB-2.12',
-      customfield_10860: { name: 'QA Contact', value: 'Bob QA' },
+      fixVersions: 'NDB-2.12',[getFieldId('qaContact')]: { name: 'QA Contact', value: 'Bob QA' },
     });
   });
 
@@ -63,12 +63,12 @@ describe('buildEpicsFromFeatureDashboard', () => {
     const epics = buildEpicsFromFeatureDashboard(canonical, 'FEAT-1');
     expect(epics).toHaveLength(1);
     expect(epics[0].key).toBe('FEAT-1');
-    expect(epics[0].customfield_10860.value).toBe('Bob QA');
+    expect(epics[0].qaContact.value).toBe('Bob QA');
     expect(epics[0].childEpics).toHaveLength(2);
 
     const linked = epics[0].childEpics.find((e) => e.key === 'ERA-100');
     expect(linked.fixVersions).toBe('NDB-2.12, NDB-2.12.1');
-    expect(linked.customfield_10860.value).toBe('Not Set');
+    expect(getFieldValue(linked, 'qaContact').value).toBe('Not Set');
     expect(linked.duedate).toBe('Not Set');
 
     const orphan = epics[0].childEpics.find((e) => e.key === 'ERA-200');

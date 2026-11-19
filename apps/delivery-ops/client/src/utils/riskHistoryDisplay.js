@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { getFieldId, getFieldValue } from './jiraFields';
 
 /** SoT RAG palette — single source for RAG hex colours per D41. Consumers (SoS, email, Project Status) must import from here; do not duplicate. */
 export const RAG_COLORS = { Red: '#d32f2f', Yellow: '#f57c00', Green: '#388e3c', NotSet: '#9e9e9e' };

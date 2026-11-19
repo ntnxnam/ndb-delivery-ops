@@ -593,7 +593,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     );
   }
   
-  // Status Update - Show from JIRA (customfield_23073) - render as rich text HTML
+  // Status Update - Show from JIRA (statusUpdate) - render as rich text HTML
   if (columnKey === 'statusUpdate') {
     const statusUpdateValue = getFieldValue(item, 'statusUpdate');
     let displayHtml = '';
@@ -778,7 +778,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     return null;
   }
   
-  // Executive Update - Show from JIRA (customfield_38460) as read-only
+  // Executive Update - Show from JIRA (executiveStatusUpdate) as read-only
   if (columnKey === 'executiveUpdate') {
     const executiveUpdateValue = getFieldValue(item, 'executiveStatusUpdate');
     let displayValue = '';
@@ -845,7 +845,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     );
   }
 
-  // Executive Summary (AI-generated, push to customfield_38460)
+  // Executive Summary (AI-generated, push to executiveStatusUpdate)
   if (columnKey === 'execSummary') {
     return (
       <td key={columnKey} style={{ padding: '6px', border: '1px solid #dee2e6', wordWrap: 'break-word', textAlign: 'left', verticalAlign: 'top', minWidth: getColumnMinWidth(columnsConfig, columnKey) || '220px', width: getColumnWidth(columnsConfig, columnKey) || '22%' }}>
@@ -939,7 +939,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
 
   if (columnKey === 'key') {
     // Manual TCMS link from Jira ticket field
-    const tcmsRaw = getFieldValue(item, 'tcmsLink') ?? item.customfield_31460;
+    const tcmsRaw = getFieldValue(item, 'tcmsLink');
     const manualTcmsUrl = tcmsRaw?.value?.url
       || (typeof tcmsRaw === 'string' && /^https?:\/\//i.test(tcmsRaw) ? tcmsRaw : null);
 
@@ -1045,12 +1045,12 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     cellContent = (typeof assignee === 'string' ? assignee : (assignee?.displayName || assignee?.name || assignee?.emailAddress || 'N/A'));
   } else if (columnKey === 'uxOwner') {
     // Defensive: ensure it's a string, not an object
-    const uxOwner = getFieldValue(item, 'uxOwner') ?? item.customfield_15968;
+    const uxOwner = getFieldValue(item, 'uxOwner');
     cellContent = (typeof uxOwner === 'string' ? uxOwner : (uxOwner?.displayName || uxOwner?.name || uxOwner?.emailAddress || 'N/A'));
   } else if (columnKey === 'qaContact') {
     // Show QA Contact and Test Lead side by side
     const qaContact = getFieldValue(item, 'qaContact');
-    const testLead = getFieldValue(item, 'testLead') ?? item.customfield_11065;
+    const testLead = getFieldValue(item, 'testLead');
     const qaContactDisplay = qaContact ? (typeof qaContact === 'string' ? qaContact : (qaContact?.displayName || qaContact?.name || qaContact?.emailAddress || 'N/A')) : null;
     const testLeadDisplay = testLead ? (typeof testLead === 'string' ? testLead : (testLead?.displayName || testLead?.name || testLead?.emailAddress || 'N/A')) : null;
     
@@ -1074,7 +1074,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     }
   } else if (columnKey === 'guiLead') {
     // Defensive: ensure it's a string, not an object
-    const guiLead = getFieldValue(item, 'guiLead') ?? item.customfield_11861;
+    const guiLead = getFieldValue(item, 'guiLead');
     cellContent = (typeof guiLead === 'string' ? guiLead : (guiLead?.displayName || guiLead?.name || guiLead?.emailAddress || 'N/A'));
   } else if (columnKey === 'tpmOwner') {
     // Defensive: ensure it's a string, not an object
@@ -1087,7 +1087,7 @@ const ReleaseVersionTableCell = React.memo(function ReleaseVersionTableCell({
     cellContent = renderLinkOrText(col?.customField ? item[col.customField] : null);
   } else if (columnKey === 'teamMembers') {
     // Handle array of team members
-    const teamMembers = getFieldValue(item, 'teamMembers') ?? item.customfield_51460;
+    const teamMembers = getFieldValue(item, 'teamMembers');
     if (!teamMembers) {
       cellContent = 'N/A';
     } else if (Array.isArray(teamMembers)) {

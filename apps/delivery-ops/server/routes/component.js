@@ -13,6 +13,7 @@ const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { fetchComponentsFromERA, fetchComponentPayload } = require('../services/componentReportService');
 const { getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const router = express.Router();
 
@@ -279,8 +280,8 @@ function buildOutstandingList(payload) {
 function buildProjectBreakdown(payload) {
   // ── Parent→children map (all children, no status filter at this layer) ─────
   // Parent key resolution depends on JIRA hierarchy level:
-  //   portfolioChildren (Epics under Features)  → customfield_20363 (Parent Link)
-  //   epicChildren / standaloneEpicChildren      → customfield_10361 (Epic Link, Nutanix field ID)
+  //   portfolioChildren (Epics under Features)  → parentLink (Parent Link)
+  //   epicChildren / standaloneEpicChildren      → epicLink (Epic Link, Nutanix field ID)
   //   sub-tasks                                  → parent.key (standard field)
   const childrenOf = {};
   const addChild = (issue, parentKey) => {
@@ -290,16 +291,16 @@ function buildProjectBreakdown(payload) {
   };
 
   payload.portfolioChildren.forEach(issue => {
-    // customfield_20363 (Parent Link) is a string "ERA-XXXX" for epics under features
-    const parentLink = issue.customfield_20363;
+    // parentLink (Parent Link) is a string "ERA-XXXX" for epics under features
+    const parentLink = getFieldValue(issue, 'parentLink');
     const pk = typeof parentLink === 'string' ? parentLink : parentLink?.key;
     addChild(issue, pk);
   });
 
   payload.epicChildren.forEach(issue => {
-    // Epic Link is customfield_10361 in Nutanix JIRA. Fall back to parent.key
+    // Epic Link is epicLink in Nutanix JIRA. Fall back to parent.key
     // when the field isn't included in the fetch (e.g. lightweight payloads).
-    const epicLinkRaw = issue.customfield_10361 ?? issue.fields?.customfield_10361;
+    const epicLinkRaw = getFieldValue(issue, 'epicLink') ?? getFieldValue(issue.fields, 'epicLink');
     const epicLink = typeof epicLinkRaw === 'string' ? epicLinkRaw : epicLinkRaw?.key ?? null;
     addChild(issue, epicLink || issue.parent?.key || issue.fields?.parent?.key);
   });

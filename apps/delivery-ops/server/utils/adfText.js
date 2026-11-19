@@ -16,7 +16,7 @@ const { adfToHtml } = require('./emailFormatter');
  *   - ADF object        -> rendered HTML via adfToHtml
  *   - legacy object     -> .value || .name || JSON
  *
- * Used heavily for customfield_38460 (Executive Status Update) and similar
+ * Used heavily for executiveStatusUpdate (Executive Status Update) and similar
  * rich-text customfields.
  *
  * @param {*} value - raw JIRA field value

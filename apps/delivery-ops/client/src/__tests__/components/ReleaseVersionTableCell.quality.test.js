@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { generateTableHTMLForEmail } from '../../utils/emailTableGenerator';
+import { getFieldId, getFieldValue } from '../../utils/jiraFields';
 
 const cellPath = path.join(__dirname, '../../components/ReleaseVersionTableCell.js');
 const emailPath = path.join(__dirname, '../../utils/emailTableGenerator.js');
@@ -76,7 +77,7 @@ describe('ReleaseVersionTableCell — TCMS Quality Functional/System rows (stati
   // Functional UI behavior verified via email generator HTML (parity proxy — same rows/cols)
   test('UT-UI-007: rendered HTML has 4 tables each with Functional/System row headers', () => {
     const tcmsQuality = makeTcmsQuality();
-    const item = { key: 'FEAT-1', summary: 'Test', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com', customfield_10860: null, customfield_27764: null, customfield_23073: null, customfield_23560: null, tcmsQuality, tcmsQI: null };
+    const item = { key: 'FEAT-1', summary: 'Test', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null, tcmsQuality, tcmsQI: null };
     const columnsConfig = { columnOrder: ['key', 'quality'], columns: { key: { label: 'Key', includeInUI: true, order: 1 }, quality: { label: 'Quality', includeInUI: true, order: 2 } } };
     const html = generateTableHTMLForEmail({ commit: [item] }, {}, 'NDB-2.12', columnsConfig, () => null, () => null, () => null, () => null, 'https://jira.nutanix.com');
     expect((html.match(/Functional/g) || []).length).toBe(5);
@@ -88,7 +89,7 @@ describe('ReleaseVersionTableCell — TCMS Quality Functional/System rows (stati
 
   test('UT-UI-008: regression — no Overall/Automation row th in rendered HTML', () => {
     const tcmsQuality = makeTcmsQuality();
-    const item = { key: 'FEAT-1', summary: 'Test', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com', customfield_10860: null, customfield_27764: null, customfield_23073: null, customfield_23560: null, tcmsQuality, tcmsQI: null };
+    const item = { key: 'FEAT-1', summary: 'Test', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null, tcmsQuality, tcmsQI: null };
     const columnsConfig = { columnOrder: ['key', 'quality'], columns: { key: { label: 'Key', includeInUI: true, order: 1 }, quality: { label: 'Quality', includeInUI: true, order: 2 } } };
     const html = generateTableHTMLForEmail({ commit: [item] }, {}, 'NDB-2.12', columnsConfig, () => null, () => null, () => null, () => null);
     expect(html).not.toMatch(/<th scope="row"[^>]*>Overall<\/th>/);
@@ -100,7 +101,7 @@ describe('ReleaseVersionTableCell — TCMS Quality Functional/System rows (stati
       releaseOverall: { functional: { manual: { qi: null, run: 10, passed: 5, failed: 5, rate: null }, automation: null }, system: { manual: null, automation: null } },
       releaseLast3Weeks: null, masterOverall: null, masterLast3Weeks: null,
     };
-    const item = { key: 'FEAT-1', summary: 'T', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com', customfield_10860: null, customfield_27764: null, customfield_23073: null, customfield_23560: null, tcmsQuality, tcmsQI: null };
+    const item = { key: 'FEAT-1', summary: 'T', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null, tcmsQuality, tcmsQI: null };
     const columnsConfig = { columnOrder: ['key', 'quality'], columns: { key: { label: 'Key', includeInUI: true, order: 1 }, quality: { label: 'Quality', includeInUI: true, order: 2 } } };
     const html = generateTableHTMLForEmail({ commit: [item] }, {}, 'NDB-2.12', columnsConfig, () => null, () => null, () => null, () => null);
     expect(html).toContain('QI —');
@@ -115,7 +116,7 @@ describe('ReleaseVersionTableCell — TCMS Quality Functional/System rows (stati
       },
       releaseLast3Weeks: null, masterOverall: null, masterLast3Weeks: null,
     };
-    const item = { key: 'FEAT-1', summary: 'T', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com', customfield_10860: null, customfield_27764: null, customfield_23073: null, customfield_23560: null, tcmsQuality, tcmsQI: null };
+    const item = { key: 'FEAT-1', summary: 'T', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null, tcmsQuality, tcmsQI: null };
     const columnsConfig = { columnOrder: ['key', 'quality'], columns: { key: { label: 'Key', includeInUI: true, order: 1 }, quality: { label: 'Quality', includeInUI: true, order: 2 } } };
     const html = generateTableHTMLForEmail({ commit: [item] }, {}, 'NDB-2.12', columnsConfig, () => null, () => null, () => null, () => null);
     expect(html).toContain('QI 99%');

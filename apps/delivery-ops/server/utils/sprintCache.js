@@ -5,6 +5,7 @@
 
 const { getJira } = require('./jiraClient');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const cache = new Map(); // cacheKey (boardId:state) -> { at: number, map: Map(sprintId -> { state, name, startDate, endDate, completeDate }) }
@@ -76,7 +77,7 @@ async function getSprintsForBoard(boardId, token, httpsAgent, state) {
 /**
  * Resolve sprint state for an issue's sprint field value (CF 10360).
  * Value can be number, string, or object with id.
- * @param {*} raw - issue.fields.customfield_10360
+ * @param {*} raw - getFieldValue(issue.fields, 'sprintNdb')
  * @param {Map<number, { state, name }>} sprintMap
  * @returns {{ state: string|null, name: string|null }}
  */
@@ -124,7 +125,7 @@ function classifySprintIssue(issue) {
  *
  * @param {Array} histories - JIRA issue changelog histories
  * @param {number|string} sprintId
- * @param {string} sprintFieldId - usually 'customfield_10360'
+ * @param {string} sprintFieldId - usually getFieldId('sprintNdb')
  * @returns {string|null}
  */
 function getAddedToSprintAt(histories, sprintId, sprintFieldId) {

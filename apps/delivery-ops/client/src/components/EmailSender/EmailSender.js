@@ -135,7 +135,7 @@ function EmailSender({ onLogout: _onLogout }) {
                 <span>{jiraData.fixVersions}</span>
               </>
             )}
-            {(() => { const _risk = getFieldValue(jiraData, 'riskIndicator') ?? jiraData.customfield_23560; return _risk?.value ? (
+            {(() => { const _risk = getFieldValue(jiraData, 'riskIndicator'); return _risk?.value ? (
               <span
                 className="email-sender-strip-risk"
                 style={{

@@ -318,7 +318,7 @@ export function generateTableHTMLForEmail(
       return ''; // Hidden
     }
     if (columnKey === 'executiveUpdate') {
-      // Format executiveUpdate (customfield_38460) - same as customfield38460
+      // Format executiveUpdate (executiveStatusUpdate) - same as customfield38460
       const executiveValue = getFieldValue(item, 'executiveStatusUpdate');
       if (!executiveValue) {
         return 'Not Set';
@@ -350,7 +350,7 @@ export function generateTableHTMLForEmail(
       return 'Not Set';
     }
     if (columnKey === 'customfield38460') {
-      // Format customfield_38460 similar to statusUpdate
+      // Format executiveStatusUpdate similar to statusUpdate
       if (!getFieldValue(item, 'executiveStatusUpdate') || typeof getFieldValue(item, 'executiveStatusUpdate') !== 'string') {
         return 'Not Set';
       }

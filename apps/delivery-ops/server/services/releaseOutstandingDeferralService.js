@@ -24,9 +24,9 @@ const RELEASE_EMAIL_CONFIG_PATH = path.join(
   __dirname,
   '../config/releaseVersionsEmailConfig.json'
 );
-const DEFERRAL_JUSTIFICATION_FIELD = getFieldId('deferralJustification') || 'customfield_42660';
-const ASSIGNEE_MANAGER_FIELD = getFieldId('assigneeManager') || 'customfield_19262';
-const QA_CONTACT_FIELD = getFieldId('qaContact') || 'customfield_10860';
+const DEFERRAL_JUSTIFICATION_FIELD = getFieldId('deferralJustification') || getFieldId('deferralJustification');
+const ASSIGNEE_MANAGER_FIELD = getFieldId('assigneeManager') || getFieldId('assigneeManager');
+const QA_CONTACT_FIELD = getFieldId('qaContact') || getFieldId('qaContact');
 const FIELDS = withExtraTicketFields([
   'summary',
   'status',

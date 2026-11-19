@@ -67,7 +67,7 @@ function ReleaseVersionGantt({ ganttConfig, selectedVersion, items, checkpointHi
   };
 
   const renderGanttItem = (item, isLongTerm=false) => {
-    const tcmsRaw=getFieldValue(item,'tcmsLink')??item.customfield_31460;
+    const tcmsRaw=getFieldValue(item,'tcmsLink');
     const manualTcmsUrl=tcmsRaw?.value?.url || (typeof tcmsRaw==='string'&&/^https?:\/\//i.test(tcmsRaw)?tcmsRaw:null);
     const tcmsVer=getTcmsVersionNum(selectedVersion, selectedTeam);
     const constructedTcmsUrl=tcmsVer?buildTcmsQueryUrl(item.key, selectedVersion, selectedTeam):null;

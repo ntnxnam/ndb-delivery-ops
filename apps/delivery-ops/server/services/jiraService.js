@@ -14,6 +14,7 @@ const {
   searchPages,
   wrapJiraError,
 } = require('../utils/jiraClient');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 function formatRiskIndicator(value) {
   if (!value || value === null || value === undefined) {
@@ -80,8 +81,8 @@ function getRiskIndicatorPriority(riskIndicator) {
 
 function sortByRiskIndicator(items) {
   return items.sort((a, b) => {
-    const priorityA = getRiskIndicatorPriority(a.customfield_23560);
-    const priorityB = getRiskIndicatorPriority(b.customfield_23560);
+    const priorityA = getRiskIndicatorPriority(getFieldValue(a, 'riskIndicator'));
+    const priorityB = getRiskIndicatorPriority(getFieldValue(b, 'riskIndicator'));
     if (priorityA === priorityB) {
       return a.key.localeCompare(b.key);
     }

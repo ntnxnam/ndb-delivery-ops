@@ -13,7 +13,7 @@ assert(summary.includes('id="kpi-matrix"'), 'matrix table id="kpi-matrix"');
 const rows = summary.match(/<tr><td><strong>Top-CFI/g) ? 1 : 0; // check at least Top-CFI row exists
 assert(summary.includes('Top-CFI') && summary.includes('Bugs Out of SLA'), '13 KPI rows present');
 // Every cell JQL contains Integrated Version (HTML-encoded as &quot;Integrated Version&quot; is OK)
-assert((summary.includes('"Integrated Version"') || summary.includes('&quot;Integrated Version&quot;') || summary.includes('Integrated Version')) && summary.includes('customfield_11360')===false, 'KPI JQL uses Integrated Version (cf11360) quoted, not raw field id');
+assert((summary.includes('"Integrated Version"') || summary.includes('&quot;Integrated Version&quot;') || summary.includes('Integrated Version')) && summary.includes(getFieldId('integratedVersion'))===false, 'KPI JQL uses Integrated Version (cf11360) quoted, not raw field id');
 // Links target blank
 assert((summary.match(/target="_blank" rel="noreferrer"/g)||[]).length >= 39, 'every KPI cell link opens in new tab (>=39)');
 for(const ver of ['NDB-2.10','NDB-2.11','NDB-2.12']){

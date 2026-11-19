@@ -5,11 +5,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const SNAPSHOTS_FILE = path.join(DATA_DIR, 'status-snapshots.json');
 
-const RISK_FIELD = 'customfield_23560';
+const RISK_FIELD = getFieldId('riskIndicator');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -38,8 +39,8 @@ function writeSnapshots(snapshots) {
 }
 
 /**
- * Derive risk category from item's risk indicator (customfield_23560).
- * @param {object} item - Item with customfield_23560 (value/color or raw JIRA object)
+ * Derive risk category from item's risk indicator (riskIndicator).
+ * @param {object} item - Item with riskIndicator (value/color or raw JIRA object)
  * @returns {'green'|'yellow'|'red'|'notSet'}
  */
 function getRiskCategory(item) {
@@ -56,7 +57,7 @@ function getRiskCategory(item) {
 
 /**
  * Build counts from items array.
- * @param {Array} items - Array of items with customfield_23560
+ * @param {Array} items - Array of items with riskIndicator
  * @returns {{ green: number, yellow: number, red: number, notSet: number, total: number }}
  */
 function computeCounts(items) {

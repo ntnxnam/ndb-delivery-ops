@@ -32,14 +32,6 @@ function validatePayload(body, isUpdate = false) {
     const d = Number(body.schedule.dayOfWeek);
     if (!Number.isInteger(d) || d < 0 || d > 6) errors.push('schedule.dayOfWeek must be 0-6');
   }
-  if (body.schedule?.hour != null) {
-    const h = Number(body.schedule.hour);
-    if (!Number.isInteger(h) || h < 0 || h > 23) errors.push('schedule.hour must be 0-23');
-  }
-  if (body.schedule?.minute != null) {
-    const m = Number(body.schedule.minute);
-    if (!Number.isInteger(m) || m < 0 || m > 59) errors.push('schedule.minute must be 0-59');
-  }
   if (body.tz) {
     try { new Intl.DateTimeFormat('en-US', { timeZone: body.tz }); } catch { errors.push('tz is not a valid IANA timezone'); }
   }
@@ -48,7 +40,18 @@ function validatePayload(body, isUpdate = false) {
 }
 
 function toResponse(s) {
-  return { ...s, when: runner.describeSchedule(s) };
+  // human phrase for "what runs when"
+  const rec = s.schedule || {};
+  let when = '';
+  if (rec.cron) when = `cron ${rec.cron} (${s.tz})`;
+  else {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const d = rec.dayOfWeek != null ? days[rec.dayOfWeek] : '—';
+    const h = rec.hour != null ? String(rec.hour).padStart(2,'0') : '09';
+    const m = rec.minute != null ? String(rec.minute).padStart(2,'0') : '00';
+    when = `${d} ${h}:${m} ${s.tz}`;
+  }
+  return { ...s, when };
 }
 
 router.get('/', (req, res) => {
@@ -70,7 +73,8 @@ router.post('/test-preview', express.json(), requireAuth, async (req, res) => {
     to: body.to || '',
     cc: body.cc || '',
   };
-  // For preview, allow missing product/release but report as check failure via validateScheduleForTest, not 400
+  const errors = validatePayload(draft);
+  // For preview, allow missing product/release but report as check failure, not 400
   try {
     const result = await runner.testSchedule(draft, { triggeredBy: req.headers['x-username'] || body.username || 'unknown' });
     res.json(result);

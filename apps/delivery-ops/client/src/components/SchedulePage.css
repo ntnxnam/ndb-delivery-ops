@@ -13,14 +13,9 @@
 .page-success { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); }
 .page-warning { background: var(--warning-soft); border: 1px solid var(--warning-border); color: var(--warning-text); padding: var(--space-3) var(--space-4); border-radius: var(--radius); font-size: var(--fs-body); margin-bottom: var(--space-4); }
 .sched-test-result { border-color: var(--accent-border); }
-.sched-test-preview { display:flex; flex-direction:column; gap: var(--space-2); }
-.sched-test-preview__row { display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3); }
-.sched-test-meta { display:flex; gap: var(--space-4); flex-wrap:wrap; font-size: var(--fs-small); color: var(--muted); }
+.sched-test-preview { display:flex; flex-direction:column; gap:8px; }
+.sched-test-meta { display:flex; gap:16px; flex-wrap:wrap; font-size: var(--fs-small); color: var(--muted); }
 .sched-test-meta strong { color: var(--text); font-weight:600; }
-.sched-form__check { display:flex; flex-direction:row; align-items:center; gap: var(--space-2); }
-.sched-form__actions { display:flex; gap: var(--space-2); flex-wrap:wrap; margin-top: var(--space-1); }
-/* no double-frame: ds-section provides surface/border/padding */
-.sched-form--ds { background: transparent; border: none; padding: 0; margin: 0; }
 
 @media (max-width: 720px) {
   .sched-form { grid-template-columns: 1fr; }
