@@ -49,7 +49,7 @@
 <h2>AI / NAI Configuration</h2>
 <p>All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.</p>
 <h3>Environment variables (canonical <code>NAI_*</code>)</h3>
-<p>Five <code>NAI_*</code> variables are canonical. <code>AI_*</code> is kept as fallback during transition — if a <code>NAI_*</code> value is set it wins; otherwise the matching <code>AI_*</code> value is used.</p>
+<p>Five <code>NAI_*</code> variables are canonical. No <code>AI_*</code> fallback is read — only <code>NAI_*</code> env vars (or <code>aiConfig.json</code> defaults for non-secrets) are considered.</p>
 <table>
 <thead>
 <tr>
@@ -72,7 +72,7 @@
 <td>no</td>
 <td>Yes, if overriding</td>
 <td><code>aiConfig.json:baseUrl</code> (<code>https://tokens.corp.nutanix.com/enterpriseai/gateway/v1</code>)</td>
-<td>Env overrides <code>aiConfig.json</code>. <code>AI_API_BASE_URL</code> fallback. Server error: <code>NAI_API_BASE_URL is not set…</code></td>
+<td>Env overrides <code>aiConfig.json</code> (no <code>AI_*</code> fallback). Server error: <code>NAI_API_BASE_URL is not set…</code></td>
 </tr>
 <tr>
 <td><code>NAI_DEFAULT_MODEL</code></td>
@@ -86,14 +86,14 @@
 <td>no</td>
 <td>Yes, if overriding</td>
 <td><code>aiConfig.json:maxTokens</code> (8192)</td>
-<td>Env parsed as int; <code>AI_MAX_TOKENS</code> fallback. Server error: <code>NAI_MAX_TOKENS is not set…</code></td>
+<td>Env parsed as int (no <code>AI_*</code> fallback). Server error: <code>NAI_MAX_TOKENS is not set…</code></td>
 </tr>
 <tr>
 <td><code>NAI_REQUEST_TIMEOUT</code></td>
 <td>no</td>
 <td>Yes, if overriding</td>
 <td><code>aiConfig.json:requestTimeoutMs</code> (120000 ms)</td>
-<td>Env parsed as int ms; <code>AI_REQUEST_TIMEOUT</code> fallback. Server error: <code>NAI_REQUEST_TIMEOUT is not set…</code></td>
+<td>Env parsed as int ms (no <code>AI_*</code> fallback). Server error: <code>NAI_REQUEST_TIMEOUT is not set…</code></td>
 </tr>
 </tbody></table>
 <p>Full table + rationale in <a href="./AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> and <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</p>
@@ -101,19 +101,18 @@
 <pre><code>per-call override (aiConnector options)
         │
         ▼
-  NAI_* env var  ──fallback──▶  AI_* env var
-        │                           │
-        └──────────┬────────────────┘
-                   ▼
-         aiConfig.json  (server/config/aiConfig.json)
-         { baseUrl, defaultModel, maxTokens, requestTimeoutMs }
-                   │
-                   ▼
-           missing → throw actionable error naming the NAI_* var
+  NAI_* env var (no AI_* fallback)
+        │
+        ▼
+  aiConfig.json  (server/config/aiConfig.json)
+  { baseUrl, defaultModel, maxTokens, requestTimeoutMs }
+        │
+        ▼
+  missing → throw actionable error naming the NAI_* var
 </code></pre>
 <ul>
 <li><strong>Secrets</strong> (<code>NAI_API_KEY</code>): env only — never in <code>aiConfig.json</code>.</li>
-<li><strong>Non-secrets</strong> (<code>NAI_API_BASE_URL</code>, <code>NAI_DEFAULT_MODEL</code>, <code>NAI_MAX_TOKENS</code>, <code>NAI_REQUEST_TIMEOUT</code>): <code>NAI_*</code> env → <code>AI_*</code> fallback → <code>aiConfig.json</code> → throw <code>NAI_* is not set</code>.</li>
+<li><strong>Non-secrets</strong> (<code>NAI_API_BASE_URL</code>, <code>NAI_DEFAULT_MODEL</code>, <code>NAI_MAX_TOKENS</code>, <code>NAI_REQUEST_TIMEOUT</code>): <code>NAI_*</code> env → <code>aiConfig.json</code> → throw <code>NAI_* is not set</code> (no <code>AI_*</code> fallback).</li>
 <li>Implementation: <code>shared/src/connectors/aiConnector.ts</code> and <code>apps/delivery-ops/server/.env.example</code>.</li>
 </ul>
 <h3>Bin-Packing Converter — server / auth</h3>
