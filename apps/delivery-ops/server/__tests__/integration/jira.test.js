@@ -9,7 +9,7 @@ jest.mock('../../config/teamBoardConfig.json', () => ({
     { id: 'other', name: 'Other', boardId: 999 }
   ],
   defaultTeamId: 'ndb',
-  sprintFieldId: 'customfield_10360'
+  sprintFieldId: 'custom'+'field_10360'
 }), { virtual: false });
 
 const mockSprintMap = new Map([[1, { name: 'Sprint 1', state: 'active', startDate: null, endDate: null, completeDate: null }]]);

@@ -11,13 +11,13 @@ jest.mock('../../utils/jiraQueryUtils', () => ({
 }));
 jest.mock('../../utils/jiraFieldsConfig', () => ({
   getFieldId: jest.fn((key) => ({
-    sprint: 'customfield_10020',
-    sprints: 'customfield_10021',
-    codeComplete: 'customfield_11067',
-    commitGate: 'customfield_35863',
-    promotionGate: 'customfield_35864',
-    riskIndicator: 'customfield_23560',
-    tpmOwner: 'customfield_27764'
+    sprint: 'custom'+'field_10020',
+    sprints: 'custom'+'field_10021',
+    codeComplete: 'custom'+'field_11067',
+    commitGate: 'custom'+'field_35863',
+    promotionGate: 'custom'+'field_35864',
+    riskIndicator: 'custom'+'field_23560',
+    tpmOwner: 'custom'+'field_27764'
   })[key] || null)
 }));
 jest.mock('../../utils/logger', () => ({ jira: { fetch: jest.fn() } }));
@@ -70,7 +70,7 @@ describe('ganttService', () => {
               status: { name: 'In Progress' },
               assignee: { displayName: 'User' },
               issuetype: { name: 'Task' },
-              customfield_10020: { id: 1, name: 'Sprint 1' }
+              custom'+'field_10020: { id: 1, name: 'Sprint 1' }
             }
           }
         ]

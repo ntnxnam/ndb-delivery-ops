@@ -4,6 +4,7 @@
  * Tests structure, frontmatter, required sections, manifest consistency, and routing invariants for merged skills.
  * Run: npm test -- skill-contract
  */
+const { getFieldId, getFieldValue } = require('../../utils/jiraFieldsConfig');
 const fs = require('fs');
 const path = require('path');
 
@@ -217,9 +218,9 @@ describe('Merged skill invariants', () => {
     expect(text).toContain('Route C');
     expect(text).toContain('Route J inputs (JIRA)');
     expect(text).toContain('Route C inputs (Config)');
-    expect(text).toContain('customfield_11067'); // CC
-    expect(text).toContain('customfield_35863'); // CG
-    expect(text).toContain('customfield_35864'); // PG
+    expect(text).toContain(getFieldId('codeComplete')); // CC
+    expect(text).toContain(getFieldId('commitGate')); // CG
+    expect(text).toContain(getFieldId('promotionGate')); // PG
     expect(text).toContain('releaseVersionsEmailConfig.json');
     expect(text).toContain('dotted');
     expect(text).toContain('solid');

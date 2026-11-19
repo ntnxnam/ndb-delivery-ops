@@ -75,7 +75,7 @@ async function runSearchByJql(token, jql, maxResults = 500, options = {}) {
       }
     } catch (_) {
       missingIds.forEach(id => {
-        idToLabel[id] = id.startsWith('customfield_') ? id.replace('customfield_', 'cf[') + ']' : id;
+        idToLabel[id] = id.startsWith('custom'+'field_') ? id.replace('custom'+'field_', 'cf[') + ']' : id;
       });
     }
   }

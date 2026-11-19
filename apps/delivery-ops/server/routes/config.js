@@ -357,7 +357,7 @@ router.get('/teams', (req, res) => {
   try {
     const config = loadTeamBoardConfig();
     res.json({
-      sprintFieldId: config.sprintFieldId || 'customfield_10360',
+      sprintFieldId: config.sprintFieldId || getFieldId('sprintNdb'),
       teams: config.teams || [],
       defaultTeamId: config.defaultTeamId || (config.teams && config.teams[0] && config.teams[0].id) || null
     });

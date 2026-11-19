@@ -1,3 +1,4 @@
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 /**
  * Gantt Chart Email Generator
  * 
@@ -181,9 +182,9 @@ function generateGanttChartSVG({ ganttConfig, selectedVersion, items = [], jiraB
 
   // Process items - only committed items
   const processedItems = (items || [])
-    .filter(item => item.customfield_11067) // Only items with Code Complete date
+    .filter(item => getFieldValue(item, 'codeComplete')) // Only items with Code Complete date
     .map(item => {
-      const codeCompleteDate = new Date(item.customfield_11067);
+      const codeCompleteDate = new Date(getFieldValue(item, 'codeComplete'));
       if (isNaN(codeCompleteDate.getTime())) {
         return null;
       }
@@ -473,27 +474,27 @@ function generateGanttChartHTMLTable({ ganttConfig, selectedVersion, items = [],
 
   // Process items - only committed items with Code Complete date
   const processedItems = (items || [])
-    .filter(item => item.customfield_11067) // Only items with Code Complete date
+    .filter(item => getFieldValue(item, 'codeComplete')) // Only items with Code Complete date
     .map(item => {
-      const codeCompleteDate = new Date(item.customfield_11067);
+      const codeCompleteDate = new Date(getFieldValue(item, 'codeComplete'));
       if (isNaN(codeCompleteDate.getTime())) {
         return null;
       }
       const codeCompletePos = getPositionPercent(codeCompleteDate);
       
-      // Get Commit Gate date for this item (customfield_35863)
+      // Get Commit Gate date for this item (commitGate)
       let commitGatePos = null;
-      if (item.customfield_35863) {
-        const commitGateDate = new Date(item.customfield_35863);
+      if (getFieldValue(item, 'commitGate')) {
+        const commitGateDate = new Date(getFieldValue(item, 'commitGate'));
         if (!isNaN(commitGateDate.getTime())) {
           commitGatePos = getPositionPercent(commitGateDate);
         }
       }
       
-      // Get Promotion Gate date for this item (customfield_35864)
+      // Get Promotion Gate date for this item (promotionGate)
       let promotionGatePos = null;
-      if (item.customfield_35864) {
-        const promotionGateDate = new Date(item.customfield_35864);
+      if (getFieldValue(item, 'promotionGate')) {
+        const promotionGateDate = new Date(getFieldValue(item, 'promotionGate'));
         if (!isNaN(promotionGateDate.getTime())) {
           promotionGatePos = getPositionPercent(promotionGateDate);
         }
@@ -504,9 +505,9 @@ function generateGanttChartHTMLTable({ ganttConfig, selectedVersion, items = [],
         summary: item.summary || '',
         codeCompleteDate,
         codeCompletePosition: codeCompletePos !== null ? codeCompletePos : 0,
-        commitGateDate: item.customfield_35863 ? new Date(item.customfield_35863) : null,
+        commitGateDate: getFieldValue(item, 'commitGate') ? new Date(getFieldValue(item, 'commitGate')) : null,
         commitGatePosition: commitGatePos !== null ? commitGatePos : null,
-        promotionGateDate: item.customfield_35864 ? new Date(item.customfield_35864) : null,
+        promotionGateDate: getFieldValue(item, 'promotionGate') ? new Date(getFieldValue(item, 'promotionGate')) : null,
         promotionGatePosition: promotionGatePos !== null ? promotionGatePos : null
       };
     })

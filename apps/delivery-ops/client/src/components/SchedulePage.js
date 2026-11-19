@@ -127,7 +127,7 @@ export default function SchedulePage() {
     fetchList();
   }
 
-  if (loading) return <div className="schedule-page"><div className="page-empty"><div className="ds-skeleton ds-skeleton--card" style={{ width: '100%', maxWidth: '30rem', margin: 'var(--space-6) auto' }} /></div></div>;
+  if (loading) return <div className="schedule-page"><div className="page-empty"><div className="ds-skeleton ds-skeleton--card" style={{ width: '100%', maxWidth: 480, margin: '24px auto' }} /></div></div>;
 
   return (
     <div className="schedule-page">
@@ -169,9 +169,9 @@ export default function SchedulePage() {
               <label className="ds-label">To<input className="ds-input" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} placeholder="team@example.com" /></label>
               <label className="ds-label">CC<input className="ds-input" value={form.cc} onChange={(e) => setForm({ ...form, cc: e.target.value })} placeholder="cc@example.com" /></label>
               <label className="ds-label" style={{ gridColumn: '1 / -1' }}>Cron (optional, overrides day/hour/minute)<input className="ds-input" value={form.cron} onChange={(e) => setForm({ ...form, cron: e.target.value })} placeholder="0 7 * * 1" /></label>
-              <label className="ds-label sched-form__check"><input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> Enabled</label>
-              <label className="ds-label sched-form__check"><input type="checkbox" checked={form.deferAfterPg} onChange={(e) => setForm({ ...form, deferAfterPg: e.target.checked })} /> Defer after PG</label>
-              <div className="full sched-form__actions">
+              <label className="ds-label" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> Enabled</label>
+              <label className="ds-label" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={form.deferAfterPg} onChange={(e) => setForm({ ...form, deferAfterPg: e.target.checked })} /> Defer after PG</label>
+              <div className="full" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 <button type="submit" className="ds-btn ds-btn--primary">{editing ? 'Update' : 'Create'}</button>
                 <button type="button" className="ds-btn ds-btn--secondary" onClick={() => setShowForm(false)}>Cancel</button>
                 <button type="button" className="ds-btn ds-btn--ghost" onClick={handleTestForm} disabled={testingForm}>{testingForm ? 'Testing…' : 'Test (dry-run)'}</button>
@@ -194,7 +194,7 @@ export default function SchedulePage() {
             {testResult.error && <div className="page-error">{testResult.error}</div>}
             {testResult.preview && (
               <div className="sched-test-preview">
-                <div className="ds-row sched-test-preview__row">
+                <div className="ds-row" style={{ gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
                   <span className="ds-pill ds-pill--accent">{testResult.preview.skill}</span>
                   <span className="ds-pill ds-pill--muted">{testResult.preview.tpmScope?.productId} / {testResult.preview.tpmScope?.release}</span>
                   <span className="ds-pill ds-pill--muted">{testResult.preview.when}</span>
@@ -205,11 +205,11 @@ export default function SchedulePage() {
                   <span><strong>CC:</strong> {testResult.preview.cc || '—'}</span>
                   <span className="sched-when">Tested {testResult.testedAt ? new Date(testResult.testedAt).toLocaleString() : 'now'} · source: {testResult.source}</span>
                 </div>
-                {testResult.warnings?.length > 0 && <div className="page-warning" style={{ marginTop: 'var(--space-3)' }}>{testResult.warnings.join(' ')}</div>}
+                {testResult.warnings?.length > 0 && <div className="page-warning" style={{ marginTop: 10 }}>{testResult.warnings.join(' ')}</div>}
               </div>
             )}
             {testResult.checks?.length > 0 && (
-              <div className="table-wrap" style={{ marginTop: 'var(--space-3)' }}>
+              <div className="table-wrap" style={{ marginTop: 12 }}>
                 <table>
                   <thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead>
                   <tbody>
@@ -249,7 +249,7 @@ export default function SchedulePage() {
                     <td className="sched-when">{s.lastRun ? new Date(s.lastRun).toLocaleString() : '—'}</td>
                     <td><span className={`ds-badge ${s.lastStatus === 'success' ? 'ds-badge--success' : s.lastStatus === 'error' ? 'ds-badge--danger' : s.lastStatus === 'skipped' ? 'ds-badge--warning' : 'ds-badge--neutral'}`}>{s.lastStatus || '—'}</span></td>
                     <td>
-                      <span style={{ display: 'inline-flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
                         <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => handleTest(s.id)} disabled={testingId === s.id}>{testingId === s.id ? 'Testing…' : 'Test'}</button>
                         <button type="button" className="ds-btn ds-btn--ghost ds-btn--sm" onClick={() => startEdit(s)}>Edit</button>
                         <button type="button" className="ds-btn ds-btn--ghost ds-btn--sm" onClick={() => toggleEnabled(s)}>{s.enabled ? 'Pause' : 'Resume'}</button>

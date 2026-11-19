@@ -29,7 +29,7 @@ const { JIRA_API_V2 } = require('../config/api');
 const { getJira } = require('../utils/jiraClient');
 const logger = require('../utils/logger');
 
-const EXEC_SUMMARY_FIELD = 'customfield_38460';
+const EXEC_SUMMARY_FIELD = getFieldId('executiveStatusUpdate');
 
 function isNaiTimeout(err) {
   const msg = err?.message || '';
@@ -106,6 +106,7 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       let provenanceId = null;
       try {
         const { getShared, getStores } = require('../services/agentRuntimeHost');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
         const s = await getShared();
         const stores = await getStores();
         const rec = s.provenanceFromTurn({
@@ -203,7 +204,7 @@ router.post('/approvals/:id', validateJiraTokenMiddleware, async (req, res) => {
  * Call NAI to generate a phase-aware executive summary for a single JIRA item.
  *
  * Body: {
- *   item: <full raw JIRA item, including customfield_* fields>,
+ *   item: <full raw JIRA item, including custom-field fields>,
  *   ganttConfig: <per-version gate marker dates from /api/config/release-versions>,
  *   breakdownData: <task breakdown for this item from taskBreakdownService>,
  *   release: "NDB-2.11"
@@ -219,9 +220,9 @@ router.post('/exec-summary', validateJiraTokenMiddleware, async (req, res) => {
   }
 
   try {
-    const rawStatusText = typeof item.customfield_23073 === 'string'
-      ? item.customfield_23073
-      : (item.customfield_23073?.value || null);
+    const rawStatusText = typeof getFieldValue(item, 'statusUpdate') === 'string'
+      ? getFieldValue(item, 'statusUpdate')
+      : (getFieldValue(item, 'statusUpdate')?.value || null);
 
     const jiraToken = req.headers.authorization?.replace('Bearer ', '');
 
@@ -259,7 +260,7 @@ router.post('/exec-summary', validateJiraTokenMiddleware, async (req, res) => {
 
 /**
  * PUT /api/ai/exec-summary/:key
- * Write the generated executive summary to customfield_38460 in JIRA.
+ * Write the generated executive summary to executiveStatusUpdate in JIRA.
  *
  * Body: { summary: "[YYYY-MM-DD] <text>" }
  */

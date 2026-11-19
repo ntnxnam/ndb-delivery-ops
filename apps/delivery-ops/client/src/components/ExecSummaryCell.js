@@ -34,7 +34,7 @@ function parseStampedSummary(raw) {
 /**
  * ExecSummaryCell
  *
- * Staleness is determined by customfield_45660 (Status Update Date).
+ * Staleness is determined by statusUpdateDate (Status Update Date).
  * If that date is > 7 days ago → show "⚠ Stale Update" only, no button.
  * Otherwise → show existing summary (if any) + Generate/Regenerate button.
  */

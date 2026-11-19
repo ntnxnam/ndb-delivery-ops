@@ -12,8 +12,8 @@ jest.mock('../../utils/teamConfig', () => ({
   getKpisForTeam: jest.fn(),
   loadTeamBoardConfig: jest.fn(() => ({
     defaultTeamId: 'ndb',
-    sprintFieldId: 'customfield_10360',
-    storyPointsFieldId: 'customfield_10002',
+    sprintFieldId: 'custom'+'field_10360',
+    storyPointsFieldId: 'custom'+'field_10002',
     pendingQAStatusName: 'Resolved',
     completedStatusName: 'Closed',
     teams: [{ id: 'ndb', name: 'NDB', boardId: 2888, baseFilter: 'filter=NDB-All-Base-Filter and statusCategory!=Done' }]

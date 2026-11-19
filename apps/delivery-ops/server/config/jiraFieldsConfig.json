@@ -374,7 +374,7 @@
         "label": "Release Commit",
         "type": "select",
         "category": "indicators",
-        "description": "Release Commit state (e.g. Commit) — used by Dependency View ask vs committed",
+        "description": "Release Commit state (e.g. Commit) \u2014 used by Dependency View ask vs committed",
         "usedIn": [
           "dependency-view",
           "fetch"
@@ -479,7 +479,9 @@
         "type": "date",
         "category": "extras",
         "description": "Start Date (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "Start Date",
         "jql": "customfield_11069",
         "standard": false
@@ -490,7 +492,9 @@
         "type": "date",
         "category": "extras",
         "description": "GA Date (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "GA Date",
         "jql": "customfield_14367",
         "standard": false
@@ -501,7 +505,9 @@
         "type": "date",
         "category": "extras",
         "description": "Commit Gate Review Date (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "Commit Gate Review Date",
         "jql": "customfield_40473",
         "standard": false
@@ -512,7 +518,9 @@
         "type": "date",
         "category": "extras",
         "description": "Automation Completion Date (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "Automation Completion Date",
         "jql": "customfield_18461",
         "standard": false
@@ -523,7 +531,9 @@
         "type": "user",
         "category": "extras",
         "description": "System Test Lead (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "System Test Lead",
         "jql": "customfield_23461",
         "standard": false
@@ -534,7 +544,9 @@
         "type": "number",
         "category": "extras",
         "description": "Story Points (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "Story Points",
         "jql": "customfield_10002",
         "standard": false
@@ -545,9 +557,76 @@
         "type": "sprint",
         "category": "extras",
         "description": "Sprint NDB 10360 (autocomplete parity)",
-        "usedIn": ["autocomplete"],
+        "usedIn": [
+          "autocomplete"
+        ],
         "jiraName": "Sprint",
         "jql": "customfield_10360",
+        "standard": false
+      },
+      "storyPointsAlt1": {
+        "id": "customfield_10016",
+        "label": "Story Points (alt 10016)",
+        "type": "number",
+        "category": "extras",
+        "description": "Story Points alias",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Story Points",
+        "jql": "customfield_10016",
+        "standard": false
+      },
+      "storyPointsAlt2": {
+        "id": "customfield_10026",
+        "label": "Story Points (alt 10026)",
+        "type": "number",
+        "category": "extras",
+        "description": "Story Points alias",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Story Points",
+        "jql": "customfield_10026",
+        "standard": false
+      },
+      "integratedVersion": {
+        "id": "customfield_11360",
+        "label": "Integrated Version",
+        "type": "array",
+        "category": "extras",
+        "description": "Integrated Version versions",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Integrated Version",
+        "jql": "customfield_11360",
+        "standard": false
+      },
+      "featNumber": {
+        "id": "customfield_14262",
+        "label": "FEAT Number",
+        "type": "string",
+        "category": "extras",
+        "description": "FEAT Number",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "FEAT Number",
+        "jql": "customfield_14262",
+        "standard": false
+      },
+      "featId": {
+        "id": "customfield_40468",
+        "label": "Feat ID",
+        "type": "string",
+        "category": "extras",
+        "description": "Feat ID",
+        "usedIn": [
+          "fetch"
+        ],
+        "jiraName": "Feat ID",
+        "jql": "customfield_40468",
         "standard": false
       }
     },
@@ -587,7 +666,7 @@
       "pattern": "{prefix}-not-por",
       "jql": "labels not in (\"{prefix}-not-por\")",
       "template": "labels not in (\"{label}\")",
-      "description": "POR exclusion label — ticket is not part of Plan-of-Record scope; filtered out of commit counts. Empty-label tickets need (labels is EMPTY OR labels not in ...) wrapper at call site (releaseOutstandingDeferralService already does).",
+      "description": "POR exclusion label \u2014 ticket is not part of Plan-of-Record scope; filtered out of commit counts. Empty-label tickets need (labels is EMPTY OR labels not in ...) wrapper at call site (releaseOutstandingDeferralService already does).",
       "usedIn": [
         "fetch",
         "commit-jql",
@@ -602,7 +681,7 @@
         "pattern": "{prefix}-{version}-deferred",
         "jql": "labels = \"{prefix}-{version}-deferred\"",
         "template": "labels = \"{label}\"",
-        "description": "Deferred from release — ticket moved out of fixVersion but retains label for audit",
+        "description": "Deferred from release \u2014 ticket moved out of fixVersion but retains label for audit",
         "usedIn": [
           "fetch",
           "release-outstanding-work",
@@ -613,7 +692,7 @@
         "pattern": "{prefix}-{version}-mustfix",
         "jql": "labels = \"{prefix}-{version}-mustfix\"",
         "template": "labels = \"{label}\"",
-        "description": "Must-fix for release — must ship even if deferred; overrides deferred label for same version",
+        "description": "Must-fix for release \u2014 must ship even if deferred; overrides deferred label for same version",
         "usedIn": [
           "fetch",
           "release-outstanding-work",
@@ -624,7 +703,7 @@
         "pattern": "{prefix}-{version}-wishlist",
         "jql": "labels = \"{prefix}-{version}-wishlist\"",
         "template": "labels = \"{label}\"",
-        "description": "Wishlist / candidate pool for release — not committed, used for dependency sidecar",
+        "description": "Wishlist / candidate pool for release \u2014 not committed, used for dependency sidecar",
         "usedIn": [
           "fetch",
           "payload-sidecar",
@@ -635,7 +714,7 @@
         "pattern": "{prefix}-{version}-long-term-funded",
         "jql": "labels = \"{prefix}-{version}-long-term-funded\"",
         "template": "labels = \"{label}\"",
-        "description": "Long-term funded work — funded across multiple releases, shown alongside fixVersion scope",
+        "description": "Long-term funded work \u2014 funded across multiple releases, shown alongside fixVersion scope",
         "usedIn": [
           "fetch",
           "gantt",
@@ -646,7 +725,7 @@
         "pattern": "{prefix}-{version}-code-complete-extension-recieved",
         "jql": "labels in (\"{prefix}-{version}-code-complete-extension-recieved\", \"{prefix}-{version}-code-complete-extention-recieved\")",
         "template": "labels = \"{label}\"",
-        "description": "Code-complete extension received — FEAT granted extra time beyond gate. Note: recieved/extention are JIRA-canonical misspellings preserved for back-compat (correct received variant intentionally in variants if present).",
+        "description": "Code-complete extension received \u2014 FEAT granted extra time beyond gate. Note: recieved/extention are JIRA-canonical misspellings preserved for back-compat (correct received variant intentionally in variants if present).",
         "usedIn": [
           "fetch",
           "release-items"
@@ -661,7 +740,7 @@
         "pattern": "{prefix}-{train}-dependency",
         "jql": "labels in (\"{prefix}-{train}-dependency\")",
         "template": "labels = \"{label}\"",
-        "description": "Train dependency ask — partner team dependency requested for a release train",
+        "description": "Train dependency ask \u2014 partner team dependency requested for a release train",
         "usedIn": [
           "dependency-view",
           "fetch"
@@ -673,7 +752,7 @@
         "pattern": "longevity",
         "jql": "labels = longevity",
         "template": "labels = \"{label}\"",
-        "description": "System-test / longevity marker — used to slice ST scale and KPI pulse",
+        "description": "System-test / longevity marker \u2014 used to slice ST scale and KPI pulse",
         "usedIn": [
           "kpi",
           "system-test-scale"

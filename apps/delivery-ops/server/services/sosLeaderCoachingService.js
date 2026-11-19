@@ -5,6 +5,7 @@
 
 const { generateSosLeaderCoaching } = require('./naiService');
 const logger = require('../utils/logger');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const STALE_STATUS_DAYS = 14;
 const DAY_MS = 86400000;
@@ -219,7 +220,7 @@ function buildLeaderPacket({
     if (isP0(item) && isOpen(item)) blockers.push(item.key);
     if (isMustFix(item) && isOpen(item)) blockers.push(item.key);
 
-    const rag = riskWord(item.customfield_23560);
+    const rag = riskWord(getFieldValue(item, 'riskIndicator'));
     if (rag === 'Red' && isOpen(item)) redRag.push(item.key);
 
     const versions = String(item.fixVersions || '')
@@ -232,9 +233,9 @@ function buildLeaderPacket({
         pastGateLagging.push(item.key);
       }
       if (nextGate && nextGate.daysFromToday != null && nextGate.daysFromToday <= 14 && isOpen(item)) {
-        const cg = item.customfield_35863;
-        const pg = item.customfield_35864;
-        const cc = item.customfield_11067;
+        const cg = getFieldValue(item, 'commitGate');
+        const pg = getFieldValue(item, 'promotionGate');
+        const cc = getFieldValue(item, 'codeComplete');
         const prereq = nextGate.kind === 'PG' ? pg || cg : nextGate.kind === 'CG' ? cc || cg : cc;
         if (prereq && String(prereq).slice(0, 10) > nextGate.iso) {
           datesPastNextGate.push(item.key);
@@ -244,23 +245,23 @@ function buildLeaderPacket({
 
     if (isDoneFamily(item)) {
       if (
-        linkEmpty(item.customfield_14463)
-        || linkEmpty(item.customfield_14464)
-        || linkEmpty(item.customfield_14465)
+        linkEmpty(getFieldValue(item, 'requirementsLink'))
+        || linkEmpty(getFieldValue(item, 'designDocLink'))
+        || linkEmpty(getFieldValue(item, 'testPlanLink'))
       ) {
         collateralGaps.push(item.key);
       }
     }
 
     if (isOpen(item) && rag === 'NotSet') riskNotSet.push(item.key);
-    const age = daysSinceIso(item.customfield_45660);
+    const age = daysSinceIso(getFieldValue(item, 'statusUpdateDate'));
     if (isOpen(item) && (age == null || age >= STALE_STATUS_DAYS)) staleStatus.push(item.key);
     if (isOpen(item) && (rag === 'Yellow' || rag === 'Red')) {
-      if (textEmpty(item.customfield_47780) || textEmpty(item.customfield_55664)) {
+      if (textEmpty(getFieldValue(item, 'riskAssessment')) || textEmpty(getFieldValue(item, 'pathToGreen'))) {
         missingPathToGreen.push(item.key);
       }
     }
-    if (isOpen(item) && (!item.customfield_35863 || !item.customfield_35864)) {
+    if (isOpen(item) && (!getFieldValue(item, 'commitGate') || !getFieldValue(item, 'promotionGate'))) {
       missingCgPg.push(item.key);
     }
 

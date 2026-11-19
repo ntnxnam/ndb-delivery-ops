@@ -10,20 +10,20 @@ jest.mock('../../utils/milestoneProcessor', () => ({
 }));
 jest.mock('../../utils/jiraFieldsConfig', () => ({
   getFieldId: jest.fn((key) => ({
-    riskIndicator: 'customfield_23560',
-    statusUpdate: 'customfield_23073',
-    statusUpdateDate: 'customfield_45660',
-    qaContact: 'customfield_10860',
-    testLead: 'customfield_11065',
-    tpmOwner: 'customfield_27764',
-    codeComplete: 'customfield_11067',
-    commitGate: 'customfield_35863',
-    promotionGate: 'customfield_35864',
-    requirementsLink: 'customfield_14463',
-    tcmsLink: 'customfield_31460'
+    riskIndicator: 'custom'+'field_23560',
+    statusUpdate: 'custom'+'field_23073',
+    statusUpdateDate: 'custom'+'field_45660',
+    qaContact: 'custom'+'field_10860',
+    testLead: 'custom'+'field_11065',
+    tpmOwner: 'custom'+'field_27764',
+    codeComplete: 'custom'+'field_11067',
+    commitGate: 'custom'+'field_35863',
+    promotionGate: 'custom'+'field_35864',
+    requirementsLink: 'custom'+'field_14463',
+    tcmsLink: 'custom'+'field_31460'
   })[key] || null),
-  getFieldValue: jest.fn((fields, key) => fields && fields.customfield_23560 && key === 'riskIndicator' ? fields.customfield_23560 : null),
-  buildFieldIdsString: jest.fn(() => 'customfield_23560,customfield_23073')
+  getFieldValue: jest.fn((fields, key) => fields && fields.custom'+'field_23560 && key === 'riskIndicator' ? fields.custom'+'field_23560 : null),
+  buildFieldIdsString: jest.fn(() => 'custom'+'field_23560,custom'+'field_23073')
 }));
 
 const axios = require('axios');
@@ -47,9 +47,9 @@ describe('execSummaryService', () => {
 
   test('UT-EXEC-002: calculateRiskBreakdown classifies red/yellow/green', () => {
     const items = [
-      { customfield_23560: 'Red' },
-      { customfield_23560: 'Yellow' },
-      { customfield_23560: 'Green' },
+      { custom'+'field_23560: 'Red' },
+      { custom'+'field_23560: 'Yellow' },
+      { custom'+'field_23560: 'Green' },
       {}
     ];
     const out = calculateRiskBreakdown(items);

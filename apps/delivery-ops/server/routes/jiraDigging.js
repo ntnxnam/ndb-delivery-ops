@@ -15,6 +15,7 @@ const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { JiraConnector } = require('@portfolio-delivery-ops/shared');
 const { loadEnv } = require('@portfolio-delivery-ops/shared');
 const logger = require('../utils/logger');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const MAX_JQL_LENGTH = 4000;
 const MAX_ISSUES = 10000;
@@ -24,13 +25,13 @@ const DIGGING_FIELDS = [
   'key', 'summary', 'issuetype', 'status', 'priority', 'assignee', 'reporter',
   'fixVersions', 'created', 'updated', 'resolution', 'resolutiondate', 'duedate',
   'labels', 'components', 'parent',
-  'customfield_10002', 'customfield_10360', 'customfield_10361', 'customfield_10860',
-  'customfield_11065', 'customfield_11067', 'customfield_11068', 'customfield_11861',
-  'customfield_13860', 'customfield_13861', 'customfield_14463', 'customfield_15160',
-  'customfield_20363', 'customfield_23073', 'customfield_23560', 'customfield_27764',
-  'customfield_31460', 'customfield_35863', 'customfield_35864', 'customfield_38460',
-  'customfield_45660', 'customfield_47780', 'customfield_51460', 'customfield_55662',
-  'customfield_55663', 'customfield_55664',
+  getFieldId('storyPoints'), getFieldId('sprintNdb'), getFieldId('epicLink'), getFieldId('qaContact'),
+  getFieldId('testLead'), getFieldId('codeComplete'), getFieldId('testPlan'), getFieldId('guiLead'),
+  getFieldId('requirementsDone'), getFieldId('fsdsDone'), getFieldId('requirementsLink'), getFieldId('primaryComponent'),
+  getFieldId('parentLink'), getFieldId('statusUpdate'), getFieldId('riskIndicator'), getFieldId('tpmOwner'),
+  getFieldId('tcmsLink'), getFieldId('commitGate'), getFieldId('promotionGate'), getFieldId('executiveStatusUpdate'),
+  getFieldId('statusUpdateDate'), getFieldId('riskAssessment'), getFieldId('teamMembers'), getFieldId('cgChecklistLink'),
+  getFieldId('pgChecklistLink'), getFieldId('pathToGreen'),
 ].join(',');
 
 function cryptoHash(jql) {

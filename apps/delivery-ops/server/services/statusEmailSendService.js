@@ -10,6 +10,7 @@ const emailSenderCCConfig = require('../config/emailSenderCCConfig.json');
 const { saveEmailHistory } = require('../utils/emailHistoryDB');
 const logger = require('../utils/logger');
 const { HIGHLIGHTS_LOWLIGHTS_REQUIRED_SECTIONS } = require('../utils/emailHighlights');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 function validateHighlights(additionalDetails) {
   const highlightsLowlights = (additionalDetails && typeof additionalDetails === 'string')
@@ -69,7 +70,7 @@ function resolveCcEmails({ userEmail, selectedCCRecipients, jiraData }) {
       if (!fieldId) continue;
       const raw = jiraData[fieldId];
       if (!raw) continue;
-      if (fieldId === 'watchers' || fieldId === 'customfield_51460') {
+      if (fieldId === 'watchers' || fieldId === getFieldId('teamMembers')) {
         extractEmailsFromJiraUserArray(raw).forEach(addNutanixCC);
       } else {
         addNutanixCC(extractEmailFromJiraUser(raw));

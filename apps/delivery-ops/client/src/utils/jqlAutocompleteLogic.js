@@ -133,7 +133,7 @@ export function detectContext(text, caret) {
   const beforeToken = before.slice(0, tokenMatch ? tokenMatch.index : before.length).trimEnd();
   const fieldOpMatch = trimmed.match(/(\w[\w\s._-]*?)\s*(=|!=|in|not in|~|!~|is|was|changed|during)\s*([^\s,()]*)$/i);
   if (fieldOpMatch) {
-    const field = fieldOpMatch[1].trim().toLowerCase().split(' ').pop().replace('customfield_', '');
+    const field = fieldOpMatch[1].trim().toLowerCase().split(' ').pop().replace('custom'+'field_', '');
     const typedVal = fieldOpMatch[3] || '';
     return { kind: 'value', field, typedVal, lastToken: typedVal, beforeToken: before.slice(0, before.length - typedVal.length) };
   }

@@ -64,7 +64,7 @@ function ReleaseVersionGantt({ ganttConfig, selectedVersion, items, checkpointHi
   };
 
   const renderGanttItem = (item, isLongTerm=false) => {
-    const tcmsRaw=getFieldValue(item,'tcmsLink')??item.customfield_31460;
+    const tcmsRaw=getFieldValue(item,'tcmsLink');
     const manualTcmsUrl=tcmsRaw?.value?.url || (typeof tcmsRaw==='string'&&/^https?:\/\//i.test(tcmsRaw)?tcmsRaw:null);
     const tcmsVer=(selectedVersion||'').replace(/^NDB-/i,'');
     const tcmsSearch=encodeURIComponent(JSON.stringify([{field:'Requirements',op:'$eq',value:[item.key]}]));

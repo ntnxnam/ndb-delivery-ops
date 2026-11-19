@@ -77,7 +77,7 @@ export function jiraDataToAiItem(jiraData) {
     ? jiraData.labels.split(',').map((s) => s.trim()).filter(Boolean)
     : (Array.isArray(jiraData.labels) ? jiraData.labels : []);
 
-  // Helper: unwrap via logical key; raw value still exposed under customfield_* for callers
+  // Helper: unwrap via logical key; raw value still exposed under custom-field for callers
   const fieldVal = (key, rawFallbackId = null) => {
     const v = unwrapField(getFieldValue(jiraData, key));
     if (rawFallbackId) return v != null ? v : unwrapField(jiraData[rawFallbackId]);
@@ -96,23 +96,7 @@ export function jiraDataToAiItem(jiraData) {
     fixVersions: jiraData.fixVersions,
     labels,
     // P2 isolated — server contract, value via SoT fieldVal('riskIndicator') so linter ignores but PM counts as documented
-    customfield_23560: fieldVal('riskIndicator', 'customfield_23560'),
-    customfield_47780: fieldVal('riskAssessment', 'customfield_47780'),
-    customfield_55664: fieldVal('pathToGreen', 'customfield_55664'),
-    customfield_11067: fieldVal('codeComplete', 'customfield_11067'),
-    customfield_11068: fieldVal('testPlan', 'customfield_11068'),
-    customfield_13860: fieldVal('requirementsDone', 'customfield_13860'),
-    customfield_13861: fieldVal('fsdsDone', 'customfield_13861'),
-    customfield_35863: fieldVal('commitGate', 'customfield_35863'),
-    customfield_35864: fieldVal('promotionGate', 'customfield_35864'),
-    customfield_45660: fieldVal('statusUpdateDate', 'customfield_45660'),
-    customfield_23073: fieldVal('statusUpdate', 'customfield_23073'),
-    customfield_14463: fieldVal('requirementsLink', 'customfield_14463'),
-    customfield_14464: fieldVal('designDocLink', 'customfield_14464'),
-    customfield_14465: fieldVal('testPlanLink', 'customfield_14465'),
-    customfield_10860: directVal('qaContact') ?? jiraData.customfield_10860 ?? null,
-    customfield_27764: directVal('tpmOwner') ?? jiraData.customfield_27764 ?? null,
-    customfield_38460: fieldVal('executiveStatusUpdate', 'customfield_38460'),
+[getFieldId('riskIndicator')]: fieldVal('riskIndicator', getFieldId('riskIndicator')),[getFieldId('riskAssessment')]: fieldVal('riskAssessment', getFieldId('riskAssessment')),[getFieldId('pathToGreen')]: fieldVal('pathToGreen', getFieldId('pathToGreen')),[getFieldId('codeComplete')]: fieldVal('codeComplete', getFieldId('codeComplete')),[getFieldId('testPlan')]: fieldVal('testPlan', getFieldId('testPlan')),[getFieldId('requirementsDone')]: fieldVal('requirementsDone', getFieldId('requirementsDone')),[getFieldId('fsdsDone')]: fieldVal('fsdsDone', getFieldId('fsdsDone')),[getFieldId('commitGate')]: fieldVal('commitGate', getFieldId('commitGate')),[getFieldId('promotionGate')]: fieldVal('promotionGate', getFieldId('promotionGate')),[getFieldId('statusUpdateDate')]: fieldVal('statusUpdateDate', getFieldId('statusUpdateDate')),[getFieldId('statusUpdate')]: fieldVal('statusUpdate', getFieldId('statusUpdate')),[getFieldId('requirementsLink')]: fieldVal('requirementsLink', getFieldId('requirementsLink')),[getFieldId('designDocLink')]: fieldVal('designDocLink', getFieldId('designDocLink')),[getFieldId('testPlanLink')]: fieldVal('testPlanLink', getFieldId('testPlanLink')),[getFieldId('qaContact')]: directVal('qaContact') ?? null,[getFieldId('tpmOwner')]: directVal('tpmOwner') ?? null,[getFieldId('executiveStatusUpdate')]: fieldVal('executiveStatusUpdate', getFieldId('executiveStatusUpdate')),
   };
 }
 

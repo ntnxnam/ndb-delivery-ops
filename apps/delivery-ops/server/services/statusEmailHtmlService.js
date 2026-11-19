@@ -16,6 +16,7 @@ const {
   resolveReleaseCcDate,
   buildGateVsActualRows,
 } = require('../utils/gateActualsUtils');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const JIRA_KEY_RE = /^[A-Z][A-Z0-9]+-\d+$/i;
 
@@ -25,8 +26,8 @@ function safeJiraKey(key) {
 }
 
 const EXTRA_EMAIL_FIELDS = [
-  ['customfield_55662', 'Link to CG checklist'],
-  ['customfield_55663', 'Link to PG checklist'],
+  [getFieldId('cgChecklistLink'), 'Link to CG checklist'],
+  [getFieldId('pgChecklistLink'), 'Link to PG checklist'],
 ];
 
 const MONTH_INDEX = {
@@ -93,9 +94,9 @@ function renderExtraEmailCells(jiraData) {
 /** Risk Indicator + Risk Assessment + Path to Green — below Highlights in email. */
 function renderRiskContextSection(jiraData) {
   if (!jiraData) return '';
-  const risk = jiraData.customfield_23560;
-  const assessment = jiraData.customfield_47780;
-  const path = jiraData.customfield_55664;
+  const risk = getFieldValue(jiraData, 'riskIndicator');
+  const assessment = getFieldValue(jiraData, 'riskAssessment');
+  const path = getFieldValue(jiraData, 'pathToGreen');
   const riskVal = fieldText(risk);
   const assessmentVal = fieldText(assessment);
   const pathVal = fieldText(path);
@@ -387,12 +388,12 @@ function buildStatusEmailHtml({
       
       // Date fields row (fixed order): Requirements Done → FS/DS → Test Plan → Code Complete → CG → PG
       const DATE_ROW_FIELDS = [
-        { field: jiraData.customfield_13860, fallback: 'Rqmnts Done Date' },
-        { field: jiraData.customfield_13861, fallback: 'FS/DS Done Date' },
-        { field: jiraData.customfield_11068, fallback: 'Test Plan Date' },
-        { field: jiraData.customfield_11067, fallback: 'Code Complete Date' },
-        { field: jiraData.customfield_35863, fallback: 'Commit Gate Ready Estimation Date' },
-        { field: jiraData.customfield_35864, fallback: 'Promotion Gate Ready Estimation Date' },
+        { field: getFieldValue(jiraData, 'requirementsDone'), fallback: 'Rqmnts Done Date' },
+        { field: getFieldValue(jiraData, 'fsdsDone'), fallback: 'FS/DS Done Date' },
+        { field: getFieldValue(jiraData, 'testPlan'), fallback: 'Test Plan Date' },
+        { field: getFieldValue(jiraData, 'codeComplete'), fallback: 'Code Complete Date' },
+        { field: getFieldValue(jiraData, 'commitGate'), fallback: 'Commit Gate Ready Estimation Date' },
+        { field: getFieldValue(jiraData, 'promotionGate'), fallback: 'Promotion Gate Ready Estimation Date' },
       ];
       emailHtml += `
                 <tr>
@@ -419,14 +420,14 @@ function buildStatusEmailHtml({
         `;
       }
 
-      // Links row: customfield_14463, customfield_14464, customfield_14465, customfield_31460 (TCMS)
-      if (jiraData.customfield_14463 || jiraData.customfield_31460 || jiraData.customfield_14464 || jiraData.customfield_14465) {
+      // Links row: requirementsLink, designDocLink, testPlanLink, tcmsLink (TCMS)
+      if (getFieldValue(jiraData, 'requirementsLink')) {
         emailHtml += `
                 <tr>
         `;
         const linkColWidth = '12.5%';
-        if (jiraData.customfield_14463) {
-          const field14463 = jiraData.customfield_14463;
+        if (getFieldValue(jiraData, 'requirementsLink')) {
+          const field14463 = getFieldValue(jiraData, 'requirementsLink');
           const field14463Name = field14463.name || 'Link to Requirements';
           const field14463Value = field14463.value || {};
           const field14463Bg = field14463Value.type === 'notSet' ? '#fff3cd' : 'transparent';
@@ -440,8 +441,8 @@ function buildStatusEmailHtml({
                   <td style="padding: 8px; border: 1px solid #1a1a1a; width: ${linkColWidth}; font-size: 0.9375rem; background-color: ${field14463Bg}; font-weight: ${field14463Weight};">${field14463Display}</td>
           `;
         }
-        if (jiraData.customfield_14464) {
-          const field14464 = jiraData.customfield_14464;
+        if (getFieldValue(jiraData, 'designDocLink')) {
+          const field14464 = getFieldValue(jiraData, 'designDocLink');
           const field14464Name = field14464.name || 'Link to Design Doc';
           const field14464Value = field14464.value || {};
           const field14464Bg = field14464Value.type === 'notSet' ? '#fff3cd' : 'transparent';
@@ -455,8 +456,8 @@ function buildStatusEmailHtml({
                   <td style="padding: 8px; border: 1px solid #1a1a1a; width: ${linkColWidth}; font-size: 0.9375rem; background-color: ${field14464Bg}; font-weight: ${field14464Weight};">${field14464Display}</td>
           `;
         }
-        if (jiraData.customfield_14465) {
-          const field14465 = jiraData.customfield_14465;
+        if (getFieldValue(jiraData, 'testPlanLink')) {
+          const field14465 = getFieldValue(jiraData, 'testPlanLink');
           const field14465Name = field14465.name || 'Link to Test Plan';
           const field14465Value = field14465.value || {};
           const field14465Bg = field14465Value.type === 'notSet' ? '#fff3cd' : 'transparent';
@@ -470,8 +471,8 @@ function buildStatusEmailHtml({
                   <td style="padding: 8px; border: 1px solid #1a1a1a; width: ${linkColWidth}; font-size: 0.9375rem; background-color: ${field14465Bg}; font-weight: ${field14465Weight};">${field14465Display}</td>
           `;
         }
-        if (jiraData.customfield_31460) {
-          const field31460 = jiraData.customfield_31460;
+        if (getFieldValue(jiraData, 'tcmsLink')) {
+          const field31460 = getFieldValue(jiraData, 'tcmsLink');
           const field31460Name = field31460.name || 'TCMS Link';
           const field31460Value = field31460.value || {};
           const field31460Bg = field31460Value.type === 'notSet' ? '#fff3cd' : 'transparent';
@@ -490,10 +491,10 @@ function buildStatusEmailHtml({
         `;
       }
       
-      // Status Update row: customfield_23073, customfield_45660
-      if (jiraData.customfield_23073 || jiraData.customfield_45660) {
-        if (jiraData.customfield_23073) {
-          const statusUpdate = jiraData.customfield_23073;
+      // Status Update row: statusUpdate, statusUpdateDate
+      if (getFieldValue(jiraData, 'statusUpdate')) {
+        if (getFieldValue(jiraData, 'statusUpdate')) {
+          const statusUpdate = getFieldValue(jiraData, 'statusUpdate');
           const statusUpdateName = statusUpdate.name || 'Status Update';
           emailHtml += `
                 <tr>
@@ -503,8 +504,8 @@ function buildStatusEmailHtml({
           `;
         }
         
-        if (jiraData.customfield_45660) {
-          const statusUpdateDate = jiraData.customfield_45660;
+        if (getFieldValue(jiraData, 'statusUpdateDate')) {
+          const statusUpdateDate = getFieldValue(jiraData, 'statusUpdateDate');
           const statusUpdateDateName = statusUpdateDate.name || 'Status Update Last Updated Date';
           const statusUpdateDateValue = statusUpdateDate.value && statusUpdateDate.value !== 'N/A' && statusUpdateDate.value !== 'NA' && statusUpdateDate.value !== 'Not Set'
             ? statusUpdateDate.value
@@ -586,7 +587,7 @@ function buildStatusEmailHtml({
                   <td>${escapeHtml(feature.status || 'N/A')}</td>
                   <td>${escapeHtml(feature.resolution || 'N/A')}</td>
                   <td>${escapeHtml(feature.assignee || 'N/A')}</td>
-                  <td>${escapeHtml(feature.customfield_10860?.value || 'Not Set')}</td>
+                  <td>${escapeHtml(getFieldValue(feature, 'qaContact')?.value || 'Not Set')}</td>
                   <td>${escapeHtml(feature.duedate || 'Not Set')}</td>
                   <td>${escapeHtml(feature.fixVersions || 'N/A')}</td>
                 </tr>
@@ -611,7 +612,7 @@ function buildStatusEmailHtml({
                   <td>${escapeHtml(epic.status || 'N/A')}</td>
                   <td>${escapeHtml(epic.resolution || 'N/A')}</td>
                   <td>${escapeHtml(epic.assignee || 'N/A')}</td>
-                  <td>${escapeHtml(epic.customfield_10860?.value || 'Not Set')}</td>
+                  <td>${escapeHtml(getFieldValue(epic, 'qaContact')?.value || 'Not Set')}</td>
                   <td>${escapeHtml(epic.duedate || 'Not Set')}</td>
                   <td>${escapeHtml(epic.fixVersions || 'N/A')}</td>
                 </tr>

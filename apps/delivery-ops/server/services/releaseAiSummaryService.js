@@ -25,6 +25,7 @@ const { deriveSignals } = require('../utils/execSummarySignals');
 const { processAllMilestones } = require('../utils/milestoneProcessor');
 const releaseVersionsEmailConfig = require('../config/releaseVersionsEmailConfig.json');
 const logger = require('../utils/logger');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 let _shared;
 async function getShared() {
@@ -36,19 +37,19 @@ async function getShared() {
 
 const FIELDS = [
   'key', 'summary', 'status', 'assignee', 'priority',
-  'customfield_23560',  // Risk Indicator
-  'customfield_11067',  // Code Complete Date
-  'customfield_35863',  // Commit Gate Ready Estimation Date
-  'customfield_35864',  // Promotion Gate Ready Estimation Date
-  'customfield_23073',  // Status Update
-  'customfield_45660',  // Status Update Date
-  'customfield_10860',  // QA Contact
-  'customfield_27764',  // TPM Owner
-  'customfield_14463',  // Requirements Link
-  'customfield_13860',  // Rqmnts Done Date
-  'customfield_13861',  // FS/DS Done Date
-  'customfield_11068',  // Test Plan Date
-  'customfield_31460',  // TCMS Link
+  getFieldId('riskIndicator'),  // Risk Indicator
+  getFieldId('codeComplete'),  // Code Complete Date
+  getFieldId('commitGate'),  // Commit Gate Ready Estimation Date
+  getFieldId('promotionGate'),  // Promotion Gate Ready Estimation Date
+  getFieldId('statusUpdate'),  // Status Update
+  getFieldId('statusUpdateDate'),  // Status Update Date
+  getFieldId('qaContact'),  // QA Contact
+  getFieldId('tpmOwner'),  // TPM Owner
+  getFieldId('requirementsLink'),  // Requirements Link
+  getFieldId('requirementsDone'),  // Rqmnts Done Date
+  getFieldId('fsdsDone'),  // FS/DS Done Date
+  getFieldId('testPlan'),  // Test Plan Date
+  getFieldId('tcmsLink'),  // TCMS Link
   'issuelinks', 'labels',
 ].join(',');
 
