@@ -110,7 +110,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
   }
 
-  const envModel = process.env.NAI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
+  const envModel = process.env.NAI_DEFAULT_MODEL || '';
   const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
   if (!defaultModel) {
     throw new Error(
