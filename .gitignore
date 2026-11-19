@@ -48,3 +48,4 @@ node_modules/
 shared/.cache/jira-digging/
 test-project-breakdown.js
 mcp/**/dist
+.opencode/
