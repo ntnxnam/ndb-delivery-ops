@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { authenticatedGet } from '../shared/services/apiService';
 
 // Shared cache for release versions config to avoid duplicate fetches
 // Defined at module level so both hooks can share it
@@ -39,7 +39,7 @@ export function useGanttConfig(selectedVersion) {
             releaseVersionsConfigCache = response.data.releaseGateDates;
           }
         } else {
-          releaseVersionsConfigPromise = axios.get('/api/config/release-versions');
+          releaseVersionsConfigPromise = authenticatedGet('/api/config/release-versions');
           const response = await releaseVersionsConfigPromise;
           configData = response.data;
           fullConfigCache = response.data; // Cache the full response
@@ -126,7 +126,7 @@ export function useAllVersionsConfig() {
     const fetchAllVersions = async () => {
       setLoadingAllVersions(true);
       try {
-        releaseVersionsConfigPromise = axios.get('/api/config/release-versions');
+        releaseVersionsConfigPromise = authenticatedGet('/api/config/release-versions');
         const response = await releaseVersionsConfigPromise;
         if (response.data?.releaseGateDates) {
           releaseVersionsConfigCache = response.data.releaseGateDates;
