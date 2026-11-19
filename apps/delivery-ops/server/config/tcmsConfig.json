@@ -22,7 +22,10 @@
       "path": "/api/v1/all_test_cases/aggregate/metrics",
       "method": "GET",
       "description": "Per-FEAT pass/fail rollup (from your HAR drill-down). time_filter: all | four_weeks. target: {milestone}-qcow2.",
-      "supportedTimeFilters": ["all", "four_weeks"],
+      "supportedTimeFilters": [
+        "all",
+        "four_weeks"
+      ],
       "query": {
         "aggregation_field": "test_case.metadata.requirements",
         "time_filter": "all | four_weeks",
@@ -30,7 +33,6 @@
         "feat_type": "all",
         "filters": "{\"$and\":[{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}"
       },
-      "supportedTimeFilters": ["all", "four_weeks"],
       "response": "{ total, data:[{ _id, total, run, passed, failed, manual_run, manual_passed, manual_failed, automation_run, automation_passed, automation_failed, average_total_op_success_percentage, average_run_op_success_percentage, average_manual_op_success_percentage, average_automation_op_success_percentage }], success }"
     },
     "bugTypeMetrics": {
@@ -45,17 +47,27 @@
       "description": "Per-FEAT list filtered by milestone + requirements (Jira key) only",
       "body": "[{\"$match\":{\"$and\":[{\"target_milestone\":\"{milestone}\"},{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}}]",
       "totalPath": "/api-readonly/v1/milestone_all_test_cases/aggregate/total",
-      "supportedMilestones": { "release": "{milestone}", "masterForNDB": "NDB-master" },
-      "supportedTimeFilters": ["all", "four_weeks"]
+      "supportedMilestones": {
+        "release": "{milestone}",
+        "masterForNDB": "{projectSegment}-master"
+      },
+      "supportedTimeFilters": [
+        "all",
+        "four_weeks"
+      ]
     },
     "testResults": {
       "path": "/api/v1/test_results",
       "method": "GET",
       "description": "Last results for specific test_case.name set (from HAR)",
-      "query": { "raw_query": "{\"$or\":[{\"test_case.name\":...,\"source\":\"{source}\",\"target\":\"{target}\"}],\"status\":{\"$nin\":[\"pending\",\"running\"]}}", "sort": "-start_time", "limit": 50 }
+      "query": {
+        "raw_query": "{\"$or\":[{\"test_case.name\":...,\"source\":\"{source}\",\"target\":\"{target}\"}],\"status\":{\"$nin\":[\"pending\",\"running\"]}}",
+        "sort": "-start_time",
+        "limit": 50
+      }
     },
     "uiLink": {
-      "template": "{baseUrl}/#/testcases/NDB/{versionNum}/qcow2?search={encodedJSON}&tab=package_type&type=All",
+      "template": "{baseUrl}/#/testcases/{projectSegment}/{versionNum}/qcow2?search={encodedJSON}&tab=package_type&type=All",
       "searchJSON": "[{\"field\":\"Requirements\",\"op\":\"$eq\",\"value\":[\"{featKey}\"]}]"
     }
   },
@@ -63,11 +75,17 @@
     "milestone": "release / fixVersion  e.g. NDB-2.12  (TCMS target_milestone / milestone param)",
     "requirements": "project key       e.g. FEAT-18520 (TCMS test_case.metadata.requirements / feats param)",
     "target": "milestone + package_type e.g. NDB-2.12-qcow2 (TCMS target)",
-    "packageTypes": ["qcow2", "ova"],
+    "packageTypes": [
+      "qcow2",
+      "ova"
+    ],
     "sourcePattern": "NDB_Nutest-{milestoneShort}-tar  e.g. NDB_Nutest-2.12-tar"
   },
   "defaults": {
-    "branchMilestones": ["{milestone}", "master"],
+    "branchMilestones": [
+      "{milestone}",
+      "master"
+    ],
     "longTermOnlyMaster": true,
     "concurrency": 5,
     "timeoutMs": 15000,

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { authenticatedPost } from '../shared/services/apiService';
+import { useTeam } from '../contexts/TeamContext';
 
 /**
  * Hook to fetch TCMS QI + component data for release items.
@@ -12,6 +13,9 @@ export function useTcmsData() {
   const [tcmsDataMap, setTcmsDataMap] = useState({});
   const [loadingTcms, setLoadingTcms] = useState(false);
 
+  const { selectedTeam, selectedTeamId } = useTeam();
+  const tcms = selectedTeam?.tcms;
+  const releasePrefixes = selectedTeam?.releasePrefixes;
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
@@ -26,7 +30,7 @@ export function useTcmsData() {
     try {
       const res = await authenticatedPost(
         '/api/jira/release-items-tcms',
-        { fixVersion, itemKeys, isLongTerm: false },
+        { fixVersion, itemKeys, isLongTerm: false, teamId: selectedTeamId, tcms, releasePrefixes },
         { jiraToken, username }
       );
       if (res.data?.success && res.data?.data) {
@@ -37,7 +41,7 @@ export function useTcmsData() {
     } finally {
       setLoadingTcms(false);
     }
-  }, [jiraToken, username]);
+  }, [jiraToken, username, tcms, releasePrefixes, selectedTeamId]);
 
   /**
    * Fetch TCMS data for long-term funded items (master QI only).
@@ -49,7 +53,7 @@ export function useTcmsData() {
     try {
       const res = await authenticatedPost(
         '/api/jira/release-items-tcms',
-        { fixVersion, itemKeys, isLongTerm: true },
+        { fixVersion, itemKeys, isLongTerm: true, teamId: selectedTeamId, tcms, releasePrefixes },
         { jiraToken, username }
       );
       if (res.data?.success && res.data?.data) {
@@ -58,7 +62,7 @@ export function useTcmsData() {
     } catch (err) {
       console.warn('[useTcmsData] Long-term TCMS fetch failed:', err?.response?.data || err.message);
     }
-  }, [jiraToken, username]);
+  }, [jiraToken, username, tcms, releasePrefixes, selectedTeamId]);
 
   const resetTcmsData = useCallback(() => {
     setTcmsDataMap({});

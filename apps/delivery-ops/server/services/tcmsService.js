@@ -67,12 +67,15 @@ async function fetchMilestoneCount(featKey, milestone) {
  * @param {string} featKey    - e.g. "FEAT-16363"
  * @param {string} fixVersion - e.g. "NDB-2.11"
  */
-function buildTcmsQueryUrl(featKey, fixVersion) {
-  const versionNum = fixVersion.replace(/^NDB-/i, '');
+function stripReleasePrefix(version, tcmsConfig) { if (!version) return ''; const prefixes = tcmsConfig?.releasePrefixes || []; for (const p of prefixes) { if (!p) continue; if (version.startsWith(p)) return version.slice(p.length); if (version.toLowerCase().startsWith(p.toLowerCase())) return version.slice(p.length); } const m = version.match(/^[A-Za-z]+\s*[- ]\s*(.*)/); if (m) return m[1]; return version; }
+function buildTcmsQueryUrl(featKey, fixVersion, tcmsConfig) {
+  const baseUrl = tcmsConfig?.baseUrl || TCMS_API_BASE;
+  const segment = tcmsConfig?.projectSegment || 'NDB';
+  const versionNum = stripReleasePrefix(fixVersion, tcmsConfig);
   const search = encodeURIComponent(JSON.stringify([
     { field: 'Requirements', op: '$eq', value: [featKey] }
   ]));
-  return `${TCMS_API_BASE}/#/testcases/NDB/${versionNum}/qcow2?search=${search}&tab=package_type&type=All`;
+  return `${baseUrl}/#/testcases/${segment}/${versionNum}/qcow2?search=${search}&tab=package_type&type=All`;
 }
 
 /**
@@ -207,13 +210,14 @@ async function fetchMergedMetrics(featKey, milestone, timeFilter = 'all') {
   };
 }
 
-async function enrichItemWithQuality(item, fixVersion, isLongTerm = false) {
+async function enrichItemWithQuality(item, fixVersion, isLongTerm = false, tcmsConfig) {
   try {
-    item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion);
+    item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion, tcmsConfig);
+    const masterMilestone = tcmsConfig?.projectSegment ? `${tcmsConfig.projectSegment}-master` : 'NDB-master';
     const branchMilestone = fixVersion;
     const [masterAll, masterLast3, branchAll, branchLast3] = await Promise.all([
-      fetchMergedMetrics(item.key, 'NDB-master', 'all'),
-      fetchMergedMetrics(item.key, 'NDB-master', 'four_weeks'),
+      fetchMergedMetrics(item.key, masterMilestone, 'all'),
+      fetchMergedMetrics(item.key, masterMilestone, 'four_weeks'),
       isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all'),
       isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'four_weeks'),
     ]);
@@ -236,15 +240,15 @@ async function enrichItemWithQuality(item, fixVersion, isLongTerm = false) {
     item.tcmsQI = { master: masterAll, branch: branchAll };
   } catch (err) {
     console.warn(`[tcmsService] enrichItemWithQuality failed for ${item.key}:`, err.message);
-    item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion);
+    item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion, tcmsConfig);
     item.tcmsQuality = null;
     item.tcmsQI = null;
   }
   return item;
 }
 
-async function enrichItemWithTCMS(item, fixVersion, isLongTerm = false) {
-  return enrichItemWithQuality(item, fixVersion, isLongTerm);
+async function enrichItemWithTCMS(item, fixVersion, isLongTerm = false, tcmsConfig) {
+  return enrichItemWithQuality(item, fixVersion, isLongTerm, tcmsConfig);
 }
 
 /**
@@ -271,8 +275,8 @@ async function enrichWithConcurrency(items, enrichFn, limit = CONCURRENCY_LIMIT)
  * @param {object[]} items
  * @param {string}   fixVersion
  */
-async function enrichCommitItemsWithQI(items, fixVersion) {
-  return enrichWithConcurrency(items, item => enrichItemWithTCMS(item, fixVersion, false));
+async function enrichCommitItemsWithQI(items, fixVersion, tcmsConfig) {
+  return enrichWithConcurrency(items, item => enrichItemWithTCMS(item, fixVersion, false, tcmsConfig));
 }
 
 /**
@@ -280,8 +284,8 @@ async function enrichCommitItemsWithQI(items, fixVersion) {
  * @param {object[]} items
  * @param {string}   fixVersion
  */
-async function enrichLongTermItemsWithQI(items, fixVersion) {
-  return enrichWithConcurrency(items, item => enrichItemWithTCMS(item, fixVersion, true));
+async function enrichLongTermItemsWithQI(items, fixVersion, tcmsConfig) {
+  return enrichWithConcurrency(items, item => enrichItemWithTCMS(item, fixVersion, true, tcmsConfig));
 }
 
 module.exports = {

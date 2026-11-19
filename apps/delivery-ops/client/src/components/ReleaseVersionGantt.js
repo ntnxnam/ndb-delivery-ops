@@ -3,12 +3,15 @@ import { getFieldValue } from '../utils/jiraFields';
 import { useJiraConfig } from '../utils/jiraConfig';
 import { hasCodeCompleteExtensionLabel } from '../utils/releaseVersionUtils';
 import { useGanttData } from '../hooks/useGanttData';
+import { useTeam } from '../contexts/TeamContext';
+import { buildTcmsQueryUrl, getTcmsVersionNum } from '../utils/tcmsUtils';
 
 /**
  * ReleaseVersionGantt — JSX only (minimal-architecture). Derives via useGanttData + ganttService.
  */
 function ReleaseVersionGantt({ ganttConfig, selectedVersion, items, checkpointHistory, sortItems, sprintDates = [], allVersionsConfig = null, statusesWithTick = [], timelineOnly = false }) {
   const { jiraBaseUrl } = useJiraConfig();
+  const { selectedTeam } = useTeam();
   const d = useGanttData({ ganttConfig, selectedVersion, items, checkpointHistory, sortItems, sprintDates, allVersionsConfig, statusesWithTick });
 
   if (!ganttConfig || !selectedVersion) return null;
@@ -66,9 +69,8 @@ function ReleaseVersionGantt({ ganttConfig, selectedVersion, items, checkpointHi
   const renderGanttItem = (item, isLongTerm=false) => {
     const tcmsRaw=getFieldValue(item,'tcmsLink')??item.customfield_31460;
     const manualTcmsUrl=tcmsRaw?.value?.url || (typeof tcmsRaw==='string'&&/^https?:\/\//i.test(tcmsRaw)?tcmsRaw:null);
-    const tcmsVer=(selectedVersion||'').replace(/^NDB-/i,'');
-    const tcmsSearch=encodeURIComponent(JSON.stringify([{field:'Requirements',op:'$eq',value:[item.key]}]));
-    const constructedTcmsUrl=tcmsVer?`https://tcms.eng.nutanix.com/#/testcases/NDB/${tcmsVer}/qcow2?search=${tcmsSearch}&tab=package_type&type=All`:null;
+    const tcmsVer=getTcmsVersionNum(selectedVersion, selectedTeam);
+    const constructedTcmsUrl=tcmsVer?buildTcmsQueryUrl(item.key, selectedVersion, selectedTeam):null;
     const sStr=(typeof item.status==='string'?item.status:item.status?.name||'').toLowerCase().trim();
     const isAdv=['code complete met','commit gate met','promotion gate met','closed'].includes(sStr);
     const warn=isAdv&&!manualTcmsUrl;
