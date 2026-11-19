@@ -45,6 +45,11 @@
 <td><code>mailrelay.dyn.nutanix.com:25</code></td>
 <td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
 </tr>
+<tr>
+<td><code>jiraFieldsConfig.json</code></td>
+<td><code>server/config</code> + <code>client/src/config</code></td>
+<td>Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via <code>server/utils/jiraFieldsConfig.js</code> getFieldId/getLabelJql and <code>client/src/utils/jiraFields</code> + fieldConfig ensureLoaded() via <code>GET /api/config/jira-fields</code></td>
+</tr>
 </tbody></table>
 <h2>AI / NAI Configuration</h2>
 <p>All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.</p>

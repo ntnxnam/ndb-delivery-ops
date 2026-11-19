@@ -34,6 +34,14 @@ See [NDB-2.11.md](./NDB-2.11.md) when cut.
   of erroring or echoing Overall. See `docs/tcms-rows-followup.md` (Endpoint
   migration).
 
+## Unreleased — weave-client-fields-labels (jiraFieldsConfig v1.1.0 client consolidation)
+
+- **Client SoT mirror:** `client/src/config/jiraFieldsConfig.json` mirrors server SoT (8 field cats + labels taxonomy: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest).
+- **fieldConfig fetch-cache:** `client/src/utils/fieldConfig.js` ensureLoaded() via `GET /api/config/jira-fields` (fetch-once, cached) delegates to `client/src/utils/jiraFields` (getFieldId/getLabelJql); consumers must await ensureLoaded() before use.
+- **385→0 (resilience):** Hardcoded field IDs/labels removed from client services — all resolved via SoT; badge contrast fix on status pills.
+- **P2 cache labels:** trainAsk/longTerm cache keys use taxonomy patterns (no inline strings).
+- **Live proof 3× HTTP200:** `/api/config/jira-fields`, project-status, and dependency-view all 200 on QA run.
+
 ## Unreleased — `weave/feature-dashboard-shared-views` (bin-packing converter + `NAI_*` canonical)
 
 > Merge target: `main` @ `eb71a25`. Source: `apps/bin-packing`, `shared/src/connectors/aiConnector.ts`, `shared/src/services/csvConverterService.ts`, `mcp/shared/tools/convertToBinPackingCsv.ts`, `agent-pack/lighthouse/skills/csv-to-binpacking/`, `apps/delivery-ops/server/routes/binPackingConvert.js`.
