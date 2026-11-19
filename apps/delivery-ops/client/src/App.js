@@ -36,6 +36,7 @@ import SosLeaderSummaryPage from './components/SosLeaderSummaryPage';
 import DependencyViewPage from './components/DependencyViewPage';
 import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
 import TeamOverallReportPage from './components/TeamOverallReportPage';
+import SchedulePage from './components/SchedulePage';
 
 import './design-system/tokens.css';
 import './design-system/primitives.css';
@@ -380,6 +381,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['ai_insights_view']}>
                       <Layout>
                         <ChatbotPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/schedules"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <SchedulePage />
                       </Layout>
                     </ProtectedRoute>
                   }

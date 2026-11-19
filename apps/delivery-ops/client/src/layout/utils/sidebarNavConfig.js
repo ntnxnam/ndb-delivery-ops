@@ -215,6 +215,14 @@ export const SIDEBAR_NAV_GROUPS = [
       },
     ],
   },
+  {
+    id: 'tpm',
+    label: 'TPM',
+    icon: 'Timer',
+    children: [
+      { path: '/schedules', label: 'Schedules', description: 'TPM digest schedules — what runs when' },
+    ],
+  },
 ];
 
 export function isNavItemActive(pathname, path) {
