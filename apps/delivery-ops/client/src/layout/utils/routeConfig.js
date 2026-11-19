@@ -25,7 +25,7 @@ export const routeConfig = {
     {
       path: '/project-status',
       exact: true,
-      component: 'ReleaseVersionTab',
+      component: 'ProjectStatusPage',
       title: 'Project Status',
       description: 'Release picker, payload table, Gantt',
       permissions: [PERMISSIONS.RELEASE_VERSIONS_VIEW],

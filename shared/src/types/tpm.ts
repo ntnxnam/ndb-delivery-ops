@@ -34,6 +34,28 @@ export type TpmFetchResult = {
 
 export type TpmReportMode = 'my-focus' | 'release' | 'digest' | 'rollup';
 
+export type TpmKpiConfig = {
+  id: string;
+  name: string;
+  baseQuery: string;
+  jqlOverride?: string;
+  lifecyclePhase: string;
+};
+
+export type TpmKpiResult = {
+  kpiId: string;
+  kpiName: string;
+  jql: string;
+  count: number;
+  jiraUrl: string;
+  capturedAt: string;
+  warnings?: string[];
+  error?: string;
+};
+
+export type TpmLifecyclePhase = 'postRelease' | 'execution' | 'atRelease' | 'overall' | string;
+export type TpmPhaseSkillId = 'tpm-post-release' | 'tpm-execution' | 'tpm-at-release' | 'tpm-overall' | string;
+
 export type TpmSchedule = {
   id: string;
   skill: 'tpm-post-release' | 'tpm-execution' | 'tpm-at-release' | 'tpm-overall' | 'tpm-report';

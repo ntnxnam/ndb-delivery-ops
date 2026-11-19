@@ -143,12 +143,17 @@ function getFieldsByContext(context) {
  * @param {string} fieldKey - Logical field key (e.g., 'codeComplete')
  * @returns {*} Field value or null if not found
  */
-function getFieldValue(issueFields, fieldKey) {
-  const fieldId = getFieldId(fieldKey);
-  if (!fieldId || !issueFields) {
-    return null;
+function getFieldValue(issueOrFields, fieldKey) {
+  if (!issueOrFields) return null;
+  if (typeof issueOrFields.getFieldValue === 'function') {
+    try { return issueOrFields.getFieldValue(issueOrFields, fieldKey); } catch { /* fall through */ }
   }
-  return issueFields[fieldId] || null;
+  const fields = issueOrFields.fields || issueOrFields;
+  const fieldId = getFieldId(fieldKey);
+  if (!fieldId || !fields) return null;
+  if (fieldId in fields) return fields[fieldId] ?? null;
+  if (fieldKey in fields) return fields[fieldKey] ?? null;
+  return null;
 }
 
 /**

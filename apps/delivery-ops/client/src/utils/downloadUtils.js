@@ -59,7 +59,7 @@ function extractText(val) {
 }
 
 function extractRisk(item) {
-  const r = item.getFieldValue(item, 'riskIndicator');
+  const r = getFieldValue(item, 'riskIndicator');
   if (!r) return 'Not Set';
   if (typeof r === 'string') return r.trim() || 'Not Set';
   return (r.value || r.name || 'Not Set').trim();
@@ -93,21 +93,21 @@ function flattenItem(item, checkpointHistory, section) {
       : (item.fixVersions ? String(item.fixVersions) : ''),
     'Risk Indicator': extractRisk(item),
     Assignee: contact(item.assignee),
-    'QA Contact': contact(item.getFieldValue(item, 'qaContact')),
-    'PM Owner': contact(item.getFieldValue(item, 'pmOwner')),
-    'Program Mgr': contact(item.getFieldValue(item, 'tpmOwner')),
-    'FS/DS Done Date': fmtDate(item.getFieldValue(item, 'fsdsDone')),
+    'QA Contact': contact(getFieldValue(item, 'qaContact')),
+    'PM Owner': contact(getFieldValue(item, 'pmOwner')),
+    'Program Mgr': contact(getFieldValue(item, 'tpmOwner')),
+    'FS/DS Done Date': fmtDate(getFieldValue(item, 'fsdsDone')),
     'FS/DS History': historyStr('fsdsDone'),
-    'Test Plan Date': fmtDate(item.getFieldValue(item, 'testPlan')),
+    'Test Plan Date': fmtDate(getFieldValue(item, 'testPlan')),
     'Test Plan History': historyStr('testPlan'),
-    'Code Complete Date': fmtDate(item.getFieldValue(item, 'codeComplete')),
+    'Code Complete Date': fmtDate(getFieldValue(item, 'codeComplete')),
     'Code Complete History': historyStr('codeComplete'),
-    'Commit Gate Date': fmtDate(item.getFieldValue(item, 'commitGate')),
+    'Commit Gate Date': fmtDate(getFieldValue(item, 'commitGate')),
     'Commit Gate History': historyStr('commitGate'),
-    'Promotion Gate Date': fmtDate(item.getFieldValue(item, 'promotionGate')),
+    'Promotion Gate Date': fmtDate(getFieldValue(item, 'promotionGate')),
     'Promotion Gate History': historyStr('promotionGate'),
-    'Status Update': extractText(item.getFieldValue(item, 'statusUpdate')),
-    'Status Update Date': fmtDate(item.getFieldValue(item, 'statusUpdateDate')),
+    'Status Update': extractText(getFieldValue(item, 'statusUpdate')),
+    'Status Update Date': fmtDate(getFieldValue(item, 'statusUpdateDate')),
   };
 }
 

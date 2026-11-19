@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import { formatters } from '../shared/utils/formatters';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import { useSprintReport, MODES, INACTIVE_MODES } from '../hooks/useSprintReport';
-import './ReleaseVersionTab.css';
+import './ProjectStatusPage.css';
 export default function SprintReportPage(){
   const h=useSprintReport(); const chartsRowRef=useRef(null);
   const { hasTeamSelected,isTransitioning,selectedTeam,baseFilter,sprints,loadingSprints,mode,setMode,selectedSprintId,setSelectedSprintId,selectedSprintIds,reportResult,trendsResult,loadingReport,loadingTrends,error,spFields,loadingSpFields,discoverSpFields,periodType,setPeriodType,startDate,setStartDate,endDate,setEndDate,fiscalYear,setFiscalYear,fiscalQuarter,setFiscalQuarter,components,selectedComponentNames,pastReportResult,loadingComponents,loadingPastReport,pastValidationError,refreshingLive,toggleSprintForTrends,toggleComponent,runReport,runTrends,runPastReport,downloadReportCsv,copyReportToClipboard,downloadPastReportCsv,handleRefreshNow,countWorkingDays,getNutanixQuarterRange,copied }=h;

@@ -23,6 +23,20 @@ Categories: `jql` | `layout` | `config` | `naming` | `process` | `data` | `auth`
 
 _Seeded on 2026-11-20 with the initial audit trail. No cross-page mistakes have been logged yet._
 
+## 2026-11-20 — naming — stale ReleaseVersionTab name
+- **Page:** ProjectStatus (`/project-status`)
+- **Mistake:** Component/route still called `ReleaseVersionTab` (legacy tab name) after route became `/project-status`; new devs grepped wrong name, docs drifted.
+- **Correction:** Canonical `ProjectStatusPage.js` + `ProjectStatusPage.css`; `ReleaseVersionTab.js` kept as re-export shim; `routeConfig` + `App.js` + `aiAudit.config` updated.
+- **Prevention:** `ARCHITECTURE_TARGET.md` rename tracker; grep `ReleaseVersionTab` in CI warn; prefer route-name = file-name.
+- **Source:** `apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-20__initial__weave-backfill.md`
+
+## 2026-11-20 — data — recurring item.getFieldValue crash
+- **Page:** ProjectStatus (`/project-status`)
+- **Mistake:** `generateExecutiveSummary`/`generateReleaseHighlights`/`downloadUtils` called `item.getFieldValue(item, key)` (instance method) but items are plain JSON from `releaseItemsDataService`; every row threw `TypeError`, table blank.
+- **Correction:** Bulk fix `item.getFieldValue(item,` → `getFieldValue(item,`; hardened `getFieldValue` in both `client/src/utils/jiraFields.js` and `server/utils/jiraFieldsConfig.js` to unwrap `.fields`, delegate to legacy `.getFieldValue` if present, and fallback to `fieldKey` lookup; added `check-no-stale-getfieldvalue.sh` CI guard.
+- **Prevention:** Defensive `getFieldValue` handles both shapes; CI guard fails on `item.getFieldValue`; add unit test for `generateExecutiveSummary` with plain item.
+- **Source:** `apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-20__initial__weave-backfill.md`
+
 ## 2026-11-19 — data — duplicate RAG palette + unescaped risk history HTML
 - **Page:** ProjectStatus (`/project-status`), SosSummary (`/sos-summary`), EmailSender (`/`)
 - **Mistake:** `RAG_COLORS` duplicated across `ReleaseVersionTableCell`, `emailTableGenerator`, `sosEmailHtml` violating D41 SoT; `formatRiskWithHistoryHTML` interpolated raw risk words without escaping (XSS).

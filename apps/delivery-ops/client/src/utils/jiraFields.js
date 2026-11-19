@@ -35,10 +35,32 @@ export function getFieldIdsByCategory(category) {
   return Object.values(cat).map((f) => f.id);
 }
 
-export function getFieldValue(issueFields, fieldKey) {
+export function getFieldValue(issueOrFields, fieldKey) {
+  if (!issueOrFields) return null;
+  // Defensive: if caller passes full item (with .fields or .getFieldValue), unwrap or delegate
+  if (typeof issueOrFields.getFieldValue === 'function') {
+    try { return issueOrFields.getFieldValue(issueOrFields, fieldKey); } catch { /* fall through */ }
+  }
+  const fields = issueOrFields.fields || issueOrFields;
   const id = getFieldId(fieldKey);
-  if (!id || !issueFields) return null;
-  return issueFields[id] ?? null;
+  if (!id || !fields) return null;
+  // Support both mapped-by-id and raw JIRA fields expansion
+  if (id in fields) return fields[id] ?? null;
+  // Fallback: direct key lookup for already-mapped items (e.g. flattened release items)
+  if (fieldKey in fields) return fields[fieldKey] ?? null;
+  return null;
+}
+
+/** Guarded wrapper — never throws; logs once per session for stale callers */
+let _warnedStaleGetFieldValue = false;
+export function safeGetFieldValue(item, fieldKey) {
+  try { return getFieldValue(item, fieldKey); } catch (e) {
+    if (!_warnedStaleGetFieldValue) {
+      console.warn('[jiraFields] safeGetFieldValue fallback', e?.message);
+      _warnedStaleGetFieldValue = true;
+    }
+    return null;
+  }
 }
 
 export function buildFieldIdsString(fieldKeys) {

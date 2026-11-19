@@ -39,7 +39,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
 
   const getRisk = (item) => {
     // #region agent log
-    const field = item.getFieldValue(item, 'riskIndicator');
+    const field = getFieldValue(item, 'riskIndicator');
     const fieldType = typeof field;
     const fieldValue = Array.isArray(field) ? field.join(',') : (field && typeof field === 'object' ? JSON.stringify(field) : String(field || ''));
     console.log('[DEBUG bc15bd] getRisk field analysis:', {key: item.key, field, fieldType, fieldValue});
@@ -71,7 +71,7 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   const link = (key) =>
     `<a href="${jiraBaseUrl}/browse/${key}" style="color:#0052cc;">${key}</a>`;
 
-  const hasStatusUpdate = (item) => !!item.getFieldValue(item, 'statusUpdateDate');
+  const hasStatusUpdate = (item) => !!getFieldValue(item, 'statusUpdateDate');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -196,10 +196,10 @@ export function generateReleaseHighlights(items, selectedVersion, jiraBaseUrl) {
   // Date issues: CC date passed but not complete, or FS/DS > Test Plan
   const dateIssues = (arr) =>
     arr.filter((item) => {
-      const ccDate = parseDate(item.getFieldValue(item, 'codeComplete'));
-      const ccMissed = ccDate && isDateMissed(item.getFieldValue(item, 'codeComplete')) && !isCCMet(item);
-      const fsdsDate = parseDate(item.getFieldValue(item, 'fsdsDone'));
-      const tpDate = parseDate(item.getFieldValue(item, 'testPlan'));
+      const ccDate = parseDate(getFieldValue(item, 'codeComplete'));
+      const ccMissed = ccDate && isDateMissed(getFieldValue(item, 'codeComplete')) && !isCCMet(item);
+      const fsdsDate = parseDate(getFieldValue(item, 'fsdsDone'));
+      const tpDate = parseDate(getFieldValue(item, 'testPlan'));
       const orderIssue = fsdsDate && tpDate && fsdsDate >= tpDate;
       return ccMissed || orderIssue;
     });

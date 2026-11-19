@@ -1605,7 +1605,15 @@ async function getOverview({ token, teamId, release } = {}) {
     'ndb';
   const team = getTeamById(requested) || getTeamById(cfg.defaultTeamId) || getTeamById(board.defaultTeamId);
   const effectiveTeamId = (team && team.id) || requested;
-  const effectiveRelease = (release || cfg.defaultRelease || 'NDB-3.0').trim();
+  const { getGateGaDate } = require('../utils/releaseGateDateResolver');
+  const { pickNextUpcomingGaVersion } = require('../utils/teamScope');
+  let effectiveRelease = (release || cfg.defaultRelease || '').trim();
+  if (!effectiveRelease) {
+    // Derive from gate config SoT if static default missing — prevents hardcoded NDB-3.0
+    const gateDates = (() => { try { return JSON.parse(fs.readFileSync(RELEASE_CFG_PATH, 'utf8')).releaseGateDates || {}; } catch (_) { return {}; } })();
+    const syntheticVersions = Object.keys(gateDates).map((n) => ({ name: n, released: false, releaseDate: getGateGaDate(n) }));
+    effectiveRelease = pickNextUpcomingGaVersion(syntheticVersions) || '';
+  }
   const jiraBaseUrl = process.env.JIRA_BASE_URL || cfg.jiraBaseUrlDefault || 'https://jira.nutanix.com';
   const releaseGatesCfg = loadReleaseGates();
   const ndbGates = pickNdbGates(releaseGatesCfg, effectiveRelease);

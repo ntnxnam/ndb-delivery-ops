@@ -3,7 +3,6 @@
  * Fetch weaves call these; report weave reuses them for fan-out.
  */
 import type { TpmScope } from '../types/tpm.js';
-import type { TpmScope } from '../types/tpm.js';
 
 export function scopeLabel(scope: TpmScope): string {
   switch (scope.kind) {
@@ -27,4 +26,13 @@ export function scopeReleaseVersion(scope: TpmScope): string | null {
 export function scopeTeamId(scope: TpmScope): string {
   if (scope.kind === 'org') return scope.teamIds[0] ?? scope.orgId;
   return scope.teamId;
+}
+
+export function validateScope(scope: TpmScope): string | null {
+  if (!scope || typeof scope.kind !== 'string') return 'scope.kind missing';
+  if (scope.kind === 'me' && (!scope.teamId || !scope.principal)) return 'me scope requires teamId and principal';
+  if (scope.kind === 'release' && (!scope.releaseVersion || !scope.teamId)) return 'release scope requires releaseVersion and teamId';
+  if (scope.kind === 'team' && !scope.teamId) return 'team scope requires teamId';
+  if (scope.kind === 'org' && (!scope.orgId || !Array.isArray(scope.teamIds))) return 'org scope requires orgId and teamIds';
+  return null;
 }

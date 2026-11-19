@@ -12,7 +12,7 @@ import { useAuth } from './auth/hooks/useAuth';
 
 // Import existing components (these will be gradually migrated to the new modules)
 import EmailSender from './components/EmailSender';
-import ReleaseVersionTab from './components/ReleaseVersionTab';
+import ProjectStatusPage from './components/ProjectStatusPage';
 import ReleaseSetup from './components/ReleaseSetup';
 import ReleaseConfigPage from './components/ReleaseConfigPage';
 import GenericEmailer from './components/GenericEmailer';
@@ -99,7 +99,7 @@ const AuthenticatedApp = () => {
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout fluid>
-                        <ReleaseVersionTab />
+                        <ProjectStatusPage />
                       </Layout>
                     </ProtectedRoute>
                   }

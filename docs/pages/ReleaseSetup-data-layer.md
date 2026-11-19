@@ -1,25 +1,46 @@
 # Release Setup — Data Layer & Middleware Contract
 
 **Route**: `/release-setup`  
-**Server routes used**: `server/routes/jira/index.js`, `server/routes/config.js`, `server/routes/dateMover.js`  
-**Components**: `ReleaseSetup/index.js`, `ReleaseSetup/CreateRelease.js`, `ReleaseSetup/CleanupFilters.js`
+**Server routes used**: `server/routes/jira/setup.js` (`check-version-exists`, `create-version`, `check-filter-exists`, `create-filter`, `create-jch-ticket`, `rename-release-cascade`, `cleanup-duplicate-prefix-filters`)  
+**Components**: `ReleaseSetup/index.js`, `ReleaseSetup/CreateRelease.js` (+ `JchFallbackBanner.js`), `ReleaseSetup/CleanupFilters.js`  
+**Constants**: `client/src/utils/jqlTemplates.js` `COMPANION_RELEASE_PROJECTS = ['SDL','LBDR','TECHPUB','LEG','SR']` → `releaseProjectsForTeam()`; server mirror `server/utils/jqlTemplates.js` `RELEASE_PROJECTS`
 
 ---
 
 ## API Calls (client → server)
 
-### 1. Create release version
+### 1. Check version exists (per-project, 5+team)
 
 ```
-POST /api/jira/version
+POST /api/jira/check-version-exists
 Headers: x-jira-token, x-username
-Body: { name, description, releaseDate, projectKey, productId }
+Body: { projectKey, versionName }
 ```
 
-**Server flow**: `jira/index.js → jiraConnector.createVersion(projectKey, payload)`  
-**JIRA endpoint**: `POST /rest/api/2/version`  
-**Returns**: `{ id, name, self }` (the created version object)  
-**Side effect**: invalidates the in-memory release versions cache
+**Server flow**: `setup.js → releaseSetupService.checkVersionExists → GET /rest/api/2/project/{key}/versions`  
+**Returns**: `{ exists, versionId, releaseDate, released }` — `CreateRelease` loops over `releaseProjectsForTeam(selectedTeam.projectKey)` = team project + SDL/LBDR/TECHPUB/LEG/SR
+
+### 1b. Create release version (per-project)
+
+```
+POST /api/jira/create-version
+Headers: x-jira-token, x-username
+Body: { projectKey, versionName, releaseDate? }
+```
+
+**Server flow**: `setup.js → releaseSetupService.createVersion → POST /rest/api/2/version {name, project, released:false, releaseDate?}`  
+**Returns**: `{ versionId, name, projectKey }`
+
+### 1c. Create JCH ticket on create failure (fallback)
+
+```
+POST /api/jira/create-jch-ticket
+Headers: x-jira-token, x-username
+Body: { versionName, projectKey, errorDetail?, releaseDate? }
+```
+
+**Server flow**: `setup.js → releaseSetupService.createJchTicket → POST /rest/api/2/issue {project:{key:'JCH'}, summary:'Request: Create fixVersion {v} in {proj}', description:{version, project, releaseDate, truncated error}, issuetype:{name:'Task'}}`  
+**Returns**: `{ key, id, url }` — client shows browse link via `JchFallbackBanner`
 
 ---
 
