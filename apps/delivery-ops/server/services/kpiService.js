@@ -483,6 +483,7 @@ module.exports = {
   appendDeferredExclusion,
   buildReleaseKpiCombinedJql,
   buildReleaseKpiResolutionJql,
+  executeKpiQuery,
   getKpiResult,
   getKpiResultBatch,
   getReleaseKpiResult,
