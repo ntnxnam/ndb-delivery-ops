@@ -222,6 +222,34 @@
       "toolClass": "read",
       "owner": "tpm-specialist",
       "path": "skills/tpm-post-release/SKILL.md"
+    },
+    {
+      "name": "tpm-at-release",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/tpm-at-release/SKILL.md"
+    },
+    {
+      "name": "tpm-overall",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/tpm-overall/SKILL.md"
+    },
+    {
+      "name": "tpm-report",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/tpm-report/SKILL.md"
+    },
+    {
+      "name": "tpm-schedule",
+      "capabilityType": "deterministic",
+      "toolClass": "read",
+      "owner": "tpm-specialist",
+      "path": "skills/tpm-schedule/SKILL.md"
     }
   ],
   "workflows": [
