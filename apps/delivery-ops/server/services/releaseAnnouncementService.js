@@ -9,7 +9,7 @@
 const path = require('path');
 const fs = require('fs');
 const { getJira } = require('../utils/jiraClient');
-const { loadTeamBoardConfig, getTeamById } = require('../utils/teamConfig');
+const { resolveTeamForRelease } = require('../utils/teamResolve');
 const { sendEmailDirect } = require('./emailService');
 const { usernameToEmail } = require('./userService');
 
@@ -29,22 +29,7 @@ function loadReleaseConfig() {
   }
 }
 
-function resolveTeamForRelease(version, teamId) {
-  if (teamId) {
-    const t = getTeamById(teamId);
-    if (t) return t;
-  }
-  const cfg = loadTeamBoardConfig();
-  const teams = cfg.teams || [];
-  for (const tm of teams) {
-    const prefixes = tm.releasePrefixes || [];
-    for (const p of prefixes) {
-      if (version.startsWith(p)) return tm;
-    }
-  }
-  const def = cfg.defaultTeamId && getTeamById(cfg.defaultTeamId);
-  return def || teams[0] || null;
-}
+// resolveTeamForRelease imported from teamResolve
 
 function extractGaDate(releaseCfg) {
   if (!releaseCfg) return null;
@@ -171,7 +156,7 @@ function buildFallbackHtml({ version, product, teamName, gaDate, features, partn
     <li>Downloads: ${escapeHtml(product)} Downloads Portal</li>
     <li>Release Notes: ${escapeHtml(version)} Release Notes</li>
     <li>TOI Links: ${escapeHtml(version)} TOIs on Confluence</li>
-    <li>Support Channel: For sales inquiries and general questions, please post in #ndb.</li>
+    <li>Support Channel: For sales inquiries and general questions, please post in #${escapeHtml(product.toLowerCase())}.</li>
   </ul>
   <h3>User Guides:</h3>
   <ul>

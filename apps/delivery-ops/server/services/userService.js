@@ -37,6 +37,7 @@ function normalizeToUsername(input) {
 function usernameToEmail(username) {
   if (!username) return null;
   const normalized = normalizeToUsername(username);
+  if (!normalized) return null;
   return `${normalized}@nutanix.com`;
 }
 

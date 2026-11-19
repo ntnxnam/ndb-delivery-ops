@@ -700,10 +700,10 @@ function buildReleaseAnnouncementPrompt({ version, product, teamName, gaDate, fe
     ? features.slice(0, 60).map((f, i) => `  ${i + 1}. ${f.key || 'UNKNOWN'}: ${String(f.summary || '').slice(0, 140)}${f.component ? ` [${f.component}]` : ''}${f.status ? ` (${f.status})` : ''}`).join('\n')
     : '  (no features found — placeholder highlights only)';
   const linksBlock = [
-    `  Downloads: ${usefulLinks.downloads || 'NDB Downloads Portal (placeholder)'}`,
+    `  Downloads: ${usefulLinks.downloads || prod + ' Downloads Portal (placeholder)'}`,
     `  Release Notes: ${usefulLinks.releaseNotes || prod + '-' + version + ' Release Notes (placeholder)'}`,
     `  TOI Links: ${usefulLinks.toi || prod + '-' + version + ' TOIs on Confluence (placeholder)'}`,
-    `  Support Channel: ${usefulLinks.support || 'For sales inquiries and general questions, please post in #ndb (placeholder)'}`,
+    `  Support Channel: ${usefulLinks.support || 'For sales inquiries and general questions, please post in #' + prod.toLowerCase() + ' (placeholder)'}`,
   ].join('\n');
   const guidesBlock = Array.isArray(userGuides) && userGuides.length
     ? userGuides.map((g) => `  - ${g}`).join('\n')

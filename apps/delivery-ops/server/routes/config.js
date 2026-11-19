@@ -1069,12 +1069,17 @@ router.get('/releases/:version/release-preview', async (req, res) => {
     if (!svc.isAuthorized(username, teamId)) return res.status(403).json({ error: 'Only admins/team-admins may preview release.' });
     const token = req.headers.authorization ? String(req.headers.authorization).replace(/^Bearer\s+/i,'') : (process.env.JIRA_TOKEN || require('../config/jiraConfig.json').token || '');
     const data = await svc.previewRelease({ version, teamId, jiraToken: token });
-    // Attach announcement draft recipient (logged-in user)
+    // Attach announcement draft recipient (logged-in user) — product-aware subject matches send path
     try {
       const { usernameToEmail } = require('../services/userService');
       const draftTo = username ? usernameToEmail(username) : null;
       data.announcementDraftTo = draftTo || null;
-      if (draftTo) data.announcementDraftSubject = `[DRAFT] Announcing ${version} — Official Release is Live 🎉`;
+      if (draftTo) {
+        const { resolveTeamForRelease } = require('../services/releaseFinalizeService');
+        const team = resolveTeamForRelease ? resolveTeamForRelease(version, teamId) : null;
+        const product = team?.branding?.shortName || team?.name || String(version).split(/[- ]/)[0] || version;
+        data.announcementDraftSubject = `[DRAFT] Announcing ${product} ${version} — Official Release is Live 🎉`;
+      }
     } catch {}
     res.json(data);
   } catch (e) { res.status(e.statusCode||500).json({ error: e.message }); }

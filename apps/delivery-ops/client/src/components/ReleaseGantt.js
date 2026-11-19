@@ -4,33 +4,21 @@ import { formatters } from '../shared/utils/formatters';
 // ── Gate extractors — handles both old and new config field shapes ────────────
 
 // Normalise a ccmXGate value: config may store it as an object (new) or array (legacy).
+// Retained for legacy single-gate shapes; new getDate uses numeric prefix scan with solid preference.
 function toGateArray(val) {
   if (!val) return [];
   return Array.isArray(val) ? val : [val];
 }
 
-function getLatestGateDate(cfg, prefix, legacyKey) {
-  // Collect all numbered gate keys like prefix1, prefix2, ... plus legacyKey fallback
-  const candidates = [];
-  if (legacyKey && cfg?.[legacyKey]?.date) candidates.push(cfg[legacyKey]);
+function getLatestGateDate(cfg, prefix) {
   const re = new RegExp(`^${prefix}(\\d+)$`);
-  for (const k of Object.keys(cfg || {})) {
-    const m = re.exec(k);
-    if (m && cfg[k]?.date) candidates.push(cfg[k]);
-  }
-  // Sort by numeric suffix ascending, pick last (chronologically last gate)
-  // But prefer solid style when multiple exist — last solid is binding
-  if (!candidates.length) return null;
-  // If any candidate has style solid, pick the last solid by gate number
   const numbered = Object.keys(cfg || {})
     .filter(k => re.test(k) && cfg[k]?.date)
     .sort((a, b) => parseInt(a.match(re)[1], 10) - parseInt(b.match(re)[1], 10));
-  if (numbered.length) {
-    const lastSolid = [...numbered].reverse().find(k => cfg[k]?.style === 'solid');
-    if (lastSolid) return cfg[lastSolid].date;
-    return cfg[numbered[numbered.length - 1]].date;
-  }
-  return candidates[candidates.length - 1]?.date || null;
+  if (!numbered.length) return null;
+  // Last solid is binding per emailer semantics (dotted = superseded)
+  const lastSolid = [...numbered].reverse().find(k => cfg[k]?.style === 'solid');
+  return cfg[lastSolid || numbered[numbered.length - 1]].date;
 }
 
 function getDate(cfg, key) {
@@ -48,10 +36,10 @@ function getDate(cfg, key) {
       }
       return cfg.codeComplete?.date || null;
     }
-    case 'cg': return getLatestGateDate(cfg, 'commitGate', null);
+    case 'cg': return getLatestGateDate(cfg, 'commitGate');
     case 'bc': return cfg.branchCut?.date || null;
-    case 'pg': return getLatestGateDate(cfg, 'promotionGate', null);
-    case 'ga': return getLatestGateDate(cfg, 'ga', null);
+    case 'pg': return getLatestGateDate(cfg, 'promotionGate');
+    case 'ga': return getLatestGateDate(cfg, 'ga');
     default:   return null;
   }
 }
@@ -123,11 +111,15 @@ const LABEL_W = 96;   // px — left label column width
 export default function ReleaseGantt({ releases }) {
   const containerRef = useRef(null);
 
-  // Only open releases — released flag is sole SoT (D30). Never mix past (released:true) with open.
-  // Overdue open releases (GA in past) must remain visible — no graceDate hiding.
+  // Open releases only — released:true is past (D30 SoT), never mixed with open.
+  // Grace window 60d hides very old overdue open (e.g. NDB-2.10 GA 2026-01-01) but
+  // keeps recent overdue (NDB-2.11 GA 2026-07-28) visible for triage.
+  const graceDate = new Date();
+  graceDate.setDate(graceDate.getDate() - 60);
+
   const sorted = Object.entries(releases)
     .map(([version, cfg]) => ({ version, cfg, ga: getDate(cfg, 'ga') }))
-    .filter(r => r.ga && !r.cfg?.released)
+    .filter(r => r.ga && !r.cfg?.released && new Date(r.ga + 'T00:00:00') >= graceDate)
     .sort((a, b) => a.ga.localeCompare(b.ga));
 
   if (!sorted.length) return null;

@@ -5,7 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const { getJira } = require('../utils/jiraClient');
-const { loadTeamBoardConfig, getTeamById } = require('../utils/teamConfig');
+const { resolveTeamForRelease } = require('../utils/teamResolve');
 const { sendEmailDirect } = require('./emailService');
 const { normalizeToUsername, usernameToEmail } = require('./userService');
 const EMAIL_CONFIG_PATH = path.join(__dirname, '../config/releaseVersionsEmailConfig.json');
@@ -21,7 +21,7 @@ function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '
 function loadReleaseConfig() { try { delete require.cache[require.resolve(EMAIL_CONFIG_PATH)]; const raw = fs.readFileSync(EMAIL_CONFIG_PATH, 'utf8'); return raw && raw.trim() ? JSON.parse(raw) : {}; } catch { return {}; } }
 function saveReleaseConfig(emailConfig) { fs.writeFileSync(EMAIL_CONFIG_PATH, JSON.stringify(emailConfig, null, 2), 'utf8'); }
 function loadCcConfig() { try { delete require.cache[require.resolve(CC_CONFIG_PATH)]; const raw = fs.readFileSync(CC_CONFIG_PATH, 'utf8'); return raw && raw.trim() ? JSON.parse(raw) : { defaultCC: [], versionDRIs: {} }; } catch { return { defaultCC: [], versionDRIs: {} }; } }
-function resolveTeamForRelease(version, teamId) { if (teamId) { const t = getTeamById(teamId); if (t) return t; } const cfg = loadTeamBoardConfig(); const teams = cfg.teams || []; for (const tm of teams) { const prefixes = tm.releasePrefixes || []; for (const p of prefixes) { if (version.startsWith(p)) return tm; } } const def = cfg.defaultTeamId && getTeamById(cfg.defaultTeamId); return def || teams[0] || null; }
+// resolveTeamForRelease imported from teamResolve (D3 one feature one place)
 function isAuthorized(username, teamId) { const allowed = new Set([...(ALLOWED_USERS.releaseConfigAllowedUsers || []), ...(ALLOWED_USERS.adminUsers || []), ...(ALLOWED_USERS.superAdminUsers || [])]); if (teamId && ALLOWED_USERS.kpiAdminUsers && ALLOWED_USERS.kpiAdminUsers[teamId]) { (ALLOWED_USERS.kpiAdminUsers[teamId] || []).forEach(u => allowed.add(u)); } if (!username) return false; const n = normalizeToUsername(username); for (const u of allowed) if (normalizeToUsername(u) === n) return true; return false; }
 function buildOpenJql(version) { const v = String(version).replace(/\\/g, '\\\\').replace(/"/g, '\\"'); const statuses = OPEN_EXCLUDED_STATUSES.map(s => `"${s}"`).join(', '); return `fixVersion = "${v}" AND status NOT IN (${statuses})`; }
 function extractUsername(userField) { if (!userField) return null; if (typeof userField === 'string') return userField.split('@')[0]; return userField.name || userField.key || (userField.emailAddress || '').split('@')[0] || null; }
