@@ -1,0 +1,45 @@
+---
+description: Always rebase from main before merging; resolve conflicts elegantly with user choice, then merge to origin and delete branch
+alwaysApply: true
+---
+
+# Merge — Rebase from main, then merge to origin
+
+When merging any branch (feature, weave, fix) into `main`:
+
+1. **Always rebase from `main` first**
+   - `git fetch origin main`
+   - `git rebase origin/main` (or `git rebase main` if already fetched)
+   - Never merge `main` into the feature branch as a merge commit to "catch up" — rebase keeps history linear.
+
+2. **Resolve conflicts elegantly**
+   - If `git rebase` reports conflicts, stop — do not force through with `ours`/`theirs`.
+   - For each conflicted file/hunk, present the choice in **plain, simple language** — what `main` has vs what the branch has, and what each option means for the user.
+   - Ask the user explicitly: *"What do you want to keep?"* — wait for their answer before continuing.
+   - Apply their choice, `git add` the resolved files, then `git rebase --continue` (repeat until clean).
+   - If the user is unsure, offer a safe default (e.g. keep both / keep main's version) but never decide silently.
+
+3. **Merge to origin and delete the branch**
+   - After a clean rebase with no conflicts (or all resolved with user approval):
+     - `git push origin <branch> --force-with-lease` if the rebase rewrote history
+     - `git checkout main && git merge --no-ff <branch>` (or `gh pr merge` if a PR exists)
+     - `git push origin main`
+     - `git push origin --delete <branch>` and `git branch -d <branch>` locally
+   - Never `git push --force` without `--lease`; never force-push `main` itself.
+
+## Applies to
+
+- Every merge performed by the Loom builder pipeline (Stage 10 Merge in `weave.mdc`) and any manual merge the agent does on the user's behalf.
+- Overrides any shortcut that skips the rebase step — even if the branch appears "mergeable" in GitHub.
+
+## Cross-references
+
+- `weave.mdc` Stage 10 — merge gate (KPIs MET + user ok).
+- `gerrit-push-for-review.mdc` — Gerrit path (`refs/for/`) is separate; this rule covers GitHub `main` merges.
+
+## Never do
+
+- Merge a feature branch into `main` without rebasing from `origin/main` first.
+- Auto-resolve rebase conflicts without asking the user in plain language.
+- Push a rebased branch with `--force` (use `--force-with-lease`) or force-push `main`.
+- Leave the feature branch alive on `origin` after a successful merge.

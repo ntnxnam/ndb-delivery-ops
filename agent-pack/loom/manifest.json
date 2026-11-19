@@ -25,6 +25,7 @@
     }
   ],
   "constitutionalRules": [
+    "rules/merge-rebase-policy.mdc",
     "rules/weave.mdc",
     "rules/no-localhost.mdc",
     "rules/no-hardcoding.mdc",
