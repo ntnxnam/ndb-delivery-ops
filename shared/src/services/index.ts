@@ -53,3 +53,4 @@ export * from './tpmFetch.js';
 export * from './tpmKpiService.js';
 export * from './tpmExecutionService.js';
 export * from './tpmFetchService.js';
+export * from './tpmReportService.js';
