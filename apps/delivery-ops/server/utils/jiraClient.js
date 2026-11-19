@@ -74,7 +74,7 @@ async function searchPages(
   token,
   jql,
   fields,
-  { pageSize = 100, maxTotal = Infinity, timeoutMs = 30000, delayMs = 200, maxTimeMs } = {}
+  { pageSize = 100, maxTotal = 10000, timeoutMs = 30000, delayMs = 200, maxTimeMs = 85000 } = {}
 ) {
   const jira = await getJira(token);
   const all = [];

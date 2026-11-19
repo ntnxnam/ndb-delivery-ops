@@ -457,8 +457,9 @@ export class JiraConnector {
     return `${this.env.jiraBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
-  private async retry<T>(call: () => Promise<T>, maxAttempts = 5): Promise<T> {
+  private async retry<T>(call: () => Promise<T>, maxAttempts = 3): Promise<T> {
     let attempt = 0;
+    const startedAt = Date.now();
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
@@ -467,7 +468,19 @@ export class JiraConnector {
         const ax = err as AxiosError;
         const status = ax?.response?.status;
         if (status === 429 && attempt < maxAttempts - 1) {
-          const delay = Math.min(2 ** attempt * 5000, 60_000);
+          // Respect Retry-After header when present; fallback to exponential 5/10/20s (max 20s).
+          const retryAfterHeader = ax?.response?.headers?.['retry-after'];
+          const retryAfterSec = retryAfterHeader ? parseInt(String(retryAfterHeader), 10) : NaN;
+          const baseDelay = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+            ? retryAfterSec * 1000
+            : Math.min(2 ** attempt * 5000, 20_000);
+          // Clamp to remaining jiraTimeoutMs budget so retry never pushes past the 408 wall.
+          const elapsed = Date.now() - startedAt;
+          const remainingBudget = Math.max(0, this.env.jiraTimeoutMs - elapsed - 5000);
+          const delay = Math.min(baseDelay, remainingBudget);
+          if (delay <= 0) {
+            throw new Error('JIRA rate limit exceeded. Wait 60-90s and try again.');
+          }
           // eslint-disable-next-line no-console
           console.error(
             `[jiraConnector] Rate limited (429); retrying in ${delay / 1000}s (attempt ${
