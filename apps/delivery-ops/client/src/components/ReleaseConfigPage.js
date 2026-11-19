@@ -452,7 +452,9 @@ const ReleaseConfigPage = () => {
       if (!res.ok) throw new Error(data.error || 'Failed');
       setReleaseConfirm(null);
       await loadConfigs();
-      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.`);
+      const draft = data.announcementDraft;
+      const draftMsg = draft?.sent ? ` Announcement draft sent to ${draft.to}.` : draft?.skipped ? '' : draft?.error ? ` Announcement draft failed: ${draft.error}.` : ' Announcement draft queued.';
+      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.${draftMsg}`);
     } catch (e) {
       setError('Mark released failed: ' + e.message);
     } finally { setReleasing(false); }
@@ -677,6 +679,7 @@ const ReleaseConfigPage = () => {
                   <li>Send email to <b>ndb-tpms@nutanix.com</b></li>
                   <li>Move <b>{releaseConfirm.preview?.openCount ?? '?'}</b> open tickets (status NOT IN Done, Complete, Closed, Cancelled, Fixed) to <b>master</b></li>
                   <li>Add comment tagging <b>assignee + assignee manager (customfield_19262)</b> asking to update fixVersion</li>
+                  <li>Send <b>announcement draft</b> to you (<code>{releaseConfirm.preview?.announcementDraftTo || localStorage.getItem('username') || 'logged-in user'}</code>) — subject <code>{releaseConfirm.preview?.announcementDraftSubject || `[DRAFT] Announcing ${releaseConfirm.version}`}</code></li>
                 </ol>
                 {releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">Already marked released in lighthouse — action will be rejected.</p>}
                 {releaseConfirm.preview?.jiraAlreadyReleased && !releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">JIRA already marked Released — will complete lighthouse + email + ticket move (repair).</p>}

@@ -178,7 +178,7 @@ No server TTL — file re-read each request. Client holds via `useEmailSenderCCC
 
 ### GET /api/config/releases/:version/release-preview
 
-**Purpose**: Preview the 5-step release-finalize flow for a version — open-ticket count, JIRA `released` flags (synced + live), and whether a **repair path** is available when JIRA is already marked released but Lighthouse is not.
+**Purpose**: Preview the 6-step release-finalize flow for a version — open-ticket count, JIRA `released` flags (synced + live), and whether a **repair path** is available when JIRA is already marked released but Lighthouse is not. Also previews the announcement draft recipient (logged-in user).
 
 **Auth**: required — admin / team-admin only (same set as `mark-released`). Checked via `releaseFinalizeService.isAuthorized(username, teamId)`.
 
@@ -205,7 +205,9 @@ No server TTL — file re-read each request. Client holds via `useEmailSenderCCC
   "canRepair": true,
   "jiraVersions": [{ "projectKey": "ERA", "id": "12345", "name": "NDB-2.12", "released": true, "releaseDate": "2026-05-01" }],
   "releasedFlag": false,
-  "emailTo": ["ndb-tpms@nutanix.com"]
+  "emailTo": ["ndb-tpms@nutanix.com"],
+  "announcementDraftTo": "actor@nutanix.com",
+  "announcementDraftSubject": "[DRAFT] Announcing NDB NDB-2.12 — Official Release is Live 🎉"
 }
 ```
 
@@ -222,7 +224,7 @@ No server TTL — file re-read each request. Client holds via `useEmailSenderCCC
 
 ### POST /api/config/releases/:version/mark-released
 
-**Purpose**: Mark a release as Released — 5-step holistic flow: JIRA version `released=true` (skipped on repair), Lighthouse `released` flag, release email, move open tickets to `master` fixVersion, JIRA comments with assignee/manager mentions.
+**Purpose**: Mark a release as Released — 6-step holistic flow: JIRA version `released=true` (skipped on repair), Lighthouse `released` flag, release email, move open tickets to `master` fixVersion, JIRA comments with assignee/manager mentions, and announcement draft email to the actor (logged-in user via `x-username`).
 
 **Auth**: required — admin / team-admin only. Body `teamId` + `note` (optional) are forwarded for audit.
 
@@ -233,7 +235,7 @@ No server TTL — file re-read each request. Client holds via `useEmailSenderCCC
 - Required headers: `Authorization: Bearer <PAT>`, `x-username`
 
 **Server flow**
-`config.js:1075` → `releaseFinalizeService.markReleased` → validate `releaseGateDates[version]` exists and `existing.released !== true` (409 otherwise) → detect `jiraAlreadyReleased` (synced `_jira.released` or live `getProjectVersions`) → if not already released in JIRA: `PUT /rest/api/2/version/:id {released:true}` per projectKey → send email via `sendEmailDirect` → paginated `search` for open tickets → per-ticket `PUT fixVersions` (add `master` preserving other versions) + `POST comment` → persist `releaseVersionsEmailConfig.json` with `released:true`, `releasedAt`, `releasedBy`, `_jira.released:true` and `_jira.repairFromJira:true` when repair.
+`config.js:1075` → `releaseFinalizeService.markReleased` → validate `releaseGateDates[version]` exists and `existing.released !== true` (409 otherwise) → detect `jiraAlreadyReleased` (synced `_jira.released` or live `getProjectVersions`) → if not already released in JIRA: `PUT /rest/api/2/version/:id {released:true}` per projectKey → send email via `sendEmailDirect` → paginated `search` for open tickets → per-ticket `PUT fixVersions` (add `master` preserving other versions) + `POST comment` → send announcement draft via `releaseAnnouncementService.sendAnnouncementDraft` to `usernameToEmail(username)` (AI-first via `naiService.generateReleaseAnnouncement`, fallback template mirroring NDB-2.11) → persist `releaseVersionsEmailConfig.json` with `released:true`, `releasedAt`, `releasedBy`, `_jira.released:true` and `_jira.repairFromJira:true` when repair.
 
 **Repair path** (`JIRA-already-released`): when `jiraAlreadyReleased` is true at entry, JIRA `PUT` is skipped — `jiraResults` contains `{ skipped:true, reason:"JIRA already marked released — lighthouse repair only" }` and `lighthouse.repair=true`. This prevents `400`/`409` from JIRA and still completes Lighthouse, email, and ticket migration.
 
@@ -247,6 +249,7 @@ No server TTL — file re-read each request. Client holds via `useEmailSenderCCC
   "jira": [{ "projectKey": "ERA", "id": "12345", "released": true }],
   "lighthouse": { "released": true, "releasedAt": "2026-11-20T10:00:00.000Z", "repair": false },
   "email": { "to": ["ndb-tpms@nutanix.com"], "messageId": "<…>" },
+  "announcementDraft": { "sent": true, "to": "actor@nutanix.com", "subject": "[DRAFT] Announcing NDB NDB-2.12 — Official Release is Live 🎉", "messageId": "<…>", "aiUsed": true, "featureCount": 42, "gaDate": "2026-07-28" },
   "tickets": { "moved": 12, "failed": 0, "errors": [], "jql": "fixVersion = \"NDB-2.12\" AND status NOT IN (…)" },
   "jiraBaseUrl": "https://jira.nutanix.com"
 }

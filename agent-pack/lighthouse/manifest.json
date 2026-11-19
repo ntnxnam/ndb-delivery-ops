@@ -461,6 +461,12 @@
       "path": "prompts/draft/component-report-narrative.md",
       "status": "draft",
       "area": "component-report"
+    },
+    {
+      "name": "release-announcement",
+      "path": "prompts/production/release-announcement.md",
+      "status": "production",
+      "area": "release-config"
     }
   ]
 }
