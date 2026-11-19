@@ -11,6 +11,11 @@ export async function generateBriefing(version, opts = {}) {
   return { summary: payload.summary, intelligence: payload.intelligence };
 }
 
+export async function sendReleaseVersionEmail(payload, opts = {}) {
+  const resp = await authenticatedPost('/api/email/send-release-versions', payload, opts);
+  return resp?.data ?? resp;
+}
+
 export function checkReleaseLevelMissingDates(ganttConfig) {
   const missing = [];
   if (!ganttConfig) return missing;
@@ -33,22 +38,7 @@ export function checkReleaseLevelMissingDates(ganttConfig) {
   return missing;
 }
 
-export function normalizeDateForComparison(dateValue) {
-  if (!dateValue) return null;
-  let date;
-  if (typeof dateValue === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateValue)) date = new Date(dateValue);
-    else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-      const [y,m,d] = dateValue.split('-').map(Number);
-      date = new Date(y, m - 1, d);
-    } else date = new Date(dateValue);
-  } else if (dateValue instanceof Date) date = dateValue;
-  else {
-    const s = dateValue.value || dateValue.date || dateValue;
-    if (typeof s === 'string') date = new Date(s); else return null;
-  }
-  return isNaN(date.getTime()) ? null : date;
-}
+export { normalizeDateForComparison } from '../utils/releaseVersionUtils';
 
 export function getExtensionLabelInfo(item) {
   if (!item || !item.labels) return null;
