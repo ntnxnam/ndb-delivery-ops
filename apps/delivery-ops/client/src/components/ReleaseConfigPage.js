@@ -181,8 +181,8 @@ function InfoNotesModal({ version, cfg, onSave, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box info-notes-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{version} — Details</h3>
+      <div className="modal-box info-notes-modal" role="dialog" aria-modal="true" aria-labelledby="info-notes-title" onClick={(e) => e.stopPropagation()}>
+        <h3 id="info-notes-title">{version} — Details</h3>
         <div className="info-meta">
           {jiraMeta ? (
             <table className="info-meta-table">
@@ -208,8 +208,9 @@ function InfoNotesModal({ version, cfg, onSave, onClose }) {
             </a>
           )}
         </div>
-        <label className="info-notes-label">Notes</label>
+        <label htmlFor="info-notes-input" className="info-notes-label">Notes</label>
         <textarea
+          id="info-notes-input"
           className="reason-textarea"
           placeholder="Free-form notes for this release…"
           value={notes}
@@ -235,15 +236,17 @@ function ReasonModal({ version, changedCols, onConfirm, onCancel }) {
   const hasGA = changedCols.some(c => c.isGA);
   return (
     <div className="modal-backdrop">
-      <div className="modal-box">
-        <h3>Why are these dates changing? — {version}</h3>
+      <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="reason-modal-title">
+        <h3 id="reason-modal-title">Why are these dates changing? — {version}</h3>
         <p className="modal-subtitle">Changed: {changedCols.map(c => c.label).join(', ')}.</p>
         {hasGA && (
           <p className="modal-warning">
             GA change will update JIRA (FEAT + ERA) and notify the team by email.
           </p>
         )}
+        <label htmlFor="reason-input" className="reason-label">Reason</label>
         <textarea
+          id="reason-input"
           className="reason-textarea"
           placeholder="Explain why (e.g. dependency slip, scope change, QA bandwidth)…"
           value={reason}
@@ -273,6 +276,9 @@ const ReleaseConfigPage = () => {
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState('');
+  const [releaseConfirm, setReleaseConfirm] = useState(null); // { version, preview, loading, note }
+  const [releasing, setReleasing]       = useState(false);
+  const [releaseNote, setReleaseNote]   = useState('');
 
   const loadConfigs = useCallback(async () => {
     try {
@@ -425,6 +431,33 @@ const ReleaseConfigPage = () => {
     } catch (e) {
       setError('Save failed: ' + e.message);
     }
+  }
+
+  async function openReleasePreview(version) {
+    setReleaseNote('');
+    setReleaseConfirm({ version, preview: null, loading: true });
+    try {
+      const res = await fetch(`/api/config/releases/${encodeURIComponent(version)}/release-preview`, { headers: { 'X-Username': localStorage.getItem('username') || '', Authorization: `Bearer ${localStorage.getItem('jiraToken') || ''}` } });
+      const data = await res.json();
+      setReleaseConfirm({ version, preview: data, loading: false });
+    } catch (e) {
+      setReleaseConfirm({ version, preview: { error: e.message }, loading: false });
+    }
+  }
+  async function confirmMarkReleased() {
+    if (!releaseConfirm) return;
+    const version = releaseConfirm.version;
+    setReleasing(true);
+    try {
+      const res = await fetch(`/api/config/releases/${encodeURIComponent(version)}/mark-released`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Username': localStorage.getItem('username') || '', Authorization: `Bearer ${localStorage.getItem('jiraToken') || ''}` }, body: JSON.stringify({ note: releaseNote }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setReleaseConfirm(null);
+      await loadConfigs();
+      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.`);
+    } catch (e) {
+      setError('Mark released failed: ' + e.message);
+    } finally { setReleasing(false); }
   }
 
   async function handleDelete(version) {
@@ -607,6 +640,10 @@ const ReleaseConfigPage = () => {
                       ) : (
                         <>
                           <button className="btn-edit"   onClick={() => startEdit(version)}>Edit</button>
+                          {!cfg.released && (
+                            <button className="btn-release" onClick={() => openReleasePreview(version)} disabled={saving} title={cfg._jira?.released ? 'Repair lighthouse — JIRA already released' : 'Mark as Released — JIRA + email + move open tickets'}>{cfg._jira?.released ? 'Repair' : 'Release'}</button>
+                          )}
+                          {cfg.released && <span className="released-badge">● Released</span>}
                           <button className="btn-delete" onClick={() => handleDelete(version)} disabled={saving}>Del</button>
                         </>
                       )}
@@ -627,6 +664,44 @@ const ReleaseConfigPage = () => {
           onConfirm={confirmSave}
           onCancel={() => setShowModal(null)}
         />
+      )}
+
+      {releaseConfirm && (
+        <div className="modal-backdrop" onClick={() => !releasing && setReleaseConfirm(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{ width: 560 }}>
+            <h3>Mark {releaseConfirm.version} as Released?</h3>
+            {releaseConfirm.loading ? <p>Loading preview…</p> : releaseConfirm.preview?.error ? <p className="modal-warning">{releaseConfirm.preview.error}</p> : (
+              <>
+                <p className="modal-subtitle">This will:</p>
+                <ol style={{ fontSize: 13, lineHeight: '1.7' }}>
+                  <li>Set lighthouse flag <code>released=true</code> for {releaseConfirm.version}</li>
+                  <li>Mark JIRA version as <b>Released</b> in {releaseConfirm.preview?.projectKey}{releaseConfirm.preview?.jiraVersions?.length ? ` + ${(releaseConfirm.preview.jiraVersions||[]).map(v=>v.projectKey).join(', ')}` : ''}</li>
+                  <li>Send email to <b>{releaseConfirm.preview?.emailTo?.[0] || localStorage.getItem('username') || 'you'}</b> only (no distro)</li>
+                  <li>Move <b>{releaseConfirm.preview?.openCount ?? '?'}</b> open tickets (status NOT IN Done, Complete, Closed, Cancelled, Fixed) to <b>master</b></li>
+                  <li>Add comment tagging <b>assignee + assignee manager (customfield_19262)</b> asking to update fixVersion</li>
+                </ol>
+                {releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">Already marked released in lighthouse — action will be rejected.</p>}
+                {releaseConfirm.preview?.jiraAlreadyReleased && !releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">JIRA already marked Released — will complete lighthouse + email + ticket move (repair).</p>}
+                {releaseConfirm.preview?.jql && <p style={{ fontSize: 11, color: '#6c757d' }}>JQL: <code>{releaseConfirm.preview.jql}</code></p>}
+                {releaseConfirm.preview?.sample?.length > 0 && <p style={{ fontSize: 11 }}>Sample: {releaseConfirm.preview.sample.map(s=>s.key).join(', ')}</p>}
+                <label htmlFor="release-note-input" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginTop: 12, marginBottom: 4 }}>Note (included in email)</label>
+                <textarea
+                  id="release-note-input"
+                  placeholder="Optional note for the release email (e.g. GA highlights, known issues)…"
+                  value={releaseNote}
+                  onChange={e => setReleaseNote(e.target.value)}
+                  rows={3}
+                  maxLength={2000}
+                  style={{ width: '100%', padding: 8, border: '1px solid #ced4da', borderRadius: 4, fontSize: 13, boxSizing: 'border-box' }}
+                />
+              </>
+            )}
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={confirmMarkReleased} disabled={releasing || releaseConfirm.loading}>{releasing ? 'Releasing…' : 'Confirm Mark Released'}</button>
+              <button className="btn-secondary" onClick={() => setReleaseConfirm(null)} disabled={releasing}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {infoModal && (
@@ -745,6 +820,9 @@ const ReleaseConfigPage = () => {
         .btn-delete:hover { background: #ffd5d5; }
         .btn-save:hover   { background: #0056b3; }
         button:disabled   { opacity: 0.55; cursor: not-allowed; }
+        .btn-release { background: #28a745; color: #fff; padding: 3px 9px; border: none; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; margin-right: 3px; }
+        .btn-release:hover { background: #1e7e34; }
+        .released-badge { font-size: 11px; color: #28a745; font-weight: 700; margin-right: 6px; }
 
         .btn-primary {
           padding: 7px 14px; background: #007bff; color: #fff;

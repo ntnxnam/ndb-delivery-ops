@@ -173,3 +173,94 @@ No server TTL — file re-read each request. Client may hold in component state 
 
 **Caching**
 No server TTL — file re-read each request. Client holds via `useEmailSenderCCConfig`.
+
+---
+
+### GET /api/config/releases/:version/release-preview
+
+**Purpose**: Preview the 5-step release-finalize flow for a version — open-ticket count, JIRA `released` flags (synced + live), and whether a **repair path** is available when JIRA is already marked released but Lighthouse is not.
+
+**Auth**: required — admin / team-admin only (same set as `mark-released`). Checked via `releaseFinalizeService.isAuthorized(username, teamId)`.
+
+**Request**
+- Method + path: `GET /api/config/releases/:version/release-preview?teamId=ndb`
+- Path param: `version` (string, required) — e.g. `NDB-2.12`
+- Query: `teamId` (string, optional but recommended) — team id for release-prefix resolution
+- Required headers: `Authorization: Bearer <PAT>` or `x-jira-token`, `x-username`
+
+**Server flow**
+`config.js:1064` → `releaseFinalizeService.previewRelease` → reads `releaseVersionsEmailConfig.json` for `lighthouseReleased` / `jiraSyncedReleased` → live JIRA `getProjectVersions` for `jiraLiveReleased` → count open tickets via `fixVersion = "<v>" AND status NOT IN ("Done","Complete","Closed","Cancelled","Fixed")`.
+
+**Response shape**
+```json
+{
+  "version": "NDB-2.12",
+  "teamId": "ndb",
+  "projectKey": "ERA",
+  "jql": "fixVersion = \"NDB-2.12\" AND status NOT IN (\"Done\", \"Complete\", \"Closed\", \"Cancelled\", \"Fixed\")",
+  "openCount": 12,
+  "sample": [{ "key": "ERA-123", "summary": "…", "status": "In Progress" }],
+  "alreadyReleased": false,
+  "jiraAlreadyReleased": true,
+  "canRepair": true,
+  "jiraVersions": [{ "projectKey": "ERA", "id": "12345", "name": "NDB-2.12", "released": true, "releaseDate": "2026-05-01" }],
+  "releasedFlag": false,
+  "emailTo": ["ndb-tpms@nutanix.com"]
+}
+```
+
+**Repair signal**: `canRepair = jiraAlreadyReleased && !alreadyReleased`. When `true`, `POST mark-released` will skip the JIRA `PUT /rest/api/2/version/:id` and still complete Lighthouse + email + ticket-move.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 403 | Caller not admin/team-admin | Hide preview button |
+| 404 | Team not found for release | Check `teamId` / `releasePrefixes` |
+| 500 | JIRA fetch failed | Retry; openCount may be 0 |
+
+---
+
+### POST /api/config/releases/:version/mark-released
+
+**Purpose**: Mark a release as Released — 5-step holistic flow: JIRA version `released=true` (skipped on repair), Lighthouse `released` flag, release email, move open tickets to `master` fixVersion, JIRA comments with assignee/manager mentions.
+
+**Auth**: required — admin / team-admin only. Body `teamId` + `note` (optional) are forwarded for audit.
+
+**Request**
+- Method + path: `POST /api/config/releases/:version/mark-released`
+- Path param: `version` (string, required)
+- Body: `teamId` (string, required), `note` (string, optional, ≤2000 chars, HTML-escaped)
+- Required headers: `Authorization: Bearer <PAT>`, `x-username`
+
+**Server flow**
+`config.js:1075` → `releaseFinalizeService.markReleased` → validate `releaseGateDates[version]` exists and `existing.released !== true` (409 otherwise) → detect `jiraAlreadyReleased` (synced `_jira.released` or live `getProjectVersions`) → if not already released in JIRA: `PUT /rest/api/2/version/:id {released:true}` per projectKey → send email via `sendEmailDirect` → paginated `search` for open tickets → per-ticket `PUT fixVersions` (add `master` preserving other versions) + `POST comment` → persist `releaseVersionsEmailConfig.json` with `released:true`, `releasedAt`, `releasedBy`, `_jira.released:true` and `_jira.repairFromJira:true` when repair.
+
+**Repair path** (`JIRA-already-released`): when `jiraAlreadyReleased` is true at entry, JIRA `PUT` is skipped — `jiraResults` contains `{ skipped:true, reason:"JIRA already marked released — lighthouse repair only" }` and `lighthouse.repair=true`. This prevents `400`/`409` from JIRA and still completes Lighthouse, email, and ticket migration.
+
+**Response shape**
+```json
+{
+  "success": true,
+  "version": "NDB-2.12",
+  "teamId": "ndb",
+  "projectKey": "ERA",
+  "jira": [{ "projectKey": "ERA", "id": "12345", "released": true }],
+  "lighthouse": { "released": true, "releasedAt": "2026-11-20T10:00:00.000Z", "repair": false },
+  "email": { "to": ["ndb-tpms@nutanix.com"], "messageId": "<…>" },
+  "tickets": { "moved": 12, "failed": 0, "errors": [], "jql": "fixVersion = \"NDB-2.12\" AND status NOT IN (…)" },
+  "jiraBaseUrl": "https://jira.nutanix.com"
+}
+```
+
+Repair variant: `jira` is `[{ "skipped": true, "reason": "JIRA already marked released — lighthouse repair only" }]` and `lighthouse.repair: true`.
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----|---|---|
+| 403 | Caller not admin/team-admin | Hide release button |
+| 404 | Release not in `releaseGateDates` or team not found | Sync releases first / check team |
+| 409 | Already `released` in Lighthouse | Show "Already released" |
+| 500 | Disk write / JIRA / email failure (partial) | Inspect `jira`/`email`/`tickets` sub-results |
+
+**Caching**
+No cache — writes `releaseVersionsEmailConfig.json` immediately. Client should refetch release config after success.
