@@ -101,7 +101,7 @@
 
 .fd-plan-table {
   width: 100%;
-  min-width: 720px;
+  min-width: 860px;
   border-collapse: collapse;
   margin-bottom: 4px;
 }
@@ -114,6 +114,7 @@
   padding: 4px 8px 4px 24px;
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
 }
 
 .fd-plan-table td {
@@ -121,6 +122,12 @@
   font-size: 12px;
   border-bottom: 1px solid #f9fafb;
   vertical-align: middle;
+  white-space: nowrap;
+}
+
+.fd-plan-table td:nth-child(3) {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .fd-plan-table tr:hover td { background: #f9fafb; }
