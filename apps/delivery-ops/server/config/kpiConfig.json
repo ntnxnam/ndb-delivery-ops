@@ -6,91 +6,104 @@
         "name": "Top-CFI",
         "baseQuery": "filter=142539",
         "displayType": "count",
-        "order": 0
+        "order": 0,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8xtjw_7iu388x4",
         "name": "Top-CFD",
         "baseQuery": "filter=142537",
         "displayType": "count",
-        "order": 1
+        "order": 1,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8y8o9_m7f8uo6d",
         "name": "Non-Top-CFI",
         "baseQuery": "filter=142543",
         "displayType": "count",
-        "order": 2
+        "order": 2,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8ykk1_87kzd1g2",
         "name": "Non-Top-CFD",
         "baseQuery": "filter=142541",
         "displayType": "count",
-        "order": 3
+        "order": 3,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mltpmqym_g5u55h35",
         "name": "Product Blockers",
         "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
         "displayType": "count",
-        "order": 4
+        "order": 4,
+        "lifecyclePhase": "execution"
       },
       {
         "id": "kpi_mltqufvv_0eregk0s",
         "name": "Product Criticals",
         "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
         "displayType": "count",
-        "order": 5
+        "order": 5,
+        "lifecyclePhase": "execution"
       },
       {
         "id": "kpi_mltqw1zl_35j6oo0k",
         "name": "OnCalls",
         "baseQuery": "filter=NDB-OnCalls",
         "displayType": "count",
-        "order": 6
+        "order": 6,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mltr5912_iqnubebp",
         "name": "System Test",
         "baseQuery": "filter=NDB-System-Test",
         "displayType": "count",
-        "order": 7
+        "order": 7,
+        "lifecyclePhase": "release"
       },
       {
         "id": "kpi_mltr5hi3_0qdmhcep",
         "name": "Smokes",
         "baseQuery": "filter=NDB-Smokes",
         "displayType": "count",
-        "order": 8
+        "order": 8,
+        "lifecyclePhase": "release"
       },
       {
         "id": "kpi_mmaylqy1_a8nuacz5",
         "name": "NDB PreCommits",
         "baseQuery": "filter=NDB-PreCommits",
         "displayType": "count",
-        "order": 9
+        "order": 9,
+        "lifecyclePhase": "release"
       },
       {
         "id": "kpi_mmosswaj_h8bp5a7r",
         "name": "CVE",
         "baseQuery": "type=CVE",
         "displayType": "count",
-        "order": 10
+        "order": 10,
+        "lifecyclePhase": "overall"
       },
       {
         "id": "kpi_muhc9grs_lveeudij",
         "name": "Deferral",
         "baseQuery": "filter=ndb-deferred-tickets",
         "displayType": "count",
-        "order": 11
+        "order": 11,
+        "lifecyclePhase": "overall"
       },
       {
         "id": "kpi_mvanq8ci_6lgab084",
         "name": "Bugs Out of SLA",
         "baseQuery": "filter=NDB-Bugs-OutOfSLA",
         "displayType": "count",
-        "order": 12
+        "order": 12,
+        "lifecyclePhase": "overall"
       }
     ],
     "datalens": [

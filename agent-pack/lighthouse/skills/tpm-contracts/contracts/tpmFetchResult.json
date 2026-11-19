@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TpmFetchResult",
+  "definitions": {
+    "TpmFetchResult": {
+      "type": "object",
+      "required": ["skill", "scope", "totals", "links", "cited"],
+      "properties": {
+        "skill": { "type": "string" },
+        "scope": { "$ref": "tpmScope.json#/definitions/TpmScope" },
+        "totals": { "type": "object", "required": ["total", "open", "done"] },
+        "links": { "type": "object", "required": ["jiraSearchUrl", "combinedJql"] },
+        "cited": { "type": "array", "items": { "type": "object", "required": ["jql", "ts"] } }
+      }
+    }
+  }
+}

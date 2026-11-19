@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tpm-report fan-out map",
+  "description": "Which phase skills each report mode composes. tpm-report never invents JQL.",
+  "modes": {
+    "my-focus": { "audience": "ic", "phases": ["tpm-post-release", "tpm-execution", "tpm-at-release", "tpm-overall"], "scopeKind": "me" },
+    "release": { "audience": "rm|tpm", "phases": ["tpm-post-release", "tpm-execution", "tpm-at-release", "tpm-overall"], "scopeKind": "release" },
+    "digest": { "audience": "team|tpm", "phases": ["tpm-post-release", "tpm-execution", "tpm-at-release", "tpm-overall"], "scopeKind": "team", "plus": "gate deadlines next 7d" },
+    "rollup": { "audience": "director|srdir_vp", "phases": ["tpm-post-release", "tpm-execution", "tpm-at-release", "tpm-overall"], "scopeKind": "org" }
+  },
+  "sendRules": { "onlySender": "tpm-report", "via": "emailConnector", "to": "assignee-or-qa", "cc": "manager", "deferral": "startAfter promotionGate" }
+}
