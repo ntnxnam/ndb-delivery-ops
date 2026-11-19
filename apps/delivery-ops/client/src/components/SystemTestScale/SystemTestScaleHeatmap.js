@@ -73,7 +73,7 @@ export default function SystemTestScaleHeatmap({ byRelease, releaseOrder, curren
                 <div
                   key={`${rel}-${m.key}`}
                   className={`sts-heat-c${rel === currentRelease ? ' is-current' : ''}`}
-                  style={{ background: bg, color: dark ? '#fff' : '#0f172a' }}
+                  style={{ background: bg, color: dark ? 'var(--text-inverse)' : 'var(--text-strong)' }}
                 >
                   {inner}
                 </div>
