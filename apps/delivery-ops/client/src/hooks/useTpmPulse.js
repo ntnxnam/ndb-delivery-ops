@@ -1,16 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getApiBase, getAuthHeaders, authenticatedPost } from '../shared/services/apiService';
+import { getApiBase, getAuthHeaders } from '../shared/services/apiService';
 
 const PHASE_ORDER = ['postRelease', 'execution', 'release', 'overall'];
 const PHASE_LABELS = { postRelease: 'Post-release', execution: 'Execution', release: 'At release', overall: 'Overall' };
-
-function buildReleaseJql(release, baseQuery) {
-  const baseFilter = `filter=${release}-All`;
-  if (!baseQuery || !baseQuery.trim()) return baseFilter;
-  const q = baseQuery.trim();
-  if (/^\s*filter\s*=/i.test(q)) return q;
-  return `${baseFilter} AND (${q})`;
-}
 
 export default function useTpmPulse(teamId) {
   const [releases, setReleases] = useState([]);
@@ -68,28 +60,34 @@ export default function useTpmPulse(teamId) {
         grouped[ph].push(k);
       });
 
-      const phaseResults = await Promise.all(
-        PHASE_ORDER.map(async (phase) => {
-          const kpisInPhase = grouped[phase] || [];
-          if (!kpisInPhase.length) return { phase, label: PHASE_LABELS[phase], total: 0, open: 0, kpis: [], jql: '', fetchedAt: null };
-          const curRelease = activeRelease || active || relList[0] || null;
-          const perKpi = await Promise.all(
-            kpisInPhase.map(async (k) => {
-              const jql = curRelease ? buildReleaseJql(curRelease, k.baseQuery) : (k.baseQuery || '').trim();
-              try {
-                const res = await authenticatedPost('/api/jira/search-by-jql', { jql, maxResults: 0 });
-                const total = res?.data?.issues ? res.data.issues.length : (res?.issues ? res.issues.length : (res.total ?? 0));
-                const count = typeof total === 'number' ? total : 0;
-                return { id: k.id, name: k.name, jql, count, error: null };
-              } catch (e) {
-                return { id: k.id, name: k.name, jql, count: null, error: e.message || 'fetch failed' };
-              }
-            })
-          );
-          const total = perKpi.reduce((s, x) => s + (x.count ?? 0), 0);
-          return { phase, label: PHASE_LABELS[phase], total, open: total, kpis: perKpi, jql: perKpi.map((x) => x.jql).join(' OR '), fetchedAt: new Date().toISOString() };
-        })
-      );
+      // Use solved path: kpiService via release-kpi-results-batch (exact counts via searchCount + filter resolution)
+      // One feature, one place — never reimplement JQL in the hook
+      const curRelease = activeRelease || active || relList[0] || null;
+      let batchResults = {};
+      if (curRelease && kpis.length) {
+        const res = await fetch(`${apiBase}/api/jira/release-kpi-results-batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ releaseVersion: curRelease, teamId: teamId || 'ndb' }),
+          signal: ctrl.signal,
+        }).then(async (r) => { if (!r.ok) throw new Error(`release-kpi-results-batch ${r.status}`); return r.json(); }).catch((e) => ({ _error: e.message }));
+        if (res._error) throw new Error(res._error);
+        batchResults = res.results || {};
+      }
+
+      const phaseResults = PHASE_ORDER.map((phase) => {
+        const kpisInPhase = grouped[phase] || [];
+        if (!kpisInPhase.length) return { phase, label: PHASE_LABELS[phase], total: 0, open: 0, kpis: [], jql: '', fetchedAt: new Date().toISOString() };
+        const perKpi = kpisInPhase.map((k) => {
+          const r = batchResults[k.id] || {};
+          const count = typeof r.total === 'number' ? r.total : null;
+          const jql = r.combinedJql || r.jql || k.baseQuery || '';
+          const error = r.error || null;
+          return { id: k.id, name: k.name, jql, count, error };
+        });
+        const total = perKpi.reduce((s, x) => s + (x.count ?? 0), 0);
+        return { phase, label: PHASE_LABELS[phase], total, open: total, kpis: perKpi, jql: perKpi.map((x) => x.jql).filter(Boolean).join(' OR '), fetchedAt: new Date().toISOString() };
+      });
 
       if (!ctrl.signal.aborted) {
         setPhases(phaseResults);
@@ -100,7 +98,7 @@ export default function useTpmPulse(teamId) {
     } finally {
       if (!ctrl.signal.aborted) setLoading(false);
     }
-  }, [teamId, activeRelease]);
+  }, [teamId]);
 
   useEffect(() => { fetchAll(); return () => { if (abortRef.current) abortRef.current.abort(); }; }, [fetchAll]);
 
