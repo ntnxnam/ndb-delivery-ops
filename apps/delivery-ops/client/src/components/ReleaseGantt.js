@@ -9,22 +9,49 @@ function toGateArray(val) {
   return Array.isArray(val) ? val : [val];
 }
 
+function getLatestGateDate(cfg, prefix, legacyKey) {
+  // Collect all numbered gate keys like prefix1, prefix2, ... plus legacyKey fallback
+  const candidates = [];
+  if (legacyKey && cfg?.[legacyKey]?.date) candidates.push(cfg[legacyKey]);
+  const re = new RegExp(`^${prefix}(\\d+)$`);
+  for (const k of Object.keys(cfg || {})) {
+    const m = re.exec(k);
+    if (m && cfg[k]?.date) candidates.push(cfg[k]);
+  }
+  // Sort by numeric suffix ascending, pick last (chronologically last gate)
+  // But prefer solid style when multiple exist — last solid is binding
+  if (!candidates.length) return null;
+  // If any candidate has style solid, pick the last solid by gate number
+  const numbered = Object.keys(cfg || {})
+    .filter(k => re.test(k) && cfg[k]?.date)
+    .sort((a, b) => parseInt(a.match(re)[1], 10) - parseInt(b.match(re)[1], 10));
+  if (numbered.length) {
+    const lastSolid = [...numbered].reverse().find(k => cfg[k]?.style === 'solid');
+    if (lastSolid) return cfg[lastSolid].date;
+    return cfg[numbered[numbered.length - 1]].date;
+  }
+  return candidates[candidates.length - 1]?.date || null;
+}
+
 function getDate(cfg, key) {
   if (!cfg) return null;
   switch (key) {
     case 'ccReq': return cfg.ccPayloadReqDate || null;
     case 'ec':    return cfg.ecDate || null;
     case 'cc': {
-      const slots = [
-        ...toGateArray(cfg.ccm2Gate),
-        ...toGateArray(cfg.ccm1Gate),
-      ].filter(x => x?.date);
-      return cfg.codeComplete?.date || slots[slots.length - 1]?.date || null;
+      // CCM gates: ccm1Gate, ccm2Gate, ... ccmNGate — any N, with solid preference
+      const ccmKeys = Object.keys(cfg || {}).filter(k => /^ccm\d+Gate$/.test(k) && cfg[k]?.date);
+      if (ccmKeys.length) {
+        ccmKeys.sort((a, b) => parseInt(a.match(/^ccm(\d+)Gate$/)[1], 10) - parseInt(b.match(/^ccm(\d+)Gate$/)[1], 10));
+        const lastSolid = [...ccmKeys].reverse().find(k => cfg[k]?.style === 'solid');
+        return cfg[lastSolid || ccmKeys[ccmKeys.length - 1]].date;
+      }
+      return cfg.codeComplete?.date || null;
     }
-    case 'cg': return cfg.commitGate2?.date || cfg.commitGate1?.date || null;
+    case 'cg': return getLatestGateDate(cfg, 'commitGate', null);
     case 'bc': return cfg.branchCut?.date || null;
-    case 'pg': return cfg.promotionGate3?.date || cfg.promotionGate2?.date || cfg.promotionGate1?.date || null;
-    case 'ga': return cfg.ga4?.date || cfg.ga3?.date || cfg.ga2?.date || cfg.ga1?.date || null;
+    case 'pg': return getLatestGateDate(cfg, 'promotionGate', null);
+    case 'ga': return getLatestGateDate(cfg, 'ga', null);
     default:   return null;
   }
 }
@@ -96,13 +123,11 @@ const LABEL_W = 96;   // px — left label column width
 export default function ReleaseGantt({ releases }) {
   const containerRef = useRef(null);
 
-  // Sort by GA date
-  const graceDate = new Date();
-  graceDate.setDate(graceDate.getDate() - 7);
-
+  // Only open releases — released flag is sole SoT (D30). Never mix past (released:true) with open.
+  // Overdue open releases (GA in past) must remain visible — no graceDate hiding.
   const sorted = Object.entries(releases)
     .map(([version, cfg]) => ({ version, cfg, ga: getDate(cfg, 'ga') }))
-    .filter(r => r.ga && new Date(r.ga + 'T00:00:00') >= graceDate)
+    .filter(r => r.ga && !r.cfg?.released)
     .sort((a, b) => a.ga.localeCompare(b.ga));
 
   if (!sorted.length) return null;
