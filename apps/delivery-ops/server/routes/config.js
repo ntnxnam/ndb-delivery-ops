@@ -304,6 +304,7 @@ router.get('/jira-fields', (req, res) => {
   try {
     // Clear require cache to ensure we get the latest config
     const configPath = path.join(__dirname, '../config/jiraFieldsConfig.json');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
     delete require.cache[require.resolve(configPath)];
     const config = require(configPath);
     res.json(config);

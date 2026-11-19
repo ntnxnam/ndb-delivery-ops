@@ -220,7 +220,9 @@ export const SIDEBAR_NAV_GROUPS = [
     label: 'TPM',
     icon: 'Timer',
     children: [
-      { path: '/schedules', label: 'Schedules', description: 'TPM digest schedules — what runs when' },
+      { path: '/tpm/pulse', label: 'Pulse', description: '4 lifecycle cards per release + gate strip (you land here)' },
+      { path: '/schedules', label: 'Schedules', description: 'TPM digest — what runs when' },
+      { path: '/tpm/jql-builder', label: 'JQL Builder', description: 'Plaintext → healthy JQL from our KPIs' },
     ],
   },
 ];

@@ -22,6 +22,7 @@ const {
 /**
  * Field mapping for all date fields we want to track
  * Now loaded from jiraFieldsConfig.json
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
  */
 function getDateFields() {
   const allFields = getAllFields();

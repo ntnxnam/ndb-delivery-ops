@@ -9,6 +9,7 @@ const { getJira } = require('../utils/jiraClient');
 const { getTeamById, loadTeamBoardConfig, normalizeTeamId } = require('../utils/teamConfig');
 const { fetchPreviouslyLinked } = require('../utils/previouslyLinkedDeps');
 const jiraFieldsConfig = require('../config/jiraFieldsConfig.json');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const CONFIG_PATH = path.join(__dirname, '../config/dependencyViewConfig.json');
 const RELEASE_CFG_PATH = path.join(__dirname, '../config/releaseVersionsEmailConfig.json');
