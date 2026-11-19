@@ -54,8 +54,8 @@ export default function DesignSystemDemo() {
                 deltaTrend="up"
                 caption="Includes wishlist + deferred"
                 rag="green"
-                href="https://jira.nutanix.com/issues/?jql=project%3DERA%20AND%20fixVersion%3D%22NDB-2.11%22"
-                title="JQL: project=ERA AND fixVersion=NDB-2.11"
+                href="https://jira.nutanix.com/issues/?jql=project%3DEXAMPLE%20AND%20fixVersion%3D%221.0%22"
+                title="JQL: project=EXAMPLE AND fixVersion=1.0"
               />
               <KPICard
                 label="Dev Velocity"
@@ -143,7 +143,7 @@ export default function DesignSystemDemo() {
               <Pill tone="danger">blocked</Pill>
               <Pill tone="muted">neutral</Pill>
               <Pill tone="success">+12 w/w</Pill>
-              <Pill tone="muted">NDB-2.11</Pill>
+              <Pill tone="muted">1.0</Pill>
             </div>
           </SectionPanel>
 

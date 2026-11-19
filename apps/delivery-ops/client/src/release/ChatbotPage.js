@@ -231,7 +231,7 @@ export default function ChatbotPage() {
               }}
               onBlur={() => window.setTimeout(() => setJqlShowSuggest(false), 150)}
               onFocus={(e) => { if (ENABLE_JQL_AUTOCOMPLETE) { jqlAuto.compute(e.target.value, e.target.selectionStart ?? e.target.value.length); setJqlShowSuggest(true); } }}
-              placeholder='e.g. project = ERA AND fixVersion = "NDB-2.11" AND issuetype in (Bug, Task) AND status != Closed'
+              placeholder='e.g. project = EXAMPLE AND fixVersion = "1.0" AND issuetype in (Bug, Task) AND status != Closed'
               rows={3}
             />
             {ENABLE_JQL_AUTOCOMPLETE && jqlAuto.ghost && (
@@ -250,7 +250,7 @@ export default function ChatbotPage() {
           </div>
           <div className="chatbot-digging-actions">
             <div className="chatbot-digging-presets">
-              <button type="button" onClick={() => setDiggingJql('project = ERA AND fixVersion = "NDB-2.11" AND status != Closed')}>NDB open</button>
+              <button type="button" onClick={() => setDiggingJql('project = EXAMPLE AND fixVersion = "1.0" AND status != Closed')}>Example open</button>
               <button type="button" onClick={() => setDiggingJql('issuetype = Bug AND priority in (P0, P1) AND status not in (Closed, Resolved)')}>P0/P1 bugs</button>
               <button type="button" onClick={() => setDiggingJql('project = ERA AND updated >= -7d')}>Updated 7d</button>
             </div>
