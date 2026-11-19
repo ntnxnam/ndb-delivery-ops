@@ -213,7 +213,7 @@ Lives in `shared/src/connectors/`. One TypeScript module per external system. Ea
 | `confluenceConnector` | `shared/src/connectors/confluenceConnector.ts` | PAT (may reuse `JIRA_PAT` if SSO) | All Confluence REST calls + `appendStructuredRow` primitive (used by Date Mover audit) |
 | `githubConnector` | `shared/src/connectors/githubConnector.ts` | `GITHUB_TOKEN` Bearer | Commits / PRs / repos / CI signals |
 | `emailConnector` | `shared/src/connectors/emailConnector.ts` | SMTP `SMTP_HOST/PORT/USER/PASS` | Send digests; SMTP transport only — templates stay in `server/services/emailService.js` |
-| `aiConnector` | `shared/src/connectors/aiConnector.ts` | `AI_API_KEY` (NuToken) | LLM transport only (`chatCompletion`/`completeChat`) — no domain prompts; delegates from `naiService` |
+| `aiConnector` | `shared/src/connectors/aiConnector.ts` | `NAI_API_KEY` (NuToken) | LLM transport only (`chatCompletion`/`completeChat`) — no domain prompts; delegates from `naiService` |
 | `slackConnector` | *not yet* | — | Deferred — no caller yet; do not add until needed ([D3](../../DECISIONS.md#d3--five-connectors-are-first-class)) |
 | `loomAuth` | `agent-pack/loom/connectors/loomAuth.ts` | env-derived | Loom-specific auth provider for weave |
 
@@ -410,7 +410,7 @@ Python/Streamlit bulk page creator + template editor + Release Gates Checklist (
 
 1. Extend the one connector file in `shared/src/connectors/<system>.ts` — no parallel client.
 2. For JIRA fields, wire through `productService.getCustomFields(productId)` — never write `customfield_NNNNN` literal twice (client mirrors in `client/src/utils/jiraFields.js`).
-3. For AI calls, go through `shared/src/connectors/aiConnector.ts` (`chatCompletion`), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in `server/config/aiConfig.json`; secrets (`AI_API_KEY`) in env.
+3. For AI calls, go through `shared/src/connectors/aiConnector.ts` (`chatCompletion`), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in `server/config/aiConfig.json`; secrets (`NAI_API_KEY`) in env.
 
 ### Docs pipeline (every change that touches `docs/` or `client/src` links)
 
@@ -459,8 +459,8 @@ Rules: use relative `/docs/guides/DEVELOPER_GUIDE.html` links in app code — ne
 | `JIRA_BASE_URL` | `https://jira.nutanix.com` | JIRA host (no trailing slash) |
 | `CONFLUENCE_PAT` / `CONFLUENCE_BASE_URL` | `JIRA_PAT` / — | Confluence — may reuse JIRA PAT if SSO |
 | `GITHUB_TOKEN` | *(none)* | GitHub PAT (`api.github.com` Bearer) |
-| `AI_API_KEY` | *(none)* | **Required for AI** — NuToken from `tokens.corp`. Non-secrets in `aiConfig.json`. See [AI_API_CONFIGURATION.md](AI_API_CONFIGURATION.md) + [NAI_API_SETUP.md](NAI_API_SETUP.md). |
-| `AI_API_BASE_URL` / `AI_DEFAULT_MODEL` / `AI_MAX_TOKENS` / `AI_REQUEST_TIMEOUT` | from `aiConfig.json` | Override aiConfig per-env (all required if set — no partial) |
+| `NAI_API_KEY` | *(none)* | **Required for AI** — NuToken from `tokens.corp`. Non-secrets in `aiConfig.json`. See [AI_API_CONFIGURATION.md](AI_API_CONFIGURATION.md) + [NAI_API_SETUP.md](NAI_API_SETUP.md). |
+| `NAI_API_BASE_URL` / `NAI_DEFAULT_MODEL` / `NAI_MAX_TOKENS` / `NAI_REQUEST_TIMEOUT` | from `aiConfig.json` | Override aiConfig per-env (all required if set — no partial) — `AI_*` fallback kept during transition |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | `secure-mailrelay.corp.nutanix.com:587` | Nutanix Secure eMail Relay (STARTTLS). Legacy `mailrelay.dyn.nutanix.com` deprecated. `SMTP_FROM` must be service account. |
 | `SMTP_FROM` | `emailConfig.smtp.from` | Override From — must be service account for relay |
 | `RELEASE_VERSIONS_PAGE_ACCESS` | `all` | `all` · `allowlist` · `none` — gates Release Versions API |

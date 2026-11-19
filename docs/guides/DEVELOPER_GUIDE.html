@@ -240,7 +240,7 @@ npm run mcp:build
 <tr>
 <td><code>aiConnector</code></td>
 <td><code>shared/src/connectors/aiConnector.ts</code></td>
-<td><code>AI_API_KEY</code> (NuToken)</td>
+<td><code>NAI_API_KEY</code> (NuToken)</td>
 <td>LLM transport only (<code>chatCompletion</code>/<code>completeChat</code>) — no domain prompts; delegates from <code>naiService</code></td>
 </tr>
 <tr>
@@ -675,7 +675,7 @@ npm run mcp:build
 <ol>
 <li>Extend the one connector file in <code>shared/src/connectors/&lt;system&gt;.ts</code> — no parallel client.</li>
 <li>For JIRA fields, wire through <code>productService.getCustomFields(productId)</code> — never write <code>customfield_NNNNN</code> literal twice (client mirrors in <code>client/src/utils/jiraFields.js</code>).</li>
-<li>For AI calls, go through <code>shared/src/connectors/aiConnector.ts</code> (<code>chatCompletion</code>), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in <code>server/config/aiConfig.json</code>; secrets (<code>AI_API_KEY</code>) in env.</li>
+<li>For AI calls, go through <code>shared/src/connectors/aiConnector.ts</code> (<code>chatCompletion</code>), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in <code>server/config/aiConfig.json</code>; secrets (<code>NAI_API_KEY</code>) in env.</li>
 </ol>
 <h3>Docs pipeline (every change that touches <code>docs/</code> or <code>client/src</code> links)</h3>
 <pre><code class="language-bash"># 1. Edit markdown under docs/guides/, docs/api/, docs/pages/, etc.
@@ -805,14 +805,14 @@ bash scripts/docs-verify.sh
 <td>GitHub PAT (<code>api.github.com</code> Bearer)</td>
 </tr>
 <tr>
-<td><code>AI_API_KEY</code></td>
+<td><code>NAI_API_KEY</code></td>
 <td><em>(none)</em></td>
 <td><strong>Required for AI</strong> — NuToken from <code>tokens.corp</code>. Non-secrets in <code>aiConfig.json</code>. See <a href="AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> + <a href="NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</td>
 </tr>
 <tr>
-<td><code>AI_API_BASE_URL</code> / <code>AI_DEFAULT_MODEL</code> / <code>AI_MAX_TOKENS</code> / <code>AI_REQUEST_TIMEOUT</code></td>
+<td><code>NAI_API_BASE_URL</code> / <code>NAI_DEFAULT_MODEL</code> / <code>NAI_MAX_TOKENS</code> / <code>NAI_REQUEST_TIMEOUT</code></td>
 <td>from <code>aiConfig.json</code></td>
-<td>Override aiConfig per-env (all required if set — no partial)</td>
+<td>Override aiConfig per-env (all required if set — no partial) — <code>AI_*</code> fallback kept during transition</td>
 </tr>
 <tr>
 <td><code>SMTP_HOST</code> / <code>SMTP_PORT</code> / <code>SMTP_USER</code> / <code>SMTP_PASS</code></td>

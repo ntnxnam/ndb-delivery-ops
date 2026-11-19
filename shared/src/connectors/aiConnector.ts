@@ -85,14 +85,30 @@ export class AiConnectorError extends Error {
  *   completeChat(messages, { model: "ntnx-beam" })  // model defaults to aiConfig.json:defaultModel
  */
 function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
-  const baseUrl = (override?.baseUrl ?? process.env.AI_API_BASE_URL ?? process.env.NAI_API_BASE_URL ?? '').trim();
+  // NAI_* is canonical; AI_* kept as fallback for transition. aiConfig.json provides
+  // defaults for non-secret vars when env is not set (matches voodooService behaviour).
+  let aiConfigFallback: { baseUrl?: string; defaultModel?: string; maxTokens?: number; requestTimeoutMs?: number } = {};
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    aiConfigFallback = require('../../../apps/delivery-ops/server/config/aiConfig.json');
+  } catch {}
+  // Second require is intentional fallback deduplication guard — path was previously
+  // '../../apps/...' (wrong, resolved to shared/apps); now uses the correct
+  // '../../../apps/...' so the first try always succeeds when config exists.
+  // Keeping the single correct require avoids dead-code confusion.
+  if (!aiConfigFallback.baseUrl) {
+    // baseUrl missing — caller will throw with actionable NAI_API_BASE_URL message below
+  }
+
+  const envBaseUrl = process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || '';
+  const baseUrl = (override?.baseUrl || envBaseUrl || aiConfigFallback.baseUrl || '').trim();
   if (!baseUrl) {
     throw new Error(
-      'AI_API_BASE_URL (or NAI_API_BASE_URL) is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+      'NAI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
     );
   }
   if (/localhost|127\.0\.0\.1/i.test(baseUrl) && process.env.NODE_ENV === 'production') {
-    throw new Error('AI_API_BASE_URL must not be localhost in production');
+    throw new Error('NAI_API_BASE_URL must not be localhost in production');
   }
 
   const apiKey = (override?.apiKey ?? process.env.NAI_API_KEY ?? '').trim();
@@ -100,21 +116,26 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     throw new Error('NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.');
   }
 
-  const defaultModel = (override?.defaultModel ?? process.env.AI_DEFAULT_MODEL ?? process.env.NAI_MODEL ?? '').trim();
+  const envModel = process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
+  const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
   if (!defaultModel) {
     throw new Error(
-      'AI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
+      'NAI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
     );
   }
 
-  const maxTokensRaw = override?.maxTokens ?? (process.env.AI_MAX_TOKENS ? parseInt(process.env.AI_MAX_TOKENS, 10) : NaN);
-  if (!maxTokensRaw || isNaN(maxTokensRaw)) {
-    throw new Error('AI_MAX_TOKENS is not set. Set it in server/.env.');
+  const envMaxTokens = process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '';
+  const maxTokensRaw =
+    (override?.maxTokens ?? (envMaxTokens ? parseInt(envMaxTokens, 10) : NaN)) || aiConfigFallback.maxTokens;
+  if (!maxTokensRaw || isNaN(maxTokensRaw as number)) {
+    throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env.');
   }
 
-  const timeoutRaw = override?.timeoutMs ?? (process.env.AI_REQUEST_TIMEOUT ? parseInt(process.env.AI_REQUEST_TIMEOUT, 10) : NaN);
-  if (!timeoutRaw || isNaN(timeoutRaw)) {
-    throw new Error('AI_REQUEST_TIMEOUT is not set. Set it in server/.env.');
+  const envTimeout = process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT || '';
+  const timeoutRaw =
+    (override?.timeoutMs ?? (envTimeout ? parseInt(envTimeout, 10) : NaN)) || aiConfigFallback.requestTimeoutMs;
+  if (!timeoutRaw || isNaN(timeoutRaw as number)) {
+    throw new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.');
   }
 
   return {

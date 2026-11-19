@@ -11,8 +11,25 @@ import { parseXlsxToRows } from './xlsx-parser.js';
 import { orderByDependencyAndSize, getDependentsCounts, getRankLabel } from './ranking.js';
 import { prepareScheduleData } from './prepare-schedule.js';
 
+// Converter agent — lazy-loaded to keep main bundle intact if module missing
+let converterAgent = null;
+let converterAgentLoadPromise = null;
+function loadConverterAgent() {
+  if (converterAgent) return Promise.resolve(converterAgent);
+  if (converterAgentLoadPromise) return converterAgentLoadPromise;
+  converterAgentLoadPromise = import('./csv-converter-agent.js')
+    .then((m) => { converterAgent = m; return m; })
+    .catch(() => null);
+  return converterAgentLoadPromise;
+}
+
 /** Pending projects after file selection, before Submit. */
 let pendingUploadProjects = null;
+
+/** Pending converter file (selected in Convert any file card). */
+let pendingConverterFile = null;
+/** Is a converter request in flight. */
+let converterBusy = false;
 
 /**
  * Render the verification table (ordered by dependency and rank).
@@ -234,6 +251,154 @@ async function handleFile(file) {
   if (fileInput) fileInput.value = '';
 }
 
+// ── Converter (AI) flow ───────────────────────────────────────────────
+
+function updateConverterConvertBtn() {
+  const btn = getEl('converterConvertBtn');
+  if (!btn) return;
+  btn.disabled = !pendingConverterFile || converterBusy;
+  btn.title = converterBusy ? 'Converting…' : pendingConverterFile ? 'Convert to canonical CSV' : 'Select a file first';
+}
+
+async function runConverterConvert() {
+  const mod = await loadConverterAgent();
+  if (!mod) {
+    const s = getEl('converterStatus');
+    if (s) { s.textContent = 'Converter module not available.'; s.className = 'upload-status error'; }
+    return;
+  }
+  if (!pendingConverterFile) {
+    mod.setConverterStatus('Select a file first.', 'error');
+    return;
+  }
+  const validation = mod.validateConverterFile(pendingConverterFile);
+  if (validation) {
+    mod.setConverterStatus(validation, 'error');
+    return;
+  }
+  const productPicker = getEl('converterProductPicker');
+  const productId = productPicker ? productPicker.value : 'ndb';
+  const statusEl = getEl('converterStatus');
+  const previewWrap = getEl('converterPreviewWrap');
+  const convertBtn = getEl('converterConvertBtn');
+
+  converterBusy = true;
+  updateConverterConvertBtn();
+  if (convertBtn) convertBtn.textContent = 'Converting…';
+  mod.setConverterStatus('Converting…', null);
+  if (previewWrap) { previewWrap.innerHTML = ''; previewWrap.style.display = 'none'; }
+
+  try {
+    const preview = await mod.convertFile({ file: pendingConverterFile, productId });
+    mod.setConverterStatus(`Converted via ${preview.via}. Review the preview below.`, 'success');
+    if (previewWrap) mod.renderPreview(previewWrap, preview);
+    // Clear file input after successful convert so re-selecting same file fires change
+    const fileInput = getEl('converterFileInput');
+    if (fileInput) fileInput.value = '';
+    logger.info('upload.converter: converted', preview.via, preview.canonicalCsv ? `${preview.canonicalCsv.length} chars` : 'no csv');
+  } catch (err) {
+    logger.error('upload.converter: convert failed', err);
+    mod.setConverterStatus(err.message || 'Conversion failed', 'error');
+  } finally {
+    converterBusy = false;
+    if (convertBtn) convertBtn.textContent = 'Convert';
+    updateConverterConvertBtn();
+  }
+}
+
+function bindConverterControls() {
+  const fileInput = getEl('converterFileInput');
+  const productPicker = getEl('converterProductPicker');
+  const convertBtn = getEl('converterConvertBtn');
+  const statusEl = getEl('converterStatus');
+
+  // No converter card in DOM (e.g. old HTML) → no-op
+  if (!fileInput || !convertBtn) return;
+
+  // Load agent eagerly so preview styles/helpers are ready on first click
+  void loadConverterAgent();
+
+  fileInput.addEventListener('click', () => {
+    if (statusEl && !converterBusy) {
+      statusEl.textContent = 'Select a file…';
+      statusEl.className = 'upload-status';
+    }
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0] || null;
+    pendingConverterFile = file || null;
+    const previewWrap = getEl('converterPreviewWrap');
+    if (!file) {
+      if (statusEl) statusEl.textContent = 'No file chosen. Select a file above and click Convert.';
+      if (previewWrap) { previewWrap.innerHTML = ''; previewWrap.style.display = 'none'; }
+      updateConverterConvertBtn();
+      return;
+    }
+    const mod = await loadConverterAgent();
+    if (mod) {
+      const validation = mod.validateConverterFile(file);
+      if (validation) {
+        mod.setConverterStatus(validation, 'error');
+        updateConverterConvertBtn();
+        return;
+      }
+      mod.setConverterStatus(`Ready: ${file.name} (${(file.size / 1024).toFixed(1)} KB) — click Convert.`, null);
+      if (previewWrap) { previewWrap.innerHTML = ''; previewWrap.style.display = 'none'; }
+    } else if (statusEl) {
+      statusEl.textContent = `Ready: ${file.name} — click Convert.`;
+    }
+    updateConverterConvertBtn();
+    // Keyboard: focus Convert button for quick action
+    requestAnimationFrame(() => convertBtn.focus({ preventScroll: true }));
+  });
+
+  convertBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void runConverterConvert();
+  });
+
+  // Keyboard: Enter in product picker triggers convert
+  if (productPicker) {
+    productPicker.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void runConverterConvert();
+      }
+    });
+  }
+
+  // Repacked event from converter agent → update verification table + status
+  window.addEventListener('converter:repacked', (e) => {
+    const detail = e.detail || {};
+    const scheduleProjects = detail.scheduleProjects || detail.projects || [];
+    const projects = detail.projects || [];
+    try {
+      // Reflect in main upload status as well
+      const uploadStatus = getEl('uploadStatus');
+      if (uploadStatus) {
+        uploadStatus.textContent = `${projects.length} rows converted → ${scheduleProjects.length} committed projects ready. Verify below or open Schedule.`;
+        uploadStatus.className = 'upload-status success';
+      }
+      // Render verification table from committed set
+      const listToRender = scheduleProjects.length ? scheduleProjects : projects;
+      if (listToRender.length) {
+        renderUploadTable(listToRender);
+        const wrap = getEl('uploadTableWrap');
+        if (wrap) {
+          wrap.style.display = 'block';
+          wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        showExportRow();
+        showUploadSubmitRow();
+      }
+    } catch (err) {
+      logger.error('upload.converter: repacked handler', err);
+    }
+  });
+}
+
 function bindControls() {
   const fileInput = getEl('csvFileInput');
   const uploadStatus = getEl('uploadStatus');
@@ -311,6 +476,7 @@ function init() {
   const uploadStatus = getEl('uploadStatus');
   try {
     bindControls();
+    bindConverterControls();
     const projects = getProjects();
     if (projects.length > 0) {
       showExportRow();

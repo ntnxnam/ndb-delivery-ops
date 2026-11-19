@@ -10,7 +10,8 @@
  * model from rambling about earlier-phase fields that no longer matter.
  */
 
-const NAI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS || '4096', 10);
+// baseUrl/model/timeout/apiKey resolved by aiConnector (shared/src/connectors/aiConnector.ts); only maxTokens capped locally here.
+const NAI_MAX_TOKENS = parseInt(process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '4096', 10);
 
 const MAX_STATUS_TEXT_CHARS = 1500;
 

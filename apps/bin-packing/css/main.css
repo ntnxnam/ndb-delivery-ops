@@ -129,6 +129,225 @@ a.tab {
   display: none;
 }
 
+/* Converter card (AI) — above upload */
+.converter-card {
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.converter-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+
+.converter-desc {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.converter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.converter-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.converter-controls input[type="file"] {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  max-width: 22rem;
+}
+
+.converter-controls select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.875rem;
+  min-width: 8rem;
+}
+
+.converter-controls select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.converter-preview-wrap {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.converter-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.converter-stat strong {
+  color: var(--text);
+}
+
+.converter-stat--via {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.converter-table-wrap {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+.converter-table-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+}
+
+.converter-headers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.converter-headers-table th {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.converter-header-cell {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.converter-header--mapped {
+  background: rgba(63, 185, 80, 0.18) !important;
+  border-color: rgba(63, 185, 80, 0.4) !important;
+  color: #3fb950;
+}
+
+.converter-header--unmapped {
+  background: rgba(210, 153, 34, 0.18) !important;
+  border-color: rgba(210, 153, 34, 0.4) !important;
+  color: #d29922;
+}
+
+.converter-header--missing {
+  background: rgba(248, 81, 73, 0.18) !important;
+  border-color: rgba(248, 81, 73, 0.4) !important;
+  color: #f85149;
+}
+
+.converter-header--mandatory {
+  outline: 1.5px solid rgba(63, 185, 80, 0.6);
+  outline-offset: -1px;
+}
+
+.converter-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.converter-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.converter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid transparent;
+}
+
+.converter-dot--mapped { background: rgba(63, 185, 80, 0.9); border-color: rgba(63, 185, 80, 0.4); }
+.converter-dot--unmapped { background: rgba(210, 153, 34, 0.9); border-color: rgba(210, 153, 34, 0.4); }
+.converter-dot--missing { background: rgba(248, 81, 73, 0.9); border-color: rgba(248, 81, 73, 0.4); }
+
+.converter-missing {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 81, 73, 0.12);
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #f85149;
+}
+
+.converter-missing code {
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  background: rgba(248, 81, 73, 0.15);
+  border-radius: 4px;
+}
+
+.converter-warnings {
+  margin: 0.75rem 0;
+}
+
+.converter-warnings-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+}
+
+.converter-warnings-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.converter-cta-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.converter-cta-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Upload CSV */
 .upload-section {
   padding: 1.5rem;

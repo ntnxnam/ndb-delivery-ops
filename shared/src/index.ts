@@ -474,3 +474,27 @@ export type {
 } from './agentRuntime/index.js';
 export * from './utils/teamProjectUtils.js';
 export type { TeamConfig, TeamId, TeamBoardConfig, TeamNotificationEmails, TeamTcmsConfig, TeamQaEnvConfig, TeamBrandingConfig } from './types/teamConfig.js';
+
+// Bin-packing CSV conversion (shared service used by MCP tool + API route).
+export { CsvConverterService } from './services/csvConverterService.js';
+export type {
+  FileType,
+  ExtractResult,
+  SkippedRow,
+  ValidateResult,
+  ConvertResult,
+  ConverterReport,
+  BinPackingProject,
+} from './services/csvConverterService.js';
+export {
+  NDB_COLUMN_ALIASES,
+  PRODUCT_COLUMN_ALIASES,
+  CANONICAL_HEADERS,
+  MANDATORY_CANONICALS,
+  getColumnAliases,
+  canonicalHeaderFor,
+  buildHeaderIndex,
+  normalizeHeaders,
+} from './services/productColumnAliases.js';
+export type { ColumnAliasMap } from './services/productColumnAliases.js';
+export { SIZING_MONTHS, SIZING_LABELS, sizingToMonths } from './constants/binPackingSizing.js';
