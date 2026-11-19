@@ -21,7 +21,8 @@ const VOODOO_CONFIG = {
   endpoint: (process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || aiConfig.baseUrl).replace(/\/$/, '') + '/chat/completions',
   model: process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || aiConfig.defaultModel,
   maxTokens: parseInt(process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS, 10) || aiConfig.maxTokens,
-  temperature: 0.7
+  temperature: 0.7,
+  timeoutMs: parseInt(process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT, 10) || aiConfig.requestTimeoutMs || 30000,
 };
 
 /**
@@ -38,26 +39,32 @@ async function generateAISummary(releaseData, apiKey, teamConfig = null) {
 
   const prompt = buildExecutivePrompt(releaseData, teamConfig);
 
-  const response = await fetch(VOODOO_CONFIG.endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: VOODOO_CONFIG.model,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: VOODOO_CONFIG.maxTokens,
-      temperature: VOODOO_CONFIG.temperature,
-      stream: false
-    })
-  });
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), VOODOO_CONFIG.timeoutMs);
+  let response;
+  try {
+    response = await fetch(VOODOO_CONFIG.endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: VOODOO_CONFIG.model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: VOODOO_CONFIG.maxTokens,
+        temperature: VOODOO_CONFIG.temperature,
+        stream: false
+      }),
+      signal: controller.signal,
+    });
+  } finally { clearTimeout(tid); }
 
   if (!response.ok) {
     const errorText = await response.text();

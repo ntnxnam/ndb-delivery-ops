@@ -240,7 +240,7 @@ npm run mcp:build
 <tr>
 <td><code>aiConnector</code></td>
 <td><code>shared/src/connectors/aiConnector.ts</code></td>
-<td><code>AI_API_KEY</code> (NuToken)</td>
+<td><code>NAI_API_KEY</code> (NuToken)</td>
 <td>LLM transport only (<code>chatCompletion</code>/<code>completeChat</code>) — no domain prompts; delegates from <code>naiService</code></td>
 </tr>
 <tr>
@@ -675,7 +675,7 @@ npm run mcp:build
 <ol>
 <li>Extend the one connector file in <code>shared/src/connectors/&lt;system&gt;.ts</code> — no parallel client.</li>
 <li>For JIRA fields, wire through <code>productService.getCustomFields(productId)</code> — never write <code>customfield_NNNNN</code> literal twice (client mirrors in <code>client/src/utils/jiraFields.js</code>).</li>
-<li>For AI calls, go through <code>shared/src/connectors/aiConnector.ts</code> (<code>chatCompletion</code>), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in <code>server/config/aiConfig.json</code>; secrets (<code>AI_API_KEY</code>) in env.</li>
+<li>For AI calls, go through <code>shared/src/connectors/aiConnector.ts</code> (<code>chatCompletion</code>), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in <code>server/config/aiConfig.json</code>; secrets (<code>NAI_API_KEY</code>) in env.</li>
 </ol>
 <h3>Docs pipeline (every change that touches <code>docs/</code> or <code>client/src</code> links)</h3>
 <pre><code class="language-bash"># 1. Edit markdown under docs/guides/, docs/api/, docs/pages/, etc.

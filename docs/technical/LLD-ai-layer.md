@@ -312,7 +312,7 @@ async function callNAI({ systemPrompt, userPrompt, maxTokens = 2048 }) {
     max_tokens: maxTokens,
     temperature: 0.3,   // low temperature for factual/operational output
   }, {
-    headers: { Authorization: `Bearer ${process.env.AI_API_KEY}` },
+    headers: { Authorization: `Bearer ${process.env.NAI_API_KEY}` },
     timeout: 30000,
   });
   return response.data.choices[0].message.content;

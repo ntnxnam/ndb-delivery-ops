@@ -213,7 +213,7 @@ Lives in `shared/src/connectors/`. One TypeScript module per external system. Ea
 | `confluenceConnector` | `shared/src/connectors/confluenceConnector.ts` | PAT (may reuse `JIRA_PAT` if SSO) | All Confluence REST calls + `appendStructuredRow` primitive (used by Date Mover audit) |
 | `githubConnector` | `shared/src/connectors/githubConnector.ts` | `GITHUB_TOKEN` Bearer | Commits / PRs / repos / CI signals |
 | `emailConnector` | `shared/src/connectors/emailConnector.ts` | SMTP `SMTP_HOST/PORT/USER/PASS` | Send digests; SMTP transport only — templates stay in `server/services/emailService.js` |
-| `aiConnector` | `shared/src/connectors/aiConnector.ts` | `AI_API_KEY` (NuToken) | LLM transport only (`chatCompletion`/`completeChat`) — no domain prompts; delegates from `naiService` |
+| `aiConnector` | `shared/src/connectors/aiConnector.ts` | `NAI_API_KEY` (NuToken) | LLM transport only (`chatCompletion`/`completeChat`) — no domain prompts; delegates from `naiService` |
 | `slackConnector` | *not yet* | — | Deferred — no caller yet; do not add until needed ([D3](../../DECISIONS.md#d3--five-connectors-are-first-class)) |
 | `loomAuth` | `agent-pack/loom/connectors/loomAuth.ts` | env-derived | Loom-specific auth provider for weave |
 
@@ -410,7 +410,7 @@ Python/Streamlit bulk page creator + template editor + Release Gates Checklist (
 
 1. Extend the one connector file in `shared/src/connectors/<system>.ts` — no parallel client.
 2. For JIRA fields, wire through `productService.getCustomFields(productId)` — never write `customfield_NNNNN` literal twice (client mirrors in `client/src/utils/jiraFields.js`).
-3. For AI calls, go through `shared/src/connectors/aiConnector.ts` (`chatCompletion`), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in `server/config/aiConfig.json`; secrets (`AI_API_KEY`) in env.
+3. For AI calls, go through `shared/src/connectors/aiConnector.ts` (`chatCompletion`), not direct gateway axios. Non-secret defaults (endpoint, model, timeout) live in `server/config/aiConfig.json`; secrets (`NAI_API_KEY`) in env.
 
 ### Docs pipeline (every change that touches `docs/` or `client/src` links)
 
