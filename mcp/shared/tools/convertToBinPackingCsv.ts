@@ -194,7 +194,7 @@ export function registerConvertToBinPackingCsv(server: McpServer): void {
     {
       title: 'Convert to Bin-Packing CSV',
       description:
-        'Normalise a CSV/XLSX export into the canonical NDB bin-packing CSV consumed by apps/bin-packing. Accepts a file path or base64 payload plus fileName; returns normalized csvText, mapping warnings, stats (rows/cols/mapped/unmapped), and validation results. Read-only — never writes to disk (D26 HITL for writes). Delegates to CsvConverterService in shared/. Use when the user says "convert this sheet for bin-packing", "prepare bin-packing CSV", or uploads a prioritization file for allocation planning.',
+        'Normalise a CSV/XLSX export into the canonical bin-packing CSV consumed by apps/bin-packing. Accepts a file path or base64 payload plus fileName; returns normalized csvText, mapping warnings, stats (rows/cols/mapped/unmapped), and validation results. Read-only — never writes to disk (D26 HITL for writes). Delegates to CsvConverterService in shared/. Use when the user says "convert this sheet for bin-packing", "prepare bin-packing CSV", or uploads a prioritization file for allocation planning.',
       inputSchema,
       annotations: {
         title: 'Convert to Bin-Packing CSV',
