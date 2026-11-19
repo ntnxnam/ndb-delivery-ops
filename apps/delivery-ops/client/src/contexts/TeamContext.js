@@ -4,7 +4,7 @@ import { requestKey, withRequestGate } from '../utils/requestGate';
 import { STORAGE_KEYS } from '../shared/utils/constants';
 
 const TEAM_STORAGE_KEY = STORAGE_KEYS.SELECTED_TEAM;
-const TEAMS_FETCH_TIMEOUT_MS = 8000;
+const TEAMS_FETCH_TIMEOUT_MS = 15000;
 
 const TeamContext = createContext(null);
 

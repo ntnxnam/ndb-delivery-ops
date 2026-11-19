@@ -86,7 +86,7 @@ export default function SystemTestScalePage() {
 
   const releaseShort = useMemo(() => {
     const s = String(activeCurrent || '');
-    if (s.startsWith('NDB-')) return s.slice(4);
+    // Team-agnostic: strip any prefix token (NCN-, AOS-, NDB-)
     const dash = s.indexOf('-');
     return dash >= 0 ? s.slice(dash + 1) : s;
   }, [activeCurrent]);

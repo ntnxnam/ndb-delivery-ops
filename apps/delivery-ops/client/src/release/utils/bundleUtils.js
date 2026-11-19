@@ -1,9 +1,10 @@
 /**
  * bundleUtils — CRA adapter copy of shared/src/domain/bundleDerive.js (D41).
  * Keep export names in sync (npm --workspace shared run smoke:wave3).
+ * shared is SoT; this copy is the client runtime.
  *
- * CRA cannot import the shared file (ModuleScopePlugin + no Node in the
- * browser graph). Shared is the SoT; this copy is the client runtime.
+ * Browser-safe (no Node builtins). CRA cannot import the shared path
+ * (ModuleScopePlugin + no Node in the browser graph).
  *
  * Exports
  * ───────
@@ -766,7 +767,16 @@ function resolutionCategory(res) {
  * (no JIRA call). Each metric carries an approximate fixVersion-scoped
  * JQL string for click-through (the caller turns it into a URL).
  *
- * Mirror of shared/src/domain/bundleDerive.js — keep in sync.
+ * Returns:
+ *   {
+ *     release,
+ *     taskClosure: { total, done, pct, jql },
+ *     bugs:        { total, done, open, byResolution, jql },
+ *     p0:          { total, open, jql },
+ *     p1:          { total, open, jql },
+ *     reopen:      { qualityTickets, reopened, rate, jql },
+ *   }
+ * Returns null when no tickets match the release.
  */
 export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
   const all = ticketsOf(bundleOrArray);
@@ -776,6 +786,7 @@ export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
 
   const fv = `fixVersion = "${release}"`;
 
+  // Task closure — Task + Unit Test.
   const taskList = list.filter((t) => t['Issue Type'] === 'Task' || t['Issue Type'] === 'Unit Test');
   const taskDone = taskList.filter(isClosed).length;
   const taskClosure = {
@@ -785,6 +796,7 @@ export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
     jql: `${fv} AND issuetype in (Task, "Unit Test")`,
   };
 
+  // Bugs — total / done / open + resolution breakdown.
   const bugList = list.filter((t) => t['Issue Type'] === 'Bug');
   const byResolution = { Done: 0, Unresolved: 0, 'Dupe or Not Reproducible': 0, Others: 0 };
   let bugsDone = 0;
@@ -801,6 +813,7 @@ export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
     jql: `${fv} AND issuetype = Bug`,
   };
 
+  // P0 / P1 — priority bands.
   const isP0 = (t) => t['Priority'] === 'Blocker - P0';
   const isP1 = (t) => t['Priority'] === 'Critical - P1';
   const p0List = list.filter(isP0);
@@ -816,6 +829,7 @@ export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
     jql: `${fv} AND priority = "Critical - P1"`,
   };
 
+  // Reopen — Bug/Improvement/Test quality tickets.
   const QUALITY = new Set(['Bug', 'Improvement', 'Test']);
   const qualityList = list.filter((t) => QUALITY.has(t['Issue Type']));
   const reopened = qualityList.filter((t) => (t['Reopen Count'] || 0) > 0).length;
@@ -830,8 +844,21 @@ export function deriveReleaseScorecardFromBundle(bundleOrArray, release) {
 }
 
 /**
- * Bug / Improvement verification at the Promotion Gate (PG).
- * Mirror of shared/src/domain/bundleDerive.js — keep in sync.
+ * Bug / Improvement verification at the Promotion Gate (PG) for one
+ * release, derived offline from the bundle.
+ *
+ * "Verification" is the Resolved -> Closed transition (dev-fixed ->
+ * QA-verified). Maps to the PG checklist item "All open bugs and
+ * improvements are verified".
+ *
+ *  - unverifiedAtPg: dev-resolved on/before PG but not Closed by PG.
+ *  - lag:            Closed Date - Last Resolved Date (verified tickets).
+ *  - reopenRate:     share with Reopen Count > 0 (failed verification).
+ *
+ * @param {Array|{tickets:Array}} bundleOrArray
+ * @param {string} release
+ * @param {string|null} pgDate  ISO date of the Promotion Gate (from gate timeline)
+ * @returns {object|null}
  */
 export function deriveBugVerificationAtPG(bundleOrArray, release, pgDate) {
   const all = ticketsOf(bundleOrArray);
@@ -843,6 +870,7 @@ export function deriveBugVerificationAtPG(bundleOrArray, release, pgDate) {
     const items = list.filter((t) => t['Issue Type'] === issueType);
     const resolvedField = (t) => t['Last Resolved Date'] || t['Resolved Date'] || null;
 
+    // Verification lag over tickets that reached Closed.
     const lags = [];
     for (const t of items) {
       const closed = t['Closed Date'];
@@ -851,13 +879,15 @@ export function deriveBugVerificationAtPG(bundleOrArray, release, pgDate) {
       if (d != null && d >= 0) lags.push(d);
     }
 
+    // Unverified at PG: resolved on/before PG, not closed by PG.
     let unverifiedAtPg = null;
     if (pgDate) {
       unverifiedAtPg = items.filter((t) => {
         const resolved = resolvedField(t);
         if (!resolved) return false;
-        if (daysBetween(resolved, pgDate) < 0) return false;
+        if (daysBetween(resolved, pgDate) < 0) return false; // resolved after PG
         const closed = t['Closed Date'];
+        // Not closed at all, or closed after PG.
         return !closed || daysBetween(pgDate, closed) > 0;
       }).length;
     }
@@ -995,10 +1025,24 @@ export function deriveComponentHealthFromBundle(bundle, componentName) {
  * for a named JIRA component — same shape as /api/component/data.
  * Returns null if bundle has no data for this component.
  */
-export function deriveComponentDataFromBundle(bundle, componentName) {
+export function deriveComponentDataFromBundle(bundle, componentName, team = null) {
   if (!bundle || !bundle.tickets || !componentName) return null;
   const tickets = bundle.tickets.filter(t => ticketHasComponent(t, componentName));
   if (tickets.length === 0) return null;
+  // D1: team-aware release predicate — NCN has 3 prefixes, Prism has "AOS " (space)
+  const teamPrefixes = team ? (team.releasePrefixes || (team.releasePrefix ? [team.releasePrefix] : [])) : null;
+  const teamPinned = team ? (team.activeVersionNames || []) : ['master', 'Master'];
+  const isTeamRelease = (rel) => {
+    if (!rel || typeof rel !== 'string') return false;
+    if (teamPinned.includes(rel) || teamPinned.map(s=>String(s).toLowerCase()).includes(String(rel).toLowerCase())) {
+      // case-insensitive pinned check for master etc.
+      const lower = String(rel).toLowerCase();
+      if (teamPinned.some(p => String(p).toLowerCase() === lower)) return true;
+    }
+    if (teamPrefixes) return teamPrefixes.some(p => p && rel.startsWith(p));
+    // Fallback: any-team heuristic (covers calls without team — don't hardcode NDB-)
+    return /^\w+[- ]/.test(rel) && /\d/.test(rel) || rel.toLowerCase() === 'master';
+  };
 
   const now = Date.now();
 
@@ -1025,18 +1069,21 @@ export function deriveComponentDataFromBundle(bundle, componentName) {
       return b.age - a.age;
     });
 
-  // ── Build available releases ──────────────────────────────────────────────
+  // ── Build available releases (team-aware, generic sort)
   const releaseSet = new Set();
   tickets.forEach(t => {
     const rel = t['Release Name'] || '';
-    if (/^NDB-\d/.test(rel) || rel.toLowerCase() === 'master') releaseSet.add(rel);
+    if (isTeamRelease(rel)) releaseSet.add(rel);
   });
   const sortFV = (a, b) => {
-    const ndbA = /^NDB-(\d+)\.(\d+)/.exec(a);
-    const ndbB = /^NDB-(\d+)\.(\d+)/.exec(b);
-    if (ndbA && ndbB) return parseInt(ndbB[1]) - parseInt(ndbA[1]) || parseInt(ndbB[2]) - parseInt(ndbA[2]);
-    if (ndbA) return -1;
-    if (ndbB) return 1;
+    const aIsRel = isTeamRelease(a); const bIsRel = isTeamRelease(b);
+    if (aIsRel && !bIsRel) return -1; if (!aIsRel && bIsRel) return 1;
+    if (aIsRel && bIsRel) {
+      const numsA = (String(a).match(/\d+/g) || []).map(Number);
+      const numsB = (String(b).match(/\d+/g) || []).map(Number);
+      const len = Math.max(numsA.length, numsB.length);
+      for (let i = 0; i < len; i++) { const d = (numsB[i] || 0) - (numsA[i] || 0); if (d) return d; }
+    }
     if (a.toLowerCase() === 'master') return -1;
     if (b.toLowerCase() === 'master') return 1;
     return a.localeCompare(b);
@@ -1144,8 +1191,7 @@ export function deriveComponentDataFromBundle(bundle, componentName) {
     ...standaloneEpics.filter(e => !crIsDone(e)).map(e => mapRow(e, collectDesc(e['Issue Key']), 'epic')),
     ...directItems.map(d => {
       const fv = d['Release Name'] || 'Unknown';
-      const isRelevantFV = /^NDB-\d/.test(fv) || fv.toLowerCase() === 'master';
-      if (!isRelevantFV) return null;
+      if (!isTeamRelease(fv)) return null;
       const wt = crClassifyType(d['Issue Type']);
       const counts = {};
       CR_WORK_TYPES.forEach(cwt => { counts[cwt] = { outstanding: 0, done: 0, p0: 0, p1: 0 }; });

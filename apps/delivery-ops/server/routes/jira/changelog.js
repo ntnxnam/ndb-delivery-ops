@@ -9,7 +9,7 @@ const { formatDateWithHistoryHTML, formatAllCheckpointDatesHTML } = require('../
 const { formatContentForEmail, formatJiraWikiMarkupForEmail, adfToHtml } = require('../../utils/emailFormatter');
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { requireAuth } = require('../../middleware/authMiddleware');
-const { jiraTimeout } = require('../../middleware/timeout');
+const { jiraTimeout, aiTimeout } = require('../../middleware/timeout');
 const { getCached, setCached } = require('../../utils/simpleCache');
 const { apiLimiter, releaseVersionsLimiter, checkpointHistoryLimiter } = require('../../middleware/security');
 const allowedUsersConfig = require('../../config/allowedUsers.json');
@@ -379,11 +379,7 @@ router.get('/test-changelog/:key', validateJiraTokenMiddleware, async (req, res)
  * POST /api/jira/release-items-history
  */
 
-router.post('/release-items-history', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
-  // History fetching walks the full release item set and pulls per-item changelogs;
-  // the upstream JIRA changelog endpoint can be slow, so raise the timeouts.
-  req.setTimeout(300000);
-  res.setTimeout(300000);
+router.post('/release-items-history', releaseVersionsLimiter, aiTimeout, validateJiraTokenMiddleware, requireAuth('releaseVersions'), async (req, res) => {
   try {
     const data = await releaseHistoryService.getCheckpointHistory(req.jiraToken, req.body || {});
     return res.json({ success: true, data });

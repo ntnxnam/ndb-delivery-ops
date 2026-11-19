@@ -480,9 +480,9 @@ function sprintPerformanceApp(D) {
     const by = new Map();
     const prefix = D.meta.releasePrefix || '';
     (D.meta.releases || []).forEach((r) => {
-      const shortRel = prefix && r.release.startsWith(prefix)
-        ? r.release.slice(prefix.length)
-        : r.release.replace(/^NDB-/i, '');
+      let shortRel;
+      if (prefix && r.release.startsWith(prefix)) shortRel = r.release.slice(prefix.length);
+      else { try { const { stripReleasePrefix: strip } = require('./teamConfig'); shortRel = strip(r.release, null); } catch { shortRel = r.release.replace(/^NDB-/i, ''); } }
       r.gates.filter((g) => g.style === 'solid').forEach((g) => {
         if (!by.has(g.slot)) by.set(g.slot, []);
         by.get(g.slot).push(`${shortRel} ${GATE_SHORT[g.kind] || g.kind}`);

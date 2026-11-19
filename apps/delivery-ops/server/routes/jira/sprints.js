@@ -4,6 +4,7 @@ const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { requireAuth } = require('../../middleware/authMiddleware');
 const { releaseVersionsLimiter } = require('../../middleware/security');
 const { JIRA_API_V2 } = require('../../config/api');
+const { jiraTimeout, aiTimeout, sprintTimeout } = require('../../middleware/timeout');
 const sprintService = require('../../services/sprintService');
 
 /**
@@ -23,7 +24,7 @@ router.get(/^\/sprints\/?$/, (req, res) => {
  * Also matches POST /api/jira/sprints/ (trailing slash) to avoid 404 from proxies.
  */
 
-router.post(/^\/sprints\/?$/, releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
+router.post(/^\/sprints\/?$/, releaseVersionsLimiter, jiraTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
   try {
     const sprints = await sprintService.getSprintList({ token: req.jiraToken, teamId: req.body?.teamId, state: req.body?.state });
     return res.json({ success: true, sprints });
@@ -38,7 +39,7 @@ router.post(/^\/sprints\/?$/, releaseVersionsLimiter, validateJiraTokenMiddlewar
  * Returns { success: true, components: [ { id, name } ] }
  */
 
-router.get('/project-components', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
+router.get('/project-components', releaseVersionsLimiter, jiraTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
   try {
     const components = await sprintService.getProjectComponents({ token: req.jiraToken, teamId: req.query.teamId });
     return res.json({ success: true, components });
@@ -59,9 +60,7 @@ router.get('/project-components', releaseVersionsLimiter, validateJiraTokenMiddl
  * Returns metrics + issues list. Changelog is fetched for "added after start"; "removed" may be 0 (see docs).
  */
 
-router.post('/sprint-report', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
-  req.setTimeout(300000);
-  res.setTimeout(300000);
+router.post('/sprint-report', releaseVersionsLimiter, aiTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
 
   try {
     const { teamId, sprintId } = req.body || {};
@@ -87,9 +86,7 @@ router.post('/sprint-report', releaseVersionsLimiter, validateJiraTokenMiddlewar
  * Returns { success, sprints, reports, jiraBaseUrl, aggregatedIssues }.
  */
 
-router.post('/sprint-report-by-range', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
-  req.setTimeout(300000);
-  res.setTimeout(300000);
+router.post('/sprint-report-by-range', releaseVersionsLimiter, aiTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
 
   try {
     const result = await sprintService.buildSprintReportByRange({
@@ -132,9 +129,7 @@ router.get('/fields', validateJiraTokenMiddleware, async (req, res) => {
  * sprintName accepted from request body to skip the sprint map lookup entirely.
  */
 
-router.post('/sprint-kpi-breakdown', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
-  req.setTimeout(120000);
-  res.setTimeout(120000);
+router.post('/sprint-kpi-breakdown', releaseVersionsLimiter, sprintTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
   try {
     const result = await sprintService.getSprintKpiBreakdown({
       token: req.jiraToken,
@@ -154,9 +149,7 @@ router.post('/sprint-kpi-breakdown', releaseVersionsLimiter, validateJiraTokenMi
  * Returns { success: true, trends: [ { sprintId, sprintName, metrics } ] }
  */
 
-router.post('/sprint-report-trends', releaseVersionsLimiter, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
-  req.setTimeout(300000);
-  res.setTimeout(300000);
+router.post('/sprint-report-trends', releaseVersionsLimiter, aiTimeout, validateJiraTokenMiddleware, requireAuth('sprintReport'), async (req, res) => {
 
   try {
     const result = await sprintService.getSprintReportTrends({

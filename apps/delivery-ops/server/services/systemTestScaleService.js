@@ -400,7 +400,7 @@ function buildTrends(cfg, byRelease) {
     const prefix = cfg.teamCode ? `${cfg.teamCode}-` : '';
     const s = String(rel || '');
     if (prefix && s.startsWith(prefix)) return s.slice(prefix.length);
-    if (s.startsWith('NDB-')) return s.slice(4);
+    try { const { stripReleasePrefix: strip } = require('../utils/teamConfig'); const st = strip(s, null); if (st !== s) return st; } catch {}
     return s;
   };
 

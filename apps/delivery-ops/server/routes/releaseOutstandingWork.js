@@ -6,6 +6,7 @@ const router = express.Router();
 const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware, extractToken } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { jiraTimeout } = require('../middleware/timeout');
 const svc = require('../services/releaseOutstandingDeferralService');
 const outstandingSvc = require('../services/outstandingWorkbenchService');
 
@@ -19,7 +20,7 @@ function sendErr(res, e) {
   return res.status(status).json(body);
 }
 
-router.get('/workbench', auth, async (req, res) => {
+router.get('/workbench', jiraTimeout, auth, async (req, res) => {
   try {
     const token = extractToken(req);
     const teamId = req.query.teamId || req.query.team;
@@ -119,7 +120,7 @@ router.post('/chase-status-update', auth, async (req, res) => {
   }
 });
 
-router.get('/outstanding', auth, async (req, res) => {
+router.get('/outstanding', jiraTimeout, auth, async (req, res) => {
   try {
     const token = extractToken(req);
     const teamId = req.query.teamId || req.query.team;
@@ -132,7 +133,7 @@ router.get('/outstanding', auth, async (req, res) => {
   }
 });
 
-router.post('/outstanding-report', auth, async (req, res) => {
+router.post('/outstanding-report', jiraTimeout, auth, async (req, res) => {
   try {
     const token = extractToken(req);
     const { teamId, release, to, cc, previewOnly, outstandingData } = req.body || {};

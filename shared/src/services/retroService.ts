@@ -13,12 +13,20 @@ export interface RetrospectiveDiscipline {
   hardGate: 'PG' | 'GA';
 }
 
+function resolveRetroPrefixes(opts: { releasePrefix?: string; releasePrefixes?: string[] }): string[] {
+  if (Array.isArray((opts as any).releasePrefixes) && (opts as any).releasePrefixes.length > 0) return [...(opts as any).releasePrefixes];
+  if (typeof opts.releasePrefix === 'string' && opts.releasePrefix.length > 0) return [opts.releasePrefix];
+  return [];
+}
+
 export interface RetrospectiveOptions {
   release: string;
   projectKeys: string[];
   companionDisciplines: RetrospectiveDiscipline[];
   labelPrefix: string;
-  releasePrefix: string;
+  /** @deprecated Prefer releasePrefixes */
+  releasePrefix?: string;
+  releasePrefixes?: string[];
   topN?: number;
   /** When set, the release-wide gate checks subtract this JIRA saved filter so only
    *  non-FEAT-project tickets are counted ("Gate compliance for everything else"). */
@@ -32,7 +40,9 @@ export interface RetroProjectsPageOptions {
   page: number;
   limit: number;
   labelPrefix?: string; // e.g., "ndb" — used to detect deferred items
+  /** @deprecated Prefer releasePrefixes */
   releasePrefix?: string; // e.g., "NDB-" — used with labelPrefix to build deferred label pattern
+  releasePrefixes?: string[];
   ccmDate?: string; // ISO date for CCM gate (for historical status queries)
   cgDate?: string; // ISO date for CG gate (for historical status queries)
   pgDate?: string; // ISO date for PG gate (for historical status queries)
@@ -49,11 +59,15 @@ function quoteJql(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-function normalizeRelease(release: string, releasePrefix: string): string {
+function normalizeRelease(release: string, releasePrefix: string | string[]): string {
   const trimmed = release.trim();
-  const withoutPrefix = trimmed.startsWith(releasePrefix)
-    ? trimmed.slice(releasePrefix.length)
-    : trimmed;
+  const prefixes: string[] = Array.isArray(releasePrefix) ? releasePrefix : (releasePrefix ? [releasePrefix] : []);
+  // Longest match first (NCN-Konvoy- before NCN-)
+  const sorted = [...prefixes].sort((a, b) => b.length - a.length);
+  let withoutPrefix = trimmed;
+  for (const p of sorted) {
+    if (p && trimmed.startsWith(p)) { withoutPrefix = trimmed.slice(p.length); break; }
+  }
   // Replace dots AND spaces/whitespace — JQL label values must not contain spaces.
   // e.g. "Era Future" → "era-future", "2.11" → "2-11"
   return withoutPrefix.toLowerCase().replace(/[\s.]+/g, '-');
@@ -136,7 +150,7 @@ export function buildRetroJqls(
   parentKey?: string
 ): Record<string, string> {
   const release = options.release;
-  const normalized = normalizeRelease(release, options.releasePrefix);
+  const normalized = normalizeRelease(release, resolveRetroPrefixes(options));
   const pClause = projectClause(options.projectKeys);
   const deferredLabel = `${options.labelPrefix}-${normalized}-deferred`;
   const companionKeys = options.companionDisciplines.map((d) => d.projectKey);
@@ -385,8 +399,9 @@ export async function getRetroProjectsPage(
     // Build deferred label pattern (e.g., "ndb-2.11-deferred" for release "NDB-2.11").
     // Use normalizeRelease so spaces and dots are both replaced with hyphens —
     // JQL label values cannot contain spaces (e.g. "Era Future" → "era-future").
-    const deferredLabelPattern = options.labelPrefix && options.releasePrefix
-      ? `${options.labelPrefix}-${normalizeRelease(options.release, options.releasePrefix)}-deferred`
+    const retroPrefixes = resolveRetroPrefixes(options);
+    const deferredLabelPattern = options.labelPrefix && retroPrefixes.length > 0
+      ? `${options.labelPrefix}-${normalizeRelease(options.release, retroPrefixes)}-deferred`
       : null;
 
     // Gate dates for "missed gate" counting — items open ON the gate date
@@ -589,7 +604,7 @@ export async function getRetroProjectDetail(
   const hasPastPg = isPastOrToday(dates.pgDate);
   const hasPastGa = isPastOrToday(dates.gaDate);
 
-  const normalized = normalizeRelease(options.release, options.releasePrefix);
+  const normalized = normalizeRelease(options.release, resolveRetroPrefixes(options));
   const deferredLabel = `${options.labelPrefix}-${normalized}-deferred`;
   const parentScope = buildParentScopeClause(parentProject.key, options.projectKeys);
   const deferredJql = `${parentScope} AND labels = "${quoteJql(deferredLabel)}"`;
@@ -891,7 +906,7 @@ export async function runNaughtyList(
 
   const rows = await mapInBatches(selected, 5, async (p) => {
     const jqls = buildRetroJqls(dates, options, p.key);
-    const normalized = normalizeRelease(options.release, options.releasePrefix);
+    const normalized = normalizeRelease(options.release, resolveRetroPrefixes(options));
     const deferredLabel = `${options.labelPrefix}-${normalized}-deferred`;
     const pScope = buildParentScopeClause(p.key, options.projectKeys);
     const deferredJql = `${pScope} AND labels = "${quoteJql(deferredLabel)}"`;

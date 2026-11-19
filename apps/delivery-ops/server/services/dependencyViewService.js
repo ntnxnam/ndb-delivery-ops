@@ -595,12 +595,14 @@ function buildTrainLabelsJql(trainSlug) {
   return `labels in ("ndb-${trainSlug}-dependency", "ndb-${trainSlug}-asks")`;
 }
 
-/** Release slug for wishlist labels: NDB-3.1 → 3.1 */
+/** Release slug for wishlist labels: NDB-3.1 → 3.1 (team-aware) */
 function releaseToWishlistSlug(release) {
-  return String(release || '')
-    .replace(/^NDB-/i, '')
-    .trim()
-    .toLowerCase();
+  try {
+    const { stripReleasePrefix: strip } = require('../utils/teamConfig');
+    return strip(String(release || ''), null).trim().toLowerCase();
+  } catch {
+    return String(release || '').replace(/^NDB-/i, '').trim().toLowerCase();
+  }
 }
 
 function resolveLabelPrefix(prefix) {
@@ -1572,7 +1574,7 @@ async function getOverview({ token, teamId, release } = {}) {
     gaDate: ndbGates.gaDate || ndbGates.ga2?.date || ndbGates.ga1?.date || null,
   };
   const alignedTrain = resolveAlignedTrain(cfg, effectiveRelease);
-  const trainSlug = alignedTrain.trainSlug || String(effectiveRelease).replace(/^NDB-/i, '').toLowerCase();
+  const trainSlug = alignedTrain.trainSlug || (() => { try { const { stripReleasePrefix: strip } = require('../utils/teamConfig'); return strip(String(effectiveRelease), (team && team.id) || null).toLowerCase(); } catch { return String(effectiveRelease).replace(/^NDB-/i, '').toLowerCase(); } })();
 
   const partnershipBlockedBy = await searchSection(
     token,

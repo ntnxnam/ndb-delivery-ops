@@ -123,9 +123,14 @@ function resolveTeam(teamId) {
   const board = loadTeamBoardConfig();
   const requested = normalizeTeamId(teamId) || normalizeTeamId(board.defaultTeamId) || 'ndb';
   const team = getTeamById(requested) || getTeamById(board.defaultTeamId);
+  if (!team || !team.projectKey) {
+    const err = new Error(`Unknown team '${requested}' — no projectKey in teamBoardConfig`);
+    err.statusCode = 400;
+    throw err;
+  }
   return {
-    teamId: (team && team.id) || requested,
-    projectKey: team?.projectKey || 'ERA',
+    teamId: team.id || requested,
+    projectKey: team.projectKey,
     jiraBaseUrl: process.env.JIRA_BASE_URL || 'https://jira.nutanix.com',
     companionProjects: companionProjectKeys(team),
   };

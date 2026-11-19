@@ -1223,8 +1223,10 @@ export function isWishlistLabel(
  */
 export interface ExtractDeferredOptions {
   labelPrefix: string;
-  /** Canonical release name prefix used when restoring lineage. e.g. `'NDB-'`. */
-  productPrefix: string;
+  /** Canonical release name prefix used when restoring lineage. e.g. `'NDB-'`. @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  /** Canonical release name prefixes. First entry is used as restore prefix. */
+  productPrefixes?: string[];
 }
 
 export function extractDeferredSourceReleases(
@@ -1254,14 +1256,15 @@ export function extractDeferredSourceReleases(
     // Restore canonical name. If a hyphen is present, split once and
     // upper-case the suffix portion (which carries the pre-release
     // token like `ea` → `EA`).
+    const restorePrefix = options.productPrefixes?.[0] ?? options.productPrefix ?? '';
     let canonical: string;
     if (relPart.includes('-')) {
       const dashIdx = relPart.indexOf('-');
       const base = relPart.slice(0, dashIdx);
       const suffix = relPart.slice(dashIdx + 1).toUpperCase();
-      canonical = `${options.productPrefix}${base}-${suffix}`;
+      canonical = `${restorePrefix}${base}-${suffix}`;
     } else {
-      canonical = `${options.productPrefix}${relPart}`;
+      canonical = `${restorePrefix}${relPart}`;
     }
     if (!seen.has(canonical)) {
       seen.add(canonical);
@@ -1381,13 +1384,22 @@ export const PROCESSED_DATASET_COLUMNS = [
 export interface ProcessMasterOptions {
   /** D1: label prefix for is-deferred / is-wishlist checks. Required. */
   labelPrefix: string;
-  /** D1: product release prefix for release-type classification. Required. */
-  productPrefix: string;
+  /** D1: product release prefix. Required (legacy singular). @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  /** D1: product release prefixes. Canonical for multi-prefix tenants like NCN. */
+  productPrefixes?: string[];
   /**
    * Sprint calendar for Sprint Number derivation. Defaults to
    * NDB_SPRINT_CALENDAR; supply your own for other tenants.
    */
   sprintCalendar?: SprintCalendar;
+}
+
+function resolveProcessPrefixes(options: ProcessMasterOptions | ExtractDeferredOptions): string[] {
+  const o = options as { productPrefixes?: string[]; productPrefix?: string };
+  if (Array.isArray(o.productPrefixes) && o.productPrefixes.length > 0) return [...o.productPrefixes];
+  if (typeof o.productPrefix === 'string' && o.productPrefix.length > 0) return [o.productPrefix];
+  throw new Error('releaseDatasetService: productPrefix/productPrefixes is required (D1)');
 }
 
 /**
@@ -1410,9 +1422,7 @@ export function processMaster(
   if (!options?.labelPrefix) {
     throw new Error('processMaster: options.labelPrefix is required (D1)');
   }
-  if (!options?.productPrefix) {
-    throw new Error('processMaster: options.productPrefix is required (D1)');
-  }
+  const prefixes = resolveProcessPrefixes(options);
   const cal = options.sprintCalendar;
   const out: ProcessedTicketWithDerived[] = [];
   for (const tickets of Object.values(perReleaseTickets)) {
@@ -1442,7 +1452,7 @@ export function processMaster(
         }),
         'Is QA Verification': isQaVerification,
         'Release Type': classifyRelease(t['Release Name'], {
-          productPrefix: options.productPrefix,
+          productPrefixes: prefixes,
         }),
       });
     }

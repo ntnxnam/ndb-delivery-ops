@@ -1,4 +1,4 @@
-const DEFAULT_TTL_MS = 120000;
+const DEFAULT_TTL_MS = 300000;
 
 class SyncLocking {
   constructor() {

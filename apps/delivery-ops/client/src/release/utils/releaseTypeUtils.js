@@ -17,12 +17,12 @@ const PRE_SUFFIXES = /^(EA|RC\d*|BETA|ALPHA|SNAPSHOT)$/i;
  * @param {string} releaseName e.g. NDB-2.11, NDB-2.10.3.2, NDB-3.0-EA
  * @param {string} [prefix] e.g. NDB-
  */
-export function getReleaseType(releaseName, prefix = 'NDB-') {
+export function getReleaseType(releaseName, prefix = '') {
   if (!releaseName) return RELEASE_TYPE.OTHER;
-  let v =
-    prefix && releaseName.startsWith(prefix)
-      ? releaseName.slice(prefix.length)
-      : releaseName.replace(/^[A-Z]+-/, '');
+  let v;
+  if (prefix && releaseName.startsWith(prefix)) v = releaseName.slice(prefix.length);
+  else if (releaseName.includes('-')) v = releaseName.slice(releaseName.indexOf('-') + 1);
+  else v = releaseName.replace(/^[A-Za-z][A-Za-z0-9]*[- ]/, '');
 
   if (v.includes('-')) {
     const [base, suffix] = v.split('-', 2);
@@ -37,11 +37,17 @@ export function getReleaseType(releaseName, prefix = 'NDB-') {
   return RELEASE_TYPE.OTHER;
 }
 
-export function filterVersionsByType(versions, type) {
+export function filterVersionsByType(versions, type, teamOrPrefix) {
   if (!type || !versions?.length) return versions || [];
+  // Derive team prefix when a team object/array is passed
+  let prefix = '';
+  if (typeof teamOrPrefix === 'string') prefix = teamOrPrefix;
+  else if (Array.isArray(teamOrPrefix)) prefix = teamOrPrefix[0] || '';
+  else if (teamOrPrefix?.releasePrefixes?.[0]) prefix = teamOrPrefix.releasePrefixes[0];
+  else if (teamOrPrefix?.releasePrefix) prefix = teamOrPrefix.releasePrefix;
   return versions.filter((v) => {
     const name = typeof v === 'string' ? v : v.name;
-    return getReleaseType(name) === type;
+    return getReleaseType(name, prefix) === type;
   });
 }
 

@@ -640,11 +640,28 @@ async function updateJiraVersionReleaseDate(versionId, releaseDate) {
 }
 
 /**
- * Fire-and-forget: update JIRA FEAT + ERA project versions when GA date changes.
- * Does not block the API response.
+ * Fire-and-forget: update JIRA project versions when GA date changes.
+ * Derives target projects from teamBoardConfig so NCN (NCN) and Prism (ENG)
+ * are updated instead of the hardcoded FEAT+ERA. Keeps FEAT for NDB compat
+ * when the version looks like an NDB release.
  */
-async function triggerGaJiraUpdate(version, newGaDate) {
-  const projects = ['FEAT', 'ERA'];
+async function triggerGaJiraUpdate(version, newGaDate, teamId) {
+  let projects = ['FEAT', 'ERA'];
+  try {
+    const cfg = loadTeamBoardConfig();
+    const team = teamId ? getTeamById(teamId) : (cfg.teams || []).find((t) => {
+      try {
+        const prefs = Array.isArray(t.releasePrefixes) ? t.releasePrefixes : [];
+        return prefs.some((p) => version.startsWith(p));
+      } catch { return false; }
+    });
+    if (team?.projectKey) {
+      const extra = team.featureProjectKey ? [team.featureProjectKey] : [];
+      projects = [team.projectKey, ...extra].filter(Boolean);
+      // For NDB keep FEAT as well so both ERA and FEAT versions stay in sync
+      if (team.id === 'ndb' && !projects.includes('FEAT')) projects.push('FEAT');
+    }
+  } catch { /* fallback to defaults */ }
   for (const proj of projects) {
     const versionId = await findJiraVersionId(proj, version);
     if (versionId) {
@@ -802,8 +819,9 @@ router.post('/release-dates', express.json(), (req, res) => {
     if (newGaDate && newGaDate !== oldGaDate) {
       const changedBy = getUsername(req);
       // Fire and forget — don't block the response
+      const teamIdForGa = req.body?.teamId || req.query?.teamId || req.headers['x-team-id'] || null;
       Promise.all([
-        triggerGaJiraUpdate(version, newGaDate),
+        triggerGaJiraUpdate(version, newGaDate, teamIdForGa),
         sendGaChangedEmail({ version, oldGaDate, newGaDate, reason, changedBy }),
       ]).catch(e => console.warn('[config] GA side-effects error:', e.message));
     }

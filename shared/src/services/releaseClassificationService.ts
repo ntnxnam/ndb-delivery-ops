@@ -52,8 +52,23 @@ export interface ParsedVersion {
 }
 
 export interface ClassificationOptions {
-  /** Product release prefix, e.g. `'NDB-'`, `'DATALENS-'`. Required (D1). */
-  productPrefix: string;
+  /** Product release prefix, e.g. `'NDB-'`. Required (D1). @deprecated Prefer productPrefixes */
+  productPrefix?: string;
+  /** Product release prefixes, e.g. `['NCN-Konvoy-','NCN-NDK-','CSI-']`. Canonical. */
+  productPrefixes?: string[];
+}
+
+function resolvePrefixes(options: ClassificationOptions): string[] {
+  if (Array.isArray(options.productPrefixes) && options.productPrefixes.length > 0) return [...options.productPrefixes];
+  if (typeof options.productPrefix === 'string' && options.productPrefix.length > 0) return [options.productPrefix];
+  throw new Error('releaseClassification: productPrefix/productPrefixes is required (D1)');
+}
+
+function stripMatchingPrefix(name: string, prefixes: string[]): string {
+  // Longest match first so NCN-Konvoy- wins over NCN- if both present
+  const sorted = [...prefixes].sort((a, b) => b.length - a.length);
+  for (const p of sorted) if (name.startsWith(p)) return name.slice(p.length);
+  return name;
 }
 
 /**
@@ -64,15 +79,11 @@ export function parseVersion(
   name: string,
   options: ClassificationOptions
 ): ParsedVersion {
-  if (!options?.productPrefix) {
-    throw new Error('parseVersion: options.productPrefix is required (D1)');
-  }
+  const prefixes = resolvePrefixes(options);
   if (!name) return { base: [], suffix: null };
 
   let raw = name.trim();
-  if (raw.startsWith(options.productPrefix)) {
-    raw = raw.slice(options.productPrefix.length);
-  }
+  raw = stripMatchingPrefix(raw, prefixes);
 
   let suffix: string | null = null;
   if (raw.includes('-')) {

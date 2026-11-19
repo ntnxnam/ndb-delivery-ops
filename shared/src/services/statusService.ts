@@ -80,6 +80,7 @@ export class StatusService {
     const productCfg = this.products.getProduct(productId);
     const projectKey = productCfg.projectKey;
     const versions = await this.jira.getProjectVersions(projectKey);
+    const productPrefixes = this.products.getReleasePrefixes(productId);
 
     // "Active" heuristic for Phase D1: not released, not archived, and
     // matching the release prefix / pinned names when either is configured.
@@ -87,11 +88,11 @@ export class StatusService {
     for (const v of versions) {
       if (v.archived) continue;
       if (v.released) continue; // shipped
-      const hasScope = productCfg.releasePrefix || productCfg.activeVersionNames?.length;
+      const hasScope = productPrefixes.length > 0 || (productCfg.activeVersionNames?.length ?? 0) > 0;
       if (
         hasScope &&
         !versionBelongsToProduct(v.name, {
-          productPrefix: productCfg.releasePrefix,
+          productPrefixes,
           activeVersionNames: productCfg.activeVersionNames,
         })
       ) {

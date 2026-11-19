@@ -10,6 +10,7 @@ const express = require('express');
 const { apiLimiter } = require('../middleware/security');
 const { validateJiraTokenMiddleware } = require('../middleware/auth/jira');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { jiraTimeout } = require('../middleware/timeout');
 const dependencyViewService = require('../services/dependencyViewService');
 const { extractApiError } = require('../utils/errorMessages');
 
@@ -20,7 +21,7 @@ const auth = [apiLimiter, validateJiraTokenMiddleware, requireAuth('releaseVersi
  * GET /api/dependency/overview
  * Query: teamId, release
  */
-router.get('/overview', auth, async (req, res) => {
+router.get('/overview', jiraTimeout, auth, async (req, res) => {
   try {
     const data = await dependencyViewService.getOverview({
       token: req.jiraToken,

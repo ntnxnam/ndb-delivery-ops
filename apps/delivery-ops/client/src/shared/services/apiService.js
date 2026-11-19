@@ -47,18 +47,19 @@ export const authenticatedPost = async (url, data = {}, options = {}, axiosConfi
     if (!requestData.username) requestData.username = normalizedUsername;
     if (!requestData.userEmail) requestData.userEmail = `${normalizedUsername}@nutanix.com`;
   }
-  let timeout = 60000;
-  if (url.includes('/release-items-history')) timeout = 300000;
-  else if (url.includes('/sos-items-history')) timeout = 180000;
-  else if (url.includes('/release-items-commit') || url.includes('/release-items-long-term')) timeout = 180000;
-  else if (url.includes('/api/jira/release-items') || url.includes('/api/release-dataset/project-status') || url.includes('/api/release-dataset/per-release')) timeout = 180000;
-  else if (url.includes('/sprint-report') || url.includes('/sprint-report-trends')) timeout = 300000;
-  else if (url.includes('/api/jira/sprints')) timeout = 90000;
-  else if (url.includes('/inspect-base-filter') || url.includes('/project-scope') || url.includes('/board-calendar')) timeout = 120000;
-  else if (url.includes('/api/ai/weekly-skim')) timeout = 600000;
-  else if (url.includes('/api/ai/')) timeout = 180000;
-  else if (url.includes('/system-test-scale')) timeout = 180000;
-  else if (url.includes('/outstanding-report')) timeout = 180000;
+  // Client timeouts are server limit + 5s so the server's 408 JSON wins over a blind abort.
+  let timeout = 35000; // generalTimeout 30s + 5s
+  if (url.includes('/release-items-history')) timeout = 305000; // aiTimeout 300s + 5s
+  else if (url.includes('/sos-items-history')) timeout = 305000;
+  else if (url.includes('/release-items-commit') || url.includes('/release-items-long-term')) timeout = 95000;
+  else if (url.includes('/api/jira/release-items') || url.includes('/api/release-dataset/project-status') || url.includes('/api/release-dataset/per-release')) timeout = 95000;
+  else if (url.includes('/sprint-report') || url.includes('/sprint-report-trends')) timeout = 305000;
+  else if (url.includes('/api/jira/sprints')) timeout = 95000;
+  else if (url.includes('/inspect-base-filter') || url.includes('/project-scope') || url.includes('/board-calendar')) timeout = 95000;
+  else if (url.includes('/api/ai/weekly-skim')) timeout = 305000;
+  else if (url.includes('/api/ai/')) timeout = 185000;
+  else if (url.includes('/system-test-scale')) timeout = 95000;
+  else if (url.includes('/outstanding-report')) timeout = 95000;
   const config = { ...authHeaders, timeout, ...axiosConfig, requestGate: { managed: true, ignoreFailureCooldown } };
   return withRequestGate(requestKey('POST', url, data), () => axios.post(url, requestData, config), { ignoreFailureCooldown });
 };
@@ -78,10 +79,10 @@ export const authenticatedPut = async (url, data = {}, options = {}) => {
 export const authenticatedGet = async (url, params = {}, options = {}, axiosConfig = {}) => {
   const { jiraToken, username, ignoreFailureCooldown = false } = options;
   const authHeaders = getAuthHeaders(jiraToken, username);
-  let timeout = 30000;
-  if (url.includes('/system-test-scale')) timeout = 180000;
-  else if (url.includes('/release-items') || url.includes('/project-status') || url.includes('/per-release') || url.includes('/release-dataset/synopsis') || url.includes('/release-dataset/outstanding')) timeout = 180000;
-  else if (url.includes('/api/feature/dashboard')) timeout = 180000;
+  let timeout = 35000;
+  if (url.includes('/system-test-scale')) timeout = 95000;
+  else if (url.includes('/release-items') || url.includes('/project-status') || url.includes('/per-release') || url.includes('/release-dataset/synopsis') || url.includes('/release-dataset/outstanding')) timeout = 95000;
+  else if (url.includes('/api/feature/dashboard')) timeout = 95000;
   return withRequestGate(requestKey('GET', url, null, params), () => axios.get(url, { ...authHeaders, params, timeout, ...axiosConfig, requestGate: { managed: true, ignoreFailureCooldown } }), { ignoreFailureCooldown });
 };
 
@@ -149,6 +150,7 @@ class ApiService {
       case 401: return `Authentication failed${baseContext}. Please check your credentials.`;
       case 403: return `Access denied${baseContext}. You don't have permission for this action.`;
       case 404: return `Resource not found${baseContext}. The requested data may have been moved or deleted.`;
+      case 408: return errorData.message || `Request timed out${baseContext}. This can happen on VPN or for very large releases — please try again.`;
       case 429: return `Too many requests${baseContext}. Please wait a moment and try again.`;
       case 500: return `Server error${baseContext}. Please try again in a moment.`;
       case 502: case 503: case 504: return `Service temporarily unavailable${baseContext}. Please try again later.`;

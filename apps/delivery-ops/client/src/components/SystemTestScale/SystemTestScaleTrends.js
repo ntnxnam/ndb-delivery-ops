@@ -27,7 +27,11 @@ function toWideRows(trends, keys) {
   const order = trends?.releaseOrder || [];
   const map = seriesMap(trends);
   return order.map((rel, idx) => {
-    const row = { release: rel, short: String(rel).replace(/^NDB-/, '') };
+    // Generic short — server shortOf already strips the team prefix; fallback strips any prefix token
+    const raw = String(rel);
+    const dash = raw.indexOf('-');
+    const short = dash >= 0 ? raw.slice(dash + 1) : raw;
+    const row = { release: rel, short };
     keys.forEach((k) => {
       const pt = map[k]?.points?.[idx];
       row[k] = pt?.value ?? 0;
@@ -43,7 +47,7 @@ function rateRows(trends) {
   const esc = (trends?.rateSeries || []).find((s) => s.key === 'escapeRate');
   return order.map((rel, idx) => ({
     release: rel,
-    short: String(rel).replace(/^NDB-/, ''),
+    short: (() => { const s = String(rel); const d = s.indexOf('-'); return d >= 0 ? s.slice(d + 1) : s; })(),
     regressionRate: reg?.points?.[idx]?.value ?? 0,
     escapeRate: esc?.points?.[idx]?.value ?? 0,
     regressionJql: reg?.points?.[idx]?.jql || '',
@@ -90,7 +94,7 @@ export default function SystemTestScaleTrends({ trends, jiraBaseUrl, currentRele
   const regRows = useMemo(() => toWideRows(trends, REG_KEYS), [trends]);
   const ageRows = useMemo(() => toWideRows(trends, AGE_KEYS), [trends]);
   const rates = useMemo(() => rateRows(trends), [trends]);
-  const currentShort = currentRelease ? String(currentRelease).replace(/^NDB-/, '') : null;
+  const currentShort = currentRelease ? (() => { const s = String(currentRelease); const d = s.indexOf('-'); return d >= 0 ? s.slice(d + 1) : s; })() : null;
 
   const tick = useCallback((props) => {
     const { x, y, payload } = props;

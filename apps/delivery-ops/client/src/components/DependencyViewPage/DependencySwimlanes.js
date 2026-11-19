@@ -10,8 +10,14 @@ const EW_LANES = [
   { id: 'team_internal', title: 'Unparked / FYI', hint: 'no EW park', tone: 'fyi' },
 ];
 
-const HOME_PROJECTS = new Set(['ERA', 'FEAT']);
+const FALLBACK_HOME_PROJECTS = new Set(['ERA', 'FEAT']);
 const MAX_DEPTH = 5;
+
+// Injected by parent (DependencyViewPage) from selectedTeam.homeProjects; fallback for direct usage
+let _injectedHomeProjects = null;
+export function setSwimlaneHomeProjects(keys) {
+  _injectedHomeProjects = Array.isArray(keys) && keys.length ? new Set(keys.map((k) => String(k).toUpperCase())) : null;
+}
 
 function spanIdOf(iss) {
   return String(iss?.spanInfo?.id || iss?.span || 'team_internal');
@@ -24,7 +30,11 @@ function projectOfKey(key) {
 
 function isHomeKey(key, project) {
   const pk = String(project || projectOfKey(key) || '').toUpperCase();
-  return HOME_PROJECTS.has(pk) || pk.startsWith('NDB');
+  const home = _injectedHomeProjects || FALLBACK_HOME_PROJECTS;
+  if (home.has(pk)) return true;
+  // Fallback heuristic: any project key containing NDB is legacy home
+  if (pk.startsWith('NDB')) return true;
+  return false;
 }
 
 function shortSummary(summary, max = 56) {

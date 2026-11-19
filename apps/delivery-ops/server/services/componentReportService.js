@@ -11,9 +11,16 @@ const { getJira, searchPages } = require('../utils/jiraClient');
 const teamBoardConfig = require('../config/teamBoardConfig.json');
 const { formatDate } = require('../utils/dateFormatter');
 
-function getProjectKey() {
-  const teams = Array.isArray(teamBoardConfig.teams) ? teamBoardConfig.teams : Object.values(teamBoardConfig.teams || {});
-  return (teams[0] && teams[0].projectKey) || 'ERA';
+function getProjectKey(teamId) {
+  const { getTeamById, loadTeamBoardConfig } = require('../utils/teamConfig');
+  if (teamId) {
+    const t = getTeamById(teamId);
+    if (t?.projectKey) return t.projectKey;
+  }
+  const cfg = loadTeamBoardConfig();
+  const def = cfg.teams?.find((x) => x.id === cfg.defaultTeamId) || cfg.teams?.[0];
+  if (def?.projectKey) return def.projectKey;
+  throw new Error(`No projectKey for team '${teamId ?? cfg.defaultTeamId}'`);
 }
 
 /**
