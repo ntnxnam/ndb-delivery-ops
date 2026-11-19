@@ -8,6 +8,7 @@
 
 import type { JiraConnector } from '../connectors/jiraConnector.js';
 import type { Env } from '../connectors/env.js';
+import { validateScope } from './tpmScope.js';
 import type { TpmScope, TpmFetchResult, TpmKpiResult, TpmLifecyclePhase, TpmPhaseSkillId, TpmKpiConfig } from '../types/tpm.js';
 
 export interface KpiConfigShape {
@@ -21,8 +22,7 @@ export interface FetchPhaseOptions {
   jira: JiraConnector;
   env: Env;
   kpiConfig: KpiConfigShape;
-  /** Timeout per JQL call (ms) — forwarded to searchCount */
-  // timeoutMs reserved for future use
+  // timeoutMs reserved — forwarded to searchCount when wired
 }
 
 function esc(v: string): string {
@@ -38,7 +38,7 @@ function getTeamKpis(kpiConfig: KpiConfigShape, teamId?: string): TpmKpiConfig[]
   const teams = kpiConfig.teams || {};
   const tid = (teamId || '').toLowerCase();
   if (tid && teams[tid]) return teams[tid];
-  // fallback: first team with KPIs, or empty
+  if (tid) return [];
   const first = Object.values(teams).find((arr) => Array.isArray(arr) && arr.length > 0);
   return first ?? [];
 }
@@ -48,7 +48,7 @@ function getReleaseBaseFilter(releaseVersion?: string): string | null {
   const v = releaseVersion.trim();
   if (!v) return null;
   // Product-agnostic default — matches server/utils/jiraRouteHelpers.getDefaultReleaseBaseFilter
-  return `filter=${v}-All`;
+  return `filter=${esc(v)}-All`;
 }
 
 function buildJiraUrl(jiraBaseUrl: string, jql: string): string {
@@ -72,7 +72,7 @@ export function buildTpmKpiJql(releaseVersion: string | undefined, kpiBaseQuery:
   if (!releaseFilter) return { jql: normalized, warnings };
   // Keep filter= literal — JIRA resolves saved filters server-side
   const kpiPart = /^filter\s*=\s*.+$/i.test(normalized) ? normalized : `(${normalized})`;
-  const jql = `${releaseFilter} and ${kpiPart} and status != Closed`;
+  const jql = `${releaseFilter} AND ${kpiPart} AND status != Closed`;
   return { jql, warnings };
 }
 
@@ -82,6 +82,10 @@ export function filterKpisByPhase(kpis: TpmKpiConfig[], lifecyclePhase: TpmLifec
 
 export async function fetchPhaseKpis(opts: FetchPhaseOptions): Promise<TpmFetchResult> {
   const { lifecyclePhase, skillId, scope, jira, env, kpiConfig } = opts;
+  const scopeErr = validateScope(scope);
+  if (scopeErr) {
+    throw new Error(`Invalid scope: ${scopeErr}`);
+  }
   const asOf = new Date().toISOString();
   const jiraBaseUrl = env.jiraBaseUrl;
   const teamId = scope.teamId;
@@ -90,46 +94,40 @@ export async function fetchPhaseKpis(opts: FetchPhaseOptions): Promise<TpmFetchR
   const allKpis = getTeamKpis(kpiConfig, teamId);
   const matching = filterKpisByPhase(allKpis, lifecyclePhase);
 
-  const kpis: TpmKpiResult[] = [];
-  for (const kpi of matching) {
-    const { jql, warnings } = buildTpmKpiJql(releaseVersion, kpi.baseQuery);
-    if (!jql) {
-      kpis.push({
-        kpiId: kpi.id,
-        kpiName: kpi.name,
-        jql: '',
-        count: 0,
-        jiraUrl: '',
-        capturedAt: new Date().toISOString(),
-        warnings,
-        error: 'Empty JQL — baseQuery missing',
-      });
-      continue;
-    }
-    const jiraUrl = buildJiraUrl(jiraBaseUrl, jql);
-    try {
-      const capturedAt = new Date().toISOString();
-      const count = await jira.searchCount(jql);
-      kpis.push({ kpiId: kpi.id, kpiName: kpi.name, jql, count, jiraUrl, capturedAt, warnings: warnings.length ? warnings : undefined });
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      kpis.push({ kpiId: kpi.id, kpiName: kpi.name, jql, count: 0, jiraUrl, capturedAt: new Date().toISOString(), warnings: warnings.length ? warnings : undefined, error: errMsg });
-    }
-  }
-
-  // Preserve config order
-  kpis.sort((a, b) => {
-    const ai = matching.findIndex((k) => k.id === a.kpiId);
-    const bi = matching.findIndex((k) => k.id === b.kpiId);
-    return ai - bi;
-  });
+  const results = await Promise.all(
+    matching.map(async (kpi): Promise<TpmKpiResult> => {
+      const rawQuery = kpi.jqlOverride ?? kpi.baseQuery;
+      const { jql, warnings } = buildTpmKpiJql(releaseVersion, rawQuery);
+      if (!jql) {
+        return {
+          kpiId: kpi.id,
+          kpiName: kpi.name,
+          jql: '',
+          count: 0,
+          jiraUrl: '',
+          capturedAt: new Date().toISOString(),
+          warnings,
+          error: 'Empty JQL — baseQuery missing',
+        };
+      }
+      const jiraUrl = buildJiraUrl(jiraBaseUrl, jql);
+      try {
+        const capturedAt = new Date().toISOString();
+        const count = await jira.searchCount(jql);
+        return { kpiId: kpi.id, kpiName: kpi.name, jql, count, jiraUrl, capturedAt, warnings: warnings.length ? warnings : undefined };
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        return { kpiId: kpi.id, kpiName: kpi.name, jql, count: 0, jiraUrl, capturedAt: new Date().toISOString(), warnings: warnings.length ? warnings : undefined, error: errMsg };
+      }
+    }),
+  );
 
   return {
     skillId,
     lifecyclePhase,
     scope,
     asOf,
-    kpis,
+    kpis: results,
     totalKpis: matching.length,
     jiraBaseUrl,
   };

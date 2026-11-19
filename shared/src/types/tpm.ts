@@ -1,5 +1,5 @@
 /**
- * TPM agent types — shared contracts for all 6 lighthouse skills.
+ * TPM agent types — shared contracts for TPM phase skills (D16, D44).
  *
  * D16 orchestrator-workers, D44 tenancy (lighthouse product pack).
  * These types are product-agnostic (D1) and citation-first (D10).

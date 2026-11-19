@@ -6,28 +6,32 @@
         "name": "Top-CFI",
         "baseQuery": "filter=142539",
         "displayType": "count",
-        "order": 0
+        "order": 0,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8xtjw_7iu388x4",
         "name": "Top-CFD",
         "baseQuery": "filter=142537",
         "displayType": "count",
-        "order": 1
+        "order": 1,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8y8o9_m7f8uo6d",
         "name": "Non-Top-CFI",
         "baseQuery": "filter=142543",
         "displayType": "count",
-        "order": 2
+        "order": 2,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mlt8ykk1_87kzd1g2",
         "name": "Non-Top-CFD",
         "baseQuery": "filter=142541",
         "displayType": "count",
-        "order": 3
+        "order": 3,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mltpmqym_g5u55h35",
@@ -48,7 +52,8 @@
         "name": "OnCalls",
         "baseQuery": "filter=NDB-OnCalls",
         "displayType": "count",
-        "order": 6
+        "order": 6,
+        "lifecyclePhase": "postRelease"
       },
       {
         "id": "kpi_mltr5912_iqnubebp",
