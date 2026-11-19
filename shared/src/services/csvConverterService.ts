@@ -314,7 +314,7 @@ function detectResourceGroupsInline(projects: BinPackingProject[]): void {
 
 // ── Core row→projects port (csv-parser rowsToProjects) ──────────────────
 
-function rowsToProjectsCore(rows: string[][]): {
+function rowsToProjectsCore(rows: string[][], productId?: string | null): {
   projects: BinPackingProject[];
   error: string | null;
   skipped: SkippedRow[];
@@ -330,19 +330,18 @@ function rowsToProjectsCore(rows: string[][]): {
     return { projects: [], error: 'No header or data rows.', skipped, invalidRows };
   }
 
-  const idx = (name: string): number => {
-    const n = (name || '').trim();
-    const found = header.findIndex((h) => (h || '').trim() === n);
-    return found >= 0 ? found : -1;
-  };
+  // Alias-aware header resolution via productColumnAliases (D1). Uses canonical index
+  // so aliases like "Issue Key"/"Title" resolve correctly; falls back to substring
+  // only for Sl No which has no canonical ambiguity.
+  const headerIndex = buildHeaderIndex(rawHeader, productId ?? null);
+  const idx = (canonical: string): number => headerIndex.get(canonical) ?? -1;
   const idxContains = (sub: string): number =>
     header.findIndex((h) => (h || '').trim().indexOf(sub) !== -1);
 
-  const iSlNo =
-    idx('Sl No') >= 0 ? idx('Sl No') : idx('Sl. No') >= 0 ? idx('Sl. No') : idxContains('Sl No');
+  const iSlNo = idx('Sl No') >= 0 ? idx('Sl No') : idxContains('Sl No');
   const iFirstCol = iSlNo >= 0 ? iSlNo : 0;
-  const iFeat = idx('FEAT NUMBER') >= 0 ? idx('FEAT NUMBER') : idxContains('FEAT NUMBER');
-  const iSummary = idx('SUMMARY') >= 0 ? idx('SUMMARY') : idxContains('SUMMARY');
+  const iFeat = idx('FEAT NUMBER');
+  const iSummary = idx('SUMMARY');
 
   if (iFeat < 0 || iSummary < 0) {
     return {
@@ -608,7 +607,7 @@ export class CsvConverterService {
     if (!rows || !rows.length) {
       return { projects: [], error: 'No rows to validate.', skipped: [], invalidRows: [] };
     }
-    const { projects, error, skipped, invalidRows } = rowsToProjectsCore(rows);
+    const { projects, error, skipped, invalidRows } = rowsToProjectsCore(rows, _productId ?? this.productId ?? null);
     return { projects, error, skipped, invalidRows };
   }
 

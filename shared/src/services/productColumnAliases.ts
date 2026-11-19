@@ -106,6 +106,8 @@ export const NDB_COLUMN_ALIASES = {
  */
 export const PRODUCT_COLUMN_ALIASES: Readonly<Record<string, ColumnAliasMap>> = {
   ndb: NDB_COLUMN_ALIASES,
+  datalens: NDB_COLUMN_ALIASES,
+  generic: NDB_COLUMN_ALIASES,
   default: NDB_COLUMN_ALIASES,
 } as const;
 
