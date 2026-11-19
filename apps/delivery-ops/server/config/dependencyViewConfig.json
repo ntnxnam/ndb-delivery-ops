@@ -2,7 +2,7 @@
   "version": "1.1.0",
   "description": "Post EC dependency view — Modes: Dependency (links) | Partnership (hierarchy). Project type via *-ew. Rules: agent-pack/context/domain/dependency_rule.md. Legacy section keys partnership*/companion* until renamed.",
   "defaultTeamId": "ndb",
-  "defaultRelease": "NDB-3.0",
+  "defaultRelease": "",
   "jiraBaseUrlDefault": "https://jira.nutanix.com",
   "scopeGroups": [
     "Team-BharatKumar-Beedu-Org",

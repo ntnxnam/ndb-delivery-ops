@@ -8,6 +8,7 @@
  *   - checkFilterExists   — does a saved JIRA filter exist by name?
  *   - createFilter        — create a saved JIRA filter (with auto-registration
  *                           of the X-All root filter in releaseVersionsColumnsConfig)
+ *   - createJchTicket     — create JCH Task when version creation fails (fallback)
  *
  * Companion service `jiraFilterService.js` owns the heavier rename / cleanup
  * cascade operations. New release-setup admin actions belong here unless they
@@ -189,9 +190,55 @@ async function createFilter(jiraToken, { filterName, jql, description }) {
   };
 }
 
+/**
+ * Create a JCH ticket requesting version creation when direct creation failed.
+ * Uses POST /rest/api/2/issue.
+ */
+async function createJchTicket(jiraToken, { versionName, projectKey, errorDetail, releaseDate }) {
+  if (!versionName || !projectKey) {
+    const err = new Error('versionName and projectKey are required');
+    err.statusCode = 400;
+    throw err;
+  }
+  try {
+    const jira = await getJira(jiraToken);
+    const summary = `Request: Create fixVersion ${versionName} in ${projectKey}`;
+    const safeError = errorDetail ? String(errorDetail).slice(0, 1000).replace(/\s+/g, ' ').trim() : '';
+    const description = [
+      `Automated request from Release Setup (delivery-ops).`,
+      ``,
+      `Version: ${versionName}`,
+      `Target project: ${projectKey}`,
+      releaseDate ? `Requested release date: ${releaseDate}` : `Requested release date: not set`,
+      safeError ? `Creation error: ${safeError}` : ``,
+      ``,
+      `Please create fixVersion "${versionName}" in project ${projectKey} and assign / transition this ticket when done.`,
+    ].filter(Boolean).join('\n');
+
+    const payload = {
+      fields: {
+        project: { key: 'JCH' },
+        summary,
+        description,
+        issuetype: { name: 'Task' },
+      },
+    };
+    const createUrl = JIRA_API_V2.CREATE_ISSUE || `${JIRA_API_V2.BASE_URL}/rest/api/2/issue`;
+    const res = await jira.post(createUrl, payload, { timeout: JIRA_TIMEOUT_MS });
+    return {
+      key: res.data?.key,
+      id: res.data?.id,
+      url: res.data?.key ? `${JIRA_API_V2.BASE_URL}/browse/${res.data.key}` : null,
+    };
+  } catch (error) {
+    throw wrapJiraError(error, 'Failed to create JCH ticket');
+  }
+}
+
 module.exports = {
   checkVersionExists,
   createVersion,
   checkFilterExists,
   createFilter,
+  createJchTicket,
 };

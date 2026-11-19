@@ -21,3 +21,7 @@
 ### POST /api/jira/cleanup-duplicate-prefix-filters
 **Purpose**: Remove duplicate filters created during setup iterations.
 **Auth**: required (`releaseSetup`)
+
+### POST /api/jira/create-jch-ticket
+**Purpose**: Create a JCH Task when fixVersion creation fails in SDL/LBDR/TECHPUB/LEG/SR; RM fallback.
+**Auth**: required (`releaseSetup`)

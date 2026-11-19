@@ -107,9 +107,18 @@ function pickNextUpcomingGaVersion(versions, now = new Date()) {
   const unreleased = (versions || []).filter(isUnreleasedVersion);
   if (unreleased.length === 0) return null;
 
+  let getGateGaDate = null;
+  try {
+    ({ getGateGaDate } = require('./releaseGateDateResolver'));
+  } catch (_) {}
+
   const today = utcDay(now);
   const dated = unreleased
-    .map((v) => ({ v, day: v.releaseDate ? parseReleaseDay(v.releaseDate) : null }))
+    .map((v) => {
+      const gateDate = getGateGaDate ? getGateGaDate(v.name) : null;
+      const effective = gateDate || v.releaseDate;
+      return { v, day: effective ? parseReleaseDay(effective) : null, effectiveDate: effective || null };
+    })
     .filter((row) => row.day != null);
 
   // Prefer one-dot (Major.Minor) releases as the global default — maintenance/patch

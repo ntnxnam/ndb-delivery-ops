@@ -4,7 +4,7 @@
  * Raw shape: { value: "NKP", child: { value: "NKP-Core" } }.
  */
 
-const { getFieldId } = require('./jiraFieldsConfig');
+const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
 
 function getPrimaryComponentField() {
   return getFieldId('primaryComponent');

@@ -3,6 +3,7 @@ import { authenticatedPost } from '../../shared/services/apiService';
 import { generateFilterChain, releaseProjectsForTeam, isValidVersionName } from '../../utils/jqlTemplates';
 import { useTeam } from '../../contexts/TeamContext';
 import { STATUS, statusLabel, statusColor, statusIcon, cardStyle, sectionHeading } from './shared';
+import { JchFallbackBanner } from './JchFallbackBanner';
 
 function CreateRelease() {
   const { selectedTeam } = useTeam();
@@ -28,6 +29,8 @@ function CreateRelease() {
   const jiraToken = localStorage.getItem('jiraToken') || '';
   const username = localStorage.getItem('username') || localStorage.getItem('userEmail') || '';
 
+  const [jchStatus, setJchStatus] = useState({});
+
   const resetAll = useCallback(() => {
     setPhase('input');
     setVersionStatuses({});
@@ -37,6 +40,7 @@ function CreateRelease() {
     setFilterErrors({});
     setFilterEdits({});
     setCheckError('');
+    setJchStatus({});
   }, []);
 
   const handleCheck = useCallback(async () => {
@@ -109,6 +113,19 @@ function CreateRelease() {
       setVersionErrors(prev => ({ ...prev, [proj]: err.response?.data?.error || err.message }));
     }
   }, [version, releaseDate, jiraToken, username]);
+
+  const handleCreateJchTicket = useCallback(async (proj) => {
+    // Prevent double-submit if already creating/created
+    if (jchStatus[proj]?.state === 'creating' || jchStatus[proj]?.state === 'created') return;
+    const errDetail = String(versionErrors[proj] || '').slice(0, 1000);
+    setJchStatus(prev => ({ ...prev, [proj]: { state: 'creating' } }));
+    try {
+      const res = await authenticatedPost('/api/jira/create-jch-ticket', { versionName: version, projectKey: proj, errorDetail: errDetail, releaseDate: releaseDate || undefined }, { jiraToken, username });
+      setJchStatus(prev => ({ ...prev, [proj]: { state: 'created', key: res.data?.key, url: res.data?.url } }));
+    } catch (err) {
+      setJchStatus(prev => ({ ...prev, [proj]: { state: 'error', error: err.response?.data?.error || err.message } }));
+    }
+  }, [version, releaseDate, versionErrors, jiraToken, username, jchStatus]);
 
   const handleSkipVersion = useCallback((proj) => {
     setVersionStatuses(prev => ({ ...prev, [proj]: STATUS.SKIPPED }));
@@ -323,10 +340,15 @@ function CreateRelease() {
                     <tr><td style={{ padding: '3px 12px 3px 0', color: '#666' }}>Release date:</td><td>{releaseDate || <em style={{ color: '#999' }}>not set</em>}</td></tr>
                   </tbody>
                 </table>
-                {versionErrors[proj] && (
-                  <div style={{ color: '#dc3545', fontSize: '0.8rem', margin: '8px 0' }}>{versionErrors[proj]}</div>
+                {s === STATUS.ERROR && (
+                  <JchFallbackBanner
+                    projectKey={proj}
+                    errorDetail={versionErrors[proj]}
+                    jchState={jchStatus[proj]}
+                    onFileJch={() => handleCreateJchTicket(proj)}
+                  />
                 )}
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                   <button
                     onClick={() => handleSkipVersion(proj)}
                     disabled={s === STATUS.CREATING}

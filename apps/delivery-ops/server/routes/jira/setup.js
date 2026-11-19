@@ -214,6 +214,23 @@ router.post('/cleanup-duplicate-prefix-filters', validateJiraTokenMiddleware, re
 });
 
 /**
+ * Create a JCH ticket to request version creation after a creation failure.
+ * POST /api/jira/create-jch-ticket  body: { versionName, projectKey, errorDetail?, releaseDate? }
+ */
+router.post('/create-jch-ticket', validateJiraTokenMiddleware, requireAuth('releaseSetup'), async (req, res) => {
+  try {
+    const actor = req.username || req.headers['x-username'] || 'unknown';
+    const result = await releaseSetupService.createJchTicket(req.jiraToken, req.body || {});
+    const logger = require('../../utils/logger');
+    logger.audit.action(actor, 'create-jch-ticket', `${req.body?.projectKey}:${req.body?.versionName}`, { key: result.key });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in /api/jira/create-jch-ticket:', error.message);
+    return sendServiceError(res, error, 'Failed to create JCH ticket');
+  }
+});
+
+/**
  * Fetch TCMS QI + component data for a list of feature keys.
  * Called by the client after items load (non-blocking background fetch).
  * POST /api/jira/release-items-tcms

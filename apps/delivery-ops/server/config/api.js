@@ -31,7 +31,8 @@ const JIRA_API_V2 = {
   PROJECT_VERSIONS: (projectKey) => `${JIRA_BASE_URL}/rest/api/2/project/${projectKey}/versions`,
   PROJECT: (projectKey) => `${JIRA_BASE_URL}/rest/api/2/project/${projectKey}`,
   CREATE_VERSION: `${JIRA_BASE_URL}/rest/api/2/version`,
-  VERSION: (id) => `${JIRA_BASE_URL}/rest/api/2/version/${id}`
+  VERSION: (id) => `${JIRA_BASE_URL}/rest/api/2/version/${id}`,
+  CREATE_ISSUE: `${JIRA_BASE_URL}/rest/api/2/issue`
 };
 
 // JIRA Agile (board/sprint) - same auth as API v2

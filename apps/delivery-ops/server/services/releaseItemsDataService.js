@@ -13,6 +13,7 @@ const { resolveRequestedTeam } = require('../utils/jiraRouteHelpers');
 const { getTeamBaseFilter, getTeamSosBaseFilter } = require('../utils/teamConfig');
 const { wrapTeamScope } = require('../utils/teamScope');
 const { getPrimaryComponentField, parsePrimaryComponent } = require('../utils/primaryComponent');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const PRIMARY_COMPONENT_FIELD = getPrimaryComponentField();
 

@@ -88,8 +88,8 @@ export async function fetchPhaseKpis(opts: FetchPhaseOptions): Promise<TpmFetchR
   }
   const asOf = new Date().toISOString();
   const jiraBaseUrl = env.jiraBaseUrl;
-  const teamId = scope.teamId;
-  const releaseVersion = scope.releaseVersion;
+  const teamId = scope.kind === 'org' ? scope.teamIds[0] ?? scope.orgId : (scope as { teamId: string }).teamId;
+  const releaseVersion = scope.kind === 'release' ? scope.releaseVersion : undefined;
 
   const allKpis = getTeamKpis(kpiConfig, teamId);
   const matching = filterKpisByPhase(allKpis, lifecyclePhase);
@@ -130,7 +130,7 @@ export async function fetchPhaseKpis(opts: FetchPhaseOptions): Promise<TpmFetchR
     kpis: results,
     totalKpis: matching.length,
     jiraBaseUrl,
-  };
+  } as unknown as TpmFetchResult;
 }
 
 // Convenience for postRelease

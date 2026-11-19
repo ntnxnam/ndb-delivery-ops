@@ -12,7 +12,7 @@ import { useAuth } from './auth/hooks/useAuth';
 
 // Import existing components (these will be gradually migrated to the new modules)
 import EmailSender from './components/EmailSender';
-import ReleaseVersionTab from './components/ReleaseVersionTab';
+import ProjectStatusPage from './components/ProjectStatusPage';
 import ReleaseSetup from './components/ReleaseSetup';
 import ReleaseConfigPage from './components/ReleaseConfigPage';
 import GenericEmailer from './components/GenericEmailer';
@@ -37,6 +37,8 @@ import DependencyViewPage from './components/DependencyViewPage';
 import ReleaseOutstandingWorkPage from './components/ReleaseOutstandingWorkPage';
 import TeamOverallReportPage from './components/TeamOverallReportPage';
 import SchedulePage from './components/SchedulePage';
+import TpmPulsePage from './components/tpm/TpmPulsePage';
+import JqlBuilder from './components/tpm/JqlBuilder';
 
 import { ensureLoaded as ensureFieldConfigLoaded } from './utils/fieldConfig';
 import './design-system/tokens.css';
@@ -97,7 +99,7 @@ const AuthenticatedApp = () => {
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout fluid>
-                        <ReleaseVersionTab />
+                        <ProjectStatusPage />
                       </Layout>
                     </ProtectedRoute>
                   }
@@ -397,6 +399,28 @@ const AuthenticatedApp = () => {
                     </ProtectedRoute>
                   }
                 />
+
+                <Route
+                  path="/tpm/pulse"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <TpmPulsePage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tpm/jql-builder"
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
+                        <JqlBuilder />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/tpm" element={<Navigate to="/tpm/pulse" replace />} />
 
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/" replace />} />

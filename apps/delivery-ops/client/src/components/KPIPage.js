@@ -15,7 +15,7 @@ import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
 import { usePermissions } from '../auth/hooks/usePermissions';
 import { useExecPageBriefing } from '../hooks/useExecPageBriefing';
 import ExecPageBriefing from './ExecPageBriefing';
-import './ReleaseVersionTab.css';
+import './ProjectStatusPage.css';
 
 const API_BASE = getApiBase();
 

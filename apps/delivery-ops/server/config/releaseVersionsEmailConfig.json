@@ -304,7 +304,7 @@
         "style": "dotted"
       },
       "ga2": {
-        "label": "General Availability 2",
+        "label": "General Availability 2 (old)",
         "date": "2026-11-30",
         "color": "#28a745",
         "style": "dotted",
@@ -312,10 +312,10 @@
       },
       "ga3": {
         "label": "General Availability 3",
-        "date": "2026-12-04",
+        "date": "2026-12-09",
         "color": "#28a745",
         "style": "solid",
-        "reason": "late delivery of MSSQL features and many other regression bugs that kept coming in late"
+        "reason": "RM-approved slip to 2026-12-09 — consolidated SoT via releaseGateDateResolver (gate solid > JIRA)"
       },
       "devDRIs": [
         "akshay.chandak"

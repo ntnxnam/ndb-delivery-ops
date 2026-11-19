@@ -14,7 +14,7 @@ import {
 import { useTeam } from '../contexts/TeamContext';
 import { authenticatedGet, getApiBase } from '../shared/services/apiService';
 import { TeamRequiredGate } from '../layout/components/TeamRequiredGate';
-import './ReleaseVersionTab.css';
+import './ProjectStatusPage.css';
 
 const API_BASE = (typeof getApiBase === 'function' ? getApiBase() : '') || '';
 

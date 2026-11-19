@@ -28,6 +28,7 @@ const { requireAuth } = require('../middleware/authMiddleware');
 const { JIRA_API_V2 } = require('../config/api');
 const { getJira } = require('../utils/jiraClient');
 const logger = require('../utils/logger');
+const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
 
 const EXEC_SUMMARY_FIELD = getFieldId('executiveStatusUpdate');
 
@@ -106,7 +107,6 @@ router.post('/chat', validateJiraTokenMiddleware, async (req, res) => {
       let provenanceId = null;
       try {
         const { getShared, getStores } = require('../services/agentRuntimeHost');
-const { getFieldId, getFieldValue } = require('../utils/jiraFieldsConfig');
         const s = await getShared();
         const stores = await getStores();
         const rec = s.provenanceFromTurn({

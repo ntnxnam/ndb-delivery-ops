@@ -1,0 +1,7 @@
+.jql-builder { display: flex; flex-direction: column; gap: var(--space-md); }
+.jql-builder-input { resize: vertical; min-height: 72px; }
+.jql-builder-card { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+.jql-builder-jql { font-family: monospace; word-break: break-all; background: var(--color-surface-muted); padding: var(--space-sm); border-radius: var(--radius-sm); }
+.jql-builder-tokens { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.jql-builder-warnings { color: var(--color-warning); font-size: var(--font-size-sm); }
+.jql-builder-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
