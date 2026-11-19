@@ -19,11 +19,7 @@ const {
   getCheckpointDateFieldIds
 } = require('./jiraFieldsConfig');
 
-/**
- * Field mapping for all date fields we want to track
- * Now loaded from jiraFieldsConfig.json
-const { getFieldId, getFieldValue } = require('./jiraFieldsConfig');
- */
+/** Field mapping for all date fields — loaded from jiraFieldsConfig.json */
 function getDateFields() {
   const allFields = getAllFields();
   const dateFields = {};

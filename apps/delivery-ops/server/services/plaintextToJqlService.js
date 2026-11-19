@@ -81,9 +81,9 @@ function plaintextToJql(opts) {
   const knownFieldIds = buildKnownFieldIds(jiraFieldsConfig);
   warnings.push(...detectWarnings(plaintext, knownFieldIds));
 
-  // Resolve team
-  const team = (teamBoardConfig?.teams || []).find(t => t.id === teamId) || (teamBoardConfig?.teams || [])[0] || null;
-  const baseFilter = team?.baseFilter || 'filter=NDB-All-Base-Filter and statusCategory!=Done';
+  // Resolve team — product-agnostic, never hardcode NDB fallback string
+  const team = (teamBoardConfig?.teams || []).find(t => t.id === teamId) || null;
+  const baseFilter = team?.baseFilter || (teamBoardConfig?.teams || [])[0]?.baseFilter || '';
   const clauses = [];
   const pushToken = (text, type, detail) => tokens.push({ text, type, detail });
 

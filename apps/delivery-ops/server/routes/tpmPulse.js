@@ -15,16 +15,18 @@ router.get('/', (req, res) => {
   } else if (team && Array.isArray(team.releasePrefixes) && team.releasePrefixes.length) {
     filtered = allReleases.filter((r) => team.releasePrefixes.some((p) => r.startsWith(p)));
   }
-  const fallback = ['NDB-2.12', 'NDB-3.0', 'NDB-2.11.1', 'NDB-2.11.1.1'];
-  const releases = filtered.length ? filtered.slice(0, 8) : (team ? [] : fallback);
   const gates = releaseVersionsEmailConfig.releaseGateDates || {};
-  const filteredGates = releases.length ? Object.fromEntries(Object.entries(gates).filter(([k]) => releases.includes(k))) : gates;
+  // Only use demo fallback when config is empty (no gateDates at all), not for team mismatches
+  let releases = filtered.slice(0, 8);
+  if (!releases.length && !allReleases.length) {
+    releases = ['NDB-2.12', 'NDB-3.0', 'NDB-2.11.1', 'NDB-2.11.1.1'].slice(0, 4);
+  }
+  const filteredGates = releases.length ? Object.fromEntries(Object.entries(gates).filter(([k]) => releases.includes(k))) : {};
   res.json({
     teamId,
     releases,
     team,
     gateDates: filteredGates,
-    allGateDates: gates,
   });
 });
 

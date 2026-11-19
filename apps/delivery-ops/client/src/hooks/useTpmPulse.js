@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getApiBase, getAuthHeaders, authenticatedPost } from '../shared/services/apiService';
 
-const DEMO_RELEASES = ['NDB-2.12', 'NDB-3.0', 'NDB-2.11.1', 'NDB-2.11.1.1'];
 const PHASE_ORDER = ['postRelease', 'execution', 'release', 'overall'];
 const PHASE_LABELS = { postRelease: 'Post-release', execution: 'Execution', release: 'At release', overall: 'Overall' };
 
@@ -43,21 +42,24 @@ export default function useTpmPulse(teamId) {
       if (pulseRes._error) setError((prev) => prev ? `${prev}; Pulse: ${pulseRes._error}` : `Pulse load failed: ${pulseRes._error}`);
 
       const kpis = Array.isArray(kpiRes.kpis) ? kpiRes.kpis : [];
-      const gateDates = pulseRes.gateDates || pulseRes.allGateDates || {};
+      const gateDates = pulseRes.gateDates || {};
       const relList = Array.isArray(pulseRes.releases) ? pulseRes.releases : [];
-      // For teams with no configured KPIs (e.g. cerebro-dr) show empty with guidance, not NDB demo
-      if (!kpis.length && !relList.length) {
+      // For teams with no matching releases (e.g. cerebro-dr with only NDB gates), show empty guidance, not NDB demo
+      if (!relList.length) {
         setReleases([]);
         setGates({});
-        setPhases([]);
-        setFetchedAt(new Date().toISOString());
-        setLoading(false);
-        return;
+        // Still show phases if kpis exist (without release scoping)
+        if (!kpis.length) {
+          setPhases([]);
+          setFetchedAt(new Date().toISOString());
+          setLoading(false);
+          return;
+        }
       }
-      const active = relList[0] || DEMO_RELEASES[0];
-      setReleases(relList.length ? relList : DEMO_RELEASES);
+      const active = relList[0] || null;
+      setReleases(relList);
       setGates(gateDates);
-      if (!activeRelease) setActiveRelease(active);
+      if (!activeRelease && active) setActiveRelease(active);
 
       const grouped = {};
       PHASE_ORDER.forEach((p) => { grouped[p] = []; });
@@ -70,10 +72,10 @@ export default function useTpmPulse(teamId) {
         PHASE_ORDER.map(async (phase) => {
           const kpisInPhase = grouped[phase] || [];
           if (!kpisInPhase.length) return { phase, label: PHASE_LABELS[phase], total: 0, open: 0, kpis: [], jql: '', fetchedAt: null };
-          const curRelease = activeRelease || active;
+          const curRelease = activeRelease || active || relList[0] || null;
           const perKpi = await Promise.all(
             kpisInPhase.map(async (k) => {
-              const jql = buildReleaseJql(curRelease, k.baseQuery);
+              const jql = curRelease ? buildReleaseJql(curRelease, k.baseQuery) : (k.baseQuery || '').trim();
               try {
                 const res = await authenticatedPost('/api/jira/search-by-jql', { jql, maxResults: 0 });
                 const total = res?.data?.issues ? res.data.issues.length : (res?.issues ? res.issues.length : (res.total ?? 0));
@@ -98,7 +100,7 @@ export default function useTpmPulse(teamId) {
     } finally {
       if (!ctrl.signal.aborted) setLoading(false);
     }
-  }, [teamId, activeRelease]);
+  }, [teamId]);
 
   useEffect(() => { fetchAll(); return () => { if (abortRef.current) abortRef.current.abort(); }; }, [fetchAll]);
 
@@ -107,4 +109,4 @@ export default function useTpmPulse(teamId) {
   return { releases, activeRelease, setActiveRelease, phases, gates, loading, error, fetchedAt, refresh };
 }
 
-export { PHASE_ORDER, PHASE_LABELS, DEMO_RELEASES };
+export { PHASE_ORDER, PHASE_LABELS };
