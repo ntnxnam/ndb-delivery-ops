@@ -181,7 +181,11 @@ function rejectTraversal(filePath: string): string | null {
 
 function base64DecodedBytes(b64: string): number {
   const clean = b64.replace(/\s/g, '');
-  return Math.ceil(clean.length * 3 / 4);
+  try {
+    return Buffer.byteLength(clean, 'base64');
+  } catch {
+    return Math.ceil(clean.length * 3 / 4);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -279,22 +283,31 @@ export function registerConvertToBinPackingCsv(server: McpServer): void {
           rawBytesLength = stat.size;
           rawText = fs.readFileSync(normalized, 'utf8');
         } else if (fileContentBase64) {
-          const approxBytes = base64DecodedBytes(fileContentBase64);
+          // Strip data: URL prefix if present (parity with server route)
+          let b64 = fileContentBase64.trim();
+          const commaIdx = b64.indexOf(',');
+          if (b64.startsWith('data:') && commaIdx !== -1) b64 = b64.slice(commaIdx + 1);
+          const b64Clean = b64.replace(/\s/g, '');
+          if (!/^[A-Za-z0-9+/]*={0,2}$/.test(b64Clean)) {
+            return {
+              content: [{ type: 'text', text: 'fileContentBase64 is not valid base64.' }],
+              isError: true,
+            };
+          }
+          if (b64Clean.length % 4 !== 0) {
+            return {
+              content: [{ type: 'text', text: 'fileContentBase64 is not valid base64 (length not multiple of 4).' }],
+              isError: true,
+            };
+          }
+          const approxBytes = base64DecodedBytes(b64Clean);
           if (approxBytes > MAX_BYTES) {
             return {
               content: [{ type: 'text', text: `Decoded file would be ~${(approxBytes / (1024 * 1024)).toFixed(1)} MB; limit is 10 MB.` }],
               isError: true,
             };
           }
-          let buf: Buffer;
-          try {
-            buf = Buffer.from(fileContentBase64, 'base64');
-          } catch {
-            return {
-              content: [{ type: 'text', text: 'fileContentBase64 is not valid base64.' }],
-              isError: true,
-            };
-          }
+          const buf = Buffer.from(b64Clean, 'base64');
           if (buf.length > MAX_BYTES) {
             return {
               content: [{ type: 'text', text: `Decoded file is ${(buf.length / (1024 * 1024)).toFixed(1)} MB; limit is 10 MB.` }],

@@ -30,8 +30,9 @@
           <select id="converterProductPicker" aria-label="Product for column mapping">
             <option value="ndb" selected>ndb</option>
             <option value="datalens">datalens</option>
-            <option value="default">default</option>
+            <option value="generic">generic</option>
           </select>
+          <span class="converter-helper" style="font-size:0.75rem;color:var(--muted)">Product picker — generic for tenant-agnostic CSVs</span>
           <button type="button" id="converterConvertBtn" class="btn-submit" disabled>Convert</button>
         </div>
         <p class="upload-status-row"><span id="converterStatus" class="upload-status" role="status" aria-live="polite">Select a file above and click Convert.</span></p>

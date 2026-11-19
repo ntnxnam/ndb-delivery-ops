@@ -495,12 +495,14 @@ router.post('/convert', apiLimiter, validateJiraTokenMiddleware, async (req, res
       let b64 = contentBase64.trim();
       const commaIdx = b64.indexOf(',');
       if (b64.startsWith('data:') && commaIdx !== -1) b64 = b64.slice(commaIdx + 1);
-      let buffer;
-      try {
-        buffer = Buffer.from(b64, 'base64');
-      } catch {
+      const b64Clean = b64.replace(/\s/g, '');
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(b64Clean)) {
         return res.status(400).json({ error: 'Invalid base64 in contentBase64' });
       }
+      if (b64Clean.length % 4 !== 0) {
+        return res.status(400).json({ error: 'Invalid base64 in contentBase64 (length not multiple of 4)' });
+      }
+      const buffer = Buffer.from(b64Clean, 'base64');
       if (!buffer.length) return res.status(400).json({ error: 'file is required (decoded base64 is empty)' });
       if (buffer.length > MAX_BYTES) {
         return res.status(413).json({ error: `File too large. Max ${MAX_BYTES} bytes (${MAX_BYTES / (1024 * 1024)} MB).` });
@@ -531,6 +533,10 @@ router.post('/convert', apiLimiter, validateJiraTokenMiddleware, async (req, res
       return res.status(413).json({ error: `File too large. Max ${MAX_BYTES} bytes (${MAX_BYTES / (1024 * 1024)} MB).` });
     }
 
+    // D1 alias: 'default' historically means generic — accept and normalize.
+    if (productId === 'default') productId = 'generic';
+    // D1 alias: 'default' historically means generic — accept and normalize.
+    if (productId === 'default') productId = 'generic';
     if (productId && !ALLOWED_PRODUCT_IDS.has(productId)) {
       return res.status(400).json({
         error: `Invalid productId "${productId}". Allowed: ${[...ALLOWED_PRODUCT_IDS].join(', ')}`,
@@ -553,16 +559,16 @@ router.post('/convert', apiLimiter, validateJiraTokenMiddleware, async (req, res
       });
     }
 
-    // ── Temp dir (os.tmpdir()/binpacking-convert-<uuid>/) ──
-    const tmpBase = path.join(os.tmpdir(), `binpacking-convert-${crypto.randomUUID()}`);
-    tmpDir = await fsp.mkdtemp(`${tmpBase}-`);
-    // mkdtemp with trailing - already creates unique suffix; normalize to the returned dir
-    // Use absolute temp file path only — no writes outside tmp.
+    // ── Temp dir (os.tmpdir()/binpacking-convert-<rand>/) ──
+    tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'binpacking-convert-'));
+    // mkdtemp creates unique suffix; normalize to the returned dir.
 
     const safeName = path.basename(file.originalname || 'upload.csv') || 'upload.csv';
     const tmpFile = path.join(tmpDir, safeName);
-    // Extra guard: ensure tmpFile stays inside tmpDir (basename already strips traversal)
-    if (!tmpFile.startsWith(tmpDir)) {
+    // Extra guard: ensure tmpFile stays inside tmpDir (path.resolve + sep hardens basename guard)
+    const resolvedTmpFile = path.resolve(tmpFile);
+    const resolvedTmpDir = path.resolve(tmpDir) + path.sep;
+    if (!resolvedTmpFile.startsWith(resolvedTmpDir)) {
       return res.status(400).json({ error: 'Invalid file name.' });
     }
     await fsp.writeFile(tmpFile, file.buffer);

@@ -92,16 +92,10 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     aiConfigFallback = require('../../../apps/delivery-ops/server/config/aiConfig.json');
   } catch {}
-  // Second require is intentional fallback deduplication guard — path was previously
-  // '../../apps/...' (wrong, resolved to shared/apps); now uses the correct
-  // '../../../apps/...' so the first try always succeeds when config exists.
-  // Keeping the single correct require avoids dead-code confusion.
-  if (!aiConfigFallback.baseUrl) {
-    // baseUrl missing — caller will throw with actionable NAI_API_BASE_URL message below
-  }
+  // aiConfig.json provides defaults for non-secret vars when env not set; missing values throw below.
 
   const envBaseUrl = process.env.NAI_API_BASE_URL || process.env.AI_API_BASE_URL || '';
-  const baseUrl = (override?.baseUrl || envBaseUrl || aiConfigFallback.baseUrl || '').trim();
+  const baseUrl = (override?.baseUrl ?? envBaseUrl ?? aiConfigFallback.baseUrl ?? '').trim();
   if (!baseUrl) {
     throw new Error(
       'NAI_API_BASE_URL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
@@ -117,7 +111,7 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   }
 
   const envModel = process.env.NAI_DEFAULT_MODEL || process.env.AI_DEFAULT_MODEL || process.env.NAI_MODEL || '';
-  const defaultModel = (override?.defaultModel || envModel || aiConfigFallback.defaultModel || '').trim();
+  const defaultModel = (override?.defaultModel ?? envModel ?? aiConfigFallback.defaultModel ?? '').trim();
   if (!defaultModel) {
     throw new Error(
       'NAI_DEFAULT_MODEL is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.'
@@ -125,17 +119,23 @@ function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   }
 
   const envMaxTokens = process.env.NAI_MAX_TOKENS || process.env.AI_MAX_TOKENS || '';
+  if (envMaxTokens && isNaN(parseInt(envMaxTokens, 10))) {
+    throw new Error(`NAI_MAX_TOKENS is set but not a number: "${envMaxTokens}"`);
+  }
   const maxTokensRaw =
-    (override?.maxTokens ?? (envMaxTokens ? parseInt(envMaxTokens, 10) : NaN)) || aiConfigFallback.maxTokens;
-  if (!maxTokensRaw || isNaN(maxTokensRaw as number)) {
-    throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env.');
+    (override?.maxTokens ?? (envMaxTokens ? parseInt(envMaxTokens, 10) : undefined) ?? aiConfigFallback.maxTokens) as number | undefined;
+  if (maxTokensRaw == null || typeof maxTokensRaw !== 'number' || isNaN(maxTokensRaw) || maxTokensRaw <= 0) {
+    throw new Error('NAI_MAX_TOKENS is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.');
   }
 
   const envTimeout = process.env.NAI_REQUEST_TIMEOUT || process.env.AI_REQUEST_TIMEOUT || '';
+  if (envTimeout && isNaN(parseInt(envTimeout, 10))) {
+    throw new Error(`NAI_REQUEST_TIMEOUT is set but not a number: "${envTimeout}"`);
+  }
   const timeoutRaw =
-    (override?.timeoutMs ?? (envTimeout ? parseInt(envTimeout, 10) : NaN)) || aiConfigFallback.requestTimeoutMs;
-  if (!timeoutRaw || isNaN(timeoutRaw as number)) {
-    throw new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env.');
+    (override?.timeoutMs ?? (envTimeout ? parseInt(envTimeout, 10) : undefined) ?? aiConfigFallback.requestTimeoutMs) as number | undefined;
+  if (timeoutRaw == null || typeof timeoutRaw !== 'number' || isNaN(timeoutRaw) || timeoutRaw <= 0) {
+    throw new Error('NAI_REQUEST_TIMEOUT is not set. Set it in server/.env or check apps/delivery-ops/server/config/aiConfig.json.');
   }
 
   return {

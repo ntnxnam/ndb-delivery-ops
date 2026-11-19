@@ -8,6 +8,7 @@
 <li><a href="#sprint-report">Sprint Report</a></li>
 <li><a href="#release-brief">Release Brief</a></li>
 <li><a href="#quality-column-tcms">Quality Column (TCMS)</a></li>
+<li><a href="#bin-packing-csv-converter">Bin-Packing CSV Converter</a></li>
 <li><a href="#tips--faq">Tips &amp; FAQ</a></li>
 </ul>
 <h2>Getting Started</h2>
@@ -48,6 +49,24 @@ metrics endpoint (<code>/api/v1/all_test_cases/aggregate/metrics</code> with
 metrics until TCMS exposes a <code>test_category</code> filter. Do not read
 distinctness into the two rows yet. See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
 </ul>
+<h2>Bin-Packing CSV Converter</h2>
+<p><strong>Who:</strong> Portfolio Manager, TPM, Release Manager</p>
+<p>Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-column bin-packing CSV that the Bin-Packing capacity planner understands.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Open <strong>Bin-Packing</strong> from the sidebar (opens in a new tab at <code>/bin-packing/</code>).</li>
+<li>Go to the <strong>Upload CSV</strong> tab and click <strong>Convert any file (AI)</strong> above the existing file picker.</li>
+<li>Select a file (<code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>, <code>.pdf</code>, <code>.docx</code>, <code>.tsv</code> — up to 10 MB). You can also paste TSV/CSV text copied from Confluence or JIRA.</li>
+<li>Wait for conversion — the preview shows <strong>mapped</strong> headers (green), <strong>unmapped</strong> headers (yellow), and a <strong>missing-mandatory</strong> warning if <code>FEAT NUMBER</code> or <code>SUMMARY</code> could not be resolved. Warnings explain which alias to use.</li>
+<li>Click <strong>Download CSV</strong> to save the canonical file, or <strong>Replace &amp; Repack</strong> to render the converted rows directly in the Gantt without a download step.</li>
+</ol>
+<p><strong>Details:</strong> See <a href="../product/CSV_CONVERTER_GUIDE.md">CSV Converter Guide</a> for the full 26-column header contract, alias table, sizing labels, dependency syntax, and duration priority rules. The legacy CSV/XLSX upload continues to work unchanged — the converter is additive.</p>
+<p><strong>Tips:</strong></p>
+<ul>
+<li>JIRA-native headers (<code>Issue Key</code>, <code>Summary</code>, <code>Assignee</code>) resolve automatically via the product alias map — no manual renaming needed.</li>
+<li>If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.</li>
+<li>The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the <code>csv-to-binpacking</code> skill (prompt/orchestration only — deterministic logic stays in <code>shared</code>).</li>
+</ul>
 <h2>OnCalls</h2>
 <p><strong>Who:</strong> EM, TPM
 <strong>Steps:</strong> Open KPIs → OnCalls → select release → review counts by period.
@@ -67,6 +86,7 @@ distinctness into the two rows yet. See <a href="../known-issues/KNOWN_ISSUES.md
 <h2>Tips &amp; FAQ</h2>
 <ul>
 <li>Missing tab? Check permissions in <a href="./ADMIN_GUIDE.md">ADMIN_GUIDE.md</a>.</li>
+<li>Need to convert a spreadsheet for bin-packing? See <a href="#bin-packing-csv-converter">Bin-Packing CSV Converter</a> and the detailed <a href="../product/CSV_CONVERTER_GUIDE.md">CSV Converter Guide</a>.</li>
 <li>Caveats? See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
 </ul>
 </article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
