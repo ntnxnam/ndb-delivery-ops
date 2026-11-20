@@ -6,9 +6,9 @@
 function getBinPackingUrl() {
   // Bin-packing runs standalone on 8890 (not on 8001) — see apps/bin-packing/package.json
   const binPackingPort = process.env.REACT_APP_BINPACKING_PORT || '8890';
-  if (typeof window === 'undefined') return `http://localhost:${binPackingPort}/`;
+  if (typeof window === 'undefined') return '/bin-packing/';
   const isDevReactServer = window.location.port === '8899';
-  if (!isDevReactServer) return `http://${window.location.hostname}:${binPackingPort}/`;
+  if (!isDevReactServer) return `//${window.location.hostname}:${binPackingPort}/`;
   return `${window.location.protocol}//${window.location.hostname}:${binPackingPort}/`;
 }
 
