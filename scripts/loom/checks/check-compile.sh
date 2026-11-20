@@ -30,6 +30,18 @@ if [ -f "apps/delivery-ops/client/tsconfig.json" ]; then
   run "client (tsc)" npx --workspace ndb-status-sender-client tsc --noEmit -p apps/delivery-ops/client/tsconfig.json
 fi
 
+# Stable-callback hygiene — unstable .bind() inside hook returns causes useEffect storms
+# (see agent-pack/loom/rules/react-useeffect-infinite-loop-prevention.mdc).
+if grep -rn --include="*.js" --include="*.jsx" '\.bind(.*Service)' apps/delivery-ops/client/src/shared/services apps/delivery-ops/client/src/hooks 2>/dev/null | grep -q .; then
+  echo "✗ stable-callback FAILED — found .bind() inside hook/service returns (unstable identity → useEffect storm)"
+  grep -rn --include="*.js" --include="*.jsx" '\.bind(.*Service)' apps/delivery-ops/client/src/shared/services apps/delivery-ops/client/src/hooks 2>/dev/null
+  echo "  Fix: wrap each callback with useCallback([]) + return via useMemo — see react-useeffect-infinite-loop-prevention.mdc"
+  FAIL=1
+else
+  echo "✓ stable-callback OK (no .bind() in hook returns)"
+  echo ""
+fi
+
 # Server is plain JS — quick syntax check for any changed JS files would be:
 # node --check <file>. For the gate we just ensure server has no require/import
 # syntax break by running `node --check` on index.js as a canary.
