@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Toast } from '../shared/components/Toast';
 import { PageLoading } from '../shared/components/PageLoading';
 import ReleaseGantt from './ReleaseGantt';
+import { useNotifications } from '../shared/services/notificationService';
 
 /**
  * Numbered gate revisions — one key per slip, reasons live on each entry.
@@ -274,8 +274,7 @@ const ReleaseConfigPage = () => {
   const [newVersion, setNewVersion]     = useState('');
   const [loading, setLoading]           = useState(true);
   const [saving, setSaving]             = useState(false);
-  const [error, setError]               = useState('');
-  const [success, setSuccess]           = useState('');
+  const { success: notifySuccess, error: notifyError } = useNotifications();
   const [releaseConfirm, setReleaseConfirm] = useState(null); // { version, preview, loading }
   const [releasing, setReleasing]       = useState(false);
   const [announce, setAnnounce]         = useState(null); // { version, html, subject, to, loading, error, sending }
@@ -291,7 +290,7 @@ const ReleaseConfigPage = () => {
       const data = await res.json();
       setReleases(data.releases || {});
     } catch (e) {
-      setError('Failed to load: ' + e.message);
+      notifyError('Failed to load: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -399,16 +398,16 @@ const ReleaseConfigPage = () => {
       if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
       await loadConfigs();
       cancelEdit(version);
-      setSuccess(`${version} saved.`);
+      notifySuccess(`${version} saved.`);
     } catch (e) {
-      setError('Save failed: ' + e.message);
+      notifyError('Save failed: ' + e.message);
     } finally {
       setSaving(false);
     }
   }
 
   async function saveNewRelease() {
-    if (!newVersion.trim()) { setError('Version is required'); return; }
+    if (!newVersion.trim()) { notifyError('Version is required'); return; }
     await doSave(newVersion.trim(), {}, '');
     setShowNewForm(false);
     setNewVersion('');
@@ -430,9 +429,9 @@ const ReleaseConfigPage = () => {
       if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
       await loadConfigs();
       setInfoModal(null);
-      setSuccess(`${version} notes saved.`);
+      notifySuccess(`${version} notes saved.`);
     } catch (e) {
-      setError('Save failed: ' + e.message);
+      notifyError('Save failed: ' + e.message);
     }
   }
 
@@ -461,10 +460,10 @@ const ReleaseConfigPage = () => {
       let hint = '';
       if (draft?.skipped) hint = ' Use Announce to send release notes.';
       else if (draft?.error) hint = ` Announcement: ${String(draft.error).split('\n')[0].slice(0, 120)}`;
-      setSuccess(`${version} marked as Released — moved ${moved} open tickets to master.${hint}`);
+      notifySuccess(`${version} marked as Released — moved ${moved} open tickets to master.${hint}`);
     } catch (e) {
       const msg = String(e.message).split('\n')[0].slice(0, 300);
-      setError('Mark released failed: ' + msg);
+      notifyError('Mark released failed: ' + msg);
     } finally { setReleasing(false); }
   }
 
@@ -498,9 +497,9 @@ const ReleaseConfigPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Send failed');
       setAnnounce(null);
-      setSuccess(`Announcement draft sent to ${data.to} — ${data.subject}`);
+      notifySuccess(`Announcement draft sent to ${data.to} — ${data.subject}`);
     } catch (e) {
-      setError('Send announcement failed: ' + String(e.message).split('\n')[0].slice(0, 400));
+      notifyError('Send announcement failed: ' + String(e.message).split('\n')[0].slice(0, 400));
     } finally {
       setAnnounce(prev => prev ? { ...prev, sending: false } : prev);
     }
@@ -516,9 +515,9 @@ const ReleaseConfigPage = () => {
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
       await loadConfigs();
-      setSuccess(`${version} deleted.`);
+      notifySuccess(`${version} deleted.`);
     } catch (e) {
-      setError('Delete failed: ' + e.message);
+      notifyError('Delete failed: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -789,8 +788,7 @@ const ReleaseConfigPage = () => {
         </div>
       )}
 
-      {error   && <Toast message={error}   type="error"   onClose={() => setError('')}   />}
-      {success && <Toast message={success} type="success" onClose={() => setSuccess('')} />}
+      {/* notifications via global ToastContainer (top-right) */}
 
       <style>{`
         .rc-page { padding: 20px 24px; }
