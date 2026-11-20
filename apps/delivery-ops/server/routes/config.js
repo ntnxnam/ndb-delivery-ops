@@ -1092,7 +1092,49 @@ router.post('/releases/:version/mark-released', express.json(), async (req, res)
     const token = req.headers.authorization ? String(req.headers.authorization).replace(/^Bearer\s+/i,'') : (process.env.JIRA_TOKEN || require('../config/jiraConfig.json').token || '');
     const data = await svc.markReleased({ version, teamId, jiraToken: token, username, note });
     res.json({ success: true, ...data });
-  } catch (e) { res.status(e.statusCode||500).json({ error: e.message }); }
+  } catch (e) { res.status(e.statusCode||500).json({ error: String(e.message).split('\n')[0].slice(0, 500) }); }
+});
+
+/**
+ * Preview release announcement draft (no send) — returns html + subject + recipient.
+ * GET /api/config/releases/:version/announcement-preview?teamId=ndb
+ */
+router.get('/releases/:version/announcement-preview', async (req, res) => {
+  try {
+    const { version } = req.params; const { teamId } = req.query;
+    const username = getUsername(req);
+    const svc = require('../services/releaseFinalizeService');
+    if (!svc.isAuthorized(username, teamId)) return res.status(403).json({ error: 'Only admins/team-admins may preview announcement.' });
+    const token = req.headers.authorization ? String(req.headers.authorization).replace(/^Bearer\s+/i,'') : (process.env.JIRA_TOKEN || require('../config/jiraConfig.json').token || '');
+    const ann = require('../services/releaseAnnouncementService');
+    const { usernameToEmail } = require('../services/userService');
+    const to = username ? usernameToEmail(username) : null;
+    const gen = await ann.generateAnnouncementHtml({ version, teamId, jiraToken: token });
+    const product = gen.product || String(version).split(/[- ]/)[0] || 'Product';
+    const subject = `[DRAFT] Announcing ${product} ${version} — Official Release is Live 🎉`;
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const draftNotice = `<div style="background:#fff3cd;border:1px solid #ffc107;padding:10px 12px;margin-bottom:16px;font-family:Arial,sans-serif;font-size:13px;border-radius:4px;">⚠️ <b>DRAFT</b> — Auto-generated for <b>${version}</b> on ${todayDate} for ${username || 'unknown'} (${to || '—'}).<br><span style="color:#6c757d">AI ${gen.aiUsed ? 'generated' : 'fallback template'} • ${gen.featureCount} feature(s) • GA ${gen.gaDate || 'TBD'}</span></div>`;
+    const html = draftNotice + gen.html;
+    res.json({ version, teamId: gen.teamId, product, subject, to, html, aiUsed: gen.aiUsed, aiError: gen.aiError ? String(gen.aiError).split('\n')[0].slice(0, 300) : null, featureCount: gen.featureCount, gaDate: gen.gaDate });
+  } catch (e) { res.status(e.statusCode||500).json({ error: String(e.message).split('\n')[0].slice(0, 500) }); }
+});
+
+/**
+ * Send edited announcement draft to the actor (after review).
+ * POST /api/config/releases/:version/announcement-send  body: { teamId, html, subject, to? }
+ */
+router.post('/releases/:version/announcement-send', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    const { version } = req.params; const { teamId, html, subject, to } = req.body || {};
+    const username = getUsername(req);
+    const svc = require('../services/releaseFinalizeService');
+    if (!svc.isAuthorized(username, teamId)) return res.status(403).json({ error: 'Only admins/team-admins may send announcement.' });
+    if (!html || !String(html).trim()) return res.status(400).json({ error: 'html is required (reviewed announcement)' });
+    const ann = require('../services/releaseAnnouncementService');
+    const result = await ann.sendEditedAnnouncement({ version, username, html: String(html), subject: subject ? String(subject) : null, toOverride: to ? String(to) : null });
+    if (result.error) return res.status(500).json({ error: String(result.error).split('\n')[0].slice(0, 500), to: result.to, subject: result.subject });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(e.statusCode||500).json({ error: String(e.message).split('\n')[0].slice(0, 500) }); }
 });
 
 /**

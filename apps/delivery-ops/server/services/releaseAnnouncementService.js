@@ -265,9 +265,29 @@ async function sendAnnouncementDraft({ version, username, teamId, jiraToken, use
   }
 }
 
+/**
+ * Send edited announcement HTML (user-reviewed) to the actor.
+ * Does not regenerate — uses caller-provided html/subject.
+ */
+async function sendEditedAnnouncement({ version, username, html, subject, toOverride }) {
+  if (!username) return { error: 'no username — cannot send' };
+  const email = toOverride || usernameToEmail(username);
+  if (!email) return { error: `cannot derive email for username "${username}"` };
+  if (!html || !String(html).trim()) return { error: 'empty html — nothing to send' };
+  const finalSubject = subject && String(subject).trim() ? String(subject).trim().slice(0, 200) : `[DRAFT] Announcing ${version} — Official Release is Live 🎉`;
+  try {
+    const info = await sendEmailDirect({ to: email, subject: finalSubject, html: String(html) });
+    return { sent: true, to: email, subject: finalSubject, messageId: info.messageId };
+  } catch (e) {
+    console.warn('[releaseAnnouncement] sendEditedAnnouncement failed:', e.message);
+    return { error: String(e.message).split('\n')[0].slice(0, 300), to: email, subject: finalSubject };
+  }
+}
+
 module.exports = {
   generateAnnouncementHtml,
   sendAnnouncementDraft,
+  sendEditedAnnouncement,
   buildFallbackHtml,
   fetchReleaseFeatures,
   extractGaDate,

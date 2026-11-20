@@ -194,7 +194,16 @@
       ],
       "qaDRIs": [
         "srikanth.cg"
-      ]
+      ],
+      "released": true,
+      "releasedAt": "2026-11-20T04:05:06.256Z",
+      "releasedBy": "namratha.singh",
+      "_jira": {
+        "name": "NDB-2.11",
+        "projectKey": "ERA",
+        "released": true,
+        "syncedAt": "2026-11-20T04:05:06.256Z"
+      }
     },
     "NDB-2.11.1": {
       "codeFreeze": {
@@ -228,7 +237,7 @@
         "date": "2026-11-23",
         "color": "#28a745",
         "style": "solid",
-        "reason": "OS image issue \u2014 patch slip, RM-approved"
+        "reason": "OS image issue — patch slip, RM-approved"
       }
     },
     "NDB-2.11.0.2": {
@@ -391,14 +400,14 @@
         "date": "2026-12-15",
         "color": "#ff9800",
         "style": "dotted",
-        "reason": "Gate sequence compressed with NDB-3.0 CCM \u2014 superseded by 1-month slip"
+        "reason": "Gate sequence compressed with NDB-3.0 CCM — superseded by 1-month slip"
       },
       "commitGate3": {
         "label": "Commit Gate 3",
         "date": "2027-01-15",
         "color": "#ff9800",
         "style": "solid",
-        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 \u2014 RM-approved 1-month gate slip"
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
       },
       "promotionGate1": {
         "label": "Promotion Gate (old)",
@@ -411,7 +420,7 @@
         "date": "2027-03-02",
         "color": "#9c27b0",
         "style": "solid",
-        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 \u2014 RM-approved 1-month gate slip"
+        "reason": "NDB-2.11.1 impact and NDB-2.12 delay cascading to NDB-3.0 — RM-approved 1-month gate slip"
       },
       "deferralComplete": {
         "label": "Deferral Complete",
@@ -587,7 +596,7 @@
         "date": "2026-11-23",
         "color": "#28a745",
         "style": "solid",
-        "reason": "OS image issue \u2014 patch slip, RM-approved"
+        "reason": "OS image issue — patch slip, RM-approved"
       }
     }
   },
