@@ -469,6 +469,29 @@ function bindControls() {
   }
 }
 
+function renderEmptyState() {
+  const uploadStatus = getEl('uploadStatus');
+  const wrap = getEl('uploadTableWrap');
+  let displayName = null;
+  let countTxt = '';
+  try {
+    const rawActive = localStorage.getItem('ndb-active-release');
+    const rawRegs = localStorage.getItem('ndb-releases-registry');
+    if (rawRegs) {
+      const regs = JSON.parse(rawRegs);
+      const active = regs.find((r) => r.id === rawActive);
+      displayName = active ? active.name : (regs[0]?.name || null);
+      countTxt = regs.length ? ` — ${regs.length} release${regs.length!==1?'s':''} kept` : '';
+    }
+  } catch (_) {}
+  if (uploadStatus) {
+    if (displayName) uploadStatus.textContent = `No projects in Active: ${displayName}${countTxt} — Upload a CSV above to start. Old releases are kept; switch via the Release bar.`;
+    else uploadStatus.textContent = 'No project data. Upload a CSV, XLSX, or JSON above, or add data/projects.json and reload.';
+    uploadStatus.className = 'upload-status';
+  }
+  if (wrap) wrap.style.display = 'none';
+}
+
 /**
  * On load: if we have projects in state, show export and optionally table.
  */
@@ -484,6 +507,10 @@ function init() {
       renderUploadTable(projects);
       const wrap = getEl('uploadTableWrap');
       if (wrap) wrap.style.display = 'block';
+    } else {
+      renderEmptyState();
+      showExportRow();
+      showUploadSubmitRow();
     }
   } catch (err) {
     logger.error('upload.init', err);

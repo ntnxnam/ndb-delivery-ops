@@ -103,6 +103,14 @@ XLSX is accepted at the MIME/extension gate. If `CsvConverterService.convertFile
 
 ---
 
-### Static app — `/bin-packing/*`
+### Static app — `/bin-packing/*` (standalone :8890)
 
-The Bin-Packing Gantt itself is a **legacy static app** (vanilla JS, no React) mounted at `/bin-packing` per CONSOLIDATION.md #14 + D37 — `express.static(apps/bin-packing)` with ESM module headers. It is not an Express route and has no `docs/api` entry; its upload flow is documented in `docs/product/CSV_CONVERTER_GUIDE.md` and `apps/bin-packing/docs/CONVENTIONS.md`. The converter agent calls `POST /api/bin-packing/convert` via `window.location.origin` (no hardcoded localhost).
+The Bin-Packing Gantt is a vanilla-JS static app served at `http://localhost:8890` via `apps/bin-packing/scripts/server-deploy.sh` (`bin-packing.conf` on `8890`, not on Lighthouse `:8001`). Sidebar `getBinPackingUrl()` uses `REACT_APP_BINPACKING_PORT || 8890`.
+
+#### Multi-release workspaces
+
+Bin-packing persists per-release isolated `localStorage` (`${baseKey}:${releaseId}` for 11 keys `SCOPED_STORAGE_KEYS` `apps/bin-packing/js/config.js:49`). Registry `ndb-releases-registry` + active `ndb-active-release` (`config.js:44`). API `apps/bin-packing/js/releases.js:83` `scopedKey()` + `apps/bin-packing/js/state.js:11` `sKey()` wrap all reads/writes; `ensureReleasesInitialized()` migrates legacy singleton to `DEFAULT_RELEASE_NAME="Release 1"` (D1). Bar `apps/bin-packing/js/release-bar.js:27` on all 5 HTML pages: picker + `releaseCount` + `releaseFeedback` (aria-live) + toasts, actions `+ New / Duplicate / Rename / Delete / Export / Import` (duplicate suffix `(copy)` unique, delete guards last, export `{release,data,version,exportedAt}` `releases.js:175`, import allowlists keys). Empty-state when no projects: "No projects in Active: X — Upload a CSV … Old releases are kept."
+
+### Static app — `/bin-packing/*` (legacy mount)
+
+Formerly `express.static(apps/bin-packing)` on `:8001` per D37; now standalone per above. Converter agent calls `POST /api/bin-packing/convert` via backend `:8001` when on `8890` (no hardcoded localhost).

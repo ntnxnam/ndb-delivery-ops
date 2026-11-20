@@ -4,6 +4,9 @@
  * @module allocation-state
  */
 
+import { scopedKey, ensureReleasesInitialized } from './releases.js';
+try { ensureReleasesInitialized(); } catch (_) {}
+function sKey(k) { try { return scopedKey(k); } catch (_) { return k; } }
 const STAFF_STORAGE_KEY = 'ndb-allocation-staff';
 const ALLOCATIONS_STORAGE_KEY = 'ndb-allocation-allocations';
 const HEADCOUNT_STORAGE_KEY = 'ndb-allocation-headcount';
@@ -32,7 +35,7 @@ const HEADCOUNT_STORAGE_KEY = 'ndb-allocation-headcount';
  */
 export function getStaff() {
   try {
-    const raw = localStorage.getItem(STAFF_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(STAFF_STORAGE_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -49,7 +52,7 @@ export function getStaff() {
 export function setStaff(staff) {
   try {
     if (!Array.isArray(staff)) return;
-    localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(staff));
+    localStorage.setItem(sKey(STAFF_STORAGE_KEY), JSON.stringify(staff));
   } catch (_) {}
 }
 
@@ -59,7 +62,7 @@ export function setStaff(staff) {
  */
 export function getAllocations() {
   try {
-    const raw = localStorage.getItem(ALLOCATIONS_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(ALLOCATIONS_STORAGE_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -76,7 +79,7 @@ export function getAllocations() {
 export function setAllocations(allocations) {
   try {
     if (!Array.isArray(allocations)) return;
-    localStorage.setItem(ALLOCATIONS_STORAGE_KEY, JSON.stringify(allocations));
+    localStorage.setItem(sKey(ALLOCATIONS_STORAGE_KEY), JSON.stringify(allocations));
   } catch (_) {}
 }
 
@@ -86,7 +89,7 @@ export function setAllocations(allocations) {
  */
 export function getHeadcount() {
   try {
-    const raw = localStorage.getItem(HEADCOUNT_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(HEADCOUNT_STORAGE_KEY));
     if (raw == null || raw === '') return null;
     const n = parseInt(raw, 10);
     return Number.isNaN(n) ? null : Math.max(1, Math.min(500, n));
@@ -102,6 +105,6 @@ export function getHeadcount() {
 export function setHeadcount(n) {
   try {
     const val = Math.max(1, Math.min(500, parseInt(String(n), 10) || 85));
-    localStorage.setItem(HEADCOUNT_STORAGE_KEY, String(val));
+    localStorage.setItem(sKey(HEADCOUNT_STORAGE_KEY), String(val));
   } catch (_) {}
 }

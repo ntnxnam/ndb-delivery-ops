@@ -40,6 +40,28 @@ export const FTE_OVERRIDES_KEY = 'ndb-fte-overrides';
 /** localStorage key for user-overridden total person-months (rowNumber → number). */
 export const DURATION_OVERRIDES_KEY = 'ndb-duration-overrides';
 
+/** Default release name (product-agnostic, D1). */
+export const DEFAULT_RELEASE_NAME = 'Release 1';
+/** Release registry: array of { id, name, createdAt, updatedAt }. */
+export const RELEASES_REGISTRY_KEY = 'ndb-releases-registry';
+/** Active release id. */
+export const ACTIVE_RELEASE_KEY = 'ndb-active-release';
+
+/** Per-release storage keys that are namespaced as `${base}:${releaseId}`. */
+export const SCOPED_STORAGE_KEYS = [
+  UPLOAD_STORAGE_KEY,
+  SCHEDULE_STORAGE_KEY,
+  FILTERS_STORAGE_KEY,
+  START_DATE_OVERRIDES_KEY,
+  FUND_FIRST_KEY,
+  COMPLETED_PCT_OVERRIDES_KEY,
+  FTE_OVERRIDES_KEY,
+  DURATION_OVERRIDES_KEY,
+  'ndb-allocation-staff',
+  'ndb-allocation-allocations',
+  'ndb-allocation-headcount',
+];
+
 /** Enable debug logging when true. Set via query param ?debug=1 or build. */
 export const DEBUG = typeof window !== 'undefined' && /[?&]debug=1/.test(window.location.search);
 
