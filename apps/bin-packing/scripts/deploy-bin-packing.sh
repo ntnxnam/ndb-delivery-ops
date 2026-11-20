@@ -61,7 +61,7 @@ main(){
 
   print_success "Creating archive..."
   cd "$WORKING_DIR"; rm -f "$ZIP_FILENAME"
-  zip -r "$ZIP_FILENAME" "$PROJECT_NAME" -x "*/node_modules/*" -x "*/.git/*" -x "${PROJECT_NAME}/.git/*" -x "*/build/*" -x "*/coverage/*" -x "*/.DS_Store" -x "*/*.log" -x "*/server/.env" -x "*/${ZIP_FILENAME}" > /dev/null
+  zip -r "$ZIP_FILENAME" "$PROJECT_NAME" -x "*/node_modules/*" -x "*/.git/*" -x "${PROJECT_NAME}/.git/*" -x "*/build/*" -x "*/coverage/*" -x "*/.DS_Store" -x "*/*.log" -x "*/server/.env" -x "*/${ZIP_FILENAME}" -x "*/shared/.cache/*" -x "*/.cache/*" -x "*/apps/delivery-ops/reports/*" -x "*/docs/reports/*" -x "*/generated/*" -x "*/.opencode/*" -x "*/.claude/*" > /dev/null
 
   ssh "$PRODUCTION_SERVER" "sudo mkdir -p '$SERVER_PATH' && sudo chown \$(whoami) '$SERVER_PATH'"
   scp "$ZIP_FILENAME" "${PRODUCTION_SERVER}:${SERVER_PATH}/"
