@@ -294,7 +294,7 @@ const ReleaseConfigPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notifyError]);
 
   useEffect(() => { loadConfigs(); }, [loadConfigs]);
 

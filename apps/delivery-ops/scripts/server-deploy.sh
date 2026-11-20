@@ -101,7 +101,7 @@ ensure_env() {
     if [ -f "$SERVER_DIR/.env.example" ]; then
       cp "$SERVER_DIR/.env.example" "$SERVER_DIR/.env"
       warn "server/.env was missing — created from .env.example."
-      warn "Edit $SERVER_DIR/.env and set SMTP_*, AI_*, ALLOWED_ORIGINS, then re-run."
+      warn "Edit $SERVER_DIR/.env and set SMTP_*, NAI_*, ALLOWED_ORIGINS, then re-run."
     else
       err "server/.env is missing and no .env.example to seed from. Aborting."
       exit 1
@@ -111,7 +111,49 @@ ensure_env() {
   if grep -qE '^[[:space:]]*PORT=' "$SERVER_DIR/.env"; then
     sed -i -E "s|^[[:space:]]*PORT=.*|PORT=${BACKEND_PORT}|" "$SERVER_DIR/.env"
   else
-    printf '\nPORT=%s\n' "$BACKEND_PORT" >> "$SERVER_DIR/.env"
+    tail -c1 "$SERVER_DIR/.env" | read -r _ || echo >> "$SERVER_DIR/.env"
+    printf 'PORT=%s\n' "$BACKEND_PORT" >> "$SERVER_DIR/.env"
+  fi
+
+  # ── NAI canonical migration (AI_* → NAI_*; old DRE → NuTokens) ──
+  if grep -q "JIRA_PAT=.*NAI_API_BASE_URL" "$SERVER_DIR/.env"; then
+    local jira_val
+    jira_val="$(grep -E "^JIRA_PAT=" "$SERVER_DIR/.env" | sed -E 's/^JIRA_PAT=([^ ]*)NAI_.*/\1/' | tail -n1)"
+    sed -i -E "s|^JIRA_PAT=.*NAI_API_BASE_URL.*|JIRA_PAT=${jira_val}|" "$SERVER_DIR/.env"
+    warn "Fixed corrupted JIRA_PAT line in server/.env"
+  fi
+  tail -c1 "$SERVER_DIR/.env" | read -r _ || echo >> "$SERVER_DIR/.env"
+  local nai_migrated=0
+  ensure_nai_var() {
+    local nai_key="$1" ai_key="$2" default_val="$3"
+    if ! grep -qE "^[[:space:]]*${nai_key}=" "$SERVER_DIR/.env"; then
+      local val=""
+      if grep -qE "^[[:space:]]*${ai_key}=" "$SERVER_DIR/.env"; then
+        val="$(grep -E "^[[:space:]]*${ai_key}=" "$SERVER_DIR/.env" | tail -n1 | cut -d= -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+      fi
+      if [ "$nai_key" = "NAI_API_BASE_URL" ] && { [ -z "$val" ] || echo "$val" | grep -qE "dpro-nai|nai-dre"; }; then
+        val="https://tokens.corp.nutanix.com/enterpriseai/gateway/v1"
+      fi
+      if [ "$nai_key" = "NAI_DEFAULT_MODEL" ] && { [ -z "$val" ] || echo "$val" | grep -qE "nemotron|eng-pool"; }; then
+        val="$default_val"
+      fi
+      if [ -z "$val" ]; then val="$default_val"; fi
+      if [ -n "$val" ]; then
+        printf '%s=%s\n' "$nai_key" "$val" >> "$SERVER_DIR/.env"
+        nai_migrated=1
+      fi
+    fi
+  }
+  ensure_nai_var "NAI_API_BASE_URL"   "AI_API_BASE_URL"   "https://tokens.corp.nutanix.com/enterpriseai/gateway/v1"
+  ensure_nai_var "NAI_DEFAULT_MODEL"   "AI_DEFAULT_MODEL"  "beam-1-501b"
+  ensure_nai_var "NAI_MAX_TOKENS"      "AI_MAX_TOKENS"     "8192"
+  ensure_nai_var "NAI_REQUEST_TIMEOUT" "AI_REQUEST_TIMEOUT" "120000"
+  ensure_nai_var "NAI_API_KEY"         "AI_API_KEY"        ""
+  if [ "$nai_migrated" -eq 1 ]; then
+    warn "Migrated AI_* → NAI_* in server/.env (canonical NuTokens). Verify NAI_API_KEY is a valid NuToken."
+  fi
+  if [ "$(grep -c "^NAI_API_BASE_URL=" "$SERVER_DIR/.env")" -gt 1 ]; then
+    awk '!seen[$0]++ || $0 !~ /^NAI_API_BASE_URL=/' "$SERVER_DIR/.env" > /tmp/env.clean && mv /tmp/env.clean "$SERVER_DIR/.env"
   fi
   ok "server/.env present (backend PORT=$BACKEND_PORT)"
 }
@@ -124,7 +166,7 @@ build_app() {
   ( cd "$REPO_ROOT" && npm install --no-audit --no-fund )
   ok "Dependencies installed"
 
-  step "Building React client for production..."
+  step "Building shared connectors (aiConnector ESM fix)..."\n  ( cd "$REPO_ROOT" && npm --workspace @portfolio-delivery-ops/shared run build ) || {\n    warn "Shared build failed — continuing with shipped dist"\n  }\n  ok "Shared built"\n\n  step "Building React client for production..."
   # CI= so ESLint warnings don't fail the production build.
   ( cd "$CLIENT_DIR" && CI= npm run build )
   if [ ! -f "$BUILD_DIR/index.html" ]; then
