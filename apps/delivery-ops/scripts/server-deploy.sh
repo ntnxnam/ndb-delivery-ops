@@ -166,7 +166,13 @@ build_app() {
   ( cd "$REPO_ROOT" && npm install --no-audit --no-fund )
   ok "Dependencies installed"
 
-  step "Building shared connectors (aiConnector ESM fix)..."\n  ( cd "$REPO_ROOT" && npm --workspace @portfolio-delivery-ops/shared run build ) || {\n    warn "Shared build failed — continuing with shipped dist"\n  }\n  ok "Shared built"\n\n  step "Building React client for production..."
+  step "Building shared connectors (aiConnector ESM fix)..."
+  ( cd "$REPO_ROOT" && npm --workspace @portfolio-delivery-ops/shared run build ) || {
+    warn "Shared build failed — continuing with shipped dist"
+  }
+  ok "Shared built"
+
+  step "Building React client for production..."
   # CI= so ESLint warnings don't fail the production build.
   ( cd "$CLIENT_DIR" && CI= npm run build )
   if [ ! -f "$BUILD_DIR/index.html" ]; then
