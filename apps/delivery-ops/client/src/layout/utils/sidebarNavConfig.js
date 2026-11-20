@@ -4,11 +4,12 @@
  */
 
 function getBinPackingUrl() {
-  if (typeof window === 'undefined') return '/bin-packing/';
+  // Bin-packing runs standalone on 8890 (not on 8001) — see apps/bin-packing/package.json
+  const binPackingPort = process.env.REACT_APP_BINPACKING_PORT || '8890';
+  if (typeof window === 'undefined') return `http://localhost:${binPackingPort}/`;
   const isDevReactServer = window.location.port === '8899';
-  if (!isDevReactServer) return '/bin-packing/';
-  const backendPort = process.env.REACT_APP_BACKEND_PORT || '8001';
-  return `${window.location.protocol}//${window.location.hostname}:${backendPort}/bin-packing/`;
+  if (!isDevReactServer) return `http://${window.location.hostname}:${binPackingPort}/`;
+  return `${window.location.protocol}//${window.location.hostname}:${binPackingPort}/`;
 }
 
 function getProjectPlanCreatorUrl() {

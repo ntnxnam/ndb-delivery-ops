@@ -7,8 +7,8 @@
 #
 # Architecture on the box:
 #   Browser ──:HTTP_PORT──> Nginx ──┬─ /            -> React build (static)
-#                                   ├─ /api/*       -> Node backend (PM2) :BACKEND_PORT
-#                                   └─ /bin-packing -> Node backend (PM2) :BACKEND_PORT
+#                                   └─ /api/*       -> Node backend (PM2) :BACKEND_PORT
+#   Bin-packing is standalone on :8890 (Nginx bin-packing.conf), not proxied here.
 #
 # Usage (normally invoked by deploy-to-production.sh over SSH):
 #   bash apps/delivery-ops/scripts/server-deploy.sh
@@ -183,7 +183,7 @@ build_app() {
 }
 
 # -------------------------------------------------------------------------
-# 4. Nginx site config (serve build, reverse-proxy /api + /bin-packing)
+# 4. Nginx site config (serve build, reverse-proxy /api)
 # -------------------------------------------------------------------------
 configure_nginx() {
   step "Writing Nginx config -> $NGINX_CONF ..."
@@ -222,13 +222,7 @@ server {
         proxy_cache off;
     }
 
-    # Legacy bin-packing app is static-mounted by the Node backend.
-    location /bin-packing/ {
-        proxy_pass http://127.0.0.1:${BACKEND_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
+    # Bin-packing is on :8890 (separate Nginx conf bin-packing.conf), not via :${BACKEND_PORT}.
 }
 EOF
 

@@ -165,23 +165,12 @@ const docsRoot = path.join(__dirname, '..', '..', '..', 'docs');
 app.use('/docs', express.static(docsRoot, { extensions: ['html'] }));
 app.use('/Documentation', express.static(docsRoot, { extensions: ['html'] }));
 
-// Bin-packing app (legacy NDB-projects-bin-packing). Static-mounted under
-// /bin-packing per CONSOLIDATION.md #14 + D37: same-origin, single runtime,
-// ESM modules + data/projects.json fetch work out of the box. Future React
-// port tracked separately.
-const binPackingRoot = path.join(__dirname, '..', '..', 'bin-packing');
-app.use(
-  '/bin-packing',
-  express.static(binPackingRoot, {
-    extensions: ['html'],
-    setHeaders: (res, filePath) => {
-      // Ensure browser ESM <script type="module"> loads correctly.
-      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      }
-    },
-  })
-);
+// Bin-packing: standalone on :8890 (not on :8001) — user requested no common-port sharing.
+// Lighthouse (8001/8899) no longer mounts /bin-packing. Run bin-packing separately:
+//   cd apps/bin-packing && npm start  -> http://localhost:8890
+// Kept for reference; re-enable by uncommenting below + sidebarNavConfig.js.
+// const binPackingRoot = path.join(__dirname, '..', '..', 'bin-packing');
+// app.use('/bin-packing', express.static(binPackingRoot, { extensions: ['html'], setHeaders: (res, p) => { if (p.endsWith('.js')||p.endsWith('.mjs')) res.setHeader('Content-Type','application/javascript; charset=utf-8'); } }));
 
 // Routes are now in separate modules:
 // - routes/config.js: Config endpoints

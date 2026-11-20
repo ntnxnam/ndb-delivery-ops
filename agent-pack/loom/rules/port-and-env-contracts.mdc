@@ -11,11 +11,13 @@ alwaysApply: true
 |---|---|---|
 | React (delivery-ops client) | `8899` | `apps/delivery-ops/client/package.json` `PORT=8899` (`start` script) |
 | Express (delivery-ops server) | `8001` | `apps/delivery-ops/server/.env` `PORT=8001`, fallback `8001` in `server/index.js:25` |
+| Bin-packing (standalone) | `8890` | `apps/bin-packing/package.json` `npx serve . -l 8890` — **not** on 8001 |
 
-**No fallback / no auto-detect.** React is `8899`, Express is `8001`. Do not reintroduce `8888` or probe for a free port. This is per `AGENTS.md` Project defaults: fixed ports, no fallback; stale `8888` conflicts on shared hosts.
+**No fallback / no auto-detect.** React is `8899`, Express is `8001`, Bin-packing is `8890` standalone. Do not reintroduce `8888` or probe for a free port. This is per `AGENTS.md` Project defaults: fixed ports, no fallback; stale `8888` conflicts on shared hosts.
 
 - `client/package.json:proxy` → `http://localhost:8001` (dev-only, CRA proxy).
 - `server/index.js:25` → `PORT=8001` default (not `8888`).
+- `apps/bin-packing/` is **not** on 8001 — runs standalone via `npm start` on 8890; `client/src/layout/utils/sidebarNavConfig.js:getBinPackingUrl()` uses `REACT_APP_BINPACKING_PORT || 8890`.
 - `apps/bin-packing/` is static-mounted under the same Express server — no extra port.
 
 ## Env contract — AI key is NAI, no fallback
