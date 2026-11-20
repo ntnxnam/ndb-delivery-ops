@@ -51,6 +51,9 @@
   "releaseConfigAllowedUsers": [
     "namratha.singh"
   ],
+  "tpmPulseAllowedUsers": [
+    "namratha.singh"
+  ],
   "sprintReportAllowedUsers": [
     "namratha.singh",
     "sneha.kulkarni",

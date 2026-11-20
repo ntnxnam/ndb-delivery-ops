@@ -22,7 +22,7 @@ jest.mock('../../utils/jiraFieldsConfig', () => ({
     requirementsLink: 'custom'+'field_14463',
     tcmsLink: 'custom'+'field_31460'
   })[key] || null),
-  getFieldValue: jest.fn((fields, key) => fields && fields.custom'+'field_23560 && key === 'riskIndicator' ? fields.custom'+'field_23560 : null),
+  getFieldValue: jest.fn((fields, key) => fields && fields['custom'+'field_23560'] && key === 'riskIndicator' ? fields['custom'+'field_23560'] : null),
   buildFieldIdsString: jest.fn(() => 'custom'+'field_23560,custom'+'field_23073')
 }));
 
@@ -47,9 +47,9 @@ describe('execSummaryService', () => {
 
   test('UT-EXEC-002: calculateRiskBreakdown classifies red/yellow/green', () => {
     const items = [
-      { custom'+'field_23560: 'Red' },
-      { custom'+'field_23560: 'Yellow' },
-      { custom'+'field_23560: 'Green' },
+      { ['custom'+'field_23560']: 'Red' },
+      { ['custom'+'field_23560']: 'Yellow' },
+      { ['custom'+'field_23560']: 'Green' },
       {}
     ];
     const out = calculateRiskBreakdown(items);

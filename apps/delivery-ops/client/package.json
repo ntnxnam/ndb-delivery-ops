@@ -47,7 +47,14 @@
         }
       ],
       "react-hooks/exhaustive-deps": "error",
-      "react-hooks/rules-of-hooks": "error"
+      "react-hooks/rules-of-hooks": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "ReturnStatement CallExpression[callee.property.name='bind']",
+          "message": "Unstable .bind() in hook/component return → useEffect storm. Use useCallback([]) per react-useeffect-infinite-loop-prevention.mdc."
+        }
+      ]
     }
   },
   "browserslist": {

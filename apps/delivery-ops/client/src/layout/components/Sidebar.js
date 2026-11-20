@@ -256,10 +256,11 @@ export const Sidebar = () => {
       <Link
         key={item.path}
         to={item.path}
-        className={`nav-item nav-item-child ${active ? 'active' : ''}`}
-        title={title}
+        className={`nav-item nav-item-child ${active ? 'active' : ''} ${item.wip ? 'is-wip' : ''}`}
+        title={item.wip ? `${title} (WIP)` : title}
       >
         <span className="nav-label">{item.label}</span>
+        {item.wip && <span className="nav-item-wip-badge" title="Work in progress">WIP</span>}
       </Link>
     );
   };

@@ -13,13 +13,10 @@
  * Date resolution follows the nutanix-jira-date-hierarchy rule:
  *
  *   - Feature / Initiative / X-FEAT / Capability:
- *       start = customfield_11069 (Start Date) if present, else null
- *       end   = first non-null of:
- *                 customfield_11067 (Code Complete Date)
- *                 customfield_35863 (Commit Gate Ready Estimation)
- *                 customfield_35864 (Promotion Gate Ready Estimation)
+ *       start = startDate (Start Date) if present, else null
+ *       end   = first non-null of: codeComplete, commitGate, promotionGate
  *   - Epic:
- *       start = customfield_11069 if present, else null
+ *       start = startDate if present, else null
  *       end   = duedate
  *
  * Everything-else is excluded from the top-level Gantt; a more detailed
@@ -30,15 +27,16 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { classifyRiskIndicator, JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
+import { getFieldId, getFieldValue } from '../config/jiraFields.js';
 
-const START_DATE_FIELD = 'customfield_11069';
-const CODE_COMPLETE_FIELD = 'customfield_11067';
-const COMMIT_GATE_FIELD = 'customfield_35863';
-const PROMOTION_GATE_FIELD = 'customfield_35864';
+const START_DATE_FIELD = getFieldId('startDate')!;
+const CODE_COMPLETE_FIELD = getFieldId('codeComplete')!;
+const COMMIT_GATE_FIELD = getFieldId('commitGate')!;
+const PROMOTION_GATE_FIELD = getFieldId('promotionGate')!;
 
 const FIELDS = [
   'key', 'summary', 'issuetype', 'status', 'priority', 'assignee',
-  'duedate', 'customfield_23560',
+  'duedate', getFieldId('riskIndicator')!,
   START_DATE_FIELD, CODE_COMPLETE_FIELD, COMMIT_GATE_FIELD, PROMOTION_GATE_FIELD,
 ].join(',');
 
@@ -117,7 +115,7 @@ export function registerGanttReleaseTimeline(server: McpServer, env: Env): void 
             assignee: (f['assignee'] as { displayName?: string } | undefined)?.displayName ?? 'Unassigned',
             startDate: startRaw,
             endDate,
-            riskBucket: classifyRiskIndicator(f['customfield_23560']),
+            riskBucket: classifyRiskIndicator(getFieldValue(f as any, 'riskIndicator')),
             endDateSource,
           };
         });

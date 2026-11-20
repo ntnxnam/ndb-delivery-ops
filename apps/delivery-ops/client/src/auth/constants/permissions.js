@@ -30,7 +30,10 @@ export const PERMISSIONS = {
   EXEC_AUDIENCE: 'exec_audience',
   
   // System
-  SYSTEM_CONFIG: 'system_config'
+  SYSTEM_CONFIG: 'system_config',
+
+  // TPM
+  TPM_PULSE_VIEW: 'tpm_pulse_view'
 };
 
 // Tab-specific permissions mapping
@@ -57,7 +60,9 @@ export const TAB_PERMISSIONS = {
   '/cfdcfi': [PERMISSIONS.KPI_VIEW],
   '/system-test-scale': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS],
-  '/schedules': [PERMISSIONS.RELEASE_VERSIONS_VIEW]
+  '/schedules': [PERMISSIONS.TPM_PULSE_VIEW],
+  '/tpm/pulse': [PERMISSIONS.TPM_PULSE_VIEW],
+  '/tpm/jql-builder': [PERMISSIONS.TPM_PULSE_VIEW]
 };
 
 // Legacy permission array mapping for migration compatibility.
@@ -71,5 +76,6 @@ export const LEGACY_PERMISSION_MAPPING = {
   releaseSetupAllowedUsers: [PERMISSIONS.RELEASE_SETUP_MANAGE],
   releaseConfigAllowedUsers: [PERMISSIONS.RELEASE_CONFIG_MANAGE],
   sprintReportAllowedUsers: [PERMISSIONS.SPRINT_REPORTS_VIEW],
+  tpmPulseAllowedUsers: [PERMISSIONS.TPM_PULSE_VIEW],
   execAudienceUsers: [PERMISSIONS.EXEC_AUDIENCE],
 };

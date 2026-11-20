@@ -1,0 +1,75 @@
+---
+description: Prevent unstable callback identities from causing useEffect fetch storms
+alwaysApply: true
+---
+<!-- Shared with lighthouse — keep in sync. See agent-pack/lighthouse/rules/react-useeffect-infinite-loop-prevention.mdc -->
+
+# React useEffect Infinite-Loop Prevention
+
+Every callback that appears in an exhaustive-deps array must have a **stable identity** — otherwise `useCallback`/`useMemo`/`useEffect` churn on every render and create fetch storms (e.g. 667× `GET /api/config/release-dates` in 7 s, `HAR.txt.rtf` Nov 20 2026).
+
+## Anti-pattern (Blocking — Code Review + Compile Gate)
+
+Returning a fresh function or a `.bind()` wrapper on every render, then threading it through deps:
+
+```js
+// ❌ Blocking — new identity every render → consumer's useCallback churns → useEffect storm
+export const useNotifications = () => {
+  const [notifications, setNotifications] = useState([]);
+  useEffect(() => { /* subscribe */ }, []);
+  return {
+    notifications,
+    error: notificationService.error.bind(notificationService), // ← unstable
+    success: notificationService.success.bind(notificationService),
+  };
+};
+
+// Consumer faithfully lists the dep (exhaustive-deps is error) — loop still fires:
+const { error: notifyError } = useNotifications();
+const loadConfigs = useCallback(async () => { /* fetch */ }, [notifyError]);
+useEffect(() => { loadConfigs(); }, [loadConfigs]); // fires every render
+```
+
+Also blocking: inline `() => …`, `{}`, `[]` literals used as hook deps; constructing a new object/array inside a hook's return without `useMemo`.
+
+## Required pattern
+
+Stabilise every callback that crosses a hook boundary with `useCallback([])` (or `useMemo` for objects). The provider owns stability — consumers must not work around it by dropping deps or disabling exhaustive-deps.
+
+```js
+// ✅ Stable — safe to list in deps
+export const useNotifications = () => {
+  const [notifications, setNotifications] = useState([]);
+  useEffect(() => {
+    setNotifications(notificationService.getAll());
+    return notificationService.subscribe(setNotifications);
+  }, []);
+  const error   = useCallback((msg, opts) => notificationService.error(msg, opts), []);
+  const success = useCallback((msg, opts) => notificationService.success(msg, opts), []);
+  const show    = useCallback((msg, type, opts) => notificationService.show(msg, type, opts), []);
+  // …warning, info, remove, clear — same shape
+  return useMemo(() => ({ notifications, error, success, show /* … */ }),
+    [notifications, error, success, show]);
+};
+```
+
+When a callback legitimately depends on changing state, prefer an `useRef` + stable wrapper or split the value out of the callback rather than stabilising incorrectly with `[]`.
+
+## Enforcement
+
+| Gate | Check | Severity |
+|------|-------|----------|
+| ESLint (`client/package.json` `eslintConfig.rules`) | `react-hooks/exhaustive-deps: error`, `react-hooks/rules-of-hooks: error` (already set — do not downgrade). Flag `no-restricted-syntax` for `.bind(` inside hook returns if feasible. | Blocking — fix the provider, don't `// eslint-disable-next-line` |
+| Compile Gate (`scripts/loom/checks/check-compile.sh`) | Grep Blocking: `\.bind\(.*Service\)` / `\.bind\(.*notificationService` inside `client/src/**/use*.js` and `client/src/shared/services/*.js`. Each hit must be rewritten to `useCallback`. | Blocking |
+| Code Review (stage 2) | Reviewer must grep `.bind(` + `useCallback`/`useEffect`/`useMemo` dep arrays for unstable identities. Any hit without `useCallback`/`useMemo` → Blocking. | Blocking |
+| Exhaustive-deps automation | Automation that adds deps (weave/codemod) must verify the added dep is stable (via `useCallback`/`useMemo`/`useRef`); if not, fix the provider first, then add the dep. | Blocking — never paper over an unstable dep by suppressing the warning |
+
+## Never do
+
+- Suppress `react-hooks/exhaustive-deps` to silence a storm — fix the provider.
+- Return `.bind()`/arrow/object literals from a hook and expect consumers to omit them from deps.
+- Land exhaustive-deps autofixes that add an unstable dep without stabilising it.
+
+## Verify
+
+After touching a shared hook, hard-refresh the consuming page and check Network filtered to that page's fetch — expect **1× on mount**, additional fetches only on explicit user actions (Save/Delete/etc.) or documented `releaseConfigSynced` events.

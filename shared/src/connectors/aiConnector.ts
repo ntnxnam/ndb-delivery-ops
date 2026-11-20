@@ -8,7 +8,10 @@
  */
 
 import axios from 'axios';
+import { existsSync, readFileSync } from 'node:fs';
 import https from 'node:https';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface AiToolCall {
   id: string;
@@ -84,14 +87,43 @@ export class AiConnectorError extends Error {
  *   Equivalently in Node (this connector):
  *   completeChat(messages, { model: "ntnx-beam" })  // model defaults to aiConfig.json:defaultModel
  */
+type AiConfigFallback = { baseUrl?: string; defaultModel?: string; maxTokens?: number; requestTimeoutMs?: number };
+
+function loadAiConfigFallback(): AiConfigFallback {
+  const candidates: string[] = [];
+  if (process.env.AI_CONFIG_PATH?.trim()) {
+    candidates.push(process.env.AI_CONFIG_PATH.trim());
+  }
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sharedRoot = resolve(here, '..', '..');
+    const monorepoRoot = resolve(sharedRoot, '..');
+    candidates.push(join(monorepoRoot, 'apps', 'delivery-ops', 'server', 'config', 'aiConfig.json'));
+    candidates.push(join(sharedRoot, '..', 'apps', 'delivery-ops', 'server', 'config', 'aiConfig.json'));
+  } catch {}
+  try {
+    const cwd = process.cwd();
+    candidates.push(join(cwd, 'apps', 'delivery-ops', 'server', 'config', 'aiConfig.json'));
+    candidates.push(join(cwd, 'server', 'config', 'aiConfig.json'));
+    candidates.push(join(cwd, 'config', 'aiConfig.json'));
+    candidates.push(resolve(cwd, 'apps/delivery-ops/server/config/aiConfig.json'));
+  } catch {}
+  for (const p of candidates) {
+    try {
+      if (existsSync(p)) {
+        const raw = readFileSync(p, 'utf8');
+        const parsed = JSON.parse(raw) as AiConfigFallback;
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+  }
+  return {};
+}
+
 function readConfig(override?: Partial<AiConnectorConfig>): AiConnectorConfig {
   // Only NAI_* env vars are read (no AI_* fallback). aiConfig.json provides
   // defaults for non-secret vars when env is not set (matches voodooService behaviour).
-  let aiConfigFallback: { baseUrl?: string; defaultModel?: string; maxTokens?: number; requestTimeoutMs?: number } = {};
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    aiConfigFallback = require('../../../apps/delivery-ops/server/config/aiConfig.json');
-  } catch {}
+  const aiConfigFallback = loadAiConfigFallback();
   // aiConfig.json provides defaults for non-secret vars when env not set; missing values throw below.
 
   const envBaseUrl = process.env.NAI_API_BASE_URL || '';

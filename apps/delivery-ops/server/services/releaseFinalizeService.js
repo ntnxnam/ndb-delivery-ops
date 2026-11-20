@@ -16,7 +16,7 @@ const jiraConfig = require('../config/jiraConfig.json');
 const jiraFieldsConfig = require('../config/jiraFieldsConfig.json');
 const OPEN_EXCLUDED_STATUSES = ['Done', 'Complete', 'Closed', 'Cancelled', 'Fixed'];
 const MASTER_VERSION = 'master';
-const ASSIGNEE_MANAGER_FIELD = (jiraFieldsConfig.fields?.people?.assigneeManager?.id) || 'customfield_19262';
+const ASSIGNEE_MANAGER_FIELD = jiraFieldsConfig.fields.people.assigneeManager.id;
 const RELEASE_DISTRO = 'ndb-tpms@nutanix.com';
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function loadReleaseConfig() { try { delete require.cache[require.resolve(EMAIL_CONFIG_PATH)]; const raw = fs.readFileSync(EMAIL_CONFIG_PATH, 'utf8'); return raw && raw.trim() ? JSON.parse(raw) : {}; } catch { return {}; } }

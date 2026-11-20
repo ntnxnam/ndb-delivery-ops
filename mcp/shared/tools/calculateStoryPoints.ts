@@ -10,7 +10,7 @@
  * API), and the *calculation* lives here so any MCP client can call it.
  *
  * Uses two JIRA conventions:
- *   - customfield_10002 — Story Points (Nutanix JIRA Server, standard)
+ *   - storyPoints (resolved via jiraFieldsConfig) — Story Points
  *   - portfolioChildrenOf("issue = KEY") — Portfolio for JIRA hierarchy
  *     traversal
  */
@@ -20,7 +20,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
 
-const STORY_POINT_FIELD = 'customfield_10002';
+import { getFieldId, getFieldValue } from '../config/jiraFields.js';
+const STORY_POINT_FIELD = getFieldId('storyPoints')!;
 const FIELDS = ['key', 'summary', 'issuetype', 'status', STORY_POINT_FIELD].join(',');
 
 const inputSchema = {
@@ -66,7 +67,7 @@ export function registerCalculateStoryPoints(server: McpServer, env: Env): void 
 
         for (const issue of issues) {
           const f = (issue.fields ?? {}) as Record<string, unknown>;
-          const sp = typeof f[STORY_POINT_FIELD] === 'number' ? (f[STORY_POINT_FIELD] as number) : 0;
+          const sp = typeof getFieldValue(f as any, 'storyPoints') === 'number' ? (getFieldValue(f as any, 'storyPoints') as number) : 0;
           const type = ((f['issuetype'] as { name?: string } | undefined)?.name) ?? 'Unknown';
           const isDone = ((f['status'] as { statusCategory?: { name?: string } } | undefined)?.statusCategory?.name) === 'Done';
 

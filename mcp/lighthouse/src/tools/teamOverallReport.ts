@@ -9,6 +9,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { JiraConnector, jqlBuilder, loadEnv } from '@portfolio-delivery-ops/shared';
+import { getFieldValue } from '../../../shared/config/jiraFields.js';
 
 const AUDIENCES = ['team-exec', 'em', 'engineer'] as const;
 
@@ -133,7 +134,7 @@ export function registerTeamOverallReport(server: McpServer): void {
             groups[groupKey] = { key: groupKey, label: groupKey, count: 0, storyPoints: 0 };
           }
           groups[groupKey].count++;
-          const sp = f.storyPoints || f.customfield_10016 || f.customfield_10026;
+          const sp = f.storyPoints || getFieldValue(f as any, 'storyPointsAlt1') || getFieldValue(f as any, 'storyPointsAlt2');
           if (sp != null) {
             const num = parseFloat(sp);
             if (!isNaN(num)) {
@@ -157,7 +158,7 @@ export function registerTeamOverallReport(server: McpServer): void {
           summary: issue.fields?.summary || '',
           issuetype: issue.fields?.issuetype?.name || 'Unknown',
           status: issue.fields?.status?.name || 'Unknown',
-          storyPoints: issue.fields?.storyPoints || issue.fields?.customfield_10016 || null,
+          storyPoints: issue.fields?.storyPoints || getFieldValue(issue.fields as any, 'storyPointsAlt1') || null,
           url: `https://jira.nutanix.com/browse/${issue.key}`,
           sourceProject: issue._sourceProject || null,
         }));

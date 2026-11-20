@@ -16,7 +16,7 @@ const SERVER_INSTRUCTIONS = [
   '',
   'Conventions:',
   '- Every tool that produces user-facing output takes an `audience` arg (vp | em | engineer). Pick the right one from context; default is `em` (engineering manager).',
-  '- Risk classification follows red/yellow/green/not_set, derived from JIRA customfield_23560.',
+  '- Risk classification follows red/yellow/green/not_set, derived from JIRA riskIndicator.',
   '- For "release status" / "release health" queries, prefer `get_release_status`.',
   '- Pass `productId` where available to scope queries to the correct product.',
   '- The `ndb://glossary` resource has authoritative definitions for Team Executive, EC, CG, X-FEAT, etc. Pull it before guessing.',

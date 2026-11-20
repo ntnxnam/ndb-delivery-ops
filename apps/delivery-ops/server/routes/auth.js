@@ -138,6 +138,7 @@ function transformLegacyPermissions(serverData, username) {
     releaseSetupAllowedUsers: ['release_setup_manage'],
     releaseConfigAllowedUsers: ['release_config_manage'],
     sprintReportAllowedUsers: ['sprint_reports_view'],
+    tpmPulseAllowedUsers: ['tpm_pulse_view'],
     // Exec-audience auto NAI briefing ("What ails the team") — not default-on
     execAudienceUsers: ['exec_audience'],
   };

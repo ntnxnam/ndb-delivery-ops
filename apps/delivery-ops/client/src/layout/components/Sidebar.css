@@ -207,6 +207,19 @@
 }
 .nav-item:focus-visible { box-shadow: inset var(--focus-ring); }
 .nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-item-wip-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.625rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--text-strong);
+  background: var(--warning);
+}
 .nav-newtab-indicator { margin-left: auto; font-size: var(--fs-muted); color: var(--sidebar-text-muted); opacity: 0.6; }
 .nav-item-external:hover .nav-newtab-indicator { color: var(--sidebar-text); opacity: 1; }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 class NotificationService {
   constructor() {
@@ -66,30 +66,15 @@ class NotificationService {
 
   // Remove a notification by ID
   remove(id) {
-    // #region agent log
-    // Removed debug telemetry
-    // #endregion
-    
     const index = this.notifications.findIndex(n => n.id === id);
     if (index !== -1) {
       const notification = this.notifications[index];
-      
-      // Clear any pending auto-dismiss timeout
       if (notification.timeoutId) {
         clearTimeout(notification.timeoutId);
         notification.timeoutId = null;
       }
-      
       this.notifications.splice(index, 1);
       this.notifyListeners();
-      
-      // #region agent log
-      // Removed debug telemetry
-      // #endregion
-    } else {
-      // #region agent log
-      // Removed debug telemetry
-      // #endregion
     }
   }
 
@@ -119,11 +104,6 @@ class NotificationService {
 
   // Notify all listeners of changes
   notifyListeners() {
-    // #region agent log
-    // Removed debug telemetry
-    // #endregion
-    
-    // Use a copy of notifications to prevent mutation during iteration
     const notificationsCopy = [...this.notifications];
     
     this.listeners.forEach((listener, index) => {
@@ -142,39 +122,37 @@ class NotificationService {
 
 export const notificationService = new NotificationService();
 
-// React hook to use notifications
-
+/**
+ * React hook to use notifications. Callbacks are memoised with `useCallback([])` so
+ * consumers can safely include `error`/`success` in `react-hooks/exhaustive-deps`
+ * without triggering infinite fetch loops — fixes `ReleaseConfigPage` reload storm.
+ * @returns {{notifications: Array, show: Function, success: Function, error: Function, warning: Function, info: Function, remove: Function, clear: Function}}
+ */
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    // Initial load
-    const initial = notificationService.getAll();
-    setNotifications(initial);
-    
-    // #region agent log
-    // Removed debug telemetry
-    // #endregion
-
-    // Subscribe to changes
-    const unsubscribe = notificationService.subscribe((newNotifications) => {
-      // #region agent log
-      // Removed debug telemetry
-      // #endregion
-      setNotifications(newNotifications);
-    });
-
+    setNotifications(notificationService.getAll());
+    const unsubscribe = notificationService.subscribe(setNotifications);
     return unsubscribe;
   }, []);
 
-  return {
+  const show = useCallback((message, type, options) => notificationService.show(message, type, options), []);
+  const success = useCallback((message, options) => notificationService.success(message, options), []);
+  const error = useCallback((message, options) => notificationService.error(message, options), []);
+  const warning = useCallback((message, options) => notificationService.warning(message, options), []);
+  const info = useCallback((message, options) => notificationService.info(message, options), []);
+  const remove = useCallback((id) => notificationService.remove(id), []);
+  const clear = useCallback(() => notificationService.clear(), []);
+
+  return useMemo(() => ({
     notifications,
-    show: notificationService.show.bind(notificationService),
-    success: notificationService.success.bind(notificationService),
-    error: notificationService.error.bind(notificationService),
-    warning: notificationService.warning.bind(notificationService),
-    info: notificationService.info.bind(notificationService),
-    remove: notificationService.remove.bind(notificationService),
-    clear: notificationService.clear.bind(notificationService)
-  };
+    show,
+    success,
+    error,
+    warning,
+    info,
+    remove,
+    clear,
+  }), [notifications, show, success, error, warning, info, remove, clear]);
 };

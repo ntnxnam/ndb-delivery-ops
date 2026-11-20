@@ -19,7 +19,7 @@ function getProjectPlanCreatorUrl() {
 }
 
 /**
- * @typedef {{ path: string, label: string, description?: string, external?: boolean, newTab?: boolean }} NavItem
+ * @typedef {{ path: string, label: string, description?: string, external?: boolean, newTab?: boolean, wip?: boolean }} NavItem
  * @typedef {{ id: string, label: string, icon: string, children: NavItem[], wip?: boolean }} NavGroup
  */
 
@@ -29,11 +29,13 @@ export const SIDEBAR_NAV_GROUPS = [
     id: 'release-admin',
     label: 'Release admin',
     icon: 'SlidersHorizontal',
+    wip: true,
     children: [
       {
         path: '/release-config',
         label: 'Release Config',
         description: 'Move gate dates, view date history',
+        wip: true,
       },
       {
         path: '/release-setup',
@@ -219,10 +221,11 @@ export const SIDEBAR_NAV_GROUPS = [
     id: 'tpm',
     label: 'TPM',
     icon: 'Timer',
+    wip: true,
     children: [
-      { path: '/tpm/pulse', label: 'Pulse', description: '4 lifecycle cards per release + gate strip (you land here)' },
-      { path: '/schedules', label: 'Schedules', description: 'TPM digest — what runs when' },
-      { path: '/tpm/jql-builder', label: 'JQL Builder', description: 'Plaintext → healthy JQL from our KPIs' },
+      { path: '/tpm/pulse', label: 'Pulse', description: '4 lifecycle cards per release + gate strip (you land here)', wip: true },
+      { path: '/schedules', label: 'Schedules', description: 'TPM digest — what runs when', wip: true },
+      { path: '/tpm/jql-builder', label: 'JQL Builder', description: 'Plaintext → healthy JQL from our KPIs', wip: true },
     ],
   },
 ];

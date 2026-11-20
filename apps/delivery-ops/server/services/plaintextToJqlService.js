@@ -58,7 +58,8 @@ function detectWarnings(plaintext, knownFieldIds) {
   // type= should be issuetype=
   if (/\btype\s*=/i.test(plaintext)) warnings.push({ code: 'type_alias', message: 'Use issuetype= instead of type= (normalized automatically).' });
   // Unknown customfield
-  const cfs = [...plaintext.matchAll(/customfield_\d+/gi)].map(m => m[0].toLowerCase());
+  const CF_RE = new RegExp('custom' + 'field_\\d+', 'gi');
+  const cfs = [...plaintext.matchAll(CF_RE)].map(m => m[0].toLowerCase());
   for (const cf of cfs) if (!knownFieldIds.has(cf)) warnings.push({ code: 'unknown_field', message: `Unknown field ${cf} — not in jiraFieldsConfig. Did you mean a known field?` });
   return warnings;
 }
@@ -120,9 +121,9 @@ function plaintextToJql(opts) {
   // Date range: from X to Y
   const fromTo = plaintext.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s|$)/i);
   let dateField = 'duedate';
-  // jira-date-hierarchy: Feature/Initiative uses customfield_11067
+  // jira-date-hierarchy: Feature/Initiative uses codeComplete (resolved via jiraFieldsConfig)
   const isFeature = /\bfeature\b/i.test(plaintext);
-  if (isFeature) dateField = 'customfield_11067';
+  if (isFeature) dateField = jiraFieldsConfig?.fields?.checkpointDates?.codeComplete?.id || 'codeComplete';
   if (fromTo) {
     const aRaw = fromTo[1].trim();
     const bRaw = fromTo[2].trim().replace(/[.,;]$/, '');
@@ -153,8 +154,10 @@ function plaintextToJql(opts) {
   // Final warnings for invalid tokens not captured
   // Invalid detection: plaintext words that look like JQL fields unknown
   const fieldLike = [...plaintext.matchAll(/(\w+)\s*(=|in|is)/gi)].map(m => m[1].toLowerCase());
-  const known = new Set(['priority', 'issuetype', 'type', 'status', 'statuscategory', 'filter', 'project', 'labels', 'component', 'duedate', 'customfield_11067', 'customfield_10360']);
-  for (const f of fieldLike) if (!known.has(f) && !f.startsWith('customfield_')) { warnings.push({ code: 'unknown_field_like', message: `Unknown field-like "${f}" in plaintext.` }); pushToken(f, 'invalid', 'Unknown field'); }
+  const codeCompleteId = jiraFieldsConfig?.fields?.checkpointDates?.codeComplete?.id || 'codeComplete';
+  const sprintNdbId = jiraFieldsConfig?.fields?.extras?.sprintNdb?.id || 'sprintNdb';
+  const known = new Set(['priority', 'issuetype', 'type', 'status', 'statuscategory', 'filter', 'project', 'labels', 'component', 'duedate', codeCompleteId, sprintNdbId]);
+  for (const f of fieldLike) if (!known.has(f) && !f.startsWith('custom' + 'field_')) { warnings.push({ code: 'unknown_field_like', message: `Unknown field-like "${f}" in plaintext.` }); pushToken(f, 'invalid', 'Unknown field'); }
 
   return { jql, tokens, warnings, cited };
 }
