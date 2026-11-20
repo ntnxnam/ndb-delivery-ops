@@ -8,7 +8,7 @@ do_restart
 # ---- bin-packing standalone on 8890 ----
 BINPACKING_PORT="${BINPACKING_PORT:-8890}"
 BINPACKING_PIDFILE="$PROJECT_ROOT/.pid-binpacking"
-BINPACKING_ROOT="$(cd "$PROJECT_ROOT/../../bin-packing" && pwd)"
+BINPACKING_ROOT="$(cd "$PROJECT_ROOT/../bin-packing" && pwd)"
 BINPACKING_LOG="$PROJECT_ROOT/logs/binpacking.log"
 # stop
 if [[ -f "$BINPACKING_PIDFILE" ]] && kill -0 "$(cat "$BINPACKING_PIDFILE")" 2>/dev/null; then pid=$(cat "$BINPACKING_PIDFILE"); kill -TERM "$pid" 2>/dev/null || true; sleep 2; kill -9 "$pid" 2>/dev/null || true; rm -f "$BINPACKING_PIDFILE"; fi

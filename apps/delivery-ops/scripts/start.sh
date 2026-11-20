@@ -6,7 +6,7 @@ lifecycle_init
 do_start
 
 # ---- bin-packing standalone on 8890 (separate from 8001/8899) ----
-BINPACKING_ROOT="$(cd "$PROJECT_ROOT/../../bin-packing" && pwd)"
+BINPACKING_ROOT="$(cd "$PROJECT_ROOT/../bin-packing" && pwd)"
 BINPACKING_PORT="${BINPACKING_PORT:-8890}"
 BINPACKING_PIDFILE="$PROJECT_ROOT/.pid-binpacking"
 BINPACKING_LOG="$PROJECT_ROOT/logs/binpacking.log"
