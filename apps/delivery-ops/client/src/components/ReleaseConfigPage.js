@@ -452,7 +452,9 @@ const ReleaseConfigPage = () => {
       if (!res.ok) throw new Error(data.error || 'Failed');
       setReleaseConfirm(null);
       await loadConfigs();
-      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.`);
+      const draft = data.announcementDraft;
+      const draftMsg = draft?.sent ? ` Announcement draft sent to ${draft.to}.` : draft?.skipped ? ` Announcement draft skipped: ${draft.reason || 'no recipient'}.` : draft?.error ? ` Announcement draft failed: ${draft.error}.` : ' Announcement draft queued.';
+      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.${draftMsg}`);
     } catch (e) {
       setError('Mark released failed: ' + e.message);
     } finally { setReleasing(false); }
@@ -666,8 +668,8 @@ const ReleaseConfigPage = () => {
 
       {releaseConfirm && (
         <div className="modal-backdrop" onClick={() => !releasing && setReleaseConfirm(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{ width: 560 }}>
-            <h3>Mark {releaseConfirm.version} as Released?</h3>
+          <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title" onClick={e=>e.stopPropagation()} style={{ width: 560 }}>
+            <h3 id="release-confirm-title">Mark {releaseConfirm.version} as Released?</h3>
             {releaseConfirm.loading ? <p>Loading preview…</p> : releaseConfirm.preview?.error ? <p className="modal-warning">{releaseConfirm.preview.error}</p> : (
               <>
                 <p className="modal-subtitle">This will:</p>
@@ -677,6 +679,7 @@ const ReleaseConfigPage = () => {
                   <li>Send email to <b>ndb-tpms@nutanix.com</b></li>
                   <li>Move <b>{releaseConfirm.preview?.openCount ?? '?'}</b> open tickets (status NOT IN Done, Complete, Closed, Cancelled, Fixed) to <b>master</b></li>
                   <li>Add comment tagging <b>assignee + assignee manager (customfield_19262)</b> asking to update fixVersion</li>
+                  <li>Send <b>announcement draft</b> to you (<code style={{wordBreak:'break-all'}}>{releaseConfirm.preview?.announcementDraftTo || localStorage.getItem('username') || 'logged-in user'}</code>) — subject <code style={{wordBreak:'break-all'}}>{releaseConfirm.preview?.announcementDraftSubject || `[DRAFT] Announcing ${releaseConfirm.version}`}</code></li>
                 </ol>
                 {releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">Already marked released in lighthouse — action will be rejected.</p>}
                 {releaseConfirm.preview?.jiraAlreadyReleased && !releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">JIRA already marked Released — will complete lighthouse + email + ticket move (repair).</p>}

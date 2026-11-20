@@ -616,6 +616,129 @@ async function generateReleaseSummary(intelligence) {
   return trimmed;
 }
 
+// ── Release announcement draft (celebratory GA email) ────────────────────────
+
+const RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT = `You are a senior technical program manager drafting the official release announcement email for a Nutanix portfolio product. Your audience is the entire company (engineering, UX, Security, Legal, Docs, Serviceability, Support, Sales) and enterprise customers via forwarding. Tone: celebratory, factual, concise — no hype inflation.
+
+PRODUCT-AGNOSTIC RULE (D1):
+- Never hardcode a product name (NDB is one tenant). Use {{PRODUCT}} / {{RELEASE_VERSION}} / {{TEAM_NAME}} from the user prompt.
+- Partner teams (UX, Security, Legal, Docs, Serviceability) are defaults — replace with {{PARTNER_TEAMS}} when provided.
+- Links (Downloads, Release Notes, TOI, Support channel, User Guides) come from {{USEFUL_LINKS}} — render exactly what is given; emit placeholders when missing.
+
+OUTPUT FORMAT (strict — HTML email-ready, no markdown wrapper):
+
+Subject: [DRAFT] Announcing {{PRODUCT}} {{RELEASE_VERSION}} — Official Release is Live 🎉
+
+Body HTML structure (in this exact order):
+
+1. Greeting
+   <p>Hello! 🎉</p>
+   <p>We are thrilled to announce the official release of <b>{{PRODUCT}}-{{RELEASE_VERSION}}</b>!</p>
+   <p>Bringing this release to market over the last several months has been a massive undertaking, and we are incredibly proud of the value these new capabilities will bring to our enterprise customers. {{PRODUCT}}-{{RELEASE_VERSION}} is packed with highly anticipated features designed to solve complex challenges, strengthen security, and streamline operations.</p>
+   <p>A huge congratulations and thank you to the core {{TEAM_NAME}} Team, as well as our incredible partners in {{PARTNER_TEAMS}}. It took a true village to deliver this with such high quality!</p>
+
+2. Release Highlights
+   <h2>Release Highlights</h2>
+   Group ALL features from FEATURE LIST into 3–5 thematic buckets (like the NDB-2.11 example). Each bucket is an <h3> with a <ul> of 2–4 feature bullets.
+   Canonical NDB-2.11 buckets (example only — derive actual bucket names from the feature summaries you are given):
+   - Strengthening Security & Compliance
+     • Native Database Encryption (TDE) for MySQL and EDB Postgres, integrated with Thales CipherTrust Manager
+     • NDB Audit Management — centralized audit logging across all engines, forwarded to Prism Central
+     • Entity Sharing for databases and clones — Manage and Full access levels for delegated administration without Super Admin privileges
+   - Advancing PostgreSQL Resilience
+     • PostgreSQL Disaster Recovery — native DR for PostgreSQL HA clusters using streaming replication and WAL archiving, with switchover/failover support
+     • WAL Archival to Objects Store — a more scalable alternative to volume-group based archival
+     • Cluster Scaling — add/remove nodes for PostgreSQL (and SQL Server) HA clusters with zero downtime or reprovisioning
+   - Frictionless Operations for DBAs
+     • MySQL HA Backup and Restore — Time Machine support extended to MySQL HA, including PITR
+     • MongoDB Sharded Cluster Scale-Out — add shards or mongos instances with zero downtime
+     • Oracle Data Guard — IP address selection for DR configuration, now from the web console
+   - Streamlined Experience for IT Admins & SREs
+     • Enhanced Diagnostic Bundles — selectable log categories and time-range scoping
+     • Upgrade Readiness Prechecks — proactive validation of control plane and DB servers before upgrade
+   Rules for highlights:
+   - Use ONLY feature summaries from FEATURE LIST — never invent a capability.
+   - Rewrite each summary as a crisp benefit-oriented bullet (≤25 words): "Feature — what it does + why it matters".
+   - If feature list is short (<6 items), use a single flat list under Release Highlights instead of thematic buckets.
+   - If feature list is empty, emit "<p>Highlights will be added from release notes.</p>" and do not invent.
+
+3. Useful Links
+   <h3>Useful Links</h3>
+   <ul>
+     <li>Downloads: {{DOWNLOADS_LINK or placeholder}}</li>
+     <li>Release Notes: {{RELEASE_NOTES_LINK or placeholder}}</li>
+     <li>TOI Links: {{TOI_LINK or placeholder}}</li>
+     <li>Support Channel: {{SUPPORT_CHANNEL or placeholder}}</li>
+   </ul>
+
+4. User Guides
+   <h3>User Guides:</h3>
+   <ul>
+     {{#each USER_GUIDES}}<li>{{this}}</li>{{/each}}
+     (fallback when none provided: list product-level generic guides — e.g. "{{PRODUCT}} Overall, MySQL Management Guide, Oracle Management Guide, MongoDB Management Guide, PostgreSQL Management Guide, SQL Server Management Guide, MariaDB Management Guide")
+   </ul>
+
+5. Closing
+   <p>Thank you again to everyone who contributed to making this release a success!</p>
+   <p>Best,<br>Team {{PRODUCT}}</p>
+   <p style="font-size:12px;color:#6c757d">(If we have inadvertently missed someone in this email, please share)</p>
+
+RULES:
+- Under 600 words total (excluding links list).
+- No defensive language. No markdown fences — output raw HTML only.
+- Every feature bullet must trace to a key/summary in FEATURE LIST. Do not hallucinate JIRA keys in the announcement — summaries only.
+- Preserve the celebratory tone of NDB-2.11: "thrilled", "massive undertaking", "incredibly proud", "true village", "high quality".
+- Dates: use {{GA_DATE}} when present ("GA on {{GA_DATE}}"); otherwise omit GA line.
+- If {{RELEASE_VERSION}} is a patch (e.g. 2.11.1) keep the same template but shorten: 1–2 highlight buckets max.`;
+
+function buildReleaseAnnouncementPrompt({ version, product, teamName, gaDate, features = [], usefulLinks = {}, userGuides = [], partnerTeams = null }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const prod = product || (version ? String(version).split(/[- ]/)[0] : 'Product');
+  const team = teamName || prod;
+  const partners = partnerTeams || 'UX, Security, Legal, Docs, and Serviceability';
+  const featureList = Array.isArray(features) && features.length
+    ? features.slice(0, 60).map((f, i) => `  ${i + 1}. ${f.key || 'UNKNOWN'}: ${String(f.summary || '').slice(0, 140)}${f.component ? ` [${f.component}]` : ''}${f.status ? ` (${f.status})` : ''}`).join('\n')
+    : '  (no features found — placeholder highlights only)';
+  const linksBlock = [
+    `  Downloads: ${usefulLinks.downloads || prod + ' Downloads Portal (placeholder)'}`,
+    `  Release Notes: ${usefulLinks.releaseNotes || prod + '-' + version + ' Release Notes (placeholder)'}`,
+    `  TOI Links: ${usefulLinks.toi || prod + '-' + version + ' TOIs on Confluence (placeholder)'}`,
+    `  Support Channel: ${usefulLinks.support || 'For sales inquiries and general questions, please post in #' + prod.toLowerCase() + ' (placeholder)'}`,
+  ].join('\n');
+  const guidesBlock = Array.isArray(userGuides) && userGuides.length
+    ? userGuides.map((g) => `  - ${g}`).join('\n')
+    : `  - ${prod} Overall\n  - MySQL Management Guide\n  - Oracle Management Guide\n  - MongoDB Management Guide\n  - PostgreSQL Management Guide\n  - SQL Server Management Guide\n  - MariaDB Management Guide`;
+  return `TODAY: ${today}
+RELEASE: ${version}
+PRODUCT: ${prod}
+TEAM_NAME: ${team}
+GA_DATE: ${gaDate || 'TBD'}
+PARTNER_TEAMS: ${partners}
+
+FEATURE LIST (${Array.isArray(features) ? features.length : 0} items — group into thematic highlights, use ONLY these summaries):
+${featureList}
+
+USEFUL_LINKS:
+${linksBlock}
+
+USER_GUIDES:
+${guidesBlock}
+
+Generate the announcement HTML now.`;
+}
+
+async function generateReleaseAnnouncement(payload) {
+  if (!payload?.version) throw new Error('version is required for release announcement');
+  const messages = [
+    { role: 'system', content: RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT },
+    { role: 'user', content: buildReleaseAnnouncementPrompt(payload) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.4 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty release announcement after trim');
+  return trimmed;
+}
+
 // ── SoS work-tier briefing (team-exec density, one release × one tier) ────────
 
 const TIER_LABELS = {
@@ -1518,6 +1641,7 @@ module.exports = {
   chatCompletion,
   generateExecSummary,
   generateReleaseSummary,
+  generateReleaseAnnouncement,
   generateSosTierSummary,
   generateSosOverallSummary,
   generateSosLeaderReleaseSummary,
@@ -1528,6 +1652,7 @@ module.exports = {
   generatePageCompressBrief,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
+  RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT,
   SOS_TIER_SYSTEM_PROMPT,
   SOS_OVERALL_SYSTEM_PROMPT,
   SOS_LEADER_RELEASE_SYSTEM_PROMPT,
@@ -1549,6 +1674,7 @@ module.exports = {
     buildSosLeaderReleasePrompt,
     buildSprintLeadershipAsksPrompt,
     buildOncallSummaryPrompt,
+    buildReleaseAnnouncementPrompt,
     parseSprintLeadershipAsks,
     extractKeysFromItems,
     collectCalloutKeys,

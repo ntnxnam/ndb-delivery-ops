@@ -9,6 +9,7 @@
 | `sprint-leadership-asks` | production | sprint-performance | `naiService#SPRINT_LEADERSHIP_ASKS_SYSTEM_PROMPT` |
 | `team-exec-report` | production | reports / email | `aiReportService` |
 | `sos-leader-coaching` | production | sos-leader | `naiService#SOS_LEADER_COACHING_SYSTEM_PROMPT` |
+| `release-announcement` | production | release-config | `naiService#RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT` |
 | `component-report-narrative` | draft | component-report | not wired |
 
 Chat uses `identity/ops-assistant.md` + tool loop — not a one-shot system
