@@ -98,7 +98,7 @@ export default function useTpmPulse(teamId) {
     } finally {
       if (!ctrl.signal.aborted) setLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, activeRelease]);
 
   useEffect(() => { fetchAll(); return () => { if (abortRef.current) abortRef.current.abort(); }; }, [fetchAll]);
 
