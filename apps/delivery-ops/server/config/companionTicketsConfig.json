@@ -11,10 +11,12 @@
     {
       "id": "lbdr-signoff",
       "projectKey": "LBDR",
-      "summaryTpl": "{{version}} — NDB product code sign-off",
-      "descriptionTpl": "Automated via Release Setup. NDB product code sign-off for {{version}}.",
+      "summaryTpl": "{{version}} — NDB product code sign-off [Security]",
+      "descriptionTpl": "Automated via Release Setup. [Security] NDB product code sign-off for {{version}} — requires security review.",
       "issuetype": "Task",
-      "fixVersionFromRelease": true
+      "fixVersionFromRelease": true,
+      "labels": ["security"],
+      "priority": "High"
     },
     {
       "id": "leg-tracking",

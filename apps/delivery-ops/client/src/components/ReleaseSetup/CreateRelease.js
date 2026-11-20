@@ -581,7 +581,7 @@ function CreateRelease() {
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: selectable ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
                           <input type="checkbox" disabled={!selectable} checked={!!selectedCompanion[t.id]} onChange={e => setSelectedCompanion(prev => ({ ...prev, [t.id]: e.target.checked }))} style={{ cursor: selectable ? 'pointer' : 'not-allowed' }} />
                           <span style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <strong>{t.projectKey}</strong> — {t.summary}
+                            <strong>{t.projectKey}</strong> — {t.summary} {t.isSecurity || t.priority === 'High' ? <span style={{ background: '#dc3545', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: 3, marginLeft: 4 }}>Security</span> : null}
                           </span>
                         </label>
                         <span style={{ color: statusColor(s), fontSize: '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>

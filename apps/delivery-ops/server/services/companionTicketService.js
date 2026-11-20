@@ -18,6 +18,9 @@ function buildDesiredTickets(version) {
     description: renderTpl(t.descriptionTpl || '', { version }),
     issuetype: t.issuetype || 'Task',
     fixVersion: t.fixVersionFromRelease ? version : null,
+    labels: Array.isArray(t.labels) ? t.labels : undefined,
+    priority: t.priority || undefined,
+    isSecurity: !!(t.labels && t.labels.includes('security')) || String(t.summaryTpl).toLowerCase().includes('[security]'),
   }));
 }
 
@@ -78,6 +81,8 @@ async function createCompanionTickets(jiraToken, { version, ids }) {
       issuetype: { name: d.issuetype },
     };
     if (d.fixVersion) fields.fixVersions = [{ name: d.fixVersion }];
+    if (d.labels) fields.labels = d.labels;
+    if (d.priority) fields.priority = { name: d.priority };
     // Attempt to handle mandatory Component/s via retry similar to JCH
     try {
       const res = await jira.post(JIRA_API_V2.CREATE_ISSUE, { fields }, { timeout: TIMEOUT_MS });
