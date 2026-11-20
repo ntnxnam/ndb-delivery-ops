@@ -106,12 +106,65 @@ function renderUploadTable(projectList) {
   logger.debug('upload.renderUploadTable: rendered', ordered.length, 'rows');
 }
 
+function getRefreshTargetReleaseId() {
+  const sel = getEl('refreshReleaseSelect');
+  if (sel && sel.value) return sel.value;
+  try {
+    const raw = localStorage.getItem('ndb-active-release');
+    if (raw) return raw;
+    const regs = JSON.parse(localStorage.getItem('ndb-releases-registry') || '[]');
+    return regs[0]?.id || null;
+  } catch (_) { return null; }
+}
+
+function refreshReleasePicker() {
+  const sel = getEl('refreshReleaseSelect');
+  const hint = getEl('refreshReleaseHint');
+  if (!sel) return;
+  let regs = [];
+  let activeId = null;
+  try { regs = JSON.parse(localStorage.getItem('ndb-releases-registry') || '[]'); } catch (_) {}
+  try { activeId = localStorage.getItem('ndb-active-release'); } catch (_) {}
+  sel.innerHTML = '';
+  for (const r of regs) {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name;
+    opt.title = r.name;
+    if (r.id === activeId) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  if (hint) {
+    const active = regs.find((r) => r.id === (sel.value || activeId));
+    hint.textContent = active ? `Will refresh "${active.name}" — ${regs.length} release${regs.length!==1?'s':''} kept, others untouched` : '';
+  }
+}
+
 /**
  * Run submit: persist pending or current projects, render table, show export.
+ * Writes to the release selected in #refreshReleaseSelect (or active if none), not always the bar's active.
  */
 function runUploadSubmit() {
   const uploadStatus = getEl('uploadStatus');
   const uploadTableWrap = getEl('uploadTableWrap');
+  const targetId = getRefreshTargetReleaseId();
+  // Switch active to target so scoped state.js writes to correct release (sKey uses active)
+  if (targetId) {
+    try {
+      const cur = localStorage.getItem('ndb-active-release');
+      if (cur !== targetId) {
+        localStorage.setItem('ndb-active-release', targetId);
+        // touch updatedAt for UX ordering
+        try {
+          const regs = JSON.parse(localStorage.getItem('ndb-releases-registry') || '[]');
+          const r = regs.find((x) => x.id === targetId);
+          if (r) { r.updatedAt = new Date().toISOString(); localStorage.setItem('ndb-releases-registry', JSON.stringify(regs)); }
+        } catch (_) {}
+        // notify bar to refresh its picker (it listens to release:switched but we set raw LS, so dispatch manually)
+        try { window.dispatchEvent(new CustomEvent('release:switched', { detail: { id: targetId } })); } catch (_) {}
+      }
+    } catch (_) {}
+  }
   const listToShow = (pendingUploadProjects && pendingUploadProjects.length > 0) ? pendingUploadProjects : getProjects();
 
   if (!listToShow || listToShow.length === 0) {
@@ -139,7 +192,15 @@ function runUploadSubmit() {
       uploadTableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     if (uploadStatus) {
-      uploadStatus.textContent = `${total} rows imported → ${scheduleProjects.length} Committed projects ready for schedule (${dropped} non-committed rows excluded). Verify the table below, then go to the Schedule tab.`;
+      let targetName = null;
+      try {
+        const regs = JSON.parse(localStorage.getItem('ndb-releases-registry') || '[]');
+        const tid = getRefreshTargetReleaseId();
+        const t = regs.find((r) => r.id === tid);
+        targetName = t ? t.name : null;
+      } catch (_) {}
+      const where = targetName ? ` for "${targetName}"` : '';
+      uploadStatus.textContent = `Refreshed${where}: ${total} rows → ${scheduleProjects.length} Committed. Others kept. Verify below, then Schedule.`;
       uploadStatus.className = 'upload-status success';
     }
     showExportRow();
@@ -369,16 +430,18 @@ function bindConverterControls() {
     });
   }
 
-  // Repacked event from converter agent → update verification table + status
+  // Repacked event: also respect refresh target release (converter's Replace & Repack writes to converter's own flow, but we align hint)
   window.addEventListener('converter:repacked', (e) => {
     const detail = e.detail || {};
     const scheduleProjects = detail.scheduleProjects || detail.projects || [];
     const projects = detail.projects || [];
     try {
-      // Reflect in main upload status as well
       const uploadStatus = getEl('uploadStatus');
       if (uploadStatus) {
-        uploadStatus.textContent = `${projects.length} rows converted → ${scheduleProjects.length} committed projects ready. Verify below or open Schedule.`;
+        let targetName = null;
+        try { const regs=JSON.parse(localStorage.getItem('ndb-releases-registry')||'[]'); const tid=getRefreshTargetReleaseId(); const t=regs.find(r=>r.id===tid); targetName=t?t.name:null; } catch(_){}
+        const where = targetName ? ` for "${targetName}"` : '';
+        uploadStatus.textContent = `${projects.length} rows converted → ${scheduleProjects.length} committed${where}. Verify below or open Schedule.`;
         uploadStatus.className = 'upload-status success';
       }
       // Render verification table from committed set
@@ -500,6 +563,12 @@ function init() {
   try {
     bindControls();
     bindConverterControls();
+    refreshReleasePicker();
+    const sel = getEl('refreshReleaseSelect');
+    if (sel) sel.addEventListener('change', refreshReleasePicker);
+    window.addEventListener('release:switched', refreshReleasePicker);
+    window.addEventListener('release:renamed', refreshReleasePicker);
+    window.addEventListener('release:deleted', refreshReleasePicker);
     const projects = getProjects();
     if (projects.length > 0) {
       showExportRow();

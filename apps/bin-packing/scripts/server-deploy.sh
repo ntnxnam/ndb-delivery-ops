@@ -39,16 +39,19 @@ check_port() {
   elif command -v netstat >/dev/null 2>&1; then
     holder="$(netstat -tlnp 2>/dev/null | grep -E ":${HTTP_PORT}[[:space:]]" || true)"
   fi
-  # If holder is our own Nginx already listening on this port, it's OK — we'll reload it.
-  if [ -n "$holder" ] && echo "$holder" | grep -q "nginx"; then
-    ok "Port ${HTTP_PORT} already held by Nginx (will reload)"
-    return 0
-  fi
+  # If Nginx already listens on this port, it's OK — we'll reload it (redeploy).
+  # ss may not show process name without -p perms, so also check lsof for nginx.
   local lsof_holder=""
   if command -v lsof >/dev/null 2>&1; then
     lsof_holder="$($SUDO lsof -i :"${HTTP_PORT}" -sTCP:LISTEN 2>/dev/null || true)"
   fi
+  if [ -n "$holder" ] && echo "$holder" | grep -q "nginx"; then
+    ok "Port ${HTTP_PORT} already held by Nginx (will reload)"
+    return 0
+  fi
   if [ -n "$lsof_holder" ] && echo "$lsof_holder" | grep -q "nginx"; then
+    # ss hid process name (no perms), but lsof confirms it's Nginx — allow reload
+>>>>>>> weave/binpacking-refresh-per-release
     ok "Port ${HTTP_PORT} already held by Nginx (will reload) [via lsof]"
     return 0
   fi

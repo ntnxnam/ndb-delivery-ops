@@ -72,12 +72,26 @@ function refreshSelect() {
   }
 }
 
+function syncHeader(activeName) {
+  const h1 = document.querySelector('h1');
+  if (!h1 || !activeName) return;
+  // Replace leading release name before "– Project bin packing", or prefix if no match
+  if (/–\s*Project bin packing/i.test(h1.textContent)) {
+    h1.textContent = `${activeName} – Project bin packing`;
+  } else if (!h1.textContent.includes(activeName)) {
+    h1.textContent = `${activeName} – Project bin packing`;
+  }
+  document.title = h1.textContent;
+  h1.id = 'appTitle';
+}
+
 export function mountReleaseBar() {
   try { ensureReleasesInitialized(); } catch (_) {}
   const mount = byId('releaseBar');
   if (!mount) return;
   const active = getActiveRelease();
   const regs = listReleases();
+  syncHeader(active?.name || null);
   mount.innerHTML = `
     <div class="release-bar" role="region" aria-label="Release workspaces">
       <div class="release-bar__left">
@@ -99,7 +113,12 @@ export function mountReleaseBar() {
     <div id="releaseFeedback" class="release-feedback" aria-live="polite" aria-atomic="true"></div>
   `;
   function setFeedback(msg) { const el = byId('releaseFeedback'); if (el) el.textContent = msg; }
-  setFeedback(active ? `Active: ${active.name} — ${regs.length} release${regs.length !== 1 ? 's' : ''} kept. Switching preserves old planning items.` : '');
+  const feedbackMsg = active
+    ? regs.length === 1
+      ? `Active: ${active.name} — 1 release. Use + New or Duplicate to keep old planning items for next release.`
+      : `Active: ${active.name} — ${regs.length} releases kept. Switching preserves old planning items.`
+    : '';
+  setFeedback(feedbackMsg);
   refreshSelect();
   const sel = byId('releaseSelect');
   if (sel) sel.addEventListener('change', (e) => {
@@ -139,8 +158,7 @@ export function mountReleaseBar() {
       const meta = byId('releaseActiveName'); if (meta) { meta.textContent = clean; meta.title = clean; }
       setFeedback(`Active: ${clean}`);
       toast(`Renamed to "${clean}"`, 'success');
-      const h1 = document.querySelector('h1');
-      if (h1 && /Project bin packing/i.test(h1.textContent)) h1.textContent = `${clean} – Project bin packing`;
+      syncHeader(clean);
       renameBtn.focus();
     } catch (err) { toast(err.message, 'error'); }
   });
