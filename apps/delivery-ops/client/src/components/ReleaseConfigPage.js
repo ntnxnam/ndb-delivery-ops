@@ -278,6 +278,10 @@ const ReleaseConfigPage = () => {
   const [success, setSuccess]           = useState('');
   const [releaseConfirm, setReleaseConfirm] = useState(null); // { version, preview, loading }
   const [releasing, setReleasing]       = useState(false);
+  const [announce, setAnnounce]         = useState(null); // { version, html, subject, to, loading, error, sending }
+  const [announceHtml, setAnnounceHtml] = useState('');
+  const [announceSubject, setAnnounceSubject] = useState('');
+  const [announceTo, setAnnounceTo] = useState('');
 
   const loadConfigs = useCallback(async () => {
     try {
@@ -449,15 +453,57 @@ const ReleaseConfigPage = () => {
     try {
       const res = await fetch(`/api/config/releases/${encodeURIComponent(version)}/mark-released`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Username': localStorage.getItem('username') || '' }, body: JSON.stringify({}) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) throw new Error(String(data.error || 'Failed').split('\n')[0].slice(0, 300));
       setReleaseConfirm(null);
       await loadConfigs();
+      const moved = data.tickets?.moved ?? 0;
       const draft = data.announcementDraft;
-      const draftMsg = draft?.sent ? ` Announcement draft sent to ${draft.to}.` : draft?.skipped ? ` Announcement draft skipped: ${draft.reason || 'no recipient'}.` : draft?.error ? ` Announcement draft failed: ${draft.error}.` : ' Announcement draft queued.';
-      setSuccess(`${version} marked as Released — moved ${data.tickets?.moved ?? 0} open tickets to master.${draftMsg}`);
+      let hint = '';
+      if (draft?.skipped) hint = ' Use Announce to send release notes.';
+      else if (draft?.error) hint = ` Announcement: ${String(draft.error).split('\n')[0].slice(0, 120)}`;
+      setSuccess(`${version} marked as Released — moved ${moved} open tickets to master.${hint}`);
     } catch (e) {
-      setError('Mark released failed: ' + e.message);
+      const msg = String(e.message).split('\n')[0].slice(0, 300);
+      setError('Mark released failed: ' + msg);
     } finally { setReleasing(false); }
+  }
+
+  async function openAnnouncement(version) {
+    setAnnounce({ version, loading: true, error: null, html: '', subject: '', to: '' });
+    setAnnounceHtml('');
+    setAnnounceSubject('');
+    setAnnounceTo('');
+    try {
+      const res = await fetch(`/api/config/releases/${encodeURIComponent(version)}/announcement-preview`, { headers: { 'X-Username': localStorage.getItem('username') || '' } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to preview announcement');
+      setAnnounce({ version, loading: false, error: null, ...data });
+      setAnnounceHtml(data.html || '');
+      setAnnounceSubject(data.subject || '');
+      setAnnounceTo(data.to || '');
+    } catch (e) {
+      setAnnounce({ version, loading: false, error: String(e.message).split('\n')[0].slice(0, 400), html: '' });
+    }
+  }
+  async function sendAnnouncementDraft() {
+    if (!announce || !announce.version) return;
+    const version = announce.version;
+    setAnnounce(prev => prev ? { ...prev, sending: true } : prev);
+    try {
+      const res = await fetch(`/api/config/releases/${encodeURIComponent(version)}/announcement-send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Username': localStorage.getItem('username') || '' },
+        body: JSON.stringify({ html: announceHtml, subject: announceSubject, to: announceTo })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+      setAnnounce(null);
+      setSuccess(`Announcement draft sent to ${data.to} — ${data.subject}`);
+    } catch (e) {
+      setError('Send announcement failed: ' + String(e.message).split('\n')[0].slice(0, 400));
+    } finally {
+      setAnnounce(prev => prev ? { ...prev, sending: false } : prev);
+    }
   }
 
   async function handleDelete(version) {
@@ -644,6 +690,7 @@ const ReleaseConfigPage = () => {
                             <button className="btn-release" onClick={() => openReleasePreview(version)} disabled={saving} title={cfg._jira?.released ? 'Repair lighthouse — JIRA already released' : 'Mark as Released — JIRA + email + move open tickets'}>{cfg._jira?.released ? 'Repair' : 'Release'}</button>
                           )}
                           {cfg.released && <span className="released-badge">● Released</span>}
+                          <button className="btn-announce" onClick={() => openAnnouncement(version)} title="Preview & send announcement draft to you (editable)">Announce</button>
                           <button className="btn-delete" onClick={() => handleDelete(version)} disabled={saving}>Del</button>
                         </>
                       )}
@@ -679,11 +726,11 @@ const ReleaseConfigPage = () => {
                   <li>Send email to <b>ndb-tpms@nutanix.com</b></li>
                   <li>Move <b>{releaseConfirm.preview?.openCount ?? '?'}</b> open tickets (status NOT IN Done, Complete, Closed, Cancelled, Fixed) to <b>master</b></li>
                   <li>Add comment tagging <b>assignee + assignee manager (customfield_19262)</b> asking to update fixVersion</li>
-                  <li>Send <b>announcement draft</b> to you (<code style={{wordBreak:'break-all'}}>{releaseConfirm.preview?.announcementDraftTo || localStorage.getItem('username') || 'logged-in user'}</code>) — subject <code style={{wordBreak:'break-all'}}>{releaseConfirm.preview?.announcementDraftSubject || `[DRAFT] Announcing ${releaseConfirm.version}`}</code></li>
                 </ol>
+                <p className="modal-hint">Announcement is separate — use <b>Announce</b> on the release row to preview, edit, and send the draft.</p>
                 {releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">Already marked released in lighthouse — action will be rejected.</p>}
                 {releaseConfirm.preview?.jiraAlreadyReleased && !releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">JIRA already marked Released — will complete lighthouse + email + ticket move (repair).</p>}
-                {releaseConfirm.preview?.jql && <p style={{ fontSize: 11, color: '#6c757d' }}>JQL: <code>{releaseConfirm.preview.jql}</code></p>}
+                {releaseConfirm.preview?.jql && <p style={{ fontSize: 11, color: '#6c757d', wordBreak: 'break-all' }}>JQL: <code>{releaseConfirm.preview.jql}</code></p>}
                 {releaseConfirm.preview?.sample?.length > 0 && <p style={{ fontSize: 11 }}>Sample: {releaseConfirm.preview.sample.map(s=>s.key).join(', ')}</p>}
               </>
             )}
@@ -702,6 +749,44 @@ const ReleaseConfigPage = () => {
           onSave={handleInfoSave}
           onClose={() => setInfoModal(null)}
         />
+      )}
+
+      {announce && (
+        <div className="modal-backdrop" onClick={() => !announce.sending && setAnnounce(null)}>
+          <div className="modal-box announce-modal" role="dialog" aria-modal="true" aria-labelledby="announce-title" onClick={e=>e.stopPropagation()}>
+            <h3 id="announce-title">Announcement Draft — {announce.version}</h3>
+            {announce.loading ? <p>Generating preview…</p> : announce.error ? (
+              <><p className="modal-warning">{announce.error}</p><div className="modal-actions"><button className="btn-secondary" onClick={() => setAnnounce(null)}>Close</button></div></>
+            ) : (
+              <>
+                <div className="announce-fields">
+                  <label className="announce-label">To (draft recipient — edit to redirect)
+                    <input className="announce-input" value={announceTo} onChange={e=>setAnnounceTo(e.target.value)} placeholder="you@nutanix.com" />
+                  </label>
+                  <label className="announce-label">Subject
+                    <input className="announce-input" value={announceSubject} onChange={e=>setAnnounceSubject(e.target.value)} />
+                  </label>
+                  <p className="announce-meta">AI: {announce.aiUsed ? 'generated' : 'fallback template'} • {announce.featureCount} feature(s) • GA {announce.gaDate || 'TBD'}</p>
+                </div>
+                <div className="announce-review">
+                  <div className="announce-preview-pane">
+                    <div className="announce-pane-title">Preview (how it will look)</div>
+                    <div className="announce-preview" dangerouslySetInnerHTML={{ __html: announceHtml }} />
+                  </div>
+                  <div className="announce-edit-pane">
+                    <div className="announce-pane-title">Edit HTML (changes reflect after send)
+                    </div>
+                    <textarea className="announce-textarea" value={announceHtml} onChange={e=>setAnnounceHtml(e.target.value)} rows={10} placeholder="Edit announcement HTML here..." />
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-primary" onClick={sendAnnouncementDraft} disabled={announce.sending || !announceHtml.trim()}>{announce.sending ? 'Sending…' : 'Send Draft'}</button>
+                  <button className="btn-secondary" onClick={() => setAnnounce(null)} disabled={announce.sending}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {error   && <Toast message={error}   type="error"   onClose={() => setError('')}   />}
@@ -760,7 +845,7 @@ const ReleaseConfigPage = () => {
         .info-notes-label { display: block; font-size: 12px; font-weight: 600; color: #495057; margin-bottom: 4px; }
         .col-ga      { background: rgba(40,167,69,0.04); }
         .col-dri     { min-width: 120px; max-width: 180px; }
-        .col-actions { min-width: 104px; white-space: nowrap; }
+        .col-actions { min-width: 160px; white-space: nowrap; }
         .date-cell   { min-width: 80px; }
         .dri-input {
           width: 100%; min-width: 110px; padding: 3px 6px;
@@ -813,7 +898,21 @@ const ReleaseConfigPage = () => {
         button:disabled   { opacity: 0.55; cursor: not-allowed; }
         .btn-release { background: #28a745; color: #fff; padding: 3px 9px; border: none; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; margin-right: 3px; }
         .btn-release:hover { background: #1e7e34; }
+        .btn-announce { background: #6f42c1; color: #fff; padding: 3px 9px; border: none; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; margin-right: 3px; }
+        .btn-announce:hover { background: #5a32a3; }
         .released-badge { font-size: 11px; color: #28a745; font-weight: 700; margin-right: 6px; }
+        .modal-hint { font-size: 12px; color: #6c757d; margin: 8px 0 0; font-style: italic; }
+        .announce-modal { width: 720px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
+        .announce-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        .announce-label { font-size: 12px; font-weight: 600; color: #495057; display: flex; flex-direction: column; gap: 4px; }
+        .announce-input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 12px; font-weight: 400; }
+        .announce-meta { font-size: 11px; color: #6c757d; margin: 0; }
+        .announce-review { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        @media (max-width: 700px) { .announce-review { grid-template-columns: 1fr; } }
+        .announce-pane-title { font-size: 11px; font-weight: 700; color: #495057; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .announce-preview { border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; max-height: 380px; overflow-y: auto; background: #fff; font-size: 12px; }
+        .announce-textarea { width: 100%; min-height: 200px; max-height: 380px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 11px; font-family: monospace; resize: vertical; box-sizing: border-box; }
+        .announce-textarea:focus { outline: none; border-color: #6f42c1; box-shadow: 0 0 0 2px rgba(111,66,193,.15); }
 
         .btn-primary {
           padding: 7px 14px; background: #007bff; color: #fff;
