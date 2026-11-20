@@ -18,22 +18,32 @@ Schedule NDB 3.0 work items by **duration** (largest first) with optional **FTE 
   - **Capacity per FTE (%)** – share of each person's time on this work (e.g. 60 = 60%); effective capacity = FTEs × capacity %.
   - **Priority** – filter by P0, P1, or All; bin packing runs only on the selected priority.
 
+## Multi-release workspaces
+
+Keep old planning items — run the tool for every release without overwrite. Each release has isolated `localStorage` (`${baseKey}:${releaseId}` for 11 scoped keys `config.js:49` `SCOPED_STORAGE_KEYS`). Use the **Release bar** on every page (picker + `N release(s)` count + `Active: X` + feedback) — `js/release-bar.js:27` `mountReleaseBar()` on `#releaseBar`:
+
+* **+ New** — empty new release, old kept (toast "empty, old releases kept")
+* **Duplicate** — copies all 11 scoped keys via `releases.js:131` `duplicateRelease()` (unique ` (copy)` suffix)
+* **Rename / Delete** — `releases.js:118` guard empty name, `releases.js:137` guard last release
+* **Export / Import** — `releases.js:175` `exportRelease()` JSON `{release,data,version,exportedAt}` + `releases.js:185` `importRelease()` with key allowlist + quota rollback
+* **Switch** — `setActiveReleaseId()` + reload, toast "Switched from X to Y — old items kept"
+
+Empty state when no projects: `upload.js`/`schedule.js` show "No projects in Active: X — Upload a CSV … Old releases are kept; switch via Release bar." Legacy singleton auto-migrates to `config.js:44` `DEFAULT_RELEASE_NAME="Release 1"` (D1 product-agnostic).
+
 ## Run locally
 
-Data is loaded from `data/projects.json`, so the app must be served (no `file://`). The app always runs on **port 3847** so the URL stays consistent when you relaunch.
+Data is loaded from `data/projects.json`, so the app must be served (no `file://`). Bin-packing runs standalone on **port 8890** (not `8001` — see `agent-pack/loom/rules/port-and-env-contracts.mdc`).
 
 ```bash
-# From repo root (recommended – always uses port 3847)
-npm run ndb
-# or from this folder
-npm start
+# Bin-packing standalone
+cd apps/bin-packing && npm start          # npx serve . -l 8890
 # or
-npx serve . -l 3847
-# or
-python3 -m http.server 3847
+python3 -m http.server 8890 --directory apps/bin-packing
+# Delivery-ops (Lighthouse) still on 8001/8899
+./apps/delivery-ops/scripts/start.sh
 ```
 
-Then open **http://localhost:3847**
+Then open **http://localhost:8890** (bin-packing) and **http://localhost:8899** (Lighthouse)
 
 ## Deploy to QA server
 

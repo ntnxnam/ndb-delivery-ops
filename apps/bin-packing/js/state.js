@@ -6,6 +6,9 @@
 
 import { logger } from './logger.js';
 import { UPLOAD_STORAGE_KEY, SCHEDULE_STORAGE_KEY, FILTERS_STORAGE_KEY, START_DATE_OVERRIDES_KEY, FUND_FIRST_KEY, COMPLETED_PCT_OVERRIDES_KEY, FTE_OVERRIDES_KEY, DURATION_OVERRIDES_KEY } from './config.js';
+import { scopedKey, ensureReleasesInitialized } from './releases.js';
+try { ensureReleasesInitialized(); } catch (_) {}
+function sKey(k) { try { return scopedKey(k); } catch (_) { return k; } }
 
 /**
  * Load projects from localStorage (previously uploaded CSV/JSON).
@@ -13,7 +16,7 @@ import { UPLOAD_STORAGE_KEY, SCHEDULE_STORAGE_KEY, FILTERS_STORAGE_KEY, START_DA
  */
 export function getProjects() {
   try {
-    const raw = localStorage.getItem(UPLOAD_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(UPLOAD_STORAGE_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -32,7 +35,7 @@ export function getProjects() {
 export function setProjects(projects) {
   try {
     if (!Array.isArray(projects)) return;
-    localStorage.setItem(UPLOAD_STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(sKey(UPLOAD_STORAGE_KEY), JSON.stringify(projects));
     logger.debug('state.setProjects: saved', projects.length, 'projects');
   } catch (e) {
     logger.warn('state.setProjects: failed to persist', e);
@@ -45,7 +48,7 @@ export function setProjects(projects) {
  */
 export function getScheduleData() {
   try {
-    const raw = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(SCHEDULE_STORAGE_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -64,7 +67,7 @@ export function getScheduleData() {
 export function setScheduleData(projects) {
   try {
     if (!Array.isArray(projects)) return;
-    localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(sKey(SCHEDULE_STORAGE_KEY), JSON.stringify(projects));
     logger.debug('state.setScheduleData: saved', projects.length, 'projects');
   } catch (e) {
     logger.warn('state.setScheduleData: failed to persist', e);
@@ -83,7 +86,7 @@ export function setScheduleData(projects) {
  */
 export function getFilters() {
   try {
-    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    const raw = localStorage.getItem(sKey(FILTERS_STORAGE_KEY));
     if (!raw) return { commitment: '', priority: '' };
     const parsed = JSON.parse(raw);
     return {
@@ -103,7 +106,7 @@ export function getFilters() {
 export function setFilters(filters) {
   try {
     if (!filters || typeof filters !== 'object') return;
-    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(sKey(FILTERS_STORAGE_KEY), JSON.stringify({
       commitment: String(filters.commitment ?? '').trim(),
       priority: String(filters.priority ?? '').trim(),
     }));
@@ -119,7 +122,7 @@ export function setFilters(filters) {
  */
 export function getStartDateOverrides() {
   try {
-    const raw = localStorage.getItem(START_DATE_OVERRIDES_KEY);
+    const raw = localStorage.getItem(sKey(START_DATE_OVERRIDES_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -142,7 +145,7 @@ export function setStartDateOverride(rowNumber, dateStr) {
     } else {
       delete overrides[String(rowNumber)];
     }
-    localStorage.setItem(START_DATE_OVERRIDES_KEY, JSON.stringify(overrides));
+    localStorage.setItem(sKey(START_DATE_OVERRIDES_KEY), JSON.stringify(overrides));
     logger.debug('state.setStartDateOverride:', rowNumber, dateStr);
   } catch (e) {
     logger.warn('state.setStartDateOverride: failed to persist', e);
@@ -176,7 +179,7 @@ export function applyStartDateOverrides(projects) {
  */
 export function getFundFirstOverrides() {
   try {
-    const raw = localStorage.getItem(FUND_FIRST_KEY);
+    const raw = localStorage.getItem(sKey(FUND_FIRST_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -199,7 +202,7 @@ export function setFundFirstOverride(rowNumber, enabled) {
     } else {
       delete overrides[String(rowNumber)];
     }
-    localStorage.setItem(FUND_FIRST_KEY, JSON.stringify(overrides));
+    localStorage.setItem(sKey(FUND_FIRST_KEY), JSON.stringify(overrides));
     logger.debug('state.setFundFirstOverride:', rowNumber, enabled);
   } catch (e) {
     logger.warn('state.setFundFirstOverride: failed to persist', e);
@@ -225,7 +228,7 @@ export function applyFundFirstOverrides(projects) {
  */
 export function getCompletedPctOverrides() {
   try {
-    const raw = localStorage.getItem(COMPLETED_PCT_OVERRIDES_KEY);
+    const raw = localStorage.getItem(sKey(COMPLETED_PCT_OVERRIDES_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -248,7 +251,7 @@ export function setCompletedPctOverride(rowNumber, pct) {
     } else {
       delete overrides[String(rowNumber)];
     }
-    localStorage.setItem(COMPLETED_PCT_OVERRIDES_KEY, JSON.stringify(overrides));
+    localStorage.setItem(sKey(COMPLETED_PCT_OVERRIDES_KEY), JSON.stringify(overrides));
     logger.debug('state.setCompletedPctOverride:', rowNumber, pct);
   } catch (e) {
     logger.warn('state.setCompletedPctOverride: failed to persist', e);
@@ -282,7 +285,7 @@ export function applyCompletedPctOverrides(projects) {
  */
 export function getFteOverrides() {
   try {
-    const raw = localStorage.getItem(FTE_OVERRIDES_KEY);
+    const raw = localStorage.getItem(sKey(FTE_OVERRIDES_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -305,7 +308,7 @@ export function setFteOverride(rowNumber, fte) {
     } else {
       delete overrides[String(rowNumber)];
     }
-    localStorage.setItem(FTE_OVERRIDES_KEY, JSON.stringify(overrides));
+    localStorage.setItem(sKey(FTE_OVERRIDES_KEY), JSON.stringify(overrides));
     logger.debug('state.setFteOverride:', rowNumber, fte);
   } catch (e) {
     logger.warn('state.setFteOverride: failed to persist', e);
@@ -339,7 +342,7 @@ export function applyFteOverrides(projects) {
  */
 export function getDurationOverrides() {
   try {
-    const raw = localStorage.getItem(DURATION_OVERRIDES_KEY);
+    const raw = localStorage.getItem(sKey(DURATION_OVERRIDES_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -362,7 +365,7 @@ export function setDurationOverride(rowNumber, months) {
     } else {
       delete overrides[String(rowNumber)];
     }
-    localStorage.setItem(DURATION_OVERRIDES_KEY, JSON.stringify(overrides));
+    localStorage.setItem(sKey(DURATION_OVERRIDES_KEY), JSON.stringify(overrides));
     logger.debug('state.setDurationOverride:', rowNumber, months);
   } catch (e) {
     logger.warn('state.setDurationOverride: failed to persist', e);
@@ -396,11 +399,11 @@ export function applyDurationOverrides(projects) {
  */
 export function clearAllOverrides() {
   try {
-    localStorage.removeItem(START_DATE_OVERRIDES_KEY);
-    localStorage.removeItem(FUND_FIRST_KEY);
-    localStorage.removeItem(COMPLETED_PCT_OVERRIDES_KEY);
-    localStorage.removeItem(FTE_OVERRIDES_KEY);
-    localStorage.removeItem(DURATION_OVERRIDES_KEY);
+    localStorage.removeItem(sKey(START_DATE_OVERRIDES_KEY));
+    localStorage.removeItem(sKey(FUND_FIRST_KEY));
+    localStorage.removeItem(sKey(COMPLETED_PCT_OVERRIDES_KEY));
+    localStorage.removeItem(sKey(FTE_OVERRIDES_KEY));
+    localStorage.removeItem(sKey(DURATION_OVERRIDES_KEY));
     logger.debug('state.clearAllOverrides: cleared all overrides');
   } catch (e) {
     logger.warn('state.clearAllOverrides: failed', e);

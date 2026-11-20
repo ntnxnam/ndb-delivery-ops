@@ -734,7 +734,19 @@ async function loadProjects() {
     logger.warn('schedule.loadProjects: failed', e);
   }
   if (statusEl) {
-    statusEl.textContent = 'No project data. Upload a CSV, XLSX, or JSON on the Refresh data tab.';
+    let activeName = null;
+    try {
+      const rawActive = localStorage.getItem('ndb-active-release');
+      const rawRegs = localStorage.getItem('ndb-releases-registry');
+      if (rawRegs) {
+        const regs = JSON.parse(rawRegs);
+        const a = regs.find((r) => r.id === rawActive);
+        activeName = a ? a.name : (regs[0]?.name || null);
+      }
+    } catch (_) {}
+    statusEl.textContent = activeName
+      ? `No projects in Active: ${activeName} — go to Upload to add CSV. Old releases are kept; switch via the Release bar.`
+      : 'No project data. Upload a CSV, XLSX, or JSON on the Refresh data tab.';
     statusEl.className = 'error';
   }
 }
