@@ -61,9 +61,13 @@ export const CANONICAL_HEADERS = [
 
 export function getApiOrigin() {
   if (typeof window === 'undefined' || !window.location) return '';
-  // window.location.origin works in both prod and dev; no localhost literal needed.
-  // In dev the hostname is localhost/127.0.0.1 but origin still resolves correctly
-  // via whatever host the page was loaded from (covers port 3847 vs 8001 cases).
+  // Bin-packing is standalone on :8890 (python http.server has no /api), so POST must
+  // go to delivery-ops backend on :8001. Detect 8890 and rewrite to :8001; otherwise use origin.
+  const port = window.location.port || '';
+  if (port === '8890' || port === '3847') {
+    const backendPort = '8001';
+    return `${window.location.protocol}//${window.location.hostname}:${backendPort}`;
+  }
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
 }
 

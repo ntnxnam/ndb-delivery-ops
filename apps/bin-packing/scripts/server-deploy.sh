@@ -81,8 +81,18 @@ server {
     location / {
         try_files \$uri \$uri/ /index.html;
     }
-    # No /api proxy — bin-packing is client-only (localStorage). Converter API
-    # lives on delivery-ops :8001 at /api/bin-packing; if needed, add proxy here.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
 }
 EOF
   if $SUDO nginx -t; then
