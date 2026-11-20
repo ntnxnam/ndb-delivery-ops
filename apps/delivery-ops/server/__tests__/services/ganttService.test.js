@@ -69,8 +69,7 @@ describe('ganttService', () => {
               summary: 'Ticket',
               status: { name: 'In Progress' },
               assignee: { displayName: 'User' },
-              issuetype: { name: 'Task' },
-              custom'+'field_10020: { id: 1, name: 'Sprint 1' }
+              issuetype: { name: 'Task' }, ['custom'+'field_10020']: { id: 1, name: 'Sprint 1' }
             }
           }
         ]

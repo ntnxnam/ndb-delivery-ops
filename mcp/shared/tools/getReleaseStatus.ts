@@ -18,22 +18,15 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { classifyRiskIndicator, JiraConnector } from '@portfolio-delivery-ops/shared';
 import type { Env } from '../config/env.js';
+import { getFieldId, getFieldValue } from '../config/jiraFields.js';
 
-// Custom field IDs used in the snapshot. Same canonical set as
-// apps/delivery-ops/server/services/releaseItemsService.js. Keep this list
-// in sync with shared/jira/fields.ts when that lands.
+// Custom field IDs via central jiraFieldsConfig — same canonical set as releaseItemsService
 const FIELDS = [
-  'key',
-  'summary',
-  'status',
-  'priority',
-  'assignee',
-  'issuetype',
-  'fixVersions',
-  'customfield_23560', // Risk Indicator
-  'customfield_11067', // Code Complete Date
-  'customfield_35863', // Commit Gate Ready Estimation
-  'customfield_35864', // Promotion Gate Ready Estimation
+  'key', 'summary', 'status', 'priority', 'assignee', 'issuetype', 'fixVersions',
+  getFieldId('riskIndicator'),
+  getFieldId('codeComplete'),
+  getFieldId('commitGate'),
+  getFieldId('promotionGate'),
 ].join(',');
 
 const AUDIENCES = ['team-exec', 'em', 'engineer'] as const;
@@ -77,7 +70,7 @@ export function registerGetReleaseStatus(server: McpServer, env: Env): void {
         };
         for (const issue of issues) {
           const f = (issue.fields ?? {}) as Record<string, unknown>;
-          const bucket = classifyRiskIndicator(f['customfield_23560']);
+          const bucket = classifyRiskIndicator(getFieldValue(f as any, 'riskIndicator'));
           buckets[bucket].push({
             key: issue.key,
             summary: String(f['summary'] ?? ''),

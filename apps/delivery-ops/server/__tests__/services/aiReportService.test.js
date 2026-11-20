@@ -53,17 +53,14 @@ describe('aiReportService', () => {
   });
 
   test('UT-AI-001: extractRiskReasoning extracts detail from risk field', () => {
-    const out = extractRiskReasoning({ fields: { custom'+'field_23560: 'Yellow - blocked by dependency' } });
+    const out = extractRiskReasoning({ fields: { ['custom'+'field_23560']: 'Yellow - blocked by dependency' } });
     expect(out).toContain('blocked by dependency');
   });
 
   test('UT-AI-002: analyzeProjectForExecutiveSummary returns structured analysis', () => {
     const out = analyzeProjectForExecutiveSummary({
       fields: {
-        assignee: { displayName: 'Dev' },
-        custom'+'field_10860: { displayName: 'QA' },
-        custom'+'field_23073: 'QI: 80%',
-        custom'+'field_45660: '2026-01-01'
+        assignee: { displayName: 'Dev' }, ['custom'+'field_10860']: { displayName: 'QA' }, ['custom'+'field_23073']: 'QI: 80%', ['custom'+'field_45660']: '2026-01-01'
       }
     });
     expect(out.resourceStatus.length).toBeGreaterThan(0);
@@ -72,9 +69,7 @@ describe('aiReportService', () => {
 
   test('UT-AI-005: analyzeProjectRisk returns gaps and metrics', () => {
     const out = analyzeProjectRisk({
-      fields: {
-        custom'+'field_23073: 'QI: 75% execution: 80% 3 open bugs',
-        custom'+'field_11067: '2026-01-01'
+      fields: { ['custom'+'field_23073']: 'QI: 75% execution: 80% 3 open bugs', ['custom'+'field_11067']: '2026-01-01'
       }
     });
     expect(out.resourceGaps.length).toBeGreaterThan(0);

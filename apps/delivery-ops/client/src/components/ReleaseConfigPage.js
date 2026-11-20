@@ -724,7 +724,7 @@ const ReleaseConfigPage = () => {
                   <li>Mark JIRA version as <b>Released</b> in {releaseConfirm.preview?.projectKey}{releaseConfirm.preview?.jiraVersions?.length ? ` + ${(releaseConfirm.preview.jiraVersions||[]).map(v=>v.projectKey).join(', ')}` : ''}</li>
                   <li>Send email to <b>ndb-tpms@nutanix.com</b></li>
                   <li>Move <b>{releaseConfirm.preview?.openCount ?? '?'}</b> open tickets (status NOT IN Done, Complete, Closed, Cancelled, Fixed) to <b>master</b></li>
-                  <li>Add comment tagging <b>assignee + assignee manager (customfield_19262)</b> asking to update fixVersion</li>
+                  <li>Add comment tagging <b>assignee + assignee manager (assigneeManager)</b> asking to update fixVersion</li>
                 </ol>
                 <p className="modal-hint">Announcement is separate — use <b>Announce</b> on the release row to preview, edit, and send the draft.</p>
                 {releaseConfirm.preview?.alreadyReleased && <p className="modal-warning">Already marked released in lighthouse — action will be rejected.</p>}
