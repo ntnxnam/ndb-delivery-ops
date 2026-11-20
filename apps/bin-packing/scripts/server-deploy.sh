@@ -44,6 +44,14 @@ check_port() {
     ok "Port ${HTTP_PORT} already held by Nginx (will reload)"
     return 0
   fi
+  local lsof_holder=""
+  if command -v lsof >/dev/null 2>&1; then
+    lsof_holder="$($SUDO lsof -i :"${HTTP_PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+  fi
+  if [ -n "$lsof_holder" ] && echo "$lsof_holder" | grep -q "nginx"; then
+    ok "Port ${HTTP_PORT} already held by Nginx (will reload) [via lsof]"
+    return 0
+  fi
   if [ -n "$holder" ]; then
     err "Port ${HTTP_PORT} is already in use:"
     echo "$holder" | sed "s/^/  /"
