@@ -503,6 +503,23 @@ async function handleReplaceAndRepack(preview) {
     const projects = out.projects;
     if (!projects.length) throw new Error('No projects after conversion');
 
+    // Respect per-release refresh picker (if present) — switch active so scoped state writes to correct release
+    try {
+      const sel = document.getElementById('refreshReleaseSelect');
+      const targetId = sel && sel.value ? sel.value : null;
+      if (targetId) {
+        const cur = localStorage.getItem('ndb-active-release');
+        if (cur !== targetId) {
+          localStorage.setItem('ndb-active-release', targetId);
+          try {
+            const regs = JSON.parse(localStorage.getItem('ndb-releases-registry') || '[]');
+            const r = regs.find((x) => x.id === targetId);
+            if (r) { r.updatedAt = new Date().toISOString(); localStorage.setItem('ndb-releases-registry', JSON.stringify(regs)); }
+          } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('release:switched', { detail: { id: targetId } })); } catch (_) {}
+        }
+      }
+    } catch (_) {}
     // Persist via same path as normal upload → Repack
     clearAllOverrides();
     setProjects(projects);
