@@ -79,12 +79,33 @@ function loadKpiConfigSync() {
   }
   const teams = config.teams;
   if (!teams || typeof teams !== 'object') return {};
+  const standardKpis = Array.isArray(config.standardKpis) ? config.standardKpis : [];
   const out = {};
   for (const [tid, arr] of Object.entries(teams)) {
     const key = normalizeTeamId(tid) || tid;
-    out[key] = Array.isArray(arr) ? arr : [];
+    const teamKpis = Array.isArray(arr) ? arr : [];
+    out[key] = [...standardKpis, ...teamKpis];
   }
+  try {
+    const boardRaw = fs.readFileSync(TEAM_CONFIG_PATH, 'utf8');
+    const board = boardRaw && boardRaw.trim() ? JSON.parse(boardRaw) : {};
+    const boardTeams = normalizeTeamsList(board.teams);
+    for (const t of boardTeams) {
+      const nid = normalizeTeamId(t.id);
+      if (nid && !out[nid]) out[nid] = [...standardKpis];
+    }
+  } catch (_) {}
   return out;
+}
+
+function loadStandardKpiIds() {
+  try {
+    const raw = fs.readFileSync(KPI_CONFIG_PATH, 'utf8');
+    const cfg = raw && raw.trim() ? JSON.parse(raw) : {};
+    return new Set((cfg.standardKpis || []).map((k) => k.id));
+  } catch (_) {
+    return new Set();
+  }
 }
 
 /**
@@ -224,6 +245,7 @@ module.exports = {
   normalizeTeamsList,
   findTeamInList,
   loadKpiConfigSync,
+  loadStandardKpiIds,
   getKpisForTeam,
   sortKpisByOrder,
   loadTeamBoardConfig,

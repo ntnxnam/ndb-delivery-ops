@@ -13,6 +13,7 @@ import type { TpmScope, TpmFetchResult, TpmKpiResult, TpmLifecyclePhase, TpmPhas
 
 export interface KpiConfigShape {
   teams: Record<string, TpmKpiConfig[]>;
+  standardKpis?: TpmKpiConfig[];
 }
 
 export interface FetchPhaseOptions {
@@ -36,11 +37,22 @@ function normalizeTypeToIssuetype(jql: string): { jql: string; warned: boolean }
 
 function getTeamKpis(kpiConfig: KpiConfigShape, teamId?: string): TpmKpiConfig[] {
   const teams = kpiConfig.teams || {};
+  const standardKpis = (kpiConfig as any).standardKpis as TpmKpiConfig[] | undefined;
   const tid = (teamId || '').toLowerCase();
-  if (tid && teams[tid]) return teams[tid];
-  if (tid) return [];
+  // If caller passed raw config without merging, merge here for D1 parity with server
+  if (tid && teams[tid]) {
+    if (Array.isArray(standardKpis) && standardKpis.length && !teams[tid].some((k) => standardKpis.some((s) => s.id === k.id))) {
+      return [...standardKpis, ...teams[tid]];
+    }
+    return teams[tid];
+  }
+  if (tid) return Array.isArray(standardKpis) ? [...standardKpis] : [];
   const first = Object.values(teams).find((arr) => Array.isArray(arr) && arr.length > 0);
-  return first ?? [];
+  if (first) {
+    if (Array.isArray(standardKpis) && standardKpis.length && !first.some((k) => standardKpis.some((s) => s.id === k.id))) return [...standardKpis, ...first];
+    return first;
+  }
+  return Array.isArray(standardKpis) ? [...standardKpis] : [];
 }
 
 function getReleaseBaseFilter(releaseVersion?: string): string | null {

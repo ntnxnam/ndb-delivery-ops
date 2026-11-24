@@ -1,62 +1,71 @@
 {
+  "standardKpis": [
+    {
+      "id": "kpi_mlt8xi2n_z3azrksl",
+      "name": "Top-CFI",
+      "baseQuery": "\"Number of Salesforce Cases\" >= 1 AND issuetype = Improvement AND (priority in (\"Blocker - P0\", \"Critical - P1\") AND (issueFunction in linkedIssuesOf(\"Project = ONCALL\") OR \"Number of Salesforce Cases\" >= 5 OR labels in (EELIST, DevEx-Top-Issue, Serviceability-Promoted) OR (\"Number of Salesforce Cases\" >= 1 AND Impact in (\"Unavailability - Permanent\", \"Data Loss\", Corruption))) OR labels in (NPS_Impacting))",
+      "displayType": "count",
+      "order": 0,
+      "lifecyclePhase": "postRelease",
+      "locked": true
+    },
+    {
+      "id": "kpi_mlt8xtjw_7iu388x4",
+      "name": "Top-CFD",
+      "baseQuery": "\"Number of Salesforce Cases\" >= 1 AND issuetype = Bug AND (priority in (\"Blocker - P0\", \"Critical - P1\") AND (issueFunction in linkedIssuesOf(\"Project = ONCALL\") OR \"Number of Salesforce Cases\" >= 5 OR labels in (EELIST, DevEx-Top-Issue, Serviceability-Promoted) OR (\"Number of Salesforce Cases\" >= 1 AND Impact in (\"Unavailability - Permanent\", \"Data Loss\", Corruption))) OR labels in (NPS_Impacting))",
+      "displayType": "count",
+      "order": 1,
+      "lifecyclePhase": "postRelease",
+      "locked": true
+    },
+    {
+      "id": "kpi_mlt8y8o9_m7f8uo6d",
+      "name": "Non-Top-CFI",
+      "baseQuery": "\"Number of Salesforce Cases\" >= 1 AND issuetype = Improvement AND NOT (priority in (\"Blocker - P0\", \"Critical - P1\") AND (issueFunction in linkedIssuesOf(\"Project = ONCALL\") OR \"Number of Salesforce Cases\" >= 5 OR labels in (EELIST, DevEx-Top-Issue, Serviceability-Promoted) OR (\"Number of Salesforce Cases\" >= 1 AND Impact in (\"Unavailability - Permanent\", \"Data Loss\", Corruption))) OR labels in (NPS_Impacting))",
+      "displayType": "count",
+      "order": 2,
+      "lifecyclePhase": "postRelease",
+      "locked": true
+    },
+    {
+      "id": "kpi_mlt8ykk1_87kzd1g2",
+      "name": "Non-Top-CFD",
+      "baseQuery": "\"Number of Salesforce Cases\" >= 1 AND issuetype = Bug AND NOT (priority in (\"Blocker - P0\", \"Critical - P1\") AND (issueFunction in linkedIssuesOf(\"Project = ONCALL\") OR \"Number of Salesforce Cases\" >= 5 OR labels in (EELIST, DevEx-Top-Issue, Serviceability-Promoted) OR (\"Number of Salesforce Cases\" >= 1 AND Impact in (\"Unavailability - Permanent\", \"Data Loss\", Corruption))) OR labels in (NPS_Impacting))",
+      "displayType": "count",
+      "order": 3,
+      "lifecyclePhase": "postRelease",
+      "locked": true
+    },
+    {
+      "id": "kpi_mltqw1zl_35j6oo0k",
+      "name": "OnCalls",
+      "baseQuery": "project = ONCALL",
+      "displayType": "count",
+      "order": 4,
+      "lifecyclePhase": "postRelease",
+      "locked": true
+    },
+    {
+      "id": "kpi_mltpmqym_g5u55h35",
+      "name": "Product Blockers",
+      "baseQuery": "priority = \"Blocker - P0\" AND issuetype = Bug",
+      "displayType": "count",
+      "order": 5,
+      "lifecyclePhase": "execution",
+      "locked": true
+    },
+    {
+      "id": "kpi_mltqufvv_0eregk0s",
+      "name": "Product Criticals",
+      "baseQuery": "priority = \"Critical - P1\" AND issuetype = Bug",
+      "displayType": "count",
+      "order": 6,
+      "lifecyclePhase": "execution",
+      "locked": true
+    }
+  ],
   "teams": {
     "ndb": [
-      {
-        "id": "kpi_mlt8xi2n_z3azrksl",
-        "name": "Top-CFI",
-        "baseQuery": "filter=142539",
-        "displayType": "count",
-        "order": 0,
-        "lifecyclePhase": "postRelease"
-      },
-      {
-        "id": "kpi_mlt8xtjw_7iu388x4",
-        "name": "Top-CFD",
-        "baseQuery": "filter=142537",
-        "displayType": "count",
-        "order": 1,
-        "lifecyclePhase": "postRelease"
-      },
-      {
-        "id": "kpi_mlt8y8o9_m7f8uo6d",
-        "name": "Non-Top-CFI",
-        "baseQuery": "filter=142543",
-        "displayType": "count",
-        "order": 2,
-        "lifecyclePhase": "postRelease"
-      },
-      {
-        "id": "kpi_mlt8ykk1_87kzd1g2",
-        "name": "Non-Top-CFD",
-        "baseQuery": "filter=142541",
-        "displayType": "count",
-        "order": 3,
-        "lifecyclePhase": "postRelease"
-      },
-      {
-        "id": "kpi_mltpmqym_g5u55h35",
-        "name": "Product Blockers",
-        "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
-        "displayType": "count",
-        "order": 4,
-        "lifecyclePhase": "execution"
-      },
-      {
-        "id": "kpi_mltqufvv_0eregk0s",
-        "name": "Product Criticals",
-        "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
-        "displayType": "count",
-        "order": 5,
-        "lifecyclePhase": "execution"
-      },
-      {
-        "id": "kpi_mltqw1zl_35j6oo0k",
-        "name": "OnCalls",
-        "baseQuery": "filter=NDB-OnCalls",
-        "displayType": "count",
-        "order": 6,
-        "lifecyclePhase": "postRelease"
-      },
       {
         "id": "kpi_mltr5912_iqnubebp",
         "name": "System Test",
@@ -129,35 +138,35 @@
         "name": "DataLens All Issues",
         "baseQuery": "filter=176286",
         "displayType": "count",
-        "order": 0
+        "order": 14
       },
       {
         "id": "kpi_datalens_bugs",
         "name": "DataLens Bugs",
         "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and type=Bug",
         "displayType": "count",
-        "order": 1
+        "order": 15
       },
       {
         "id": "kpi_datalens_blockers",
         "name": "DataLens Blockers",
         "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and priority = \"Blocker - P0\"",
         "displayType": "count",
-        "order": 2
+        "order": 16
       },
       {
         "id": "kpi_datalens_criticals",
         "name": "DataLens Critical",
         "baseQuery": "component in (\"Data Lens\", DataLens-OnPrem, Datalens) and priority = \"Critical - P1\"",
         "displayType": "count",
-        "order": 3
+        "order": 17
       },
       {
         "id": "kpi_datalens_primary_component",
         "name": "DataLens Primary Component",
         "baseQuery": "\"Primary Component\" in (\"Data Lens\")",
         "displayType": "count",
-        "order": 4
+        "order": 18
       }
     ],
     "ndb-all-sos": [
@@ -166,28 +175,28 @@
         "name": "Open P0 Blockers",
         "baseQuery": "project=ERA and priority = \"Blocker - P0\" and type=Bug",
         "displayType": "count",
-        "order": 0
+        "order": 14
       },
       {
         "id": "kpi_sos_mustfix",
         "name": "Must-Fix Tickets",
         "baseQuery": "project=ERA and type=Bug and labels is not EMPTY",
         "displayType": "list",
-        "order": 1
+        "order": 15
       },
       {
         "id": "kpi_sos_at_risk",
         "name": "At-Risk Features",
         "baseQuery": "issuetype in (Feature, Initiative) and \"Risk Indicator\" = Red",
         "displayType": "count",
-        "order": 2
+        "order": 16
       },
       {
         "id": "kpi_sos_criticals",
         "name": "Open Criticals",
         "baseQuery": "project=ERA and priority = \"Critical - P1\" and type=Bug",
         "displayType": "count",
-        "order": 3
+        "order": 17
       }
     ],
     "ncm": [
@@ -196,35 +205,35 @@
         "name": "NCM All Issues",
         "baseQuery": "filter=175938",
         "displayType": "count",
-        "order": 0
+        "order": 14
       },
       {
         "id": "kpi_ncm_eng_bugs",
         "name": "NCM ENG Bugs",
         "baseQuery": "project=ENG and component in (NCM, \"Cloud Manager\") and type=Bug",
         "displayType": "count",
-        "order": 1
+        "order": 15
       },
       {
         "id": "kpi_ncm_calm_bugs",
         "name": "NCM CALM Bugs",
         "baseQuery": "project=CALM and type=Bug",
         "displayType": "count",
-        "order": 2
+        "order": 16
       },
       {
         "id": "kpi_ncm_blockers",
         "name": "NCM Blockers",
         "baseQuery": "project in (ENG, CALM) and priority = \"Blocker - P0\"",
         "displayType": "count",
-        "order": 3
+        "order": 17
       },
       {
         "id": "kpi_ncm_criticals",
         "name": "NCM Critical",
         "baseQuery": "project in (ENG, CALM) and priority = \"Critical - P1\"",
         "displayType": "count",
-        "order": 4
+        "order": 18
       }
     ],
     "prism-infra": [],

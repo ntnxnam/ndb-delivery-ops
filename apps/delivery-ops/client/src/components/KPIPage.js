@@ -301,7 +301,7 @@ function KPIWidgetCard({ kpi, data, onRefresh, isRefreshing }) {
 }
 
 export default function KPIPage() {
-  const { selectedTeamId, selectedTeam, replaceTeams, updateTeam, hasTeamSelected } = useTeam();
+  const { selectedTeamId, selectedTeam, hasTeamSelected } = useTeam();
   const [kpis, setKpis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -314,9 +314,6 @@ export default function KPIPage() {
   const [widgetResults, setWidgetResults] = useState(null);
   const [widgetsLoading, setWidgetsLoading] = useState(false);
   const [loadingWidgetId, setLoadingWidgetId] = useState(null);
-  const [teamBaseFilterEdit, setTeamBaseFilterEdit] = useState('');
-  const [savingBaseFilter, setSavingBaseFilter] = useState(false);
-  const [editingBaseFilter, setEditingBaseFilter] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const teamId = selectedTeamId;
@@ -392,10 +389,6 @@ export default function KPIPage() {
   useEffect(() => {
     fetchKpis();
   }, [fetchKpis]);
-
-  useEffect(() => {
-    setTeamBaseFilterEdit(currentTeamBaseFilter);
-  }, [teamId, currentTeamBaseFilter]);
 
   const fetchWidgetResults = useCallback(async () => {
     if (!teamId || !kpis.length || !jiraToken) {
@@ -476,29 +469,7 @@ export default function KPIPage() {
     setError('');
   };
 
-  const handleSaveTeamBaseFilter = async () => {
-    if (!teamId) return;
-    setSavingBaseFilter(true);
-    setError('');
-    try {
-      const res = await authenticatedPost(`${API_BASE}/api/config/team-base-filter`, { teamId, baseFilter: teamBaseFilterEdit }, { jiraToken, username });
-      if (Array.isArray(res.data?.teams)) {
-        replaceTeams(res.data.teams);
-      } else {
-        updateTeam(teamId, { baseFilter: teamBaseFilterEdit });
-      }
-      setEditingBaseFilter(false);
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to save team base filter');
-    } finally {
-      setSavingBaseFilter(false);
-    }
-  };
 
-  const handleCancelEditBaseFilter = () => {
-    setTeamBaseFilterEdit(currentTeamBaseFilter);
-    setEditingBaseFilter(false);
-  };
 
   const [reorderingId, setReorderingId] = useState(null);
 
@@ -564,55 +535,9 @@ export default function KPIPage() {
 
       {teamId && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Team base filter</label>
-          {currentTeamBaseFilter && !editingBaseFilter ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.9rem' }}>{currentTeamBaseFilter}</span>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setEditingBaseFilter(true)}
-                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', color: '#0d6efd', background: 'transparent', border: '1px solid #0d6efd', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          ) : isAdmin ? (
-            <>
-              {!currentTeamBaseFilter && (
-                <p style={{ fontSize: '0.8rem', color: '#6c757d', marginBottom: '0.5rem' }}>
-                  KPI query = team-base-filter AND kpi-filter. Set once per team. Example: <code style={{ background: '#e9ecef', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>filter=142500</code>
-                </p>
-              )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  value={teamBaseFilterEdit}
-                  onChange={(e) => setTeamBaseFilterEdit(e.target.value)}
-                  placeholder="e.g. filter=142500"
-                  style={{ flex: '1 1 200px', minWidth: '180px', padding: '0.5rem 0.6rem', border: '1px solid #ced4da', borderRadius: '6px' }}
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveTeamBaseFilter}
-                  disabled={savingBaseFilter}
-                  style={{ padding: '0.5rem 1rem', background: '#0d6efd', color: '#fff', border: 'none', borderRadius: '6px', cursor: savingBaseFilter ? 'not-allowed' : 'pointer', fontSize: '0.875rem' }}
-                >
-                  {savingBaseFilter ? 'Saving…' : 'Save'}
-                </button>
-                {currentTeamBaseFilter && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEditBaseFilter}
-                    disabled={savingBaseFilter}
-                    style={{ padding: '0.5rem 1rem', background: '#6c757d', color: '#fff', border: 'none', borderRadius: '6px', cursor: savingBaseFilter ? 'not-allowed' : 'pointer', fontSize: '0.875rem' }}
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.35rem' }}>Team base filter <span style={{ fontWeight: 400, color: '#6c757d', fontSize: '0.75rem' }}>(read-only — managed in Admin)</span></label>
+          {currentTeamBaseFilter ? (
+            <div style={{ fontSize: '0.85rem', wordBreak: 'break-all', whiteSpace: 'pre-wrap', color: '#212529', background: '#fff', border: '1px solid #e9ecef', borderRadius: '6px', padding: '0.5rem 0.6rem' }}>{currentTeamBaseFilter}</div>
           ) : (
             <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>Not set</span>
           )}
@@ -651,46 +576,58 @@ export default function KPIPage() {
                 <tr key={k.id} style={{ borderBottom: '1px solid #eee' }}>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleReorder(k.id, 'up')}
-                        disabled={index === 0 || reorderingId === k.id}
-                        title="Move up"
-                        style={{ padding: '2px 6px', fontSize: '0.7rem', marginRight: '2px', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff', cursor: index === 0 || reorderingId === k.id ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.5 : 1 }}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleReorder(k.id, 'down')}
-                        disabled={index === kpis.length - 1 || reorderingId === k.id}
-                        title="Move down"
-                        style={{ padding: '2px 6px', fontSize: '0.7rem', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff', cursor: index === kpis.length - 1 || reorderingId === k.id ? 'not-allowed' : 'pointer', opacity: index === kpis.length - 1 ? 0.5 : 1 }}
-                      >
-                        ↓
-                      </button>
+                      {k.locked ? (
+                        <span style={{ fontSize: '0.65rem', color: '#adb5bd' }} title="Standard KPI order is fixed">—</span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleReorder(k.id, 'up')}
+                            disabled={index === 0 || reorderingId === k.id}
+                            title="Move up"
+                            style={{ padding: '2px 6px', fontSize: '0.7rem', marginRight: '2px', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff', cursor: index === 0 || reorderingId === k.id ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.5 : 1 }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReorder(k.id, 'down')}
+                            disabled={index === kpis.length - 1 || reorderingId === k.id}
+                            title="Move down"
+                            style={{ padding: '2px 6px', fontSize: '0.7rem', border: '1px solid #dee2e6', borderRadius: '4px', background: '#fff', cursor: index === kpis.length - 1 || reorderingId === k.id ? 'not-allowed' : 'pointer', opacity: index === kpis.length - 1 ? 0.5 : 1 }}
+                          >
+                            ↓
+                          </button>
+                        </>
+                      )}
                     </td>
                   )}
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.name}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.name}{k.locked && <span title="Company-standard — same JQL for every team, not editable. Team scope comes from team.baseFilter." style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#6c757d', border: '1px solid #dee2e6', borderRadius: '999px', padding: '0.1rem 0.4rem', background: '#f8f9fa' }}>🔒 standard</span>}</td>
                   <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', wordBreak: 'break-all' }}>{k.baseQuery}</td>
                   <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.displayType === 'list' ? 'List' : 'Count'}</td>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(k)}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px', color: '#0d6efd', background: 'transparent', border: '1px solid #0d6efd', borderRadius: '6px', cursor: 'pointer' }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(k)}
-                        disabled={deleting === k.id}
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', color: '#dc3545', background: 'transparent', border: '1px solid #dc3545', borderRadius: '6px', cursor: deleting === k.id ? 'not-allowed' : 'pointer' }}
-                      >
-                        {deleting === k.id ? '…' : 'Remove'}
-                      </button>
+                      {k.locked ? (
+                        <span style={{ fontSize: '0.7rem', color: '#6c757d' }} title="Standard KPI — JQL is fixed company-wide">Locked</span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(k)}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px', color: '#0d6efd', background: 'transparent', border: '1px solid #0d6efd', borderRadius: '6px', cursor: 'pointer' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(k)}
+                            disabled={deleting === k.id}
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', color: '#dc3545', background: 'transparent', border: '1px solid #dc3545', borderRadius: '6px', cursor: deleting === k.id ? 'not-allowed' : 'pointer' }}
+                          >
+                            {deleting === k.id ? '…' : 'Remove'}
+                          </button>
+                        </>
+                      )}
                     </td>
                   )}
                 </tr>
