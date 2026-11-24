@@ -79,7 +79,7 @@ function AdminPanel() {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: 0 }}>Team Management</h1>
           <p style={{ color: '#6b7280', margin: 0 }}>Add and edit teams</p>

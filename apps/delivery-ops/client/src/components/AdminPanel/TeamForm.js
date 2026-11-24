@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useTeamDetect } from '../../hooks/useTeamDetect';
-import DetectedConfig from './DetectedConfig';
 
 export function slugifyTeamId(name) {
   return String(name || '')
@@ -12,6 +11,7 @@ export function slugifyTeamId(name) {
 }
 
 const fieldLabel = { display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' };
+const fieldError = { fontSize: '12px', color: '#dc2626', margin: '4px 0 0' };
 const input = {
   width: '100%',
   boxSizing: 'border-box',
@@ -20,6 +20,7 @@ const input = {
   border: '1px solid #d1d5db',
   borderRadius: '4px',
 };
+const inputError = { ...input, borderColor: '#fca5a5', backgroundColor: '#fef2f2' };
 const button = (bg, color = 'white') => ({
   padding: '6px 14px',
   minHeight: '2rem',
@@ -41,9 +42,9 @@ const chipStyle = {
   fontSize: '12px',
   margin: '2px',
 };
-const chipRemove = { cursor: 'pointer', fontWeight: 700, marginLeft: '2px' };
+const chipRemove = { cursor: 'pointer', fontWeight: 700, marginLeft: '4px', padding: '2px 6px', minWidth: '24px', minHeight: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' };
 
-// Known components across ENG + horizontals — used for autocomplete suggestions (Atlas suggests based on first input)
+// Known components across ENG + horizontals — used for autocomplete suggestions
 const KNOWN_COMPONENTS = [
   'NDB', 'Era', 'ERA', 'NDB Databases', 'NDB Service',
   'NDB-API-Infra', 'NDB-Backup-Restore', 'NDB-CP-Availability',
@@ -55,6 +56,7 @@ const KNOWN_COMPONENTS = [
 ];
 
 const CONTACT_ROWS = [
+  { key: 'team', label: 'Team' },
   { key: 'serv_team', label: 'Serv team' },
   { key: 'doc_team', label: 'Doc Team' },
   { key: 'security_team', label: 'Security team' },
@@ -64,7 +66,7 @@ const CONTACT_ROWS = [
   { key: 'others', label: 'Others' },
 ];
 
-function ChipInput({ value, onChange, placeholder, suggestions = [] }) {
+function ChipInput({ value, onChange, placeholder, suggestions = [], error }) {
   const [inputVal, setInputVal] = useState('');
   const [showSug, setShowSug] = useState(false);
   const filtered = useMemo(() => {
@@ -90,11 +92,18 @@ function ChipInput({ value, onChange, placeholder, suggestions = [] }) {
       removeChip(value[value.length - 1]);
     }
   };
+  const onPaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    if (text && /[,;\n]/.test(text)) {
+      e.preventDefault();
+      addChip(text);
+    }
+  };
   return (
-    <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '4px', minHeight: '34px', background: 'white' }}>
+    <div style={{ border: `1px solid ${error ? '#fca5a5' : '#d1d5db'}`, borderRadius: '4px', padding: '4px', minHeight: '34px', background: error ? '#fef2f2' : 'white' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
         {value.map(v => (
-          <span key={v} style={chipStyle}>{v}<span style={chipRemove} onClick={() => removeChip(v)}>×</span></span>
+          <span key={v} style={chipStyle}>{v}<span role="button" tabIndex={0} aria-label={`Remove ${v}`} style={chipRemove} onClick={() => removeChip(v)} onKeyDown={(e) => e.key === 'Enter' && removeChip(v)}>×</span></span>
         ))}
         <input
           value={inputVal}
@@ -102,14 +111,16 @@ function ChipInput({ value, onChange, placeholder, suggestions = [] }) {
           onFocus={() => setShowSug(true)}
           onBlur={() => setTimeout(() => setShowSug(false), 150)}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           placeholder={value.length === 0 ? placeholder : ''}
+          aria-label={placeholder}
           style={{ border: 'none', outline: 'none', fontSize: '14px', flex: '1 0 120px', minWidth: '80px', padding: '4px' }}
         />
       </div>
       {showSug && filtered.length > 0 && (
-        <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', maxHeight: '120px', overflowY: 'auto' }}>
+        <div role="listbox" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', maxHeight: '120px', overflowY: 'auto' }}>
           {filtered.map(s => (
-            <div key={s} onMouseDown={() => addChip(s)} style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '13px', background: value.includes(s) ? '#f3f4f6' : 'white' }}>{s}</div>
+            <div key={s} role="option" onMouseDown={() => addChip(s)} style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '13px', background: value.includes(s) ? '#f3f4f6' : 'white' }}>{s}</div>
           ))}
         </div>
       )}
@@ -118,31 +129,46 @@ function ChipInput({ value, onChange, placeholder, suggestions = [] }) {
 }
 
 function summary(team) {
-  const comps = Object.keys(team.featureComponents || {});
+  const comps = team.components || Object.keys(team.featureComponents || {});
   const cal = team.sprintCalendar;
   return [
     `Project ${team.projectKey || team.custom_project_key || '—'}`,
     `board ${team.boardId || '—'}`,
     cal ? `S1 ${cal.s1StartIso} · ${cal.sprintDays}d` : 'no sprint calendar',
-    comps.length ? `components ${comps.join(', ')}` : team.components ? `components ${team.components.join(', ')}` : 'no components',
+    comps.length ? `components ${comps.join(', ')}` : 'no components',
   ].join(' · ');
 }
 
 function parseComponentsFromJql(jql) {
   if (!jql || typeof jql !== 'string') return [];
+  // Match component in (...) handling quoted strings with commas
   const m = jql.match(/component\s+in\s*\(([^)]+)\)/i);
   if (!m) return [];
-  return m[1].split(',').map(s => s.trim().replace(/^"|"$/g, '').replace(/\\"/g, '"')).filter(Boolean);
+  const raw = m[1];
+  // Split respecting quoted values: "NDB Databases" stays together
+  const parts = [];
+  let cur = '';
+  let inQuote = false;
+  let escapeNext = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (escapeNext) { cur += ch; escapeNext = false; continue; }
+    if (ch === '\\') { escapeNext = true; cur += ch; continue; }
+    if (ch === '"') { inQuote = !inQuote; cur += ch; continue; }
+    if (ch === ',' && !inQuote) { parts.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts.map(s => s.trim().replace(/^"|"$/g, '').replace(/\\"/g, '"')).filter(Boolean);
 }
-function esc(v) { return String(v).replace(/"/g, '\\"'); }
-function dedupeTrim(arr) { const seen = new Set(); const out = []; for (const v of arr) { const s = String(v||'').trim(); if (!s) continue; const k = s.toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(s); } return out; }
+function esc(v) { return String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
+function dedupeTrim(arr) { const seen = new Set(); const out = []; for (const v of arr) { const s = String(v || '').trim(); if (!s) continue; const k = s.toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(s); } return out; }
 function initialComponentsFor(team) {
   if (!team) return [];
   if (Array.isArray(team.components) && team.components.length) return team.components;
   const fromJql = parseComponentsFromJql(team.baseFilter || team.base_jql || team.baseJql || '');
   if (fromJql.length) return fromJql;
   if (team.featureComponents && typeof team.featureComponents === 'object') {
-    // featureComponents is {Ndb: [sub1,sub2]}, but base JQL components are often top-level keys; use keys as fallback
     const keys = Object.keys(team.featureComponents);
     if (keys.length) return keys;
   }
@@ -167,14 +193,14 @@ function buildPreview({ isShared, customKey, components, contactRows }) {
   innerParts.push(`issuetype in ("Era Oncall", "ERA Oncall")`);
   const inner = innerParts.join(' OR ');
   if (isShared) return `project in (${shared}) AND (${inner})`;
-  const customKeys = dedupeTrim(String(customKey||'').split(/[,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean));
+  const customKeys = dedupeTrim(String(customKey || '').split(/[,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean));
   const custom = customKeys.length ? customKeys.join(', ') : 'ERA';
   return `(project in (${custom}) OR (project in (${shared}) AND (${inner})))`;
 }
 
 export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
   const editMode = Boolean(initialTeam);
-  const { detected, detecting, detectError, calendarLoading, detect, loadProject, loadBoardCalendar } = useTeamDetect();
+  const { detecting, detectError, calendarLoading, loadProject, loadBoardCalendar } = useTeamDetect();
   const [name, setName] = useState(initialTeam?.name || '');
   const [teamId, setTeamId] = useState(initialTeam?.id || '');
   const [idTouched, setIdTouched] = useState(editMode);
@@ -194,14 +220,15 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
   });
   const [selection, setSelection] = useState({
     projectKey: initialTeam?.projectKey || initialTeam?.custom_project_key?.split(',')[0]?.trim() || '',
-    boardId: initialTeam?.boardId || null,
+    boardId: initialTeam?.boardId != null ? String(initialTeam.boardId) : '',
     sprintCalendar: initialTeam?.sprintCalendar || null,
     calendarError: '',
     calendarManual: false,
-    components: Object.keys(initialTeam?.featureComponents || {}),
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [triedSave, setTriedSave] = useState(false);
+  const [copyOk, setCopyOk] = useState(false);
 
   const handleName = (value) => {
     setName(value);
@@ -224,17 +251,44 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
     setComponents(initialComponentsFor(initialTeam));
     setBaseFilter(initialTeam?.baseFilter || initialTeam?.base_jql || '');
     setBaseFilterTouched(false);
+    setContactRows(() => {
+      const init = {};
+      for (const r of CONTACT_ROWS) {
+        const existing = initialTeam?.contacts?.[r.key];
+        if (existing) init[r.key] = { entries: existing.entries || [], isDL: Boolean(existing.isDL) };
+        else init[r.key] = { entries: [], isDL: false };
+      }
+      return init;
+    });
+    setSelection({
+      projectKey: initialTeam?.projectKey || initialTeam?.custom_project_key?.split(',')[0]?.trim() || '',
+      boardId: initialTeam?.boardId != null ? String(initialTeam.boardId) : '',
+      sprintCalendar: initialTeam?.sprintCalendar || null,
+      calendarError: '',
+      calendarManual: false,
+    });
   }, [initialTeam?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nameError = triedSave && !name.trim() ? 'Team name is required' : '';
+  const compError = triedSave && components.length === 0 ? 'Add at least one component' : '';
+  const customError = triedSave && !isShared && !customKey.trim() ? 'Custom project key is required' : '';
+  const boardError = triedSave && !selection.boardId ? '' : ''; // board optional per spec, warn only
 
   const canSave = Boolean(name.trim() && teamId && components.length > 0 && (!isShared ? customKey.trim() : true)) && !saving;
 
   const handleSave = async () => {
+    setTriedSave(true);
+    if (!canSave) {
+      setSaveError('Fix the highlighted fields before saving.');
+      return;
+    }
     setSaving(true);
     setSaveError('');
     const contacts = {};
     for (const r of CONTACT_ROWS) {
-      if (contactRows[r.key].entries.length) contacts[r.key] = contactRows[r.key];
+      contacts[r.key] = contactRows[r.key];
     }
+    const boardIdNum = selection.boardId ? Number(String(selection.boardId).trim()) : null;
     const payload = {
       name: name.trim(),
       is_shared_project: isShared,
@@ -242,7 +296,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       components,
       leader_outlook_dls: leaderDLs,
       contacts,
-      boardId: selection.boardId,
+      boardId: Number.isInteger(boardIdNum) && boardIdNum > 0 ? boardIdNum : null,
       sprintCalendar: selection.sprintCalendar,
       baseFilter: baseFilter.trim() || previewJql,
       base_jql: baseFilter.trim() || previewJql,
@@ -261,6 +315,10 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
 
   const editIdRef = editMode ? initialTeam.id : null;
 
+  const copyPreview = async () => {
+    try { await navigator.clipboard.writeText(previewJql); setCopyOk(true); setTimeout(() => setCopyOk(false), 2000); } catch (_) { /* ignore */ }
+  };
+
   // Keep sprint calendar detection for board
   const runDetectForBoard = useCallback(async () => {
     const pk = isShared ? 'ENG' : customKey.trim().split(',')[0].trim().toUpperCase();
@@ -270,8 +328,8 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
     setSelection(prev => ({
       ...prev,
       projectKey: pk,
-      boardId: out.board.boardId || null,
-      sprintCalendar: out.board.sprintCalendar || null,
+      boardId: out.board.boardId != null ? String(out.board.boardId) : prev.boardId,
+      sprintCalendar: out.board.sprintCalendar || prev.sprintCalendar,
       calendarError: out.board.calendarError || '',
       calendarManual: !out.board.sprintCalendar,
     }));
@@ -281,14 +339,16 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
     <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px' }}>
       <h2 style={{ fontSize: '20px', fontWeight: 600, margin: '0 0 16px' }}>{editMode ? `Edit ${initialTeam.name}` : 'Add team'}</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '12px' }}>
-        <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+        <div style={{ flex: '2 1 240px', minWidth: '200px' }}>
           <label htmlFor="team-name" style={fieldLabel}>Team Name *</label>
-          <input id="team-name" style={input} value={name} onChange={e => handleName(e.target.value)} placeholder="NDB, DR" />
+          <input id="team-name" aria-required="true" aria-invalid={Boolean(nameError)} style={nameError ? inputError : input} value={name} onChange={e => handleName(e.target.value)} placeholder="NDB, DR" />
+          {nameError && <div style={fieldError}>{nameError}</div>}
         </div>
-        <div>
+        <div style={{ flex: '1 1 160px', minWidth: '140px' }}>
           <label htmlFor="team-code" style={fieldLabel}>Team code</label>
-          <input id="team-code" style={{ ...input, backgroundColor: editMode ? '#f3f4f6' : 'white' }} value={teamId} readOnly={editMode} onChange={e => { setIdTouched(true); setTeamId(slugifyTeamId(e.target.value)); }} />
+          <input id="team-code" aria-label="Team code" style={{ ...input, backgroundColor: editMode ? '#f3f4f6' : 'white' }} value={teamId} readOnly={editMode} onChange={e => { setIdTouched(true); setTeamId(slugifyTeamId(e.target.value)); }} />
+          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>{editMode ? 'Code cannot be changed after creation' : 'Auto-generated from name'}</div>
         </div>
       </div>
 
@@ -303,32 +363,34 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       {!isShared && (
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="custom-project" style={fieldLabel}>Custom Project Key * (comma-separated for multiple, e.g. ERA, NDBECO)</label>
-          <input id="custom-project" style={input} value={customKey} onChange={e => setCustomKey(e.target.value)} placeholder="ERA" />
+          <input id="custom-project" aria-required="true" aria-invalid={Boolean(customError)} style={customError ? inputError : input} value={customKey} onChange={e => setCustomKey(e.target.value)} placeholder="ERA" />
+          {customError && <div style={fieldError}>{customError}</div>}
         </div>
       )}
 
       <div style={{ marginBottom: '12px' }}>
         <label style={fieldLabel}>Components * (validated across ENG + FEAT/SDL/TECHPUBS/SR/LEG/NDBECO)</label>
-        <ChipInput value={components} onChange={setComponents} placeholder="Type component and press Enter, or pick suggestion" suggestions={KNOWN_COMPONENTS} />
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Atlas suggests based on first input. Same list used for ENG + horizontal projects.</p>
+        <ChipInput value={components} onChange={setComponents} placeholder="Type component and press Enter, or pick suggestion" suggestions={KNOWN_COMPONENTS} error={Boolean(compError)} />
+        {compError ? <div style={fieldError}>{compError}</div> : <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Press Enter or comma to add. Paste comma-separated. Suggestions from Atlas.</p>}
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <label style={fieldLabel}>Leadership Outlook DL(s) (comma-separated emails)</label>
+        <label style={fieldLabel}>Leadership Outlook DL(s)</label>
         <ChipInput value={leaderDLs} onChange={setLeaderDLs} placeholder="team-ndb-leads@nutanix.com, era-managers@nutanix.com" suggestions={[]} />
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Optional. Used for report distribution.</p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 8px' }}>Role / Function Contacts (Jira handles or DLs)</h3>
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px' }}>Each row: type handles/DLs comma-separated, tick DL if row entries are DLs (→ membersOf), else handles.</p>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px' }}>Each row: add handles/DLs, tick DL if entries are distribution lists (→ membersOf).</p>
         {CONTACT_ROWS.map(row => (
-          <div key={row.key} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 500 }}>{row.label}</label>
+          <div key={row.key} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ flex: '1 1 220px', minWidth: '200px' }}>
+              <label htmlFor={`contact-${row.key}`} style={{ fontSize: '12px', fontWeight: 500 }}>{row.label}</label>
               <ChipInput value={contactRows[row.key].entries} onChange={v => handleContactChange(row.key, v)} placeholder={`Add ${row.label} handles/DLs`} suggestions={[]} />
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', marginTop: '16px' }}>
-              <input type="checkbox" checked={contactRows[row.key].isDL} onChange={() => handleContactToggle(row.key)} /> DL
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', flex: '0 0 120px' }}>
+              <input id={`contact-${row.key}-dl`} type="checkbox" checked={contactRows[row.key].isDL} onChange={() => handleContactToggle(row.key)} /> DL
               <span style={{ color: '#6b7280' }} title={contactRows[row.key].isDL ? 'Will use membersOf("DL")' : 'Will use assignee in (handle)'}>{contactRows[row.key].isDL ? '→ membersOf' : '→ handle'}</span>
             </label>
           </div>
@@ -336,45 +398,45 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: '12px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '10px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Auto-generated Base JQL (preview)</div>
-        <div style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>{previewJql}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600 }}>Auto-generated Base JQL (preview)</div>
+          <button type="button" onClick={copyPreview} style={button(copyOk ? '#15803d' : '#e5e7eb', copyOk ? 'white' : '#374151')}>{copyOk ? 'Copied!' : 'Copy'}</button>
+        </div>
+        <div style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap' }}>{previewJql}</div>
         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>Saved as <code>base_jql</code> + <code>baseFilter</code> (compat). Rest of app reads it unchanged.</div>
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <label htmlFor="team-base-filter" style={fieldLabel}>Base Filter (collected — editable, defaults to preview above)</label>
-        <textarea id="team-base-filter" rows={3} style={{ ...input, fontFamily: 'monospace', fontSize: '12px' }} value={baseFilter} onChange={e => { setBaseFilter(e.target.value); setBaseFilterTouched(true); }} placeholder='filter=NDB-All-Base-Filter or project in (ENG,FEAT...) AND (component in (...))' />
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Collected and saved with team. If left empty, preview JQL is used. Edit only if you need to override.</p>
+        <label htmlFor="team-base-filter" style={fieldLabel}>Base Filter (editable override)</label>
+        <textarea id="team-base-filter" rows={3} aria-label="Base Filter" style={{ ...input, fontFamily: 'monospace', fontSize: '12px' }} value={baseFilter} onChange={e => { setBaseFilter(e.target.value); setBaseFilterTouched(true); }} placeholder='project in (ENG,FEAT...) AND (component in (...))' />
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Defaults to preview. Edit only to override. <button type="button" onClick={() => { setBaseFilter(previewJql); setBaseFilterTouched(false); }} style={{ padding: 0, border: 'none', background: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '11px' }}>Reset to preview</button></p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
-        <label style={fieldLabel}>Sprint Board ID (Jira board number, e.g. 2888 for NDB)</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input style={input} value={selection.boardId || ''} onChange={e => setSelection(p => ({ ...p, boardId: e.target.value ? Number(e.target.value) : null }))} placeholder="2888" />
-          <button type="button" onClick={runDetectForBoard} disabled={detecting || !selection.boardId} style={button(detecting ? '#9ca3af' : '#2563eb', 'white')}>{detecting ? 'Detecting…' : 'Fetch Calendar'}</button>
+        <label style={fieldLabel}>Sprint Board</label>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input aria-label="Sprint board ID" style={{ ...input, flex: '1 1 160px' }} value={selection.boardId} onChange={e => setSelection(p => ({ ...p, boardId: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="2888" inputMode="numeric" />
           <button type="button" onClick={async () => {
             const id = selection.boardId;
             if (!id) return;
             const out = await loadBoardCalendar(id);
-            setSelection(p => ({ ...p, sprintCalendar: out?.sprintCalendar || null, calendarError: out?.calendarError || '' }));
+            setSelection(p => ({ ...p, sprintCalendar: out?.sprintCalendar || null, calendarError: out?.calendarError || '', calendarManual: !out?.sprintCalendar }));
           }} disabled={!selection.boardId || calendarLoading} style={button(!selection.boardId || calendarLoading ? '#9ca3af' : '#0ea5e9')}>{calendarLoading ? 'Loading…' : 'Load Calendar'}</button>
+          <button type="button" onClick={runDetectForBoard} disabled={detecting} style={button(detecting ? '#9ca3af' : '#2563eb')}>{detecting ? 'Detecting…' : 'Auto-detect from project'}</button>
         </div>
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Enter board number from Jira (e.g. NDB is 2888). Click Fetch Calendar to auto-fill S1 + sprint length, or type manually below.</p>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#6b7280' }}>Or detect from project key:</span>
-          <button type="button" onClick={runDetectForBoard} disabled={detecting} style={button(detecting ? '#9ca3af' : '#2563eb')}>{detecting ? 'Detecting…' : 'Detect Board Calendar'}</button>
-          <span style={{ fontSize: '12px', color: '#6b7280' }}>Fills sprint board + calendar from project key.</span>
-        </div>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Enter board number from Jira Agility board URL, or auto-detect from project key.</p>
         {detectError && <div role="alert" style={{ color: '#dc2626', fontSize: '13px', marginTop: '6px' }}>{detectError}</div>}
-        {editMode && !detected && <div style={{ fontSize: '12px', color: '#374151', marginTop: '6px' }}>Current: {summary(initialTeam)}</div>}
-        <DetectedConfig detected={detected} selection={selection} calendarLoading={calendarLoading} onSelectProject={() => {}} onSelectBoard={() => {}} onManualCalendar={v => setSelection(p => ({ ...p, sprintCalendar: v }))} onToggleComponent={() => {}} onUnselectAll={() => {}} />
+        {selection.calendarError && <div role="alert" style={{ color: '#b45309', fontSize: '12px', marginTop: '6px' }}>{selection.calendarError}</div>}
+        {selection.sprintCalendar && <div style={{ fontSize: '12px', color: '#065f46', marginTop: '6px', background: '#ecfdf5', padding: '6px 8px', borderRadius: '4px' }}>S1 {selection.sprintCalendar.s1StartIso} · {selection.sprintCalendar.sprintDays} days</div>}
+        {!selection.sprintCalendar && selection.calendarManual && <div style={{ fontSize: '12px', color: '#92400e', marginTop: '6px' }}>Could not detect calendar — fill manually below or check board ID.</div>}
+        {editMode && <div style={{ fontSize: '12px', color: '#374151', marginTop: '6px' }}>Current: {summary(initialTeam)}</div>}
       </div>
 
-      {saveError && <div role="alert" style={{ color: '#dc2626', fontSize: '14px', marginTop: '8px' }}>{saveError}</div>}
+      {saveError && <div role="alert" style={{ color: '#dc2626', fontSize: '14px', marginTop: '8px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px', borderRadius: '4px' }}>{saveError}</div>}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
         <button type="button" onClick={onCancel} style={button('#f3f4f6', '#374151')}>Cancel</button>
-        <button type="button" onClick={handleSave} disabled={!canSave} style={button(canSave ? '#16a34a' : '#9ca3af')} title={!canSave ? 'Fill Team Name, Components, Custom Project (if Not Shared)' : ''}>{saving ? 'Saving…' : editMode ? 'Save changes' : 'Create team'}</button>
+        <button type="button" onClick={handleSave} disabled={!canSave || saving} style={{ ...button((!canSave || saving) ? '#9ca3af' : '#15803d'), opacity: (!canSave || saving) ? 0.9 : 1 }} title={!canSave && triedSave ? 'Fix highlighted fields' : ''}>{saving ? 'Saving…' : editMode ? 'Save changes' : 'Create team'}</button>
       </div>
     </div>
   );

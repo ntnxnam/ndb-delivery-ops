@@ -67,7 +67,10 @@ function TestResults({ result }) {
 }
 
 function TeamCard({ team, testing, testResult, onEdit, onTest }) {
-  const components = Object.entries(team.featureComponents || {});
+  const rawComps = team.components
+    ? team.components.map((c) => [c, []])
+    : Object.entries(team.featureComponents || {});
+  const components = rawComps;
   const cal = team.sprintCalendar;
   return (
     <div style={card}>
