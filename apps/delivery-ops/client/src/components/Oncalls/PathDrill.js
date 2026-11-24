@@ -172,6 +172,17 @@ function buildSeedModes(agedDays = 14) {
         `${n} OnCall(s) with neither TechHelp nor eng/docs${past ? ' when closed' : ' — uncovered customer waits'}.`,
       jiraProof: 'Open matching OnCalls in JIRA ↗',
     },
+    // V2 taxonomy modes — tickets pre-filtered to gap set, so match all
+    needInfo: { title: 'Need Info', match: () => true, lead: (n) => `${n} OnCall(s) waiting for info.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    waiting: { title: 'Waiting for Customer', match: () => true, lead: (n) => `${n} OnCall(s) waiting for customer.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    closedInWindow: { title: 'Closed in window', match: () => true, lead: (n, past) => `${n} OnCall(s) closed in window.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    duds: { title: 'Duds', match: () => true, lead: (n) => `${n} duds (no fix).`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    ndbGaps: { title: 'NDB gaps', match: () => true, lead: (n) => `${n} NDB gaps.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    otherTeamGaps: { title: 'Other-team gaps', match: () => true, lead: (n) => `${n} other-team gaps.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    thLinked: { title: 'TH linked', match: () => true, lead: (n) => `${n} TH linked.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    bugs: { title: 'Bugs', match: () => true, lead: (n) => `${n} bugs.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    improvements: { title: 'Improvements', match: () => true, lead: (n) => `${n} improvements.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    other: { title: 'Other', match: () => true, lead: (n) => `${n} other.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
   };
 }
 

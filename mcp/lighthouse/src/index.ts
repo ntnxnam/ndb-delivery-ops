@@ -12,6 +12,8 @@ import { registerGanttReleaseTimeline } from '../../shared/tools/ganttReleaseTim
 import { registerPlanCapacity } from '../../shared/tools/planCapacity.js';
 import { registerLeadershipCommitReport } from '../../shared/tools/leadershipCommitReport.js';
 import { registerConvertToBinPackingCsv } from '../../shared/tools/convertToBinPackingCsv.js';
+import { registerBuildOncallPrompt } from '../../shared/tools/buildOncallPrompt.js';
+import { registerGenerateOncallBrief } from './tools/generateOncallBrief.js';
 import { registerNdbGlossary } from '../../shared/resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -41,6 +43,8 @@ async function main(): Promise<void> {
   registerPlanCapacity(server);
   registerLeadershipCommitReport(server);
   registerConvertToBinPackingCsv(server);
+  registerBuildOncallPrompt(server, env);
+  registerGenerateOncallBrief(server, env);
   registerNdbGlossary(server);
   const transport = new StdioServerTransport();
   await server.connect(transport);

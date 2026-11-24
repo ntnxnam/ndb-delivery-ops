@@ -703,4 +703,66 @@ router.post(
   }
 });
 
+/**
+ * POST /api/ai/oncall-concern
+ * Body: { teamId, timeframe, dashboard }
+ * Uses oncallDashboardV2 intelligence + naiService.generateOncallConcern
+ */
+router.post('/oncall-concern', validateJiraTokenMiddleware, async (req, res) => {
+  const teamId = (req.body?.teamId || '').trim() || undefined;
+  const timeframe = (req.body?.timeframe || '').trim() || '2Q';
+  const dashboard = req.body?.dashboard || null;
+  const jiraToken = req.headers.authorization?.replace('Bearer ', '') || req.jiraToken;
+  try {
+    let intelligence = dashboard;
+    if (!intelligence || !intelligence.hero) {
+      const oncallDashboardV2 = require('../services/oncallDashboardV2');
+      intelligence = await oncallDashboardV2.getDashboard({ token: jiraToken, teamId, timeframe });
+    }
+    // Build concern intelligence packet
+    const { buildOncallConcernPrompt, generateOncallConcern } = require('../services/naiService');
+    // Enrich with componentMix top2 if available from dashboard
+    const concernInput = {
+      timeframe,
+      hero: intelligence.hero,
+      health: intelligence.health,
+      workflow: intelligence.workflow,
+      gapTaxonomy: intelligence.gapTaxonomy,
+      componentMix: intelligence.componentMix || intelligence.priorityMix || [],
+      validKeys: intelligence.gapMeta ? [...(intelligence.gapMeta.dudsKeys || []), ...(intelligence.gapMeta.ndbGapsKeys || []), ...(intelligence.gapMeta.otherTeamGapsKeys || [])].slice(0, 20) : (intelligence.openTickets || []).slice(0, 8).map((t) => t.key),
+      agedOpenDays: intelligence.agedOpenDays,
+    };
+    const summary = await generateOncallConcern(concernInput);
+    return res.json({ summary, intelligence: concernInput, timeframe, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    logger.error(`[oncall-concern] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'OnCall concern generation failed');
+  }
+});
+
+/**
+ * POST /api/ai/oncall-slice
+ * Body: { teamId, view, keys, timeframe }
+ */
+router.post('/oncall-slice', validateJiraTokenMiddleware, async (req, res) => {
+  const teamId = (req.body?.teamId || '').trim() || undefined;
+  const view = (req.body?.view || '').trim() || 'Need Info';
+  const keys = Array.isArray(req.body?.keys) ? req.body.keys : [];
+  const timeframe = (req.body?.timeframe || '').trim() || '2Q';
+  try {
+    const { generateOncallSlice } = require('../services/naiService');
+    const summary = await generateOncallSlice({ teamId, view, keys, timeframe, meta: req.body?.meta || {} });
+    return res.json({ summary, view, keys, timeframe, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    logger.error(`[oncall-slice] Failed for view=${view}`, err, { naiDebug: err.naiDebug });
+    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
+      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
+    }
+    return naiFailureResponse(res, err, 'OnCall slice generation failed');
+  }
+});
+
 module.exports = router;

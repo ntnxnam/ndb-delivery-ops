@@ -158,6 +158,15 @@ export const routeConfig = {
       showInNav: true,
     },
     {
+      path: '/oncalls-next',
+      exact: true,
+      component: 'OncallsV2Page',
+      title: 'OnCalls V2',
+      description: 'VP-first timeframe + AI concern (pills global)',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
+    },
+    {
       path: '/cfdcfi',
       exact: true,
       component: 'CfdCfiPage',

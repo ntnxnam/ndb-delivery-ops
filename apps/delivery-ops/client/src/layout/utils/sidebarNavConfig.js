@@ -158,6 +158,11 @@ export const SIDEBAR_NAV_GROUPS = [
         description: 'OnCall → TechHelp → eng-fix metrics and AI briefing',
       },
       {
+        path: '/oncalls-next',
+        label: 'OnCalls V2',
+        description: 'VP-first timeframe + AI concern (pills global)',
+      },
+      {
         path: '/cfdcfi',
         label: 'CFD / CFI',
         description: 'CFD and CFI KPI pulse — heroes, trends, open tickets',

@@ -14,6 +14,11 @@
     "genuine_engineering_miss"
   ],
   "agedOpenDays": 14,
+  "needInfoDays": 10,
+  "waitingForCustomerDays": 21,
+  "_note_needInfoDays": "UI threshold for How long open + AI workflow pressure (status-only JQL; dwell filter via changelog planned)",
+  "_note_waitingForCustomerDays": "UI threshold for Waiting >21d nudge; not in JQL status filter — status-only",
+  "_note_Overall": "Overall = no date clause handled in service (oncallDashboardV2 timeframeClause returns null)",
   "pastLookbackDays": 30,
   "openStatusJql": "statusCategory != Done",
   "doneStatusJql": "statusCategory = Done",
