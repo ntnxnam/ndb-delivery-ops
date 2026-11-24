@@ -35,9 +35,9 @@ AGENT KPIs:
     - no JQL edit without approval; gap taxonomy uses cfg.gapProjectPrefixes
     - server/index.js dotenv still loads server/.env + apps/delivery-ops/.env (no regression)
   QA:
-    - /oncalls with teamId+timeframe returns 200 with hero/health/gapTaxonomy (live JQL proof)
-    - /oncalls/report preview returns 200 HTML containing hero counts + JQL links; send returns messageId (mocked SMTP in test)
-    - Overall timeframe omits resolved >= clause
+    - /oncalls with teamId+timeframe returns 200 with hero/health/gapTaxonomy (live JQL proof — STALE: re-verify live before sign-off: `curl -H "Authorization: Bearer $PAT" "$HOST/api/jira/oncalls?teamId=ndb&timeframe=Overall"` must return `hero.open.jql` without `resolved >=` clause; Overall pill omits date filter)
+    - /oncalls/report preview returns 200 HTML containing hero counts + JQL links; send returns messageId (mocked SMTP in test: server/__tests__/routes/oncallReport.test.js)
+    - Overall timeframe omits resolved >= clause (covered by oncallReport.test.js: Overall + lowercase overall cases)
   UX:
     - Pill bar sticky, active state, 8 pills visible at 1280/768
     - Download/Preview/Send bar aligned, not crushing hero grid; drill overlay still works (z-index, overflow hidden)

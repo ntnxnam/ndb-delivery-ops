@@ -78,7 +78,7 @@ router.post('/oncalls/v2/refresh', validateJiraTokenMiddleware, apiLimiter, asyn
 
 /**
  * POST /api/jira/oncalls/report — preview or send HTML email report (reuses outstanding pattern)
- * Body: { teamId, timeframe, to?, cc?, previewOnly?, dashboard?, aiConcern? }
+ * Body: { teamId, timeframe, to?, previewOnly?, dashboard?, aiConcern? } — cc is server-owned, client cc ignored
  * - dashboard: optional snapshot from client (avoids re-fetch); when missing, server fetches via getDashboard
  * - aiConcern: optional fused AI concern string to embed in email
  */

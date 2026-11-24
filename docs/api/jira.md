@@ -852,6 +852,8 @@ Counts are `key in (...)` proofs; all use `baseScopeJql` as seed. See `server/se
 | 403 | No KPI view | Show access denied |
 | 500 | Dashboard failed | Show error + retry |
 
+**Live JQL verification** (STALE — re-run before sign-off): `curl -H "Authorization: Bearer $PAT" "$HOST/api/jira/oncalls?teamId=ndb&timeframe=Overall"` must return `hero.open.jql` without `resolved >=` clause. For non-Overall, `hero.closedInWindow.jql` must contain `resolved >= -Nd`.
+
 **Caching**
 No — live on load / Pull.
 

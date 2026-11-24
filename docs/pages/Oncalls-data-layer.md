@@ -132,6 +132,8 @@ MCP: `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only) + `mcp/lighthouse
 - Ticket narrative / blurbs (legacy): short-lived per key
 - `oncallDashboardV2.getDashboard` parallelizes with `allSettled`; partial errors surface in `errors` map
 
+**Live JQL verification — STALE (re-run before sign-off):** `curl -H "Authorization: Bearer $PAT" "$HOST/api/jira/oncalls?teamId=ndb&timeframe=Overall"` must return `hero.open.jql` without `resolved >=` clause.
+
 ---
 
 ## Error handling

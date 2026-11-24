@@ -106,9 +106,20 @@ Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-colu
 ## OnCalls V2
 
 **Who:** Team Executive / VP, TPM, Director, EM  
-**Route:** `/oncalls` (V2) — `/oncalls-legacy` redirects to `/oncalls` (V1 removed 2026-11-24); Report: Download Report + Send Email HTML (preview/send)
+**Route:** `/oncalls` (V2) — `/oncalls-legacy` redirects to `/oncalls` (V1 removed 2026-11-24)
 
 This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim *what's hot, too-long, and what to fix*.
+
+**Report — Download & Email (Preview → Send → Download)**
+
+At the bottom of `/oncalls` find **Report — Download & Email** (component `OncallReportSection` via `useOncallReport` → `POST /api/jira/oncalls/report`). Workflow:
+
+1. **To:** editable email input, defaults to the team's distribution (e.g. `ndb-exec-updates@nutanix.com` from server `releaseVersionsCCConfig.json`); `CC` is server-owned (leadership DLs) and cannot be overridden from the client.
+2. **Preview:** click **Preview** → server returns `{subject, html}` without SMTP (subject `[OnCalls tf] team — N open, N aged — YYYY-MM-DD`); drawer renders the HTML email inline (heroes/health/taxonomy + ticket tables with JQL proof links).
+3. **Send:** click **Send Email** → same payload with `previewOnly:false` → `sendEmailDirect` via SMTP; confirmation shows `Sent: subject → to (CC n)`. Errors: `413` if pasted dashboard >200 KB or concern >5 k chars, `400` if To empty, `403` if no `kpi_view`.
+4. **Download:** click **Download Report** → reuses cached preview HTML if present, otherwise previews first, then downloads standalone file `OnCalls-{team}-{timeframe}-{date}.html` (e.g. `OnCalls-ndb-7d-2026-11-24.html`) via client `Blob` + `URL.createObjectURL` (Firefox-safe append/revoke). Open locally or attach to email.
+
+Tip: change the timeframe pill first — the report is scoped to the selected pill (`7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall`; `Overall` = all closed history).
 
 **At a glance — timeframe pills (global)**
 

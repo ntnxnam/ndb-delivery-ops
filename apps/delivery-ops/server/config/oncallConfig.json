@@ -66,6 +66,11 @@
     "panaceaHoursSaved": { "id": "customfield_54883", "label": "No of hours  saved by Panacea.ai", "jiraName": "No of hours  saved by Panacea.ai" },
     "panaceaUsefulChat": { "id": "customfield_55962", "label": "How useful is Panacea.ai CHAT", "jiraName": "How useful is Panacea.ai CHAT" }
   },
+  "reportDefaults": {
+    "_note": "Optional tenant-aware email defaults; when absent, server falls back to NDB tenant defaults in oncallReportService.js",
+    "to": ["ndb-exec-updates@nutanix.com"],
+    "cc": ["ndb-tech-leads@nutanix.com", "ndb-managers@nutanix.com"]
+  },
   "notificationChannels": {
     "slackEnabled": false,
     "slackChannel": "",

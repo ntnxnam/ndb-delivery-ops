@@ -401,7 +401,7 @@ export default function PathDrill({
                 style={{
                   marginTop: 8,
                   padding: '8px 10px',
-                  background: 'var(--oc-slice-bg, #f5f7ff)',
+                  background: 'var(--surface-raised)',
                   border: '1px solid var(--border)',
                   borderRadius: 6,
                   whiteSpace: 'pre-wrap',

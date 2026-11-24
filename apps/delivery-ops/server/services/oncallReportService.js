@@ -9,6 +9,7 @@ const { sendEmailDirect } = require('./emailService');
 const { getDashboard } = require('./oncallDashboardV2');
 
 const CC_CONFIG_PATH = path.join(__dirname, '../config/releaseVersionsCCConfig.json');
+// NDB tenant fallback — used when oncallConfig.json has no reportDefaults; sourced from oncallConfig.reportDefaults when present (see defaultRecipients).
 const DEFAULT_REPORT_TO = 'ndb-exec-updates@nutanix.com';
 const DEFAULT_LEADERSHIP_CC = ['ndb-tech-leads@nutanix.com', 'ndb-managers@nutanix.com'];
 
@@ -36,6 +37,16 @@ function leadershipCc() {
   return uniqEmails(DEFAULT_LEADERSHIP_CC);
 }
 function defaultRecipients() {
+  // Prefer oncallConfig.reportDefaults when present; fall back to NDB tenant defaults above.
+  try {
+    const { loadConfig } = require('./oncallConfigResolve');
+    const oc = loadConfig();
+    if (oc.reportDefaults?.to || oc.reportDefaults?.cc) {
+      const to = oc.reportDefaults.to ? uniqEmails(Array.isArray(oc.reportDefaults.to) ? oc.reportDefaults.to : [oc.reportDefaults.to]) : [DEFAULT_REPORT_TO];
+      const cc = oc.reportDefaults.cc ? uniqEmails(Array.isArray(oc.reportDefaults.cc) ? oc.reportDefaults.cc : [oc.reportDefaults.cc]) : leadershipCc();
+      if (to.length) return { to, cc };
+    }
+  } catch {}
   return { to: [DEFAULT_REPORT_TO], cc: leadershipCc() };
 }
 function escapeHtml(s) {
@@ -86,9 +97,11 @@ function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
     gap.ndbGaps ? `NDB gaps ${gap.ndbGaps.count ?? 0}` : null,
     gap.otherTeamGaps ? `Other-team ${gap.otherTeamGaps.count ?? 0}` : null,
   ].filter(Boolean).join(' · ');
+  const notConfiguredBanner = d.notConfigured ? `<div style="padding:10px 12px;border:1px solid #facc15;background:#fefce8;border-radius:6px;margin:0 0 12px;font-size:13px;color:#713f12;">OnCalls not configured for team ${escapeHtml(teamId)} — Add OnCalls KPI in Admin → KPIs</div>` : '';
   return `<!-- OnCalls | ${escapeHtml(teamId)} | ${escapeHtml(timeframe)} | ${escapeHtml(asOf)} -->
 <!-- audience: team-exec -->
 <div style="box-sizing:border-box;width:99%;max-width:99%;margin:0 auto;padding:0 0.5%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18181b;font-size:14px;line-height:1.4;">
+  ${notConfiguredBanner}
   <h1 style="font-size:clamp(18px,2.2vw,22px);margin:0 0 6px;">OnCalls — ${escapeHtml(teamId)} · ${escapeHtml(timeframe)}</h1>
   <p style="margin:0 0 8px;font-size:12px;color:#52525b;">as of ${escapeHtml(asOf)} · <a href="${escapeHtml(jiraIssuesUrl(jiraBaseUrl, d.baseScopeJql || ''))}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;">Scope JQL</a> ${d.elapsedMs ? `· ${d.elapsedMs}ms` : ''}</p>
   ${rag ? `<div style="display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;margin:0 0 12px;background:${rag.level === 'RED' ? '#fee2e2' : rag.level === 'YELLOW' ? '#ffedd5' : '#dcfce7'};color:${rag.level === 'RED' ? '#b91c1c' : rag.level === 'YELLOW' ? '#c2410c' : '#15803d'};border:1px solid ${rag.level === 'RED' ? '#fecaca' : rag.level === 'YELLOW' ? '#fed7aa' : '#bbf7d0'};">${escapeHtml(rag.level)} — ${escapeHtml(rag.why || '')}</div>` : ''}
@@ -132,11 +145,7 @@ async function previewOrSendOncallReport({ token, teamId, timeframe, to, cc, pre
   const { resolveRuntimeConfig: resolveCfg } = require('./oncallConfigResolve');
   const { TIMEFRAMES } = require('./oncallDashboardV2');
   const rawTf = String(timeframe || '7d').trim();
-  let tf = rawTf;
-  if (!TIMEFRAMES.hasOwnProperty(rawTf)) {
-    const hit = Object.keys(TIMEFRAMES).find((k) => k.toLowerCase() === rawTf.toLowerCase());
-    tf = hit || '7d';
-  }
+  const tf = Object.keys(TIMEFRAMES).find((k) => k.toLowerCase() === rawTf.toLowerCase()) || '7d';
   const tid = resolveCfg(teamId).teamId || String(teamId || 'ndb').trim() || 'ndb';
   let dash = dashboard;
   if (!dash || !dash.hero) {

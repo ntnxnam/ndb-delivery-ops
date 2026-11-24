@@ -107,7 +107,7 @@ function deriveKeysForView(mode, dash, agedDays) {
 }
 
 export default function OncallsV2Page() {
-  const { selectedTeamId, hasTeamSelected } = useTeam();
+  const { selectedTeamId, selectedTeam, hasTeamSelected } = useTeam();
   const {
     timeframe, setTimeframe, data, loading, refreshing, error, refresh,
     aiConcern, aiConcernState, aiConcernError, generateConcern,
@@ -304,7 +304,7 @@ export default function OncallsV2Page() {
             </>
           )}
 
-          <OncallReportSection teamId={selectedTeamId} timeframe={timeframe} busy={reportBusy} error={reportError} onPreview={previewReport} onSend={sendReport} />
+          <OncallReportSection teamId={selectedTeamId} timeframe={timeframe} busy={reportBusy} error={reportError} onPreview={previewReport} onSend={sendReport} defaultTo={selectedTeam?.notificationEmails?.exec || data?.reportRecipients?.to || ''} />
 
           <PathDrill
             mode={drill?.mode}

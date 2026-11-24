@@ -8,8 +8,18 @@ const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId, getTeamBaseFilter } 
 
 const CONFIG_PATH = path.join(__dirname, '../config/oncallConfig.json');
 
+let configCache = { data: null, mtimeMs: -1 };
 function loadConfig() {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  try {
+    const mtimeMs = fs.statSync(CONFIG_PATH).mtimeMs;
+    if (configCache.data && configCache.mtimeMs === mtimeMs) return configCache.data;
+    const data = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    configCache = { data, mtimeMs };
+    return data;
+  } catch {
+    if (configCache.data) return configCache.data;
+    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  }
 }
 
 function andParts(...parts) {
