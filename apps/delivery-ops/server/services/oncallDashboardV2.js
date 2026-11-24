@@ -17,6 +17,8 @@ const {
   andParts,
   keysInJql,
 } = require('./oncallConfigResolve');
+const { SimpleCache } = require('../utils/simpleCache');
+const heroCache = new SimpleCache(5 * 60 * 1000); // 5m hero cache per team:timeframe
 const { fetchOpenStacks, emptyStackData, buildPathCells, mapTicketRows, topN } = require('./oncallStacksService');
 const { buildPulse } = require('./kpiPulseService');
 const { classifyGapBuckets, buildGapCells, classifyNdbSubGaps, buildNdbSubCells } = require('./oncallGapService');
@@ -125,12 +127,12 @@ async function fetchClosedStacks(token, cfg, timeframe) {
   const jql = clause ? andParts(seed, doneJql, clause) : andParts(seed, doneJql);
   // fetch with pagination — cap at maxPastIssuesFetch or 500 for gap taxonomy
   const maxTotal = cfg.maxPastIssuesFetch || 200;
-  // include resolution field for dud detection
+  // include resolution field for dud detection — cap 200 for initial paint, not 500
   const issues = await searchPages(token, jql, 'key,summary,status,priority,assignee,created,updated,resolution,resolutiondate,issuelinks,labels,issuetype,components', {
-    pageSize: 100,
-    maxTotal: Math.min(maxTotal * 2, 500),
-    timeoutMs: 45000,
-    delayMs: 150,
+    pageSize: 50,
+    maxTotal: Math.min(maxTotal, 200),
+    timeoutMs: 30000,
+    delayMs: 100,
   });
   // reuse classifyStacksFromIssues logic manually — but we need full stack shape
   const { classifyStacksFromIssues } = require('./oncallStacksService');
