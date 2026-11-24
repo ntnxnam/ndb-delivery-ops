@@ -1,42 +1,48 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>RBAC_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>RBAC_GUIDE</span></nav><div class="container"><article class="prose"><pre># RBAC Guide: Roles and Permissions
-
-## Role hierarchy
-
-The app uses a simple role model: **Super Admin**, **Admin**, and **User**. Roles are defined in config so teams can change who has each role without code changes.
-
-| Role           | Config key          | Permissions |
-|----------------|---------------------|-------------|
-| **Super Admin** | `superAdminUsers`   | Full access: release versions, sprint report, KPI view/edit, email history, **generic emailer**, **release setup**, KPI admin per team, and any future super-admin-only actions. |
-| **Admin**       | `adminUsers`        | Same as above except **not** generic emailer and **not** release setup. Can send release emails, edit KPIs, access email history, sprint report, etc. |
-| **User**        | (any authenticated) | View-only: reports, KPI view, release versions view (when env allows). |
-
-Only **generic emailer** and **release setup** are restricted to Super Admin. All other admin-level actions are available to both Super Admin and Admin.
-
-## Config-driven lists
-
-Roles are configured in `server/config/allowedUsers.json`:
-
-- **`superAdminUsers`**: list of usernames (e.g. `["namratha.singh"]`). Super Admin only.
-- **`adminUsers`**: list of usernames (e.g. `["sneha.kulkarni"]`). Admin tier (does not include Super Admins; Super Admins automatically have admin permissions).
-
-To change who is Super Admin or Admin as the team evolves, edit these arrays in `allowedUsers.json` and restart the server (or rely on config cache bust if applicable). No code change is required.
-
-## Example config
-
-```json
-{
-  "superAdminUsers": ["namratha.singh"],
-  "adminUsers": ["sneha.kulkarni"],
-  "allowedUsers": [ ... ],
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>RBAC_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>RBAC_GUIDE</span></nav><div class="container"><article class="prose"><h1>RBAC Guide: Roles and Permissions</h1>
+<h2>Role hierarchy</h2>
+<p>The app uses a simple role model: <strong>Super Admin</strong>, <strong>Admin</strong>, and <strong>User</strong>. Roles are defined in config so teams can change who has each role without code changes.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Config key</th>
+<th>Permissions</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Super Admin</strong></td>
+<td><code>superAdminUsers</code></td>
+<td>Full access: release versions, sprint report, KPI view/edit, email history, <strong>generic emailer</strong>, <strong>release setup</strong>, KPI admin per team, and any future super-admin-only actions.</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td><code>adminUsers</code></td>
+<td>Same as above except <strong>not</strong> generic emailer and <strong>not</strong> release setup. Can send release emails, edit KPIs, access email history, sprint report, etc.</td>
+</tr>
+<tr>
+<td><strong>User</strong></td>
+<td>(any authenticated)</td>
+<td>View-only: reports, KPI view, release versions view (when env allows).</td>
+</tr>
+</tbody></table>
+<p>Only <strong>generic emailer</strong> and <strong>release setup</strong> are restricted to Super Admin. All other admin-level actions are available to both Super Admin and Admin.</p>
+<h2>Config-driven lists</h2>
+<p>Roles are configured in <code>server/config/allowedUsers.json</code>:</p>
+<ul>
+<li><strong><code>superAdminUsers</code></strong>: list of usernames (e.g. <code>[&quot;namratha.singh&quot;]</code>). Super Admin only.</li>
+<li><strong><code>adminUsers</code></strong>: list of usernames (e.g. <code>[&quot;sneha.kulkarni&quot;]</code>). Admin tier (does not include Super Admins; Super Admins automatically have admin permissions).</li>
+</ul>
+<p>To change who is Super Admin or Admin as the team evolves, edit these arrays in <code>allowedUsers.json</code> and restart the server (or rely on config cache bust if applicable). No code change is required.</p>
+<h2>Example config</h2>
+<pre><code class="language-json">{
+  &quot;superAdminUsers&quot;: [&quot;namratha.singh&quot;],
+  &quot;adminUsers&quot;: [&quot;sneha.kulkarni&quot;],
+  &quot;allowedUsers&quot;: [ ... ],
   ...
 }
-```
-
-## API exposure
-
-The permissions endpoint (e.g. `/api/config/allowed-users`) can return `isSuperAdmin` and `isAdmin` for the current user so the client can show or hide UI (e.g. show "Release setup" only for Super Admin). The raw `superAdminUsers` / `adminUsers` lists are not exposed to the client.
-
-## Legacy behavior
-
-If `superAdminUsers` and `adminUsers` are missing or empty, the server falls back to the previous behavior using legacy keys (e.g. `genericEmailerAllowedUsers`, `releaseSetupAllowedUsers`) so existing deployments keep working.
-</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+</code></pre>
+<h2>API exposure</h2>
+<p>The permissions endpoint (e.g. <code>/api/config/allowed-users</code>) can return <code>isSuperAdmin</code> and <code>isAdmin</code> for the current user so the client can show or hide UI (e.g. show &quot;Release setup&quot; only for Super Admin). The raw <code>superAdminUsers</code> / <code>adminUsers</code> lists are not exposed to the client.</p>
+<h2>Legacy behavior</h2>
+<p>If <code>superAdminUsers</code> and <code>adminUsers</code> are missing or empty, the server falls back to the previous behavior using legacy keys (e.g. <code>genericEmailerAllowedUsers</code>, <code>releaseSetupAllowedUsers</code>) so existing deployments keep working.</p>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

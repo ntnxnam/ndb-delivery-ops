@@ -1,144 +1,135 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>USER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>USER_GUIDE</span></nav><div class="container"><article class="prose"><pre># User Guide
-
-> For IC / TPM / FEAT / QA personas. Maintained by `doc-specialist` via `doc-user-guide`.
-
-## Table of Contents
-- [Getting Started](#getting-started)
-- [Sprint Report](#sprint-report)
-- [Release Brief](#release-brief)
-- [Quality Column (TCMS)](#quality-column-tcms)
-- [Bin-Packing CSV Converter](#bin-packing-csv-converter)
-- [OnCalls V2](#oncalls-v2)
-- [Tips &amp; FAQ](#tips--faq)
-
-## Getting Started
-
-1. Log in at `/login` (RBAC via `allowedUsers.json` — see [ADMIN_GUIDE.md#rbac) (see Documentation)).
-2. Pick product + release in the header.
-3. Use sidebar tabs per your permission.
-
-## Sprint Report
-
-**Who:** TPM, FEAT owners
-**Steps:** Open Sprint Report → select sprint → review burndown/burnup.
-**Tips:** Use `?` filter help for JQL-backed counts.
-
-## Release Brief
-
-**Who:** Team Exec / Director
-**Steps:** Open Release Brief → check RAG + blockers → drill into FEAT.
-
-## Risk Details (Project Status)
-
-**Who:** Portfolio Manager, TPM, Director
-**Steps:** Open Project Status → select release → scan the Risk Details column.
-**What it shows:** Risk Indicator pill (Deep Red/Red/Green/Yellow) + Risk Assessment + Path to Green. Rich-text values authored in JIRA (ADF) render as plain text; URLs render as Link; empty stays Not Set. Previously cached HTML values strip on next fetch.
-**Risk movement trail:** When Risk Indicator has changed during the release, the badge is followed by a trail `Current ← Prior` (e.g. `Red ← Yellow ← Green`) with prior values struck-through. The trail is derived from `POST /api/jira/release-items-history` `checkpointHistory[key].riskIndicator` and rendered via `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`). Single-value history shows no trail. The same trail appears in SoS Summary table + SoS/release-versions emails; Feature Dashboard and Email Sender are intentionally out of scope (see `docs/pages/FeatureDashboard-data-layer.md#risk-trail-disposition`).
-
-## Team Management — Teams Config (Admin)
-
-**Who:** App admin (`ADMIN_PANEL_ACCESS` via `allowedUsers.json::adminUsers`) — NDB is one entry (`ERA,NDBECO` private) in multi-team `teamBoardConfig.json` (D43)  
-**Route:** `/team-management` (`/admin` redirects here)
-
-Create/edit teams without hand-writing JQL — the form generates the base filter from structured inputs and derives sprint cadence from the board:
-
-- **Filter — project type:** *Shared Project* → `project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR)` (10 horizontals) `AND (inner OR)`; *Not Shared / Custom* → `(project in (ERA,NDBECO) OR (project in (shared 10) AND (inner OR)))` — type a comma-separated private key like `ERA, NDBECO`. Inner OR = `component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype in ("Era Oncall","ERA Oncall")`.
-- **Filter — components:** Chip input with Atlas suggestions (`NDB`, `Era`, `NDB Databases`…) — validated across ENG + 10 shared projects. Press `Enter`/`,` to add, paste comma-separated, `×` 24px to remove.
-- **People — Leadership DLs (PM/Dev/QA 3):** three dedicated inputs auto-map to `assignee in (membersOf("PM-DL") OR membersOf("Dev-DL") OR membersOf("QA-DL"))` inner OR — no re-typing in Contacts. Also used for email distribution.
-- **People — Role / Function Contacts (8 rows):** `Team` / `Serv team` / `Doc Team` / `Security team` / `Legal` / `Documentation` / `Trade Compliance` / `Others` — each row has chips + **DL toggle**: checked → `membersOf("DL")`, unchecked → direct `assignee in (handle)`. All rows inner-OR together with Leadership DLs and `component`/`"primary component"`/`issuetype`.
-- **Preview:** auto-generated Base JQL preview (indented, 2-space per `(`/`OR`/`AND`, `&lt;pre>` with **Copy**). Editable **Base Filter** textarea defaults to preview; edit only to override, **Reset to preview** restores. Saved as both `base_jql` + `baseFilter` (compat).
-- **Sprint — board + 21d + S1:** enter **Board #** (number from Jira Agility board URL), **Sprint duration** (days, 1–90, default 21), **S1 start** (date `YYYY-MM-DD`). **Load Calendar** fetches `sprintCalendar` from that board; **Auto-detect from project** picks the best board for the chosen project and infers the calendar from **recent 10 sprints** median snapped to 7/14/21 (fallback 21d) — so a recent 3-week cadence is not drowned by old 14-day history. Shown as `S1 2022-12-06 · 21 days`.
-
-See [ADMIN_GUIDE — Teams Config](./ADMIN_GUIDE.md#teams-config--filterproject--peopleroles--sprintboard) and [Admin requirements/data-layer](../pages/Admin-requirements.md).
-
-## Quality Column (TCMS)
-
-**Who:** TPM, FEAT owners, QA
-
-The Quality column on the Project Status table shows TCMS test results per
-feature.
-
-- **Four tables per feature**: `Release — Overall`, `Release — Last 4
-  weeks`, `Master — Overall`, `Master — Last 4 weeks`.
-- **Each table is a 2×2 grid**:
-  - Rows: **Functional**, **System**
-  - Columns: **Manual**, **Automation**
-  - Cells: QI / Run / Passed / Failed / Rate
-- **Last 4 weeks** window reflects runs in the most recent 4-week window;
-  shows "Not Set" when there are no runs in that window (it does not fall
-  back to Overall). Time-filtered runs now come from the corrected TCMS
-  metrics endpoint (`/api/v1/all_test_cases/aggregate/metrics` with
-  `time_filter=four_weeks`).
-- **Caveat:** Functional and System rows currently share the same source
-  metrics until TCMS exposes a `test_category` filter. Do not read
-  distinctness into the two rows yet. See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).
-
-## Bin-Packing CSV Converter
-
-**Who:** Portfolio Manager, TPM, Release Manager
-
-Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-column bin-packing CSV that the Bin-Packing capacity planner understands.
-
-**Steps:**
-
-1. Open **Bin-Packing** from the sidebar (opens in a new tab at `/bin-packing/`).
-2. Go to the **Upload CSV** tab and click **Convert any file (AI)** above the existing file picker.
-3. Select a file (`.csv`, `.xlsx`, `.xls`, `.pdf`, `.docx`, `.tsv` — up to 10 MB). You can also paste TSV/CSV text copied from Confluence or JIRA.
-4. Wait for conversion — the preview shows **mapped** headers (green), **unmapped** headers (yellow), and a **missing-mandatory** warning if `FEAT NUMBER` or `SUMMARY` could not be resolved. Warnings explain which alias to use.
-5. Click **Download CSV** to save the canonical file, or **Replace &amp; Repack** to render the converted rows directly in the Gantt without a download step.
-
-**Details:** See [CSV Converter Guide](../product/CSV_CONVERTER_GUIDE.md) for the full 26-column header contract, alias table, sizing labels, dependency syntax, and duration priority rules. The legacy CSV/XLSX upload continues to work unchanged — the converter is additive.
-
-**Tips:**
-
-- JIRA-native headers (`Issue Key`, `Summary`, `Assignee`) resolve automatically via the product alias map — no manual renaming needed.
-- If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.
-- The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the `csv-to-binpacking` skill (prompt/orchestration only — deterministic logic stays in `shared`).
-
-## OnCalls V2
-
-**Who:** Team Executive / VP, TPM, Director, EM  
-**Route:** `/oncalls` (V2) — legacy pulse view at `/oncalls-legacy`
-
-This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim *what's hot, too-long, and what to fix*.
-
-**At a glance — timeframe pills (global)**
-
-Pick a pill at the top (sticky): `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` · `18M` · `Overall`. Every hero, health strip, age table, graph, and gap taxonomy recomputes for that window. `Overall` shows all closed history (no date clause). The drawer inherits the pill — it never resets.
-
-**What you see**
-
-1. **AI Concern** (~100 words) — fuses quant (open / MTTR / net) + qual (hotspot: top 2 components like Upgrade/MSSQL + gap% + workflow view). It auto-generates after metrics load and regenerates when you change pill, click a hero, or open a taxonomy. Use **Regenerate AI Concern** to refresh.
-2. **Hero row (5):** `Open now` · `Aged >Nd` · `Need Info` · `Waiting for Customer` · `Closed in window`. Each card shows count + one-line explainer + **Open in JIRA ↗** (exact JQL). Clicking a count opens the in-app drill; the JIRA link opens the JQL search.
-3. **Health row (4):** `MTTR median` · `MTTR p90` · `Throughput` (with net) · `Aged share`. Click to drill into throughput/MTTR (past scope).
-4. **How-long-open table:** bucket / count / median age / oldest / JQL proof.
-5. **Pulse graph:** weekly Created→Resolved for the pill window (Overall → default 2Q); toggle flow vs snapshot.
-6. **Gap taxonomy (3 cards):** `Duds` (duplicate/Won't Do/Cannot Reproduce/no linked fix) · `NDB gaps` (our gaps) · `Other-team gaps`. Double-click **NDB gaps** to expand the 4 sub-cards: `TH linked` · `Bugs` · `Improvements` · `Other`.
-7. **Drill drawer:** clicking any count/taxonomy opens the ticket list for that view with a per-view AI 2-liner + fix suggestion. The drawer keeps the pill.
-
-**Dual-click rule (all heroes):** **Count → in-app drill**, **Open in JIRA ↗ → exact JQL** — never both external.
-
-See [Oncalls requirements](../pages/Oncalls-requirements.md) and [Oncalls data-layer](../pages/Oncalls-data-layer.md) for JQL contracts, gap rules, and config. Legacy `/oncalls-legacy` keeps the pulse-only comparison.
-
-## CFD / CFI
-**Who:** TPM, QA Lead
-**Steps:** Open KPIs → CFD/CFI → Top / Non-Top → check created vs resolved.
-**Tips:** Use MTTR and status-dwell to spot aging items.
-
-## Dependency View
-**Who:** FEAT owner, TPM
-**Steps:** Open Dependency View → select release → review blockers.
-**Tips:** Links show upstream/downstream tickets.
-
-## KPI Pulse
-**Who:** TPM, Director
-**Steps:** Open KPIs → last 2 quarters strip → toggle cumulative / point-in-time.
-**Tips:** Compare trend vs snapshot.
-
-## Tips &amp; FAQ
-
-- Missing tab? Check permissions in [ADMIN_GUIDE.md](./ADMIN_GUIDE.md).
-- Need to convert a spreadsheet for bin-packing? See [Bin-Packing CSV Converter](#bin-packing-csv-converter) and the detailed [CSV Converter Guide](../product/CSV_CONVERTER_GUIDE.md).
-- Commit scope labels (deferred/mustfix/wishlist…) come from central taxonomy in `jiraFieldsConfig.json` — contact admin to change, don't edit JQL inline (`client/src/utils/jiraFields` + fieldConfig).
-- Caveats? See [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md).
-</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>USER_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>USER_GUIDE</span></nav><div class="container"><article class="prose"><h1>User Guide</h1>
+<blockquote>
+<p>For IC / TPM / FEAT / QA personas. Maintained by <code>doc-specialist</code> via <code>doc-user-guide</code>.</p>
+</blockquote>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#sprint-report">Sprint Report</a></li>
+<li><a href="#release-brief">Release Brief</a></li>
+<li><a href="#quality-column-tcms">Quality Column (TCMS)</a></li>
+<li><a href="#bin-packing-csv-converter">Bin-Packing CSV Converter</a></li>
+<li><a href="#oncalls-v2">OnCalls V2</a></li>
+<li><a href="#cfd--cfi-v2">CFD / CFI V2</a></li>
+<li><a href="#tips--faq">Tips &amp; FAQ</a></li>
+</ul>
+<h2>Getting Started</h2>
+<ol>
+<li>Log in at <code>/login</code> (RBAC via <code>allowedUsers.json</code> — see [ADMIN_GUIDE.md#rbac) (see Documentation)).</li>
+<li>Pick product + release in the header.</li>
+<li>Use sidebar tabs per your permission.</li>
+</ol>
+<h2>Sprint Report</h2>
+<p><strong>Who:</strong> TPM, FEAT owners
+<strong>Steps:</strong> Open Sprint Report → select sprint → review burndown/burnup.
+<strong>Tips:</strong> Use <code>?</code> filter help for JQL-backed counts.</p>
+<h2>Release Brief</h2>
+<p><strong>Who:</strong> Team Exec / Director
+<strong>Steps:</strong> Open Release Brief → check RAG + blockers → drill into FEAT.</p>
+<h2>Risk Details (Project Status)</h2>
+<p><strong>Who:</strong> Portfolio Manager, TPM, Director
+<strong>Steps:</strong> Open Project Status → select release → scan the Risk Details column.
+<strong>What it shows:</strong> Risk Indicator pill (Deep Red/Red/Green/Yellow) + Risk Assessment + Path to Green. Rich-text values authored in JIRA (ADF) render as plain text; URLs render as Link; empty stays Not Set. Previously cached HTML values strip on next fetch.
+<strong>Risk movement trail:</strong> When Risk Indicator has changed during the release, the badge is followed by a trail <code>Current ← Prior</code> (e.g. <code>Red ← Yellow ← Green</code>) with prior values struck-through. The trail is derived from <code>POST /api/jira/release-items-history</code> <code>checkpointHistory[key].riskIndicator</code> and rendered via <code>client/src/utils/riskHistoryDisplay.js</code> (SoT <code>RAG_COLORS</code>). Single-value history shows no trail. The same trail appears in SoS Summary table + SoS/release-versions emails; Feature Dashboard and Email Sender are intentionally out of scope (see <code>docs/pages/FeatureDashboard-data-layer.md#risk-trail-disposition</code>).</p>
+<h2>Team Management — Teams Config (Admin)</h2>
+<p><strong>Who:</strong> App admin (<code>ADMIN_PANEL_ACCESS</code> via <code>allowedUsers.json::adminUsers</code>) — NDB is one entry (<code>ERA,NDBECO</code> private) in multi-team <code>teamBoardConfig.json</code> (D43)<br><strong>Route:</strong> <code>/team-management</code> (<code>/admin</code> redirects here)</p>
+<p>Create/edit teams without hand-writing JQL — the form generates the base filter from structured inputs and derives sprint cadence from the board:</p>
+<ul>
+<li><strong>Filter — project type:</strong> <em>Shared Project</em> → <code>project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR)</code> (10 horizontals) <code>AND (inner OR)</code>; <em>Not Shared / Custom</em> → <code>(project in (ERA,NDBECO) OR (project in (shared 10) AND (inner OR)))</code> — type a comma-separated private key like <code>ERA, NDBECO</code>. Inner OR = <code>component in (…) OR &quot;primary component&quot; in (…) OR assignee in (…) OR issuetype in (&quot;Era Oncall&quot;,&quot;ERA Oncall&quot;)</code>.</li>
+<li><strong>Filter — components:</strong> Chip input with Atlas suggestions (<code>NDB</code>, <code>Era</code>, <code>NDB Databases</code>…) — validated across ENG + 10 shared projects. Press <code>Enter</code>/<code>,</code> to add, paste comma-separated, <code>×</code> 24px to remove.</li>
+<li><strong>People — Leadership DLs (PM/Dev/QA 3):</strong> three dedicated inputs auto-map to <code>assignee in (membersOf(&quot;PM-DL&quot;) OR membersOf(&quot;Dev-DL&quot;) OR membersOf(&quot;QA-DL&quot;))</code> inner OR — no re-typing in Contacts. Also used for email distribution.</li>
+<li><strong>People — Role / Function Contacts (8 rows):</strong> <code>Team</code> / <code>Serv team</code> / <code>Doc Team</code> / <code>Security team</code> / <code>Legal</code> / <code>Documentation</code> / <code>Trade Compliance</code> / <code>Others</code> — each row has chips + <strong>DL toggle</strong>: checked → <code>membersOf(&quot;DL&quot;)</code>, unchecked → direct <code>assignee in (handle)</code>. All rows inner-OR together with Leadership DLs and <code>component</code>/<code>&quot;primary component&quot;</code>/<code>issuetype</code>.</li>
+<li><strong>Preview:</strong> auto-generated Base JQL preview (indented, 2-space per <code>(</code>/<code>OR</code>/<code>AND</code>, <code>&lt;pre&gt;</code> with <strong>Copy</strong>). Editable <strong>Base Filter</strong> textarea defaults to preview; edit only to override, <strong>Reset to preview</strong> restores. Saved as both <code>base_jql</code> + <code>baseFilter</code> (compat).</li>
+<li><strong>Sprint — board + 21d + S1:</strong> enter <strong>Board #</strong> (number from Jira Agility board URL), <strong>Sprint duration</strong> (days, 1–90, default 21), <strong>S1 start</strong> (date <code>YYYY-MM-DD</code>). <strong>Load Calendar</strong> fetches <code>sprintCalendar</code> from that board; <strong>Auto-detect from project</strong> picks the best board for the chosen project and infers the calendar from <strong>recent 10 sprints</strong> median snapped to 7/14/21 (fallback 21d) — so a recent 3-week cadence is not drowned by old 14-day history. Shown as <code>S1 2022-12-06 · 21 days</code>.</li>
+</ul>
+<p>See <a href="./ADMIN_GUIDE.md#teams-config--filterproject--peopleroles--sprintboard">ADMIN_GUIDE — Teams Config</a> and <a href="../pages/Admin-requirements.md">Admin requirements/data-layer</a>.</p>
+<h2>Quality Column (TCMS)</h2>
+<p><strong>Who:</strong> TPM, FEAT owners, QA</p>
+<p>The Quality column on the Project Status table shows TCMS test results per
+feature.</p>
+<ul>
+<li><strong>Four tables per feature</strong>: <code>Release — Overall</code>, <code>Release — Last 4 weeks</code>, <code>Master — Overall</code>, <code>Master — Last 4 weeks</code>.</li>
+<li><strong>Each table is a 2×2 grid</strong>:<ul>
+<li>Rows: <strong>Functional</strong>, <strong>System</strong></li>
+<li>Columns: <strong>Manual</strong>, <strong>Automation</strong></li>
+<li>Cells: QI / Run / Passed / Failed / Rate</li>
+</ul>
+</li>
+<li><strong>Last 4 weeks</strong> window reflects runs in the most recent 4-week window;
+shows &quot;Not Set&quot; when there are no runs in that window (it does not fall
+back to Overall). Time-filtered runs now come from the corrected TCMS
+metrics endpoint (<code>/api/v1/all_test_cases/aggregate/metrics</code> with
+<code>time_filter=four_weeks</code>).</li>
+<li><strong>Caveat:</strong> Functional and System rows currently share the same source
+metrics until TCMS exposes a <code>test_category</code> filter. Do not read
+distinctness into the two rows yet. See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
+</ul>
+<h2>Bin-Packing CSV Converter</h2>
+<p><strong>Who:</strong> Portfolio Manager, TPM, Release Manager</p>
+<p>Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-column bin-packing CSV that the Bin-Packing capacity planner understands.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Open <strong>Bin-Packing</strong> from the sidebar (opens in a new tab at <code>/bin-packing/</code>).</li>
+<li>Go to the <strong>Upload CSV</strong> tab and click <strong>Convert any file (AI)</strong> above the existing file picker.</li>
+<li>Select a file (<code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>, <code>.pdf</code>, <code>.docx</code>, <code>.tsv</code> — up to 10 MB). You can also paste TSV/CSV text copied from Confluence or JIRA.</li>
+<li>Wait for conversion — the preview shows <strong>mapped</strong> headers (green), <strong>unmapped</strong> headers (yellow), and a <strong>missing-mandatory</strong> warning if <code>FEAT NUMBER</code> or <code>SUMMARY</code> could not be resolved. Warnings explain which alias to use.</li>
+<li>Click <strong>Download CSV</strong> to save the canonical file, or <strong>Replace &amp; Repack</strong> to render the converted rows directly in the Gantt without a download step.</li>
+</ol>
+<p><strong>Details:</strong> See <a href="../product/CSV_CONVERTER_GUIDE.md">CSV Converter Guide</a> for the full 26-column header contract, alias table, sizing labels, dependency syntax, and duration priority rules. The legacy CSV/XLSX upload continues to work unchanged — the converter is additive.</p>
+<p><strong>Tips:</strong></p>
+<ul>
+<li>JIRA-native headers (<code>Issue Key</code>, <code>Summary</code>, <code>Assignee</code>) resolve automatically via the product alias map — no manual renaming needed.</li>
+<li>If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.</li>
+<li>The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the <code>csv-to-binpacking</code> skill (prompt/orchestration only — deterministic logic stays in <code>shared</code>).</li>
+</ul>
+<h2>OnCalls V2</h2>
+<p><strong>Who:</strong> Team Executive / VP, TPM, Director, EM<br><strong>Route:</strong> <code>/oncalls</code> (V2) — legacy pulse view at <code>/oncalls-legacy</code></p>
+<p>This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim <em>what&#39;s hot, too-long, and what to fix</em>.</p>
+<p><strong>At a glance — timeframe pills (global)</strong></p>
+<p>Pick a pill at the top (sticky): <code>7d</code> · <code>15d</code> · <code>1M</code> · <code>1Q</code> · <code>2Q</code> · <code>1Y</code> · <code>18M</code> · <code>Overall</code>. Every hero, health strip, age table, graph, and gap taxonomy recomputes for that window. <code>Overall</code> shows all closed history (no date clause). The drawer inherits the pill — it never resets.</p>
+<p><strong>What you see</strong></p>
+<ol>
+<li><strong>AI Concern</strong> (~100 words) — fuses quant (open / MTTR / net) + qual (hotspot: top 2 components like Upgrade/MSSQL + gap% + workflow view). It auto-generates after metrics load and regenerates when you change pill, click a hero, or open a taxonomy. Use <strong>Regenerate AI Concern</strong> to refresh.</li>
+<li><strong>Hero row (5):</strong> <code>Open now</code> · <code>Aged &gt;Nd</code> · <code>Need Info</code> · <code>Waiting for Customer</code> · <code>Closed in window</code>. Each card shows count + one-line explainer + <strong>Open in JIRA ↗</strong> (exact JQL). Clicking a count opens the in-app drill; the JIRA link opens the JQL search.</li>
+<li><strong>Health row (4):</strong> <code>MTTR median</code> · <code>MTTR p90</code> · <code>Throughput</code> (with net) · <code>Aged share</code>. Click to drill into throughput/MTTR (past scope).</li>
+<li><strong>How-long-open table:</strong> bucket / count / median age / oldest / JQL proof.</li>
+<li><strong>Pulse graph:</strong> weekly Created→Resolved for the pill window (Overall → default 2Q); toggle flow vs snapshot.</li>
+<li><strong>Gap taxonomy (3 cards):</strong> <code>Duds</code> (duplicate/Won&#39;t Do/Cannot Reproduce/no linked fix) · <code>NDB gaps</code> (our gaps) · <code>Other-team gaps</code>. Double-click <strong>NDB gaps</strong> to expand the 4 sub-cards: <code>TH linked</code> · <code>Bugs</code> · <code>Improvements</code> · <code>Other</code>.</li>
+<li><strong>Drill drawer:</strong> clicking any count/taxonomy opens the ticket list for that view with a per-view AI 2-liner + fix suggestion. The drawer keeps the pill.</li>
+</ol>
+<p><strong>Dual-click rule (all heroes):</strong> <strong>Count → in-app drill</strong>, <strong>Open in JIRA ↗ → exact JQL</strong> — never both external.</p>
+<p>See <a href="../pages/Oncalls-requirements.md">Oncalls requirements</a> and <a href="../pages/Oncalls-data-layer.md">Oncalls data-layer</a> for JQL contracts, gap rules, and config. Legacy <code>/oncalls-legacy</code> keeps the pulse-only comparison.</p>
+<h2>CFD / CFI V2</h2>
+<p><strong>Who:</strong> Team Executive / VP, TPM, Director, QA Lead<br><strong>Route:</strong> <code>/cfdcfi</code> (V2) — legacy tabbed view at <code>/cfdcfi-legacy</code></p>
+<p>VP-first CFD/CFI dashboard — one timeframe pill controls every number so you can skim <em>what&#39;s hot, too-long, boomerang risk, and what to fix</em>.</p>
+<p><strong>Timeframe pills (global)</strong></p>
+<p>Pick a pill at the top (sticky): <code>7d</code> · <code>15d</code> · <code>1M</code> · <code>1Q</code> · <code>2Q</code> · <code>1Y</code> · <code>18M</code> · <code>Overall</code>. Every hero, health strip, breakdown, boomerang, pulse, and AI concern recomputes for that window. <code>Overall</code> shows all closed history (no date clause). The drawer inherits the pill — it never resets.</p>
+<p><strong>What you see</strong></p>
+<ol>
+<li><strong>AI Concern</strong> (~100w: Quantitative 40–45w + Qualitative 45–50w + Hotspot 50–60w + 2-line chase) — fuses open/aged/MTTR/net/aged-share + boomerang rate + hotspot top-2 components (Upgrade etc.) + TH/test-escape themes from the top-5 stack sample. Auto-generates after metrics load; regenerates on pill/hero/chip/view. <strong>Regenerate AI Concern</strong> refreshes.</li>
+<li><strong>Hero row (5):</strong> <code>Open now</code> · <code>Aged &gt;Nd</code> · <code>P0 open</code> · <code>P1 open</code> · <code>Closed in window</code> — each shows count + explain + <strong>Open in JIRA ↗</strong> (exact JQL). Clicking a count opens the in-app drill.</li>
+<li><strong>Health row (4):</strong> <code>MTTR median</code> · <code>MTTR p90</code> · <code>Throughput</code> (+net) · <code>Aged share</code>.</li>
+<li><strong>Chip filter row:</strong> <code>Filter:</code> + chips for component / fixVersion (release) / age bucket / test-escape / TH linkage / boomerang — single-active; clicking narrows the drawer; <strong>Clear</strong> resets.</li>
+<li><strong>Breakdowns (6):</strong> <code>By Component</code> · <code>By FixVersion</code> · <code>Age Buckets</code> (0-7/8-30/31-90/90+) · <code>Test Escape</code> · <code>Root Cause</code> · <code>Linkage</code> (TH linked / TechPubs). Each has count + JQL; click to drill.</li>
+<li><strong>Boomerang card:</strong> deferred→scope rate (<code>CFD/CFI ∩ ndb-*-deferred</code> / deferred total ×100) + <code>deferredTotal</code> + by-component / by-fixVersion; drill shows deferred keys.</li>
+<li><strong>Pulse graph:</strong> weekly Created→Resolved for the pill window (<code>Overall</code> → default 2Q); same shared <code>KpiPulseBand</code> as OnCalls.</li>
+<li><strong>Drill drawer:</strong> per-view AI 2-liner + fix suggestion; inherits timeframe + chip filter.</li>
+</ol>
+<p><strong>Dual-click (all heroes):</strong> <strong>Count → in-app drill</strong>, <strong>Open in JIRA ↗ → exact JQL</strong> — never both external.</p>
+<p>See <a href="../pages/cfdcfi/feature.md">CFD/CFI feature</a> · <a href="../pages/CfdCfi-requirements.md">CfdCfi requirements</a> · <a href="../pages/CfdCfi-data-layer.md">CfdCfi data-layer</a> · <a href="../api/cfdcfi.md">API — CFD/CFI V2</a>. Legacy <code>/cfdcfi-legacy</code> keeps the tabbed pulse comparison.</p>
+<h2>Dependency View</h2>
+<p><strong>Who:</strong> FEAT owner, TPM
+<strong>Steps:</strong> Open Dependency View → select release → review blockers.
+<strong>Tips:</strong> Links show upstream/downstream tickets.</p>
+<h2>KPI Pulse</h2>
+<p><strong>Who:</strong> TPM, Director
+<strong>Steps:</strong> Open KPIs → last 2 quarters strip → toggle cumulative / point-in-time.
+<strong>Tips:</strong> Compare trend vs snapshot.</p>
+<h2>Tips &amp; FAQ</h2>
+<ul>
+<li>Missing tab? Check permissions in <a href="./ADMIN_GUIDE.md">ADMIN_GUIDE.md</a>.</li>
+<li>Need to convert a spreadsheet for bin-packing? See <a href="#bin-packing-csv-converter">Bin-Packing CSV Converter</a> and the detailed <a href="../product/CSV_CONVERTER_GUIDE.md">CSV Converter Guide</a>.</li>
+<li>Commit scope labels (deferred/mustfix/wishlist…) come from central taxonomy in <code>jiraFieldsConfig.json</code> — contact admin to change, don&#39;t edit JQL inline (<code>client/src/utils/jiraFields</code> + fieldConfig).</li>
+<li>Caveats? See <a href="../known-issues/KNOWN_ISSUES.md">KNOWN_ISSUES.md</a>.</li>
+</ul>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

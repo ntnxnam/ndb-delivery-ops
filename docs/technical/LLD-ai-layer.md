@@ -336,6 +336,8 @@ Notes:
 - `aiConnector` also rejects `NAI_API_BASE_URL` containing `localhost`/`127.0.0.1` when `NODE_ENV=production`.
 - Admin setup is in [ADMIN_GUIDE.md](../guides/ADMIN_GUIDE.md#ai--nai-configuration) and [NAI_API_SETUP.md](../guides/NAI_API_SETUP.md); env template in `apps/delivery-ops/server/.env.example`.
 
+## 8. OnCalls V2 AI — Concern + Slice (CFD/CFI V2 mirrors this shape: `CFDCFI_CONCERN`/`CFDCFI_SLICE` in `naiService.js` with `breakdowns` + `boomerang` + top-5 `cfdcfiFields` sample → `POST /api/ai/cfdcfi-concern|slice` 400 on missing `NAI_API_KEY`; see [CFD/CFI feature](../pages/cfdcfi/feature.md) + [API](../api/cfdcfi.md) — MCP `buildCfdcfiPrompt` (Loom) → `generateCfdcfiBrief` (Lighthouse))
+
 ## 8. OnCalls V2 AI — Concern + Slice
 
 ### 8.1 Prompts

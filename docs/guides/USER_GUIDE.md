@@ -16,6 +16,7 @@ source: doc-user-guide @ 2026-11-24
 - [Quality Column (TCMS)](#quality-column-tcms)
 - [Bin-Packing CSV Converter](#bin-packing-csv-converter)
 - [OnCalls V2](#oncalls-v2)
+- [CFD / CFI V2](#cfd--cfi-v2)
 - [Tips & FAQ](#tips--faq)
 
 ## Getting Started
@@ -127,10 +128,31 @@ Pick a pill at the top (sticky): `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` �
 
 See [Oncalls requirements](../pages/Oncalls-requirements.md), [Oncalls data-layer](../pages/Oncalls-data-layer.md), and [API — OnCalls](../api/jira.md#oncalls) for JQL contracts, gap rules, report email, and config.
 
-## CFD / CFI
-**Who:** TPM, QA Lead
-**Steps:** Open KPIs → CFD/CFI → Top / Non-Top → check created vs resolved.
-**Tips:** Use MTTR and status-dwell to spot aging items.
+## CFD / CFI V2
+
+**Who:** Team Executive / VP, TPM, Director, QA Lead  
+**Route:** `/cfdcfi` (V2) — legacy tabbed view at `/cfdcfi-legacy`
+
+VP-first CFD/CFI dashboard — one timeframe pill controls every number so you can skim *what's hot, too-long, boomerang risk, and what to fix*.
+
+**Timeframe pills (global)**
+
+Pick a pill at the top (sticky): `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` · `18M` · `Overall`. Every hero, health strip, breakdown, boomerang, pulse, and AI concern recomputes for that window. `Overall` shows all closed history (no date clause). The drawer inherits the pill — it never resets.
+
+**What you see**
+
+1. **AI Concern** (~100w: Quantitative 40–45w + Qualitative 45–50w + Hotspot 50–60w + 2-line chase) — fuses open/aged/MTTR/net/aged-share + boomerang rate + hotspot top-2 components (Upgrade etc.) + TH/test-escape themes from the top-5 stack sample. Auto-generates after metrics load; regenerates on pill/hero/chip/view. **Regenerate AI Concern** refreshes.
+2. **Hero row (5):** `Open now` · `Aged >Nd` · `P0 open` · `P1 open` · `Closed in window` — each shows count + explain + **Open in JIRA ↗** (exact JQL). Clicking a count opens the in-app drill.
+3. **Health row (4):** `MTTR median` · `MTTR p90` · `Throughput` (+net) · `Aged share`.
+4. **Chip filter row:** `Filter:` + chips for component / fixVersion (release) / age bucket / test-escape / TH linkage / boomerang — single-active; clicking narrows the drawer; **Clear** resets.
+5. **Breakdowns (6):** `By Component` · `By FixVersion` · `Age Buckets` (0-7/8-30/31-90/90+) · `Test Escape` · `Root Cause` · `Linkage` (TH linked / TechPubs). Each has count + JQL; click to drill.
+6. **Boomerang card:** deferred→scope rate (`CFD/CFI ∩ ndb-*-deferred` / deferred total ×100) + `deferredTotal` + by-component / by-fixVersion; drill shows deferred keys.
+7. **Pulse graph:** weekly Created→Resolved for the pill window (`Overall` → default 2Q); same shared `KpiPulseBand` as OnCalls.
+8. **Drill drawer:** per-view AI 2-liner + fix suggestion; inherits timeframe + chip filter.
+
+**Dual-click (all heroes):** **Count → in-app drill**, **Open in JIRA ↗ → exact JQL** — never both external.
+
+See [CFD/CFI feature](../pages/cfdcfi/feature.md) · [CfdCfi requirements](../pages/CfdCfi-requirements.md) · [CfdCfi data-layer](../pages/CfdCfi-data-layer.md) · [API — CFD/CFI V2](../api/cfdcfi.md). Legacy `/cfdcfi-legacy` keeps the tabbed pulse comparison.
 
 ## Dependency View
 **Who:** FEAT owner, TPM
