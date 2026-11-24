@@ -26,7 +26,18 @@ function buildOncallConcernPrompt(intelligence: any): { userPrompt: string; vali
   const topComponents = i.componentMix || i.topComponents || [];
   // no priority fallback — that leaked P2/P1 as fake hotspot
   const top2 = (topComponents || []).slice(0, 2).map((c: any) => `${c.name || c.component || c.key} (${c.count})`).join(' + ') || 'no component hotspot';
-  const validKeys: string[] = Array.isArray(i.validKeys) ? i.validKeys : (Array.isArray(i.gapMeta?.dudsKeys) ? [...i.gapMeta.dudsKeys, ...i.gapMeta.ndbGapsKeys, ...i.gapMeta.otherTeamGapsKeys].slice(0, 20) : []);
+  // Chase = open tickets needing action (not closed gaps). Prioritize Need Info / Waiting / Aged.
+  let validKeys: string[] = Array.isArray(i.validKeys) ? i.validKeys : [];
+  if (!validKeys.length && Array.isArray(i.openTickets) && i.openTickets.length) {
+    const agedDays = i.agedOpenDays || 14;
+    const ranked = [...i.openTickets].sort((a: any, b: any) => {
+      const score = (t: any) => (t.status === 'Need Info' ? 3 : t.status === 'Waiting for Customer' ? 2 : (t.ageDays ?? 0) >= agedDays ? 1 : 0);
+      return score(b) - score(a) || (b.ageDays ?? 0) - (a.ageDays ?? 0);
+    });
+    validKeys = ranked.slice(0, 8).map((t: any) => t.key).filter(Boolean);
+  } else if (!validKeys.length && Array.isArray(i.gapMeta?.dudsKeys)) {
+    validKeys = [...i.gapMeta.dudsKeys, ...i.gapMeta.ndbGapsKeys, ...i.gapMeta.otherTeamGapsKeys].slice(0, 20);
+  }
   const validBlock = validKeys.length
     ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${validKeys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}`
     : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
@@ -38,15 +49,15 @@ function buildOncallConcernPrompt(intelligence: any): { userPrompt: string; vali
   const stacks = Array.isArray((intelligence as any).stacksPreview) ? (intelligence as any).stacksPreview : Array.isArray((intelligence as any).openTickets) ? (intelligence as any).openTickets : [];
   const blurbLines = stacks.slice(0, 5).map((s: any) => {
     const oc = s.onCallFields || {};
-    const bits = [`${s.key}: ${String(s.summary||'').slice(0,120)} [${s.status||'?'} ${s.ageDays??'?'}d]`];
+    const bits = [`${s.key}: ${String(s.summary||'').slice(0,120)} [${s.status||'?'} ${s.ageDays??'?'}d assignee:${s.assignee || 'Unassigned'} priority:${s.priority || '?'}]`];
     if (oc.onCallRelief) bits.push(`Relief:${oc.onCallRelief}`);
     if (oc.correctiveActionCompleted) bits.push(`Corrective:${oc.correctiveActionCompleted}`);
     if (oc.rootCause) bits.push(`RootCause:${String(oc.rootCause).slice(0,180).replace(/\n/g,' ')}`);
     if (oc.workaroundUsed) bits.push(`Workaround:${String(oc.workaroundUsed).slice(0,200).replace(/\n/g,' ')}`);
     return `- ${bits.join(' | ')}`;
   }).join('\n');
-  const stackBlock = blurbLines ? `STACK SAMPLE (top 5 — use for hotspot themes):\n${blurbLines}` : '';
-  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above. Use stack sample themes for hotspot narrative.`;
+  const stackBlock = blurbLines ? `STACK SAMPLE (top 5 open — use for hotspot themes):\n${blurbLines}` : '';
+  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. Chase ONLY open tickets needing action (Need Info 3d, Waiting 5d, Aged 7d) using assignee as owner — never chase closed/dud tickets. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above. Use stack sample themes for hotspot narrative.`;
   return { userPrompt, validKeys };
 }
 

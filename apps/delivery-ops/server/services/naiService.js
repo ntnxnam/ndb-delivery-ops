@@ -1641,7 +1641,7 @@ async function generatePageCompressBrief(story, validKeys = []) {
 
 const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly three sections. Use ticket content — status alone is not insight.
 
-Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY, HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5: summary + OnCall Relief + Corrective + Root Cause + Workaround + Preliminary Analysis). Summaries carry product signals (e.g. oracle, upgrade on 2.11 family).
+Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY, HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5 open tickets: summary + assignee + status + ageDays + OnCall Relief + Corrective + Root Cause + Workaround + Preliminary Analysis). Summaries carry product signals (e.g. oracle, upgrade on 2.11 family).
 
 Output format (exact headings, keep order):
 Quantitative: 1 paragraph 40-45 words — counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. Plain English.
@@ -1650,7 +1650,7 @@ Qualitative: 1 paragraph 45-50 words — what do counts mean? 58% aged + MTTR 15
 
 Hotspot: 1 paragraph 50-60 words — thematic hotspot from STACK SAMPLE content (not status). Name recurring Technical Category/Problem + concrete pattern e.g. "oracle + upgrade infra on 2.11 family — MPLS 130m timeout + stale PRE_REBOOT marker + PYTHON_BIN gap" vs "diffuse — no concentration". Tie gap (duds vs NDB other) + workflow pressure to that theme. Do not quote full Workaround commands.
 
-Then 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent.`;
+Then 2-line chase: "Ask <assignee> to <action> on <KEY> by <deadline>." — chase ONLY open tickets needing action (Need Info = ask assignee to get info from reporter, 3d; Waiting for Customer = ask assignee to ping customer, 5d; Aged>Xd = ask assignee to triage/close loop, 7d). Use assignee from STACK SAMPLE as owner; if Unassigned use "owner". Copy keys verbatim — never invent or chase closed/dud tickets.`;
 
 const ONCALL_SLICE_SYSTEM_PROMPT = `You are a TPM writing a 2-line drawer slice for one OnCalls view (Need Info, Waiting for Customer, Duds, NDB gaps, Other-team, or NDB sub-drill). Input gives slice keys, timeframe, ages, and owners. Output exactly 2 lines: line 1 = why stuck in this view (status dwell + gap% context), line 2 = "Ask <owner> to <action> on <keys> by <timeframe>" with concrete next step. Keep each line under 180 characters. Copy ticket keys verbatim — never invent or paraphrase keys.`;
 
@@ -1664,7 +1664,16 @@ function buildOncallConcernPrompt(intelligence) {
   const topComponents = i.componentMix || i.topComponents || [];
   // no priority fallback — that leaked P2/P1 as fake hotspot "Major - P2 (9)"
   const top2 = (topComponents || []).slice(0, 2).map((c) => `${c.name || c.component || c.key} (${c.count})`).join(' + ') || 'no component hotspot';
-  const validKeys = Array.isArray(i.validKeys) ? i.validKeys : [];
+  // Chase must be open tickets needing action, not closed gap taxonomy. Build validKeys from openTickets prioritized by aged/needInfo/waiting.
+  let validKeys = Array.isArray(i.validKeys) ? i.validKeys : [];
+  if (!validKeys.length && Array.isArray(i.openTickets) && i.openTickets.length) {
+    const agedDays = i.agedOpenDays || 14;
+    const ranked = [...i.openTickets].sort((a, b) => {
+      const score = (t) => (t.status === 'Need Info' ? 3 : t.status === 'Waiting for Customer' ? 2 : (t.ageDays ?? 0) >= agedDays ? 1 : 0);
+      return score(b) - score(a) || (b.ageDays ?? 0) - (a.ageDays ?? 0);
+    });
+    validKeys = ranked.slice(0, 8).map((t) => t.key).filter(Boolean);
+  }
   const validBlock = validKeys.length
     ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${validKeys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}`
     : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
@@ -1677,7 +1686,7 @@ function buildOncallConcernPrompt(intelligence) {
   const stacks = Array.isArray(i.stacksPreview) ? i.stacksPreview : Array.isArray(i.openTickets) ? i.openTickets : [];
   const blurbLines = stacks.slice(0, 5).map((s) => {
     const oc = s.onCallFields || {};
-    const bits = [`${s.key}: ${String(s.summary || '').slice(0, 120)} [${s.status || '?'} ${s.ageDays ?? '?'}d]`];
+    const bits = [`${s.key}: ${String(s.summary || '').slice(0, 120)} [${s.status || '?'} ${s.ageDays ?? '?'}d assignee:${s.assignee || 'Unassigned'} priority:${s.priority || '?'}]`];
     if (oc.onCallRelief) bits.push(`Relief:${oc.onCallRelief}`);
     if (oc.correctiveActionCompleted) bits.push(`Corrective:${oc.correctiveActionCompleted}`);
     if (oc.rootCause) bits.push(`RootCause:${String(oc.rootCause).slice(0, 180).replace(/\n/g,' ')}`);
