@@ -740,10 +740,15 @@ graph TD
 server/config/
 ├── emailConfig.json          # Default email lists
 ├── confluenceConfig.json     # Confluence base URL
-├── allowedUsers.json         # Authorized users for Release Versions
+├── allowedUsers.json         # Authorized users + adminUsers (RBAC, ADMIN_PANEL_ACCESS)
+├── teamBoardConfig.json      # Multi-team registry (D43) — `is_shared_project` + `custom_project_key` (ERA,NDBECO private) + `components` + `leader_outlook_dls[3]` PM/Dev/QA + `contacts` 8 rows → `base_jql` via teamBaseJqlService shared 10 (ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR) + `sprintCalendar:{s1StartIso,sprintDays:21}` recent-10 median
+├── kpiConfig.json            # Per-team KPI lists (created with team)
+├── jiraFieldsConfig.json     # 8-category fields + labels taxonomy SoT (client+server)
 ├── releaseVersionsColumnsConfig.json  # Column configuration
 └── releaseVersionsEmailConfig.json    # Gantt chart & email config
 ```
+
+> **Teams Config SoT:** `shared/src/services/teamBaseJqlService.ts` (`SHARED_PROJECTS_ALL`=10, `buildInnerOr` → `component OR "primary component" OR assignee in (membersOf(PM/Dev/QA+DLs)+handles) OR issuetype`) + `server/services/teamAdminService.js:buildBaseJqlFromTeam` server parity + `server/utils/sprintCalendar.js: inferSprintCalendarFromSprints` (recent 10 median → `snapSprintDays` 7/14/21, fallback 21d, max 4 pages) + `apps/delivery-ops/client/src/components/AdminPanel/TeamForm.js: buildPreview/formatJql`. See `docs/pages/Admin-*` + `docs/api/admin.md`.
 
 ### 10.2 Environment Variables
 

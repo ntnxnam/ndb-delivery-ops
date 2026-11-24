@@ -42,6 +42,22 @@ source: doc-user-guide @ 2026-11-24
 **What it shows:** Risk Indicator pill (Deep Red/Red/Green/Yellow) + Risk Assessment + Path to Green. Rich-text values authored in JIRA (ADF) render as plain text; URLs render as Link; empty stays Not Set. Previously cached HTML values strip on next fetch.
 **Risk movement trail:** When Risk Indicator has changed during the release, the badge is followed by a trail `Current ← Prior` (e.g. `Red ← Yellow ← Green`) with prior values struck-through. The trail is derived from `POST /api/jira/release-items-history` `checkpointHistory[key].riskIndicator` and rendered via `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`). Single-value history shows no trail. The same trail appears in SoS Summary table + SoS/release-versions emails; Feature Dashboard and Email Sender are intentionally out of scope (see `docs/pages/FeatureDashboard-data-layer.md#risk-trail-disposition`).
 
+## Team Management — Teams Config (Admin)
+
+**Who:** App admin (`ADMIN_PANEL_ACCESS` via `allowedUsers.json::adminUsers`) — NDB is one entry (`ERA,NDBECO` private) in multi-team `teamBoardConfig.json` (D43)  
+**Route:** `/team-management` (`/admin` redirects here)
+
+Create/edit teams without hand-writing JQL — the form generates the base filter from structured inputs and derives sprint cadence from the board:
+
+- **Filter — project type:** *Shared Project* → `project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR)` (10 horizontals) `AND (inner OR)`; *Not Shared / Custom* → `(project in (ERA,NDBECO) OR (project in (shared 10) AND (inner OR)))` — type a comma-separated private key like `ERA, NDBECO`. Inner OR = `component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype in ("Era Oncall","ERA Oncall")`.
+- **Filter — components:** Chip input with Atlas suggestions (`NDB`, `Era`, `NDB Databases`…) — validated across ENG + 10 shared projects. Press `Enter`/`,` to add, paste comma-separated, `×` 24px to remove.
+- **People — Leadership DLs (PM/Dev/QA 3):** three dedicated inputs auto-map to `assignee in (membersOf("PM-DL") OR membersOf("Dev-DL") OR membersOf("QA-DL"))` inner OR — no re-typing in Contacts. Also used for email distribution.
+- **People — Role / Function Contacts (8 rows):** `Team` / `Serv team` / `Doc Team` / `Security team` / `Legal` / `Documentation` / `Trade Compliance` / `Others` — each row has chips + **DL toggle**: checked → `membersOf("DL")`, unchecked → direct `assignee in (handle)`. All rows inner-OR together with Leadership DLs and `component`/`"primary component"`/`issuetype`.
+- **Preview:** auto-generated Base JQL preview (indented, 2-space per `(`/`OR`/`AND`, `<pre>` with **Copy**). Editable **Base Filter** textarea defaults to preview; edit only to override, **Reset to preview** restores. Saved as both `base_jql` + `baseFilter` (compat).
+- **Sprint — board + 21d + S1:** enter **Board #** (number from Jira Agility board URL), **Sprint duration** (days, 1–90, default 21), **S1 start** (date `YYYY-MM-DD`). **Load Calendar** fetches `sprintCalendar` from that board; **Auto-detect from project** picks the best board for the chosen project and infers the calendar from **recent 10 sprints** median snapped to 7/14/21 (fallback 21d) — so a recent 3-week cadence is not drowned by old 14-day history. Shown as `S1 2022-12-06 · 21 days`.
+
+See [ADMIN_GUIDE — Teams Config](./ADMIN_GUIDE.md#teams-config--filterproject--peopleroles--sprintboard) and [Admin requirements/data-layer](../pages/Admin-requirements.md).
+
 ## Quality Column (TCMS)
 
 **Who:** TPM, FEAT owners, QA

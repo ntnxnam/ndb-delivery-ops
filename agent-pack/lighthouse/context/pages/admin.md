@@ -17,7 +17,7 @@ Add/edit teams, RBAC surfaces — auto-generates `baseFilter`/`base_jql` JQL for
 
 - **Components** → `component in (...)` + `"primary component" in (...)` (both required)
 - **Contacts 8 rows** (`Team/Serv/Doc/Security/Legal/Documentation/Trade Compliance/Others` each `{entries[],isDL}`) → `assignee in (membersOf("DL") OR handle)` **inner OR** inside `(project in (shared) AND (... OR assignee ... OR issuetype))` — private teams ` (project in (ERA,NDBECO) OR (shared AND (...)))` (`shared=ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR` 10, `LEGACY=[]`, `NDBECO` private not shared)
-- **Leadership Outlook DLs** → email distribution only, **not in JQL** (`teamAdminService.js:129`)
+- **Leadership Outlook DLs (PM/Dev/QA 3)** → `leader_outlook_dls[3]` (`pmDL`/`devDL`/`qaDL` inputs) auto → `assignee in (membersOf("PM") OR membersOf("Dev") OR membersOf("QA"))` inner OR with contacts (no re-typing), also for email distribution (`teamAdminService.js:buildBaseJqlFromTeam` + `teamBaseJqlService.ts:leaderOutlookDLs`, `TeamForm.js: leaderDLParts`)
 - **UX rule:** Chip must be obvious — `ChipInput` adds on `Enter`/`,`/`paste`, shows chip `×` 24px, `DL` toggle `→ membersOf` vs `→ handle` label must be next to field; never silently ignore typed-but-not-committed input on Save (Blocking UX if Save ignores visible chip/input)
 
 ## Prompts

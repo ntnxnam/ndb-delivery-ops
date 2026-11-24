@@ -175,16 +175,22 @@ No.
   "success": true,
   "defaultTeamId": "ndb",
   "teams": [{
-    "id": "ndb", "name": "NDB", "projectKey": "ERA", "boardId": 2888,
-    "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
-    "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 21 },
+    "id": "ndb", "name": "NDB",
+    "is_shared_project": false, "custom_project_key": "ERA,NDBECO",
+    "components": ["NDB","Era","NDB Databases","NDB Service"],
+    "leader_outlook_dls": ["Team-PM-Org","Team-Dev-Org","Team-QA-Org"],
+    "contacts": { "team": { "entries": ["Team-Ashish-Mohindroo-Org"], "isDL": true } },
+    "baseFilter": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB) OR \"primary component\" in (\"NDB\") OR assignee in (membersOf(\"Team-PM-Org\")) OR issuetype in (\"Era Oncall\"))))",
+    "base_jql": "(project in (ERA, NDBECO) OR (...))",
+    "projectKey": "ERA", "boardId": 2888,
+    "sprintCalendar": { "s1StartIso": "2022-12-06", "sprintDays": 21 },
     "featureComponents": { "NDB": ["NDB-Core"] },
-    "sprintScope": "filter=NDB-All-Base-Filter",
+    "sprintScope": "(project in (ERA, NDBECO) OR (...))",
     "kpiCount": 5
   }]
 }
 ```
-`sprintScope` and `kpiCount` are computed, not stored.
+`sprintScope` (derived via `sprintScopeFromBaseFilter` — strip `ORDER BY` + trailing `statusCategory != Done`) and `kpiCount` are computed, not stored. `is_shared_project`/`custom_project_key`/`components`/`leader_outlook_dls`/`contacts`/`base_jql` reflect Teams Config 2026-11-24 shapes (shared 10, sprint 21d default).
 
 **Error responses**
 | HTTP code | When | Client should |
@@ -199,33 +205,42 @@ No.
 
 ### POST /api/admin/teams
 
-**Purpose**: Add a team to the registry using the values confirmed after Detect.
+**Purpose**: Add a team to the registry — JQL is generated from structured filter/sprint/people inputs, not a hand-pasted `filter=…` (now derived via `teamBaseJqlService` / `teamAdminService.buildBaseJqlFromTeam`).
 
 **Auth**: super-admin
 
 **Request**
 - Body params:
-  - `name` (string, required)
-  - `baseFilter` (string, required)
-  - `projectKey` (string, required) — uppercased; must match `^[A-Z][A-Z0-9_]+$`
-  - `sprintCalendar` (object, required) — `{ s1StartIso: "YYYY-MM-DD", sprintDays: 1–90 }`
-  - `id` (string, optional) — team code; defaults to a slug of `name` (lowercase letters, digits, dashes, max 40)
-  - `boardId` (number, optional)
-  - `featureComponents` (object, optional) — `{ "<FEAT component>": ["<primary component>", ...] }`
+  - `name` (string, required) — team display name (e.g. `NDB`)
+  - `is_shared_project` (boolean, required) — `true` → shared-10 only; `false` → `custom_project_key` + shared-10 (see JQL shapes below)
+  - `custom_project_key` (string \| null, required when `is_shared_project=false`) — comma-separated private project keys, uppercased, `^[A-Z][A-Z0-9_]+$` per key (e.g. `ERA,NDBECO` for NDB; empty legacy `""` forbidden)
+  - `components` (string[], required ≥1) — validated across ENG + 10 horizontals (`ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR`); shown as chips with Atlas suggestions in `TeamForm.js`
+  - `leader_outlook_dls` (string[] \| string, optional) — **PM / Dev / QA 3 Outlook DLs** (e.g. `["Team-PM-Org@nutanix.com","Team-Dev-Org@nutanix.com","Team-QA-Org@nutanix.com"]`) → auto `assignee in (membersOf(PM) OR membersOf(Dev) OR membersOf(QA))` inner OR, no re-typing in Contacts; also for email distribution
+  - `contacts` (object, optional) — 8 role rows `team`/`serv_team`/`doc_team`/`security_team`/`legal`/`documentation`/`trade_compliance`/`others` each `{ entries: string[], isDL: boolean }` (`isDL=true` → `membersOf("DL")`, else direct handle) → combined `assignee in (…)` inner OR with Leadership DLs via `buildInnerOr`; `ChipInput` commits on `Enter`/`,`/`paste`/`blur`
+  - `baseFilter` / `base_jql` (string, derived) — auto-generated JQL preview (`buildPreview` → indented `formatJql`); editable textarea defaults to preview (`Reset to preview`); saved as both keys for compat. If omitted, server generates from `components`+`contacts`+`leader_outlook_dls`.
+  - `sprintCalendar` (object, conditional) — `{ s1StartIso: "YYYY-MM-DD", sprintDays: 1–90 }` — now **optional** on create (auto-detected on first board fetch), but form shows `boardId` + `sprintDays` (default **21**) + `S1 start`; `parseSprintCalendar` validates ISO + 1–90; inferred via `inferSprintCalendarFromSprints` recent-10 median snapped 7/14/21 (fallback 21)
+  - `id` (string, optional) — team code; defaults to slug of `name` (lowercase letters, digits, dashes, max 40)
+  - `boardId` (number, optional) — Jira Agility board number from board URL (`GET /rest/agile/1.0/board/{id}`), one per team
+  - `projectKey` / `featureComponents` (legacy compat, optional) — `projectKey` derived from `is_shared_project ? "ENG" : first `custom_project_key` token; `featureComponents` still accepted but `components` is canonical
 - Any other field (including the removed `projectType`, `versionPatterns`, `sprintBaseFilter`, `userConfig`) is ignored.
 
+**JQL shapes (shared 10 = `ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR`, `LEGACY=[]`, SoT `teamBaseJqlService.ts:SHARED_PROJECTS_ALL`)**
+
+- Shared: `project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR "primary component" in (…) OR assignee in (membersOf(PM/Dev/QA + contacts DLs/handles)) OR issuetype in ("Era Oncall","ERA Oncall"))`
+- Private: `(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype …)))` — NDB sample; other teams replace `ERA,NDBECO` with their `custom_project_key`.
+
 **Server flow**
-`admin.js` → `teamAdminService.createTeam` → validate → append to `teamBoardConfig.json` (`saveTeamBoardConfig`) → add an empty KPI list for the team in `kpiConfig.json`
+`admin.js` → `teamAdminService.createTeam` → `dedupeTrim`/`parseCommaList` normalize → `buildBaseJqlFromTeam` generates `base_jql`/`baseFilter` from `components`+`leader_outlook_dls`+`contacts` (unless caller provided `baseFilter`) → validate `is_shared_project=false` requires non-empty `custom_project_key` with valid `PROJECT_KEY_PATTERN`, `components` ≥1, `leader_outlook_dls` optional but deduped, `sprintCalendar` via `parseSprintCalendar` if present → append to `teamBoardConfig.json` (`saveTeamBoardConfig`) → add empty KPI list for the team in `kpiConfig.json`
 
 **Response shape**
 ```json
-{ "success": true, "team": { "id": "data-lens", "name": "Data Lens", "projectKey": "DL", "baseFilter": "filter=DL", "sprintCalendar": { "s1StartIso": "2024-10-23", "sprintDays": 14 } }, "message": "Team \"Data Lens\" created successfully" }
+{ "success": true, "team": { "id": "ndb", "name": "NDB", "is_shared_project": false, "custom_project_key": "ERA,NDBECO", "components": ["NDB","Era","NDB Databases","NDB Service"], "leader_outlook_dls": ["Team-PM-Org","Team-Dev-Org","Team-QA-Org"], "contacts": { "team": { "entries": ["Team-Ashish-Mohindroo-Org"], "isDL": true } }, "base_jql": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (...)))", "baseFilter": "(project in (ERA, NDBECO) OR (...))", "projectKey": "ERA", "boardId": 2888, "sprintCalendar": { "s1StartIso": "2022-12-06", "sprintDays": 21 } }, "message": "Team \"NDB\" created successfully" }
 ```
 
 **Error responses**
 | HTTP code | When | Client should |
 |-----------|------|---------------|
-| 400 | Missing name/baseFilter, invalid projectKey or team code, missing/invalid `sprintCalendar` | Show `message` |
+| 400 | Missing `name`/`components`, `custom_project_key` missing/invalid when `is_shared_project=false`, invalid project key pattern, `sprintCalendar` invalid (bad ISO or sprintDays 1–90), `components` empty | Show `message` |
 | 403 | Not a super admin | Show Access Denied |
 | 409 | Team code already exists | Ask for a different code |
 | 429 | General rate limit (JSON body `{ success: false, error, message }`) | Wait and retry |
@@ -238,16 +253,16 @@ Invalidates the `teamBoardConfig.json` mtime cache.
 
 ### PUT /api/admin/teams/:teamId
 
-**Purpose**: Update an existing team; the team code cannot change.
+**Purpose**: Update an existing team; the team code cannot change. JQL is regenerated from `components`/`leader_outlook_dls`/`contacts` when those fields change (parity with `buildPreview`).
 
 **Auth**: super-admin
 
 **Request**
 - Path: `teamId` (string)
-- Body: any of `name`, `baseFilter`, `projectKey`, `boardId`, `sprintCalendar`, `featureComponents` (same rules as POST). Omitted fields keep their current values; `id` in the body is ignored.
+- Body: any of `name`, `is_shared_project`, `custom_project_key`, `components`, `leader_outlook_dls`, `contacts`, `baseFilter`/`base_jql`, `projectKey`, `boardId`, `sprintCalendar`, `featureComponents` (same rules as POST; new Teams Config fields `is_shared_project`/`custom_project_key`/`components`/`leader_outlook_dls`/`contacts` trigger JQL regeneration via `buildBaseJqlFromTeam` when `components`/`contacts`/`is_shared_project`/`custom_project_key` change). Omitted fields keep their current values; `id` in the body is ignored. `sprintCalendar` remains optional; `baseFilterTouched` guard in `TeamForm` preserves manual override on edit unless reset.
 
 **Server flow**
-`admin.js` → `teamAdminService.updateTeam` → merge onto the stored team → strip legacy fields → validate → `saveTeamBoardConfig`
+`admin.js` → `teamAdminService.updateTeam` → merge onto stored team → if `is_shared_project`/`components`/`custom_project_key`/`contacts` changed, regenerate `base_jql`/`baseFilter` via `buildBaseJqlFromTeam` → strip legacy fields (`projectType`, `versionPatterns`, `sprintBaseFilter`) → validate (`PROJECT_KEY_PATTERN`, `components` ≥1, `custom_project_key` when not shared) → `saveTeamBoardConfig`
 
 **Response shape**
 ```json

@@ -1,7 +1,7 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-source: doc-known-issues @ 2026-05-19
+lastUpdated: 2026-11-24
+source: doc-known-issues @ 2026-11-24
 ---
 
 # Known Issues
@@ -14,7 +14,7 @@ source: doc-known-issues @ 2026-05-19
 |---|---|---|---|---|---|
 | — | _No deferred JIRA tickets at this time_ | — | — | — | — |
 
-*Last verified: 2026-05-19 — re-check JIRA: `project = NDB AND labels in (known-issue, deferred) OR status = Deferred`*
+*Last verified: 2026-11-24 — re-check JIRA: `project = NDB AND labels in (known-issue, deferred) OR status = Deferred` — no deferred tickets; Teams Config filter/sprint/people JQL verified (shared 10, sprint 21d, 3 DLs).* 
 
 ## Known Limitations (no JIRA ticket yet)
 
