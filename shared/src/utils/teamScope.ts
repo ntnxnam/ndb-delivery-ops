@@ -16,6 +16,8 @@ export interface VersionLike {
 export interface TeamScopeInput {
   id?: string;
   baseFilter?: string | null;
+  base_jql?: string | null;
+  baseJql?: string | null;
   projectKey?: string | null;
 }
 
@@ -68,8 +70,8 @@ export function sprintScopeFromBaseFilter(baseFilter: string | null | undefined)
   return filter.replace(TRAILING_NOT_DONE, '').trim();
 }
 
-export function requireBaseFilter(team: TeamScopeInput | null | undefined): string {
-  const filter = typeof team?.baseFilter === 'string' ? team.baseFilter.trim() : '';
+export function requireBaseFilter(team: (TeamScopeInput & { base_jql?: string; baseJql?: string }) | null | undefined): string {
+  const filter = typeof (team as any)?.baseFilter === 'string' ? String((team as any).baseFilter).trim() : typeof (team as any)?.base_jql === 'string' ? String((team as any).base_jql).trim() : typeof (team as any)?.baseJql === 'string' ? String((team as any).baseJql).trim() : '';
   if (!filter) {
     const err = new Error(
       `Team "${team?.id || 'unknown'}" has no baseFilter in Admin. Set the team base filter, then Fetch again.`

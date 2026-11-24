@@ -46,6 +46,12 @@ export interface TeamConfig {
   projectKey: string;
   homeProjects: string[];
   baseFilter: string;
+  base_jql?: string;
+  is_shared_project?: boolean;
+  custom_project_key?: string | null;
+  components?: string[];
+  leader_outlook_dls?: string[];
+  contacts?: Record<string, { entries: string[]; isDL: boolean }>;
   releasePrefixes: string[];
   releaseRegexes: string[];
   labelPrefix: string;

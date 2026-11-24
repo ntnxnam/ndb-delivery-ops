@@ -194,7 +194,10 @@ function getTeamField(teamId, fieldName) {
  * @returns {string|null}
  */
 function getTeamBaseFilter(teamId) {
-  return getTeamField(teamId, 'baseFilter');
+  const team = getTeamById(teamId);
+  if (!team) return null;
+  const v = team.baseFilter || team.base_jql || team.baseJql || '';
+  return v ? String(v).trim() : null;
 }
 
 /**

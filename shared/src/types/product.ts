@@ -67,6 +67,18 @@ export interface ProductConfig {
    * derived from it (see `sprintScopeFromBaseFilter`).
    */
   baseFilter: string;
+  /** Auto-generated base JQL (new) — mirrors baseFilter for downstream compat */
+  base_jql?: string;
+  /** Whether team lives in shared project only (true) or has private custom project(s) */
+  is_shared_project?: boolean;
+  /** Comma-separated private project keys (e.g. "ERA,NDBECO") when is_shared_project==false */
+  custom_project_key?: string | null;
+  /** Flat component list used for JQL (ENG+horizontal filtered) */
+  components?: string[];
+  /** Outlook DL emails for leadership notifications */
+  leader_outlook_dls?: string[];
+  /** Per-row contacts: Team/Serv/Doc/Security/Legal/Documentation/Trade Compliance/Others */
+  contacts?: Record<string, { entries: string[]; isDL: boolean }>;
   /**
    * Components in the feature project, keyed by component name, each
    * listing its Primary Component children.
