@@ -32,6 +32,8 @@ export interface BuildBaseJqlParams {
   // Aggregated assignee DLs/Handles across 8 contact rows — caller merges them
   assigneeDLs: string[]; // DL names → membersOf("...")
   assigneeHandles: string[]; // Jira handles → direct
+  // Leadership DLs (PM, Dev, QA) — 3 Outlook DLs that automatically become assignee DLs (membersOf) for JQL
+  leaderOutlookDLs?: string[];
   // Optional: include legacy projects in shared set (default false to keep JQL minimal)
   includeLegacy?: boolean;
   // Optional: include oncall issuetype clause (default true to match legacy JQL)
@@ -89,8 +91,9 @@ function buildInnerOr(params: BuildBaseJqlParams): string {
   // "primary component" in (...) — same list, always quoted per JQL spec
   parts.push(`"primary component" in (${comps.map(c => `"${esc(c)}"`).join(', ')})`);
 
-  // assignee in (...) — membersOf for DLs + direct handles, baked with OR
-  const dlParts = dedupeAndTrim(params.assigneeDLs).map(dl => `membersOf("${esc(dl)}")`);
+  // assignee in (...) — membersOf for DLs + direct handles + Leadership DLs (PM/Dev/QA auto-included)
+  const leaderDLs = dedupeAndTrim(params.leaderOutlookDLs || []);
+  const dlParts = dedupeAndTrim([...leaderDLs, ...params.assigneeDLs]).map(dl => `membersOf("${esc(dl)}")`);
   const handleParts = dedupeAndTrim(params.assigneeHandles);
   const allAssignee = [...dlParts, ...handleParts];
   if (allAssignee.length > 0) {
