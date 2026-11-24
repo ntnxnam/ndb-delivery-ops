@@ -99,6 +99,10 @@ function ChipInput({ value, onChange, placeholder, suggestions = [], error }) {
       addChip(text);
     }
   };
+  const onBlurAdd = () => {
+    if (inputVal.trim()) addChip(inputVal.trim());
+    setTimeout(() => setShowSug(false), 150);
+  };
   return (
     <div style={{ border: `1px solid ${error ? '#fca5a5' : '#d1d5db'}`, borderRadius: '4px', padding: '4px', minHeight: '34px', background: error ? '#fef2f2' : 'white' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -109,7 +113,7 @@ function ChipInput({ value, onChange, placeholder, suggestions = [], error }) {
           value={inputVal}
           onChange={e => { setInputVal(e.target.value); setShowSug(true); }}
           onFocus={() => setShowSug(true)}
-          onBlur={() => setTimeout(() => setShowSug(false), 150)}
+          onBlur={onBlurAdd}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder={value.length === 0 ? placeholder : ''}
@@ -174,6 +178,27 @@ function initialComponentsFor(team) {
   }
   return [];
 }
+function formatJql(jql) {
+  if (!jql || jql.startsWith('(add ')) return jql;
+  let out = String(jql);
+  out = out.replace(/\s+OR\s+/g, '\nOR\n');
+  out = out.replace(/\s+AND\s+/g, '\nAND\n');
+  out = out.replace(/\(\s*/g, '(\n  ');
+  out = out.replace(/\s*\)/g, '\n)');
+  out = out.replace(/,\s*/g, ', ');
+  const lines = out.split('\n');
+  let indent = 0;
+  const formatted = lines.map(l => {
+    const t = l.trim();
+    if (!t) return '';
+    if (t === ')') indent = Math.max(0, indent - 1);
+    const res = '  '.repeat(indent) + t;
+    if (t.endsWith('(')) indent += 1;
+    return res;
+  }).filter(l => l !== '').join('\n');
+  return formatted;
+}
+
 function buildPreview({ isShared, customKey, components, contactRows }) {
   const comps = dedupeTrim(components.filter(Boolean));
   if (comps.length === 0) return '(add at least one component to preview)';
@@ -385,14 +410,14 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <label style={fieldLabel}>Leadership Outlook DL(s)</label>
+        <label style={fieldLabel}>Leadership Outlook DL(s) — for emails, not JQL</label>
         <ChipInput value={leaderDLs} onChange={setLeaderDLs} placeholder="team-ndb-leads@nutanix.com, era-managers@nutanix.com" suggestions={[]} />
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Optional. Used for report distribution.</p>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Optional. For report distribution only — does not affect JQL.</p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 8px' }}>Role / Function Contacts (Jira handles or DLs)</h3>
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px' }}>Each row: add handles/DLs, tick DL if entries are distribution lists (→ membersOf).</p>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 8px' }}>Role / Function Contacts — affects JQL assignee</h3>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px' }}>Each row → <code>assignee in (membersOf("DL") OR handle)</code> inner OR with <code>component</code> / <code>"primary component"</code> / <code>issuetype</code>. Tick DL for distribution lists.</p>
         {CONTACT_ROWS.map(row => (
           <div key={row.key} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ flex: '1 1 220px', minWidth: '200px' }}>
@@ -412,7 +437,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
           <div style={{ fontSize: '12px', fontWeight: 600 }}>Auto-generated Base JQL (preview)</div>
           <button type="button" onClick={copyPreview} style={button(copyOk ? '#15803d' : '#e5e7eb', copyOk ? 'white' : '#374151')}>{copyOk ? 'Copied!' : 'Copy'}</button>
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap' }}>{previewJql}</div>
+        <pre style={{ fontFamily: 'monospace', fontSize: '12px', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto', maxHeight: '240px', margin: 0 }}>{formatJql(previewJql)}</pre>
         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>Saved as <code>base_jql</code> + <code>baseFilter</code> (compat). Rest of app reads it unchanged.</div>
       </div>
 
@@ -423,9 +448,12 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
-        <label style={fieldLabel}>Sprint Board</label>
+        <label style={fieldLabel}>Sprint Board — for full team</label>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px' }}>One board number + sprint duration + base date (S1 start) applies to whole team.</p>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input aria-label="Sprint board ID" style={{ ...input, flex: '1 1 160px' }} value={selection.boardId} onChange={e => setSelection(p => ({ ...p, boardId: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="2888" inputMode="numeric" />
+          <input aria-label="Sprint board ID" style={{ ...input, flex: '1 1 120px' }} value={selection.boardId} onChange={e => setSelection(p => ({ ...p, boardId: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Board #" inputMode="numeric" />
+          <input aria-label="Sprint duration days" type="number" min="1" max="90" style={{ ...input, flex: '0 0 110px' }} value={selection.sprintCalendar?.sprintDays || ''} onChange={e => setSelection(p => ({ ...p, sprintCalendar: p.sprintCalendar ? { ...p.sprintCalendar, sprintDays: Number(e.target.value) || 21 } : { s1StartIso: new Date().toISOString().slice(0,10), sprintDays: Number(e.target.value) || 21 } }))} placeholder="21 days" />
+          <input aria-label="Base date S1 start" type="date" style={{ ...input, flex: '0 0 150px' }} value={selection.sprintCalendar?.s1StartIso || ''} onChange={e => setSelection(p => ({ ...p, sprintCalendar: { s1StartIso: e.target.value, sprintDays: p.sprintCalendar?.sprintDays || 21 } }))} />
           <button type="button" onClick={async () => {
             const id = selection.boardId;
             if (!id) return;
