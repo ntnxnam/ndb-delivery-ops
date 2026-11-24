@@ -222,8 +222,6 @@ function assertValidTeam(team) {
   }
   if (!team.sprintCalendar) {
     // sprintCalendar optional for new flow — will be auto-detected on first board fetch, don't block Save
-    // throw httpError(400, 'sprintCalendar is required', 'Detect the sprint calendar from the team\'s scrum board.');
-  }
   }
 }
 
