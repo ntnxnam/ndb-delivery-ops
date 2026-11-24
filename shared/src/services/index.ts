@@ -45,6 +45,7 @@ export * from './sprintMetrics.js';
 export * from './releaseIntelligence.js';
 export * from './jiraDiggingAskService.js';
 export * from './jqlBuilder.js';
+export * from './teamBaseJqlService.js';
 export * from './csvConverterService.js';
 export * from './productColumnAliases.js';
 export * from '../constants/binPackingSizing.js';
