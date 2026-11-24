@@ -1,117 +1,148 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOYMENT_FEATURE_FLAGS — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOYMENT_FEATURE_FLAGS</span></nav><div class="container"><article class="prose"><h1>Deployment Feature Flags Guide</h1>
-<p>This application supports environment-based feature flags to enable/disable the Release Versions page for different deployments.</p>
-<h2>Feature Flag: <code>REACT_APP_ENABLE_TRENDS_AND_RISK</code></h2>
-<p>Controls visibility of the <strong>Trends &amp; risk</strong> section on the Release Versions tab (snapshots, pie chart, tasks-over-time, risk moves). Hidden by default while the feature is in development.</p>
-<ul>
-<li>Set <code>REACT_APP_ENABLE_TRENDS_AND_RISK=true</code> in the client environment (e.g. in <code>client/.env</code>) to show the section.</li>
-<li>Unset or <code>false</code>: section is not rendered.</li>
-</ul>
-<h2>Feature Flag: <code>REACT_APP_ENABLE_RELEASE_VERSIONS</code></h2>
-<p>This flag controls whether the Release Versions page (<code>/all-status</code>) is included in the build.</p>
-<h3>Behavior:</h3>
-<ul>
-<li><strong>Development (local testing)</strong>: Defaults to <code>true</code> - both pages are available for easy testing</li>
-<li><strong>Production (deployment)</strong>: Must be explicitly set to <code>true</code> - defaults to email-only if not set</li>
-</ul>
-<h3>Values:</h3>
-<ul>
-<li><code>true</code> - Both Email Sender and Release Versions pages are available</li>
-<li><code>false</code> - Only Email Sender page is available</li>
-<li>Unset in production - Only Email Sender page (default for production)</li>
-<li>Unset in development - Both pages available (default for development)</li>
-</ul>
-<h2>Local Development</h2>
-<p>For local testing, <strong>both pages are enabled by default</strong>. You don&#39;t need to set anything - just run:</p>
-<pre><code class="language-bash">cd client
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOYMENT_FEATURE_FLAGS — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOYMENT_FEATURE_FLAGS</span></nav><div class="container"><article class="prose"><pre># Deployment Feature Flags Guide
+
+This application supports environment-based feature flags to enable/disable the Release Versions page for different deployments.
+
+## Feature Flag: `REACT_APP_ENABLE_TRENDS_AND_RISK`
+
+Controls visibility of the **Trends &amp; risk** section on the Release Versions tab (snapshots, pie chart, tasks-over-time, risk moves). Hidden by default while the feature is in development.
+
+- Set `REACT_APP_ENABLE_TRENDS_AND_RISK=true` in the client environment (e.g. in `client/.env`) to show the section.
+- Unset or `false`: section is not rendered.
+
+## Feature Flag: `REACT_APP_ENABLE_RELEASE_VERSIONS`
+
+This flag controls whether the Release Versions page (`/all-status`) is included in the build.
+
+### Behavior:
+- **Development (local testing)**: Defaults to `true` - both pages are available for easy testing
+- **Production (deployment)**: Must be explicitly set to `true` - defaults to email-only if not set
+
+### Values:
+- `true` - Both Email Sender and Release Versions pages are available
+- `false` - Only Email Sender page is available
+- Unset in production - Only Email Sender page (default for production)
+- Unset in development - Both pages available (default for development)
+
+## Local Development
+
+For local testing, **both pages are enabled by default**. You don't need to set anything - just run:
+
+```bash
+cd client
 npm start
-</code></pre>
-<p>Both Email Sender (<code>/</code>) and Release Versions (<code>/all-status</code>) will be available.</p>
-<p>To test email-only mode locally, create a <code>.env</code> file in the <code>client/</code> directory:</p>
-<pre><code class="language-bash">REACT_APP_ENABLE_RELEASE_VERSIONS=false
-</code></pre>
-<h2>Deployment Options</h2>
-<h3>Option 1: Email Sender Only (Default for Production)</h3>
-<p>This is the standard deployment that includes only the Email Sender functionality.</p>
-<p><strong>Build Command:</strong></p>
-<pre><code class="language-bash">cd client
+```
+
+Both Email Sender (`/`) and Release Versions (`/all-status`) will be available.
+
+To test email-only mode locally, create a `.env` file in the `client/` directory:
+```bash
+REACT_APP_ENABLE_RELEASE_VERSIONS=false
+```
+
+## Deployment Options
+
+### Option 1: Email Sender Only (Default for Production)
+
+This is the standard deployment that includes only the Email Sender functionality.
+
+**Build Command:**
+```bash
+cd client
 npm run build:email-only
-</code></pre>
-<p><strong>Or set environment variable:</strong></p>
-<pre><code class="language-bash">REACT_APP_ENABLE_RELEASE_VERSIONS=false npm run build
-</code></pre>
-<p><strong>What&#39;s included:</strong></p>
-<ul>
-<li>Email Sender page (<code>/</code>)</li>
-<li>Authentication</li>
-<li>JIRA integration for email sending</li>
-<li><strong>NOT included:</strong> Release Versions page</li>
-</ul>
-<h3>Option 2: Full Deployment (Both Pages)</h3>
-<p>This deployment includes both Email Sender and Release Versions pages.</p>
-<p><strong>Build Command:</strong></p>
-<pre><code class="language-bash">cd client
+```
+
+**Or set environment variable:**
+```bash
+REACT_APP_ENABLE_RELEASE_VERSIONS=false npm run build
+```
+
+**What's included:**
+- Email Sender page (`/`)
+- Authentication
+- JIRA integration for email sending
+- **NOT included:** Release Versions page
+
+### Option 2: Full Deployment (Both Pages)
+
+This deployment includes both Email Sender and Release Versions pages.
+
+**Build Command:**
+```bash
+cd client
 npm run build:full
-</code></pre>
-<p><strong>Or set environment variable:</strong></p>
-<pre><code class="language-bash">REACT_APP_ENABLE_RELEASE_VERSIONS=true npm run build
-</code></pre>
-<p><strong>What&#39;s included:</strong></p>
-<ul>
-<li>Email Sender page (<code>/</code>)</li>
-<li>Release Versions page (<code>/all-status</code>) - only accessible to <code>namratha.singh</code></li>
-<li>Authentication</li>
-<li>JIRA integration for both pages</li>
-</ul>
-<h2>Using Environment Files</h2>
-<p>You can create environment files in the <code>client/</code> directory:</p>
-<h3><code>.env.production</code> (Email Sender Only)</h3>
-<pre><code class="language-bash">REACT_APP_ENABLE_RELEASE_VERSIONS=false
-</code></pre>
-<h3><code>.env.production.full</code> (Both Pages)</h3>
-<pre><code class="language-bash">REACT_APP_ENABLE_RELEASE_VERSIONS=true
-</code></pre>
-<p>Then copy the appropriate file before building:</p>
-<pre><code class="language-bash"># For email-only deployment
+```
+
+**Or set environment variable:**
+```bash
+REACT_APP_ENABLE_RELEASE_VERSIONS=true npm run build
+```
+
+**What's included:**
+- Email Sender page (`/`)
+- Release Versions page (`/all-status`) - only accessible to `namratha.singh`
+- Authentication
+- JIRA integration for both pages
+
+## Using Environment Files
+
+You can create environment files in the `client/` directory:
+
+### `.env.production` (Email Sender Only)
+```bash
+REACT_APP_ENABLE_RELEASE_VERSIONS=false
+```
+
+### `.env.production.full` (Both Pages)
+```bash
+REACT_APP_ENABLE_RELEASE_VERSIONS=true
+```
+
+Then copy the appropriate file before building:
+```bash
+# For email-only deployment
 cp .env.production.email-only .env.production
 npm run build
 
 # For full deployment
 cp .env.production.full .env.production
 npm run build
-</code></pre>
-<h2>Deployment Script Usage</h2>
-<p>The <code>deploy.sh</code> script respects the <code>ENABLE_RELEASE_VERSIONS</code> environment variable:</p>
-<pre><code class="language-bash"># Deploy Email Sender only (default)
+```
+
+## Deployment Script Usage
+
+The `deploy.sh` script respects the `ENABLE_RELEASE_VERSIONS` environment variable:
+
+```bash
+# Deploy Email Sender only (default)
 sudo ./deploy.sh
 
 # Deploy with Release Versions enabled
 sudo ENABLE_RELEASE_VERSIONS=true ./deploy.sh
-</code></pre>
-<h2>Verification</h2>
-<p>After deployment, verify which version is running:</p>
-<ol>
-<li><p><strong>Email Sender Only:</strong></p>
-<ul>
-<li>Navigate to the application</li>
-<li>You should only see &quot;Email Sender&quot; in the navigation</li>
-<li>Accessing <code>/all-status</code> will redirect to <code>/</code></li>
-</ul>
-</li>
-<li><p><strong>Full Deployment:</strong></p>
-<ul>
-<li>Navigate to the application</li>
-<li>If logged in as <code>namratha.singh</code>, you should see both &quot;Email Sender&quot; and &quot;Release Versions&quot; links</li>
-<li>Both pages should be accessible</li>
-</ul>
-</li>
-</ol>
-<h2>Hard Refresh Fix</h2>
-<p>The authentication state is now initialized immediately from localStorage, so hard refresh (CMD+SHIFT+R) will maintain the current route instead of redirecting to <code>/</code>.</p>
-<h2>Notes</h2>
-<ul>
-<li>The feature flag is evaluated at <strong>build time</strong>, not runtime</li>
-<li>To change the feature flag, you must rebuild the application</li>
-<li>The Release Versions page requires <code>namratha.singh</code> authentication even when enabled</li>
-<li>All dependencies are installed regardless of the feature flag (code is tree-shaken during build)</li>
-</ul>
-</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+```
+
+## Verification
+
+After deployment, verify which version is running:
+
+1. **Email Sender Only:**
+   - Navigate to the application
+   - You should only see "Email Sender" in the navigation
+   - Accessing `/all-status` will redirect to `/`
+
+2. **Full Deployment:**
+   - Navigate to the application
+   - If logged in as `namratha.singh`, you should see both "Email Sender" and "Release Versions" links
+   - Both pages should be accessible
+
+## Hard Refresh Fix
+
+The authentication state is now initialized immediately from localStorage, so hard refresh (CMD+SHIFT+R) will maintain the current route instead of redirecting to `/`.
+
+## Notes
+
+- The feature flag is evaluated at **build time**, not runtime
+- To change the feature flag, you must rebuild the application
+- The Release Versions page requires `namratha.singh` authentication even when enabled
+- All dependencies are installed regardless of the feature flag (code is tree-shaken during build)
+
+</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

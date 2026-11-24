@@ -9,10 +9,10 @@
     {
       "id": "ndb",
       "name": "NDB",
-      "boardId": 2888,
-      "projectKey": "ERA",
+      "boardId": 4556,
+      "projectKey": "ENG",
       "featureProjectKey": "FEAT",
-      "baseFilter": "filter=NDB-All-Base-Filter and status not in (Closed, Done, Approved)",
+      "baseFilter": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",
@@ -48,8 +48,8 @@
         }
       ],
       "sprintCalendar": {
-        "s1StartIso": "2024-10-23",
-        "sprintDays": 21
+        "s1StartIso": "2022-12-06",
+        "sprintDays": 14
       },
       "defaultReleaseVersion": "NDB-2.12",
       "featureComponents": {
@@ -119,7 +119,17 @@
       },
       "defaultRelease": "NDB-2.12",
       "storyPointsField": "customfield_10002",
-      "displayName": "NDB"
+      "displayName": "NDB",
+      "base_jql": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
+      "is_shared_project": true,
+      "custom_project_key": null,
+      "components": [
+        "NDB",
+        "Era",
+        "NDB Databases"
+      ],
+      "leader_outlook_dls": [],
+      "contacts": {}
     },
     {
       "id": "prism-infra",

@@ -1,119 +1,54 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>ADMIN_GUIDE</span></nav><div class="container"><article class="prose"><h1>Admin Guide</h1>
-<blockquote>
-<p>For architects / admins. Maintained by <code>doc-specialist</code> via <code>doc-admin-guide</code>.</p>
-</blockquote>
-<h2>Prerequisites</h2>
-<ul>
-<li>Node 20+, PM2, Nginx</li>
-<li>JIRA PAT (Bearer per D40) — <code>JIRA_PAT</code> env</li>
-</ul>
-<h2>Installation</h2>
-<pre><code class="language-bash">./scripts/start.sh   # backend 8001, frontend 8899
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>ADMIN_GUIDE</span></nav><div class="container"><article class="prose"><pre># Admin Guide
+
+> For architects / admins. Maintained by `doc-specialist` via `doc-admin-guide`.
+
+## Prerequisites
+
+- Node 20+, PM2, Nginx
+- JIRA PAT (Bearer per D40) — `JIRA_PAT` env
+
+## Installation
+
+```bash
+./scripts/start.sh   # backend 8001, frontend 8899
 ./scripts/stop.sh
-</code></pre>
-<h2>Configuration</h2>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>File</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>JIRA_PAT</code></td>
-<td>env</td>
-<td>Bearer only, no Basic</td>
-</tr>
-<tr>
-<td>Team boards</td>
-<td><code>server/config/teamBoardConfig.json</code></td>
-<td>customfield_10360 for sprints</td>
-</tr>
-<tr>
-<td>Quality column</td>
-<td><code>server/config/releaseVersionsColumnsConfig.json</code> (<code>columns.quality</code>)</td>
-<td>Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service <code>server/services/tcmsService.js</code> (time-filtered metrics via <code>/api/v1/all_test_cases/aggregate/metrics</code>, `time_filter=all</td>
-</tr>
-<tr>
-<td>Risk trail</td>
-<td><code>client/src/utils/riskHistoryDisplay.js</code> (SoT <code>RAG_COLORS</code>) + <code>server/services/releaseHistoryService.js</code> (<code>includeRiskIndicator:true</code>)</td>
-<td><code>POST /api/jira/release-items-history</code> → <code>checkpointHistory[key].riskIndicator</code>; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions)</td>
-</tr>
-<tr>
-<td>RBAC</td>
-<td><code>server/config/allowedUsers.json</code> + <code>server/routes/auth.js::LEGACY_PERMISSION_MAPPING</code></td>
-<td>Keep client mirror in sync</td>
-</tr>
-<tr>
-<td>SMTP</td>
-<td><code>mailrelay.dyn.nutanix.com:25</code></td>
-<td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
-</tr>
-<tr>
-<td>OnCalls V2</td>
-<td><code>server/config/oncallConfig.json</code> + <code>server/services/oncallDashboardV2.js</code> + <code>oncallGapService.js</code></td>
-<td>Timeframe pills <code>7d</code>/<code>15d</code>/<code>1M</code>/<code>1Q</code>/<code>2Q</code>/<code>1Y</code>/<code>18M</code>/<code>Overall</code> (<code>Overall</code> = no date clause); workflow buckets <code>needInfoDays</code> (10) / <code>waitingForCustomerDays</code> (21) / <code>agedOpenDays</code> (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (<code>gapProjectPrefixes</code> tenant override, default <code>NDB</code>); health MTTR/throughput; component hotspot. See <a href="../pages/Oncalls-requirements.md">Oncalls requirements</a> + <a href="../pages/Oncalls-data-layer.md">Oncalls data-layer</a> + <a href="../api/jira.md#oncalls">API — OnCalls V2</a></td>
-</tr>
-<tr>
-<td><code>jiraFieldsConfig.json</code></td>
-<td><code>server/config</code> + <code>client/src/config</code></td>
-<td>Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via <code>server/utils/jiraFieldsConfig.js</code> getFieldId/getLabelJql and <code>client/src/utils/jiraFields</code> + fieldConfig ensureLoaded() via <code>GET /api/config/jira-fields</code></td>
-</tr>
-</tbody></table>
-<h2>AI / NAI Configuration</h2>
-<p>All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.</p>
-<h3>Environment variables (canonical <code>NAI_*</code>)</h3>
-<p>Five <code>NAI_*</code> variables are canonical. No <code>AI_*</code> fallback is read — only <code>NAI_*</code> env vars (or <code>aiConfig.json</code> defaults for non-secrets) are considered.</p>
-<table>
-<thead>
-<tr>
-<th>Var</th>
-<th>Secret?</th>
-<th>Required</th>
-<th>Default / fallback</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>NAI_API_KEY</code></td>
-<td>yes</td>
-<td>Required for any AI call</td>
-<td><em>(none)</em> — must be set in <code>server/.env</code></td>
-<td>NuToken from <code>tokens.corp.nutanix.com</code>. No fallback file. Server error: <code>NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.</code></td>
-</tr>
-<tr>
-<td><code>NAI_API_BASE_URL</code></td>
-<td>no</td>
-<td>Yes, if overriding</td>
-<td><code>aiConfig.json:baseUrl</code> (<code>https://tokens.corp.nutanix.com/enterpriseai/gateway/v1</code>)</td>
-<td>Env overrides <code>aiConfig.json</code> (no <code>AI_*</code> fallback). Server error: <code>NAI_API_BASE_URL is not set…</code></td>
-</tr>
-<tr>
-<td><code>NAI_DEFAULT_MODEL</code></td>
-<td>no</td>
-<td>Yes, if overriding</td>
-<td><code>aiConfig.json:defaultModel</code> (<code>beam-1-501b</code>)</td>
-<td>Also accepts legacy <code>NAI_MODEL</code>. Server error: <code>NAI_DEFAULT_MODEL is not set…</code></td>
-</tr>
-<tr>
-<td><code>NAI_MAX_TOKENS</code></td>
-<td>no</td>
-<td>Yes, if overriding</td>
-<td><code>aiConfig.json:maxTokens</code> (8192)</td>
-<td>Env parsed as int (no <code>AI_*</code> fallback). Server error: <code>NAI_MAX_TOKENS is not set…</code></td>
-</tr>
-<tr>
-<td><code>NAI_REQUEST_TIMEOUT</code></td>
-<td>no</td>
-<td>Yes, if overriding</td>
-<td><code>aiConfig.json:requestTimeoutMs</code> (120000 ms)</td>
-<td>Env parsed as int ms (no <code>AI_*</code> fallback). Server error: <code>NAI_REQUEST_TIMEOUT is not set…</code></td>
-</tr>
-</tbody></table>
-<p>Full table + rationale in <a href="./AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> and <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</p>
-<h3>Precedence diagram</h3>
-<pre><code>per-call override (aiConnector options)
+```
+
+## Configuration
+
+| Setting | File | Notes |
+|---|---|---|
+| `JIRA_PAT` | env | Bearer only, no Basic |
+| Team boards | `server/config/teamBoardConfig.json` | customfield_10360 for sprints |
+| Quality column | `server/config/releaseVersionsColumnsConfig.json` (`columns.quality`) | Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service `server/services/tcmsService.js` (time-filtered metrics via `/api/v1/all_test_cases/aggregate/metrics`, `time_filter=all|four_weeks`, `target={milestone}-qcow2`) |
+| Risk trail | `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`) + `server/services/releaseHistoryService.js` (`includeRiskIndicator:true`) | `POST /api/jira/release-items-history` → `checkpointHistory[key].riskIndicator`; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions) |
+| RBAC | `server/config/allowedUsers.json` + `server/routes/auth.js::LEGACY_PERMISSION_MAPPING` | Keep client mirror in sync |
+| SMTP | `mailrelay.dyn.nutanix.com:25` | No auth; see `server/services/emailService.js` (sacred) |
+| OnCalls V2 | `server/config/oncallConfig.json` + `server/services/oncallDashboardV2.js` + `oncallGapService.js` | Timeframe pills `7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall` (`Overall` = no date clause); workflow buckets `needInfoDays` (10) / `waitingForCustomerDays` (21) / `agedOpenDays` (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (`gapProjectPrefixes` tenant override, default `NDB`); health MTTR/throughput; component hotspot. See [Oncalls requirements](../pages/Oncalls-requirements.md) + [Oncalls data-layer](../pages/Oncalls-data-layer.md) + [API — OnCalls V2](../api/jira.md#oncalls) |
+| `jiraFieldsConfig.json` | `server/config` + `client/src/config` | Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via `server/utils/jiraFieldsConfig.js` getFieldId/getLabelJql and `client/src/utils/jiraFields` + fieldConfig ensureLoaded() via `GET /api/config/jira-fields` |
+
+## AI / NAI Configuration
+
+All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.
+
+### Environment variables (canonical `NAI_*`)
+
+Five `NAI_*` variables are canonical. No `AI_*` fallback is read — only `NAI_*` env vars (or `aiConfig.json` defaults for non-secrets) are considered.
+
+| Var | Secret? | Required | Default / fallback | Notes |
+|---|---|---|---|---|
+| `NAI_API_KEY` | yes | Required for any AI call | *(none)* — must be set in `server/.env` | NuToken from `tokens.corp.nutanix.com`. No fallback file. Server error: `NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.` |
+| `NAI_API_BASE_URL` | no | Yes, if overriding | `aiConfig.json:baseUrl` (`https://tokens.corp.nutanix.com/enterpriseai/gateway/v1`) | Env overrides `aiConfig.json` (no `AI_*` fallback). Server error: `NAI_API_BASE_URL is not set…` |
+| `NAI_DEFAULT_MODEL` | no | Yes, if overriding | `aiConfig.json:defaultModel` (`beam-1-501b`) | Also accepts legacy `NAI_MODEL`. Server error: `NAI_DEFAULT_MODEL is not set…` |
+| `NAI_MAX_TOKENS` | no | Yes, if overriding | `aiConfig.json:maxTokens` (8192) | Env parsed as int (no `AI_*` fallback). Server error: `NAI_MAX_TOKENS is not set…` |
+| `NAI_REQUEST_TIMEOUT` | no | Yes, if overriding | `aiConfig.json:requestTimeoutMs` (120000 ms) | Env parsed as int ms (no `AI_*` fallback). Server error: `NAI_REQUEST_TIMEOUT is not set…` |
+
+Full table + rationale in [AI_API_CONFIGURATION.md](./AI_API_CONFIGURATION.md) and [NAI_API_SETUP.md](./NAI_API_SETUP.md).
+
+### Precedence diagram
+
+```
+per-call override (aiConnector options)
         │
         ▼
   NAI_* env var (no AI_* fallback)
@@ -124,132 +59,56 @@
         │
         ▼
   missing → throw actionable error naming the NAI_* var
-</code></pre>
-<ul>
-<li><strong>Secrets</strong> (<code>NAI_API_KEY</code>): env only — never in <code>aiConfig.json</code>.</li>
-<li><strong>Non-secrets</strong> (<code>NAI_API_BASE_URL</code>, <code>NAI_DEFAULT_MODEL</code>, <code>NAI_MAX_TOKENS</code>, <code>NAI_REQUEST_TIMEOUT</code>): <code>NAI_*</code> env → <code>aiConfig.json</code> → throw <code>NAI_* is not set</code> (no <code>AI_*</code> fallback).</li>
-<li>Implementation: <code>shared/src/connectors/aiConnector.ts</code> and <code>apps/delivery-ops/server/.env.example</code>.</li>
-</ul>
-<h3>Bin-Packing Converter — server / auth</h3>
-<table>
-<thead>
-<tr>
-<th>Concern</th>
-<th>Detail</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Route</td>
-<td><code>POST /api/bin-packing/convert</code> → <code>apps/delivery-ops/server/routes/binPackingConvert.js</code> (mounted at <code>/api/bin-packing</code> in <code>server/index.js</code>)</td>
-</tr>
-<tr>
-<td>Auth</td>
-<td><code>apiLimiter</code> + <code>validateJiraTokenMiddleware</code> — same guard as <code>POST /api/ai/chat</code> and <code>/api/jira-digging</code>. Unauthenticated requests receive 401 before any file processing.</td>
-</tr>
-<tr>
-<td>Input</td>
-<td>Accepts both <code>multipart/form-data</code> (primary) and <code>JSON { filename, contentBase64, mimeType, productId }</code> (alternate). Max file 10 MB (multipart) / ~13 MB b64 (JSON).</td>
-</tr>
-<tr>
-<td>Body parser</td>
-<td><code>bodyParser.json({ limit: &#39;15mb&#39; })</code> in <code>server/index.js</code> — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. <code>bodyParser.urlencoded</code> also <code>15mb</code>.</td>
-</tr>
-<tr>
-<td>Temp files</td>
-<td>Per-request <code>mkdtemp</code> via <code>shared/src/services/csvConverterService.ts</code>; never executes from the upload dir (downloaded files are untrusted — see project <code>AGENTS.md</code> environment note).</td>
-</tr>
-</tbody></table>
-<h2>OnCalls V2 — extra config</h2>
-<table>
-<thead>
-<tr>
-<th>Concern</th>
-<th>Detail</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Route</td>
-<td><code>GET /api/jira/oncalls?timeframe=&amp;v2=</code> + <code>GET /api/jira/oncalls/v2</code> + <code>POST /api/jira/oncalls/refresh</code> + <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code> — see <a href="../api/jira.md#oncalls">API — OnCalls</a></td>
-</tr>
-<tr>
-<td>Auth</td>
-<td><code>validateJiraTokenMiddleware</code> + <code>apiLimiter</code> (same as <code>POST /api/ai/chat</code>); permission <code>kpi_view</code></td>
-</tr>
-<tr>
-<td>MCP</td>
-<td><code>mcp/shared/tools/buildOncallPrompt.ts</code> (Loom, read-only, builds concern prompt) → <code>mcp/lighthouse</code> <code>generateOncallBrief</code> (calls NAI)</td>
-</tr>
-<tr>
-<td>NDB override</td>
-<td><code>oncallConfig.json:gapProjectPrefixes</code> — set your tenant prefix (e.g. <code>[&quot;ENG&quot;,&quot;PRISM&quot;]</code>) to replace <code>NDB</code> default; component-contains-NDB fallback stays</td>
-</tr>
-<tr>
-<td>Overall</td>
-<td><code>Overall</code> pill sends no <code>resolved &gt;= -Nd</code> clause — payload uses <code>seed AND statusCategory=Done</code> only; QA spot-check: pick one pill and verify hero JQL matches count</td>
-</tr>
-</tbody></table>
-<h2>RBAC</h2>
-<p>See <code>RBAC_GUIDE.md</code> and <code>docs/api/</code> per <code>api-docs-required.mdc</code>.</p>
-<h2>Deployment</h2>
-<ul>
-<li>PM2: <code>pm2 start ecosystem.config.js</code></li>
-<li>Nginx: proxy 8899 → delivery-ops</li>
-</ul>
-<h2>Troubleshooting</h2>
-<table>
-<thead>
-<tr>
-<th>Symptom</th>
-<th>Cause</th>
-<th>Fix</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Missing sidebar tab</td>
-<td>Permission not mapped</td>
-<td>Sync <code>LEGACY_PERMISSION_MAPPING</code> both sides, re-test permissions</td>
-</tr>
-<tr>
-<td>401 from JIRA</td>
-<td>PAT expired</td>
-<td>Rotate <code>JIRA_PAT</code>, Bearer header</td>
-</tr>
-<tr>
-<td><code>NAI_API_KEY is not set</code> on AI call</td>
-<td><code>NAI_API_KEY</code> missing from <code>server/.env</code></td>
-<td>Set <code>NAI_API_KEY</code> (NuToken from <code>tokens.corp.nutanix.com</code>); see <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a></td>
-</tr>
-<tr>
-<td><code>NAI_API_BASE_URL is not set</code></td>
-<td>No <code>NAI_API_BASE_URL</code> env and <code>aiConfig.json</code> missing/misconfigured</td>
-<td>Set <code>NAI_API_BASE_URL</code> in env or ensure <code>server/config/aiConfig.json</code> has <code>baseUrl</code></td>
-</tr>
-<tr>
-<td>401 on <code>POST /api/bin-packing/convert</code></td>
-<td>Missing/invalid JIRA Bearer token</td>
-<td>Same fix as <code>POST /api/ai/chat</code> — supply <code>Authorization: Bearer &lt;JIRA_PAT&gt;</code></td>
-</tr>
-<tr>
-<td>401 on <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code></td>
-<td>Missing JIRA token / <code>kpi_view</code></td>
-<td>Supply <code>Authorization: Bearer &lt;PAT&gt;</code>; check <code>allowedUsers.json</code> maps <code>kpi_view</code></td>
-</tr>
-<tr>
-<td>413 / 422 on bin-packing upload</td>
-<td>File &gt; 10 MB or unsupported type</td>
-<td>Reduce file or convert to CSV/XLSX; see <a href="../product/CSV_CONVERTER_GUIDE.md">CSV_CONVERTER_GUIDE.md</a></td>
-</tr>
-<tr>
-<td>TCMS Quality shows &quot;Not Set&quot;</td>
-<td>TCMS timeout / no runs in window</td>
-<td>Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use <code>/api/v1/all_test_cases/aggregate/metrics</code> (<code>time_filter=four_weeks</code>, <code>target={milestone}-qcow2</code>).</td>
-</tr>
-<tr>
-<td>TCMS Functional/System identical</td>
-<td>Clone caveat (pending <code>test_category</code> filter)</td>
-<td>Expected until TCMS ships filter; see <code>docs/tcms-rows-followup.md</code></td>
-</tr>
-</tbody></table>
-<h2>Appendix</h2>
-<p>Full env var table in <code>TECH_DESIGN.md</code>.</p>
-</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+```
+
+- **Secrets** (`NAI_API_KEY`): env only — never in `aiConfig.json`.
+- **Non-secrets** (`NAI_API_BASE_URL`, `NAI_DEFAULT_MODEL`, `NAI_MAX_TOKENS`, `NAI_REQUEST_TIMEOUT`): `NAI_*` env → `aiConfig.json` → throw `NAI_* is not set` (no `AI_*` fallback).
+- Implementation: `shared/src/connectors/aiConnector.ts` and `apps/delivery-ops/server/.env.example`.
+
+### Bin-Packing Converter — server / auth
+
+| Concern | Detail |
+|---|---|
+| Route | `POST /api/bin-packing/convert` → `apps/delivery-ops/server/routes/binPackingConvert.js` (mounted at `/api/bin-packing` in `server/index.js`) |
+| Auth | `apiLimiter` + `validateJiraTokenMiddleware` — same guard as `POST /api/ai/chat` and `/api/jira-digging`. Unauthenticated requests receive 401 before any file processing. |
+| Input | Accepts both `multipart/form-data` (primary) and `JSON { filename, contentBase64, mimeType, productId }` (alternate). Max file 10 MB (multipart) / ~13 MB b64 (JSON). |
+| Body parser | `bodyParser.json({ limit: '15mb' })` in `server/index.js` — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. `bodyParser.urlencoded` also `15mb`. |
+| Temp files | Per-request `mkdtemp` via `shared/src/services/csvConverterService.ts`; never executes from the upload dir (downloaded files are untrusted — see project `AGENTS.md` environment note). |
+
+## OnCalls V2 — extra config
+
+| Concern | Detail |
+|---------|--------|
+| Route | `GET /api/jira/oncalls?timeframe=&amp;v2=` + `GET /api/jira/oncalls/v2` + `POST /api/jira/oncalls/refresh` + `POST /api/ai/oncall-concern` / `oncall-slice` — see [API — OnCalls](../api/jira.md#oncalls) |
+| Auth | `validateJiraTokenMiddleware` + `apiLimiter` (same as `POST /api/ai/chat`); permission `kpi_view` |
+| MCP | `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only, builds concern prompt) → `mcp/lighthouse` `generateOncallBrief` (calls NAI) |
+| NDB override | `oncallConfig.json:gapProjectPrefixes` — set your tenant prefix (e.g. `["ENG","PRISM"]`) to replace `NDB` default; component-contains-NDB fallback stays |
+| Overall | `Overall` pill sends no `resolved >= -Nd` clause — payload uses `seed AND statusCategory=Done` only; QA spot-check: pick one pill and verify hero JQL matches count |
+
+## RBAC
+
+See `RBAC_GUIDE.md` and `docs/api/` per `api-docs-required.mdc`.
+
+## Deployment
+
+- PM2: `pm2 start ecosystem.config.js`
+- Nginx: proxy 8899 → delivery-ops
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Missing sidebar tab | Permission not mapped | Sync `LEGACY_PERMISSION_MAPPING` both sides, re-test permissions |
+| 401 from JIRA | PAT expired | Rotate `JIRA_PAT`, Bearer header |
+| `NAI_API_KEY is not set` on AI call | `NAI_API_KEY` missing from `server/.env` | Set `NAI_API_KEY` (NuToken from `tokens.corp.nutanix.com`); see [NAI_API_SETUP.md](./NAI_API_SETUP.md) |
+| `NAI_API_BASE_URL is not set` | No `NAI_API_BASE_URL` env and `aiConfig.json` missing/misconfigured | Set `NAI_API_BASE_URL` in env or ensure `server/config/aiConfig.json` has `baseUrl` |
+| 401 on `POST /api/bin-packing/convert` | Missing/invalid JIRA Bearer token | Same fix as `POST /api/ai/chat` — supply `Authorization: Bearer &lt;JIRA_PAT>` |
+| 401 on `POST /api/ai/oncall-concern` / `oncall-slice` | Missing JIRA token / `kpi_view` | Supply `Authorization: Bearer &lt;PAT>`; check `allowedUsers.json` maps `kpi_view` |
+| 413 / 422 on bin-packing upload | File > 10 MB or unsupported type | Reduce file or convert to CSV/XLSX; see [CSV_CONVERTER_GUIDE.md](../product/CSV_CONVERTER_GUIDE.md) |
+| TCMS Quality shows "Not Set" | TCMS timeout / no runs in window | Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`). |
+| TCMS Functional/System identical | Clone caveat (pending `test_category` filter) | Expected until TCMS ships filter; see `docs/tcms-rows-followup.md` |
+
+## Appendix
+
+Full env var table in `TECH_DESIGN.md`.
+</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
