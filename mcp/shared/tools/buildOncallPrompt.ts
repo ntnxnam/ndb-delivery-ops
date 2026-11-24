@@ -7,11 +7,11 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Env } from '../config/env.js';
 
-const TIMEFRAMES = ['15d', '1M', '1Q', '2Q', '1Y', '18M', 'Overall'] as const;
+const TIMEFRAMES = ['7d', '15d', '1M', '1Q', '2Q', '1Y', '18M', 'Overall'] as const;
 
 const inputSchema = {
   teamId: z.string().optional().describe('Team ID (e.g. ndb)'),
-  timeframe: z.enum(TIMEFRAMES).optional().default('2Q').describe('Global timeframe pill'),
+  timeframe: z.enum(TIMEFRAMES).optional().default('7d').describe('Global timeframe pill'),
   view: z.string().optional().describe('Drawer view: Need Info | Waiting for Customer | duds | ndbGaps | otherTeamGaps | thLinked etc.'),
   dashboard: z.record(z.string(), z.any()).optional().describe('Dashboard payload from /api/jira/oncalls/v2 (avoid extra JIRA fetch)'),
 };

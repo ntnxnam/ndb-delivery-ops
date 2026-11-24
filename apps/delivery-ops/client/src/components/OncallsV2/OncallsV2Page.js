@@ -57,17 +57,57 @@ function ExplainHero({ label, cell, explain, jiraBase, onOpen, meta }) {
   );
 }
 
+function deriveKeysForView(mode, dash, agedDays) {
+  if (!dash || !mode) return [];
+  const openTickets = dash.openTickets || [];
+  const closedPreview = dash.closedStacksPreview || [];
+  const gapMeta = dash.gapMeta || {};
+  // Closed taxonomy modes use gapMeta or closed preview
+  const closedModes = ['duds', 'ndbGaps', 'otherTeamGaps', 'thLinked', 'bugs', 'improvements', 'other', 'closedInWindow'];
+  if (closedModes.includes(mode)) {
+    if (mode === 'closedInWindow') return closedPreview.slice(0, 12).map((t) => t.key).filter(Boolean);
+    if (gapMeta.dudsKeys && mode === 'duds') return (gapMeta.dudsKeys || []).slice(0, 12);
+    if (gapMeta.ndbGapsKeys && mode === 'ndbGaps') return (gapMeta.ndbGapsKeys || []).slice(0, 12);
+    if (gapMeta.otherTeamGapsKeys && mode === 'otherTeamGaps') return (gapMeta.otherTeamGapsKeys || []).slice(0, 12);
+    if (gapMeta.ndbSubKeys && gapMeta.ndbSubKeys[mode]) return (gapMeta.ndbSubKeys[mode] || []).slice(0, 12);
+    return closedPreview.slice(0, 12).map((t) => t.key).filter(Boolean);
+  }
+  if (mode === 'agedOpen') return openTickets.filter((t) => (t.ageDays ?? 0) >= (agedDays ?? 14)).slice(0, 12).map((t) => t.key);
+  if (mode === 'needInfo' || mode === 'waiting') {
+    const target = mode === 'needInfo' ? 'need info' : 'waiting for customer';
+    return openTickets.filter((t) => String(t.status || '').toLowerCase() === target).slice(0, 12).map((t) => t.key);
+  }
+  if (mode === 'throughput') return openTickets.slice(0, 12).map((t) => t.key);
+  return openTickets.slice(0, 12).map((t) => t.key);
+}
+
 export default function OncallsV2Page() {
   const { selectedTeamId, hasTeamSelected } = useTeam();
   const {
     timeframe, setTimeframe, data, loading, refreshing, error, refresh,
     aiConcern, aiConcernState, aiConcernError, generateConcern,
-  } = useOncallsV2(selectedTeamId, '2Q');
+    aiSlice, aiSliceState, aiSliceError, aiSliceView, generateSlice, resetAiSlice,
+  } = useOncallsV2(selectedTeamId, '7d');
 
   const [drill, setDrill] = useState(null); // { mode, scope }
   const [showNdbSub, setShowNdbSub] = useState(false);
-  const closeDrill = useCallback(() => setDrill(null), []);
-  const openDrill = useCallback((mode, scope = 'open') => setDrill({ mode, scope }), []);
+  const closeDrill = useCallback(() => {
+    setDrill(null);
+    resetAiSlice();
+  }, [resetAiSlice]);
+  const openDrill = useCallback((mode, scope = 'open') => {
+    setDrill({ mode, scope });
+    if (mode && data) {
+      const keys = deriveKeysForView(mode, data, data.agedOpenDays ?? 14);
+      const meta = {
+        count: data.hero?.[mode]?.count ?? data.workflow?.[mode]?.count ?? data.gapTaxonomy?.[mode]?.count ?? data.gapTaxonomy?.ndbSub?.[mode]?.count ?? keys.length,
+        agedDays: data.agedOpenDays ?? 14,
+        throughput: data.health?.throughput ?? null,
+        mttrMedian: data.health?.mttrMedian ?? null,
+      };
+      generateSlice(mode, keys, meta);
+    }
+  }, [data, generateSlice]);
 
   const jiraBase = data?.jiraBaseUrl || '';
   const agedDays = data?.agedOpenDays ?? 14;
@@ -135,11 +175,11 @@ export default function OncallsV2Page() {
             <ExplainHero label="Closed in window" cell={hero.closedInWindow} meta={`window: ${timeframe}`} explain="Resolved in selected timeframe (Overall = all closed)" jiraBase={jiraBase} onOpen={() => openDrill('closedInWindow', 'open')} />
           </div>
 
-          {/* Health row 4 */}
+          {/* Health row 4 — metric-click-dual-action: count → in-app drill, Open in JIRA ↗ → exact JQL */}
           <div className="ocv2-health-row">
-            <ExplainHero label="MTTR median" cell={{ count: health.mttrMedian ?? '—', jql: data.pulse?.mttr?.jql }} meta="created → resolved" explain="Typical time to clear" jiraBase={jiraBase} onOpen={() => openDrill('throughput', 'open')} />
-            <ExplainHero label="MTTR p90" cell={{ count: health.p90 ?? '—', jql: data.pulse?.mttr?.jql }} meta="slow tail" explain="90th percentile wait" jiraBase={jiraBase} onOpen={() => openDrill('throughput', 'open')} />
-            <ExplainHero label="Throughput" cell={{ count: health.throughput ?? 0, jql: data.pulse?.heroes?.resolvedWindow?.jql }} meta={`net ${health.net ?? 0}`} explain="Resolved in window" jiraBase={jiraBase} onOpen={() => openDrill('throughput', 'open')} />
+            <ExplainHero label="MTTR median" cell={{ count: health.mttrMedian ?? '—', jql: data.pulse?.mttr?.jql || data.pulse?.heroes?.resolvedWindow?.jql }} meta="created → resolved" explain="Typical time to clear" jiraBase={jiraBase} onOpen={() => openDrill('mttr', 'past')} />
+            <ExplainHero label="MTTR p90" cell={{ count: health.p90 ?? '—', jql: data.pulse?.mttr?.jql || data.pulse?.heroes?.resolvedWindow?.jql }} meta="slow tail" explain="90th percentile wait" jiraBase={jiraBase} onOpen={() => openDrill('mttr', 'past')} />
+            <ExplainHero label="Throughput" cell={{ count: health.throughput ?? 0, jql: data.pulse?.heroes?.resolvedWindow?.jql || data.pulse?.mttr?.jql }} meta={`net ${health.net ?? 0}`} explain="Resolved in window" jiraBase={jiraBase} onOpen={() => openDrill('throughput', 'past')} />
             <ExplainHero label="Aged share" cell={{ count: `${health.agedShare ?? 0}%`, jql: hero.agedOpen?.jql }} meta={`${hero.agedOpen?.count ?? 0} of ${hero.open?.count ?? 0} open`} explain="Aged / open ratio" jiraBase={jiraBase} onOpen={() => openDrill('agedOpen', 'open')} />
           </div>
 
@@ -184,13 +224,13 @@ export default function OncallsV2Page() {
           {/* Created vs Resolved graph reuse KpiPulseBand */}
           <KpiPulseBand pulse={data.pulse} jiraBaseUrl={jiraBase} title={`OnCalls pulse · ${timeframe}`} domainHint="OnCalls" loading={loading && !data.pulse} error={data.errors?.pulse || null} />
 
-          {/* Taxonomy 3 cards */}
+          {/* Taxonomy 3 cards — count → gap drawer (past scope), Jira link → exact JQL */}
           <div className="ocv2-taxonomy">
-            <ExplainHero label="Duds" cell={taxonomy.duds} explain="Duplicate / Won't Do / Cannot Reproduce / no linked fix" jiraBase={jiraBase} meta="resolution gaps" onOpen={() => openDrill('duds', 'open')} />
+            <ExplainHero label="Duds" cell={taxonomy.duds} explain="Duplicate / Won't Do / Cannot Reproduce / no linked fix" jiraBase={jiraBase} meta="resolution gaps" onOpen={() => openDrill('duds', 'past')} />
             <div onDoubleClick={() => setShowNdbSub((v) => !v)} title="Double-click to expand NDB breakdown" style={{ cursor: 'pointer' }}>
-              <ExplainHero label="NDB gaps" cell={taxonomy.ndbGaps} explain="Linked fix in NDB project family — double-click to expand" jiraBase={jiraBase} meta="our gaps" onOpen={() => openDrill('ndbGaps', 'open')} />
+              <ExplainHero label="NDB gaps" cell={taxonomy.ndbGaps} explain="Linked fix in NDB project family — double-click to expand" jiraBase={jiraBase} meta="our gaps" onOpen={() => openDrill('ndbGaps', 'past')} />
             </div>
-            <ExplainHero label="Other-team gaps" cell={taxonomy.otherTeamGaps} explain="Linked fix outside NDB" jiraBase={jiraBase} meta="externalize" onOpen={() => openDrill('otherTeamGaps', 'open')} />
+            <ExplainHero label="Other-team gaps" cell={taxonomy.otherTeamGaps} explain="Linked fix outside NDB" jiraBase={jiraBase} meta="externalize" onOpen={() => openDrill('otherTeamGaps', 'past')} />
           </div>
 
           {/* NDB drill 4 sub-cards — hidden until double-click */}
@@ -198,10 +238,10 @@ export default function OncallsV2Page() {
             <>
               <h3>NDB sub-drill (inherits {timeframe})</h3>
               <div className="ocv2-ndb-drill">
-                <ExplainHero label="TH linked" cell={ndbSub.thLinked} explain="NDB gaps with TechHelp" jiraBase={jiraBase} onOpen={() => openDrill('thLinked', 'open')} />
-                <ExplainHero label="Bugs" cell={ndbSub.bugs} explain="Linked bug type" jiraBase={jiraBase} onOpen={() => openDrill('bugs', 'open')} />
-                <ExplainHero label="Improvements" cell={ndbSub.improvements} explain="Linked improvement/story" jiraBase={jiraBase} onOpen={() => openDrill('improvements', 'open')} />
-                <ExplainHero label="Other" cell={ndbSub.other} explain="Remaining NDB gaps" jiraBase={jiraBase} onOpen={() => openDrill('other', 'open')} />
+                <ExplainHero label="TH linked" cell={ndbSub.thLinked} explain="NDB gaps with TechHelp" jiraBase={jiraBase} onOpen={() => openDrill('thLinked', 'past')} />
+                <ExplainHero label="Bugs" cell={ndbSub.bugs} explain="Linked bug type" jiraBase={jiraBase} onOpen={() => openDrill('bugs', 'past')} />
+                <ExplainHero label="Improvements" cell={ndbSub.improvements} explain="Linked improvement/story" jiraBase={jiraBase} onOpen={() => openDrill('improvements', 'past')} />
+                <ExplainHero label="Other" cell={ndbSub.other} explain="Remaining NDB gaps" jiraBase={jiraBase} onOpen={() => openDrill('other', 'past')} />
               </div>
             </>
           )}
@@ -211,15 +251,21 @@ export default function OncallsV2Page() {
           </div>
           <PathDrill
             mode={drill?.mode}
-            tickets={['duds','ndbGaps','otherTeamGaps','thLinked','bugs','improvements','other','closedInWindow'].includes(drill?.mode) ? (data.closedStacksPreview || []) : data.openTickets}
+            tickets={['duds','ndbGaps','otherTeamGaps','thLinked','bugs','improvements','other','closedInWindow','throughput','mttr'].includes(drill?.mode) ? (data.closedStacksPreview || []) : data.openTickets}
             jiraBase={jiraBase}
-            jql={drill ? (data.workflow?.[drill.mode]?.jql || data.gapTaxonomy?.[drill.mode]?.jql || data.gapTaxonomy?.ndbSub?.[drill.mode]?.jql || data.hero?.[drill.mode]?.jql || null) : null}
-            cellCount={drill ? (data.workflow?.[drill.mode]?.count ?? data.gapTaxonomy?.[drill.mode]?.count ?? data.gapTaxonomy?.ndbSub?.[drill.mode]?.count ?? data.hero?.[drill.mode]?.count ?? null) : null}
-            scope={['duds','ndbGaps','otherTeamGaps','thLinked','bugs','improvements','other','closedInWindow'].includes(drill?.mode) ? 'past' : (drill?.scope || 'open')}
+            jql={drill ? (data.workflow?.[drill.mode]?.jql || data.gapTaxonomy?.[drill.mode]?.jql || data.gapTaxonomy?.ndbSub?.[drill.mode]?.jql || data.hero?.[drill.mode]?.jql || data.pulse?.mttr?.jql || data.pulse?.heroes?.resolvedWindow?.jql || null) : null}
+            cellCount={drill ? (data.workflow?.[drill.mode]?.count ?? data.gapTaxonomy?.[drill.mode]?.count ?? data.gapTaxonomy?.ndbSub?.[drill.mode]?.count ?? data.hero?.[drill.mode]?.count ?? data.health?.throughput ?? data.pulse?.heroes?.resolvedWindow?.count ?? null) : null}
+            scope={['duds','ndbGaps','otherTeamGaps','thLinked','bugs','improvements','other','closedInWindow','throughput','mttr'].includes(drill?.mode) ? 'past' : (drill?.scope || 'open')}
             gapLabel="yet"
             agedDays={agedDays}
             teamId={selectedTeamId}
             seedStacks={data.stacksPreview}
+            gapMeta={data.gapMeta}
+            timeframe={timeframe}
+            aiSlice={aiSlice}
+            aiSliceState={aiSliceState}
+            aiSliceError={aiSliceError}
+            aiSliceView={aiSliceView}
             onClose={closeDrill}
           />
         </>

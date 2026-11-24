@@ -4,14 +4,14 @@ module.exports = function (app) {
   app.use(
     '/docs',
     createProxyMiddleware({
-      target: 'http://localhost:8001',
+      target: 'http://localhost:8002',
       changeOrigin: true,
     })
   );
   app.use(
     '/Documentation',
     createProxyMiddleware({
-      target: 'http://localhost:8001',
+      target: 'http://localhost:8002',
       changeOrigin: true,
     })
   );

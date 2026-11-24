@@ -1,6 +1,26 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { AboutInferenceBanner, AboutLine, jiraHref, ticketHref } from './OncallsParts';
+import { AboutInferenceBanner, AboutLine, jiraHref, linkify, ticketHref } from './OncallsParts';
 import { useOncallBlurbs } from '../../hooks/useOncallBlurbs';
+import { useOncallSlice } from '../../hooks/useOncallSlice';
+
+const MODE_TO_VIEW = {
+  needInfo: 'Need Info',
+  waiting: 'Waiting for Customer',
+  closedInWindow: 'Closed in window',
+  duds: 'Duds',
+  ndbGaps: 'NDB gaps',
+  otherTeamGaps: 'Other-team gaps',
+  thLinked: 'TH linked',
+  bugs: 'Bugs',
+  improvements: 'Improvements',
+  other: 'Other',
+  throughput: 'Throughput',
+  mttr: 'MTTR sample',
+  open: 'Open OnCalls',
+  agedOpen: 'Aged open',
+  p0Open: 'P0 open',
+  p1Open: 'P1 open',
+};
 
 function CommentsCell({ comments, loading, error }) {
   if (!Array.isArray(comments)) {
@@ -116,9 +136,31 @@ const LINKED_MODES = {
   },
 };
 
-function buildSeedModes(agedDays = 14) {
+function normStatus(s) {
+  return String(s || '').trim().toLowerCase();
+}
+
+function buildSeedModes(agedDays = 14, gapMeta = null) {
   const isP0 = (p) => /blocker|\bp0\b/i.test(String(p || ''));
   const isP1 = (p) => /critical|\bp1\b/i.test(String(p || ''));
+  // gapMeta sets for view-specific filtering — each drill gets its own intelligence packet
+  const gapSets = gapMeta
+    ? {
+        duds: new Set(gapMeta.dudsKeys || []),
+        ndbGaps: new Set(gapMeta.ndbGapsKeys || []),
+        otherTeamGaps: new Set(gapMeta.otherTeamGapsKeys || []),
+        thLinked: new Set(gapMeta.ndbSubKeys?.thLinked || []),
+        bugs: new Set(gapMeta.ndbSubKeys?.bugs || []),
+        improvements: new Set(gapMeta.ndbSubKeys?.improvements || []),
+        other: new Set(gapMeta.ndbSubKeys?.other || []),
+      }
+    : null;
+  const byGapSet = (setName) => (r) => {
+    if (!gapSets) return true;
+    const set = gapSets[setName];
+    if (!set || set.size === 0) return false;
+    return set.has(r.key);
+  };
   return {
     open: {
       title: 'Open OnCalls',
@@ -172,17 +214,39 @@ function buildSeedModes(agedDays = 14) {
         `${n} OnCall(s) with neither TechHelp nor eng/docs${past ? ' when closed' : ' — uncovered customer waits'}.`,
       jiraProof: 'Open matching OnCalls in JIRA ↗',
     },
-    // V2 taxonomy modes — tickets pre-filtered to gap set, so match all
-    needInfo: { title: 'Need Info', match: () => true, lead: (n) => `${n} OnCall(s) waiting for info.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    waiting: { title: 'Waiting for Customer', match: () => true, lead: (n) => `${n} OnCall(s) waiting for customer.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    closedInWindow: { title: 'Closed in window', match: () => true, lead: (n, past) => `${n} OnCall(s) closed in window.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    duds: { title: 'Duds', match: () => true, lead: (n) => `${n} duds (no fix).`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    ndbGaps: { title: 'NDB gaps', match: () => true, lead: (n) => `${n} NDB gaps.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    otherTeamGaps: { title: 'Other-team gaps', match: () => true, lead: (n) => `${n} other-team gaps.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    thLinked: { title: 'TH linked', match: () => true, lead: (n) => `${n} TH linked.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    bugs: { title: 'Bugs', match: () => true, lead: (n) => `${n} bugs.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    improvements: { title: 'Improvements', match: () => true, lead: (n) => `${n} improvements.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
-    other: { title: 'Other', match: () => true, lead: (n) => `${n} other.`, jiraProof: 'Open matching OnCalls in JIRA ↗' },
+    // V2 workflow — view-specific status filtering (own intelligence packet per hero drill)
+    needInfo: {
+      title: 'Need Info',
+      match: (r) => normStatus(r.status) === 'need info',
+      lead: (n, past) => `${n} OnCall(s) in Need Info${past ? ' when closed' : ' — waiting for reporter details; chase info'} .`,
+      jiraProof: 'Open matching OnCalls in JIRA ↗',
+      appendGap: false,
+    },
+    waiting: {
+      title: 'Waiting for Customer',
+      match: (r) => normStatus(r.status) === 'waiting for customer',
+      lead: (n, past) => `${n} OnCall(s) in Waiting for Customer${past ? ' when closed' : ' — customer action pending; nudge to close loop'}.`,
+      jiraProof: 'Open matching OnCalls in JIRA ↗',
+      appendGap: false,
+    },
+    closedInWindow: {
+      title: 'Closed in window',
+      match: () => true,
+      lead: (n) => `${n} OnCall(s) closed in selected window.`,
+      jiraProof: 'Open matching OnCalls in JIRA ↗',
+      appendGap: false,
+    },
+    // V2 taxonomy — tickets filtered via gapMeta per view (own context window per hero drill)
+    duds: { title: 'Duds — no fix', match: byGapSet('duds'), lead: (n) => `${n} dud(s) — duplicate / Won't Do / Cannot Reproduce / no linked fix.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    ndbGaps: { title: 'NDB gaps', match: byGapSet('ndbGaps'), lead: (n) => `${n} NDB gap(s) — linked fix in NDB project family.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    otherTeamGaps: { title: 'Other-team gaps', match: byGapSet('otherTeamGaps'), lead: (n) => `${n} other-team gap(s) — linked fix outside NDB; externalize.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    thLinked: { title: 'TH linked (NDB)', match: byGapSet('thLinked'), lead: (n) => `${n} NDB gap(s) with TechHelp linked.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    bugs: { title: 'Bugs (NDB)', match: byGapSet('bugs'), lead: (n) => `${n} NDB gap(s) linked to bug type.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    improvements: { title: 'Improvements (NDB)', match: byGapSet('improvements'), lead: (n) => `${n} NDB gap(s) linked to improvement/story.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    other: { title: 'Other NDB gaps', match: byGapSet('other'), lead: (n) => `${n} remaining NDB gap(s).`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    // Health heroes — resolved-in-window sample (past scope), JQL from pulse
+    throughput: { title: 'Throughput', match: () => true, lead: (n) => `${n} OnCall(s) resolved in window — throughput sample.`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
+    mttr: { title: 'MTTR sample', match: () => true, lead: (n) => `${n} OnCall(s) in MTTR sample (resolved in window).`, jiraProof: 'Open matching OnCalls in JIRA ↗', appendGap: false },
   };
 }
 
@@ -202,12 +266,18 @@ export default function PathDrill({
   agedDays = 14,
   teamId,
   seedStacks,
+  gapMeta = null,
+  timeframe = null,
+  aiSlice: aiSliceProp = null,
+  aiSliceState: aiSliceStateProp = null,
+  aiSliceError: aiSliceErrorProp = null,
+  aiSliceView: aiSliceViewProp = null,
   onClose,
 }) {
   const closeRef = useRef(null);
   const past = scope === 'past';
   const linkedSpec = LINKED_MODES[mode];
-  const seedModes = useMemo(() => buildSeedModes(agedDays), [agedDays]);
+  const seedModes = useMemo(() => buildSeedModes(agedDays, gapMeta), [agedDays, gapMeta]);
   const seedSpec = seedModes[mode];
 
   const linkedRows = useMemo(() => {
@@ -241,6 +311,27 @@ export default function PathDrill({
     enabled: Boolean(mode && oncallKeys.length),
     seedStacks,
   });
+
+  // AI slice — view-specific 2-liner per drill (each PathDrill mode = own intelligence packet)
+  // Parent may manage via props (OncallsV2Page); otherwise hook fetches directly — minimal-arch: no fetch in component
+  const viewLabel = MODE_TO_VIEW[mode] || mode || 'Need Info';
+  const needsSlice = Boolean(mode && oncallKeys.length);
+  const useHookSlice = aiSliceStateProp == null && aiSliceProp == null;
+  const {
+    slice: hookSlice,
+    loading: hookSliceLoading,
+    error: hookSliceError,
+  } = useOncallSlice({
+    teamId,
+    view: viewLabel,
+    keys: oncallKeys,
+    timeframe: timeframe || '2Q',
+    enabled: useHookSlice && needsSlice,
+  });
+  const effectiveSlice = aiSliceProp ?? hookSlice;
+  const effectiveSliceState = aiSliceStateProp ?? (hookSliceLoading ? 'loading' : hookSliceError ? 'error' : hookSlice ? 'done' : 'idle');
+  const effectiveSliceError = aiSliceErrorProp ?? hookSliceError;
+  const effectiveSliceView = aiSliceViewProp ?? mode;
 
   useEffect(() => {
     if (!mode) return undefined;
@@ -294,6 +385,36 @@ export default function PathDrill({
             <p id="oc-path-drill-lead" className="oc-story oc-story-tight oc-drill-lead">
               {lead}
             </p>
+            {effectiveSliceState === 'loading' && effectiveSliceView === mode && (
+              <p className="oc-muted" style={{ marginTop: 6 }}>
+                Generating AI slice for {viewLabel}…
+              </p>
+            )}
+            {effectiveSliceState === 'error' && effectiveSliceView === mode && (
+              <p className="oc-error" style={{ marginTop: 6 }}>
+                {effectiveSliceError}
+              </p>
+            )}
+            {effectiveSliceState === 'done' && effectiveSliceView === mode && effectiveSlice && (
+              <div
+                className="oc-slice-ai"
+                style={{
+                  marginTop: 8,
+                  padding: '8px 10px',
+                  background: 'var(--oc-slice-bg, #f5f7ff)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  whiteSpace: 'pre-wrap',
+                  fontSize: 'var(--fs-small)',
+                }}
+              >
+                {String(effectiveSlice)
+                  .split('\n')
+                  .map((line, idx) => (
+                    <div key={idx}>{linkify(line, jiraBase)}</div>
+                  ))}
+              </div>
+            )}
           </div>
           <button type="button" className="oc-btn" ref={closeRef} onClick={onClose} aria-label="Close path drill">
             Close ✕

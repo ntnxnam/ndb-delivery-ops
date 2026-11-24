@@ -202,18 +202,18 @@ const AuthenticatedApp = () => {
                   element={
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>
-                        <OncallsPage />
+                        <OncallsV2Page />
                       </Layout>
                     </ProtectedRoute>
                   }
                 />
 
                 <Route
-                  path="/oncalls-next"
+                  path="/oncalls-legacy"
                   element={
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>
-                        <OncallsV2Page />
+                        <OncallsPage />
                       </Layout>
                     </ProtectedRoute>
                   }

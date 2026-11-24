@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
 
 // Plain-text 429 bodies break clients that always call response.json()
@@ -14,7 +15,7 @@ function rateLimitBody(message) {
 // One bucket per user when the client sent X-Username, still scoped to IP
 // so a shared office NAT does not exhaust the limit for everyone else.
 function clientKey(req) {
-  const ip = req.ip || 'unknown';
+  const ip = ipKeyGenerator(req.ip || 'unknown');
   const user = String(req.headers['x-username'] || '').trim().toLowerCase();
   return user ? `${user}|${ip}` : ip;
 }
