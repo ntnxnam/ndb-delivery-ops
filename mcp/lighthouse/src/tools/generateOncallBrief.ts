@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Env } from '../../../shared/config/env.js';
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Don't parrot numbers in a table — interpret them. Input: TIMEFRAME, HERO, HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY + ndbSub, HOTSPOT_COMPONENTS top2. Write 1 paragraph 95-115 words + 2-line chase. Paragraph must headline real concern (what does agedShare 58% + MTTR 15d/19d + throughput/net mean?), name hotspot verbatim like "last 7d hotspot in <A> (9) + <B> (7)" or "no component hotspot — diffuse", give gap story duds vs NDB vs other-team + where eng gaps land, and workflow Need Info vs Waiting pressure. Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive, no table dump.`;
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be Quantitative: then Qualitative: then Hotspot: then 2-line chase. Use ticket content. Input: TIMEFRAME/HERO/HEALTH/WORKFLOW/GAP_TAXONOMY + HOTSPOT top2 + STACK SAMPLE (summary + Relief/RootCause/Workaround/Prelim — e.g. oracle + upgrade 2.11). Quantitative: 40-45w counts only. Qualitative: 45-50w what counts mean. Hotspot: 50-60w thematic hotspot from content (oracle+upgrade 2.11 MPLS/marker pattern vs diffuse) + gap/workflow tied to theme, not status labels. Never quote full Workaround. Copy keys verbatim.`;
 
 const inputSchema = {
   userPrompt: z.string().describe('User prompt from build_oncall_prompt (Loom)'),
