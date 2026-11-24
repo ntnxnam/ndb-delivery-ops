@@ -722,6 +722,11 @@ router.post('/oncall-concern', validateJiraTokenMiddleware, async (req, res) => 
     // Build concern intelligence packet
     const { buildOncallConcernPrompt, generateOncallConcern } = require('../services/naiService');
     // Enrich with componentMix top2 if available from dashboard
+    const agedDays = intelligence.agedOpenDays || 14;
+    const openRanked = [...(intelligence.openTickets || [])].sort((a, b) => {
+      const score = (t) => (t.status === 'Need Info' ? 3 : t.status === 'Waiting for Customer' ? 2 : (t.ageDays ?? 0) >= agedDays ? 1 : 0);
+      return score(b) - score(a) || (b.ageDays ?? 0) - (a.ageDays ?? 0);
+    });
     const concernInput = {
       timeframe,
       hero: intelligence.hero,
@@ -731,7 +736,7 @@ router.post('/oncall-concern', validateJiraTokenMiddleware, async (req, res) => 
       componentMix: intelligence.componentMix || [],
       stacksPreview: intelligence.stacksPreview || [],
       openTickets: intelligence.openTickets || [],
-      validKeys: intelligence.gapMeta ? [...(intelligence.gapMeta.dudsKeys || []), ...(intelligence.gapMeta.ndbGapsKeys || []), ...(intelligence.gapMeta.otherTeamGapsKeys || [])].slice(0, 20) : (intelligence.openTickets || []).slice(0, 8).map((t) => t.key),
+      validKeys: openRanked.slice(0, 8).map((t) => t.key).filter(Boolean),
       agedOpenDays: intelligence.agedOpenDays,
     };
     // No deterministic fallback — surface config error like every other AI route

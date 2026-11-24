@@ -1,23 +1,19 @@
-# Goal KPI Card — fix/closed-age-cycle
+# Goal KPI Card — fix/oncall-chase-call-to-action
 
-GOAL: Closed in window sample shows Priority/Assignee/Age correctly, with Age = cycle (created→resolved) not today-based.
+GOAL: 2-line chase refers to open tickets needing action (Need Info / Waiting / Aged) with real assignee owner and correct deadline, not closed tickets with generic owners.
 
-SCOPE: apps/delivery-ops/server/services/oncallDashboardV2.js (closedStacksPreview shape) + oncallStacksService.js (cycleDays already computed) + server/services/oncallReportService.js (ticketRowsHtml Age column for closed) + client tables if any
-BASE: origin/main @ b6d1dad (weave/oncall-report-fix merged)
+SCOPE: apps/delivery-ops/server/routes/ai.js (validKeys source), server/services/naiService.js (ONCALL_CONCERN_SYSTEM_PROMPT + buildOncallConcernPrompt validKeys + assignee), mcp/shared/tools/buildOncallPrompt.ts (same), docs if needed
+BASE: origin/main @ bd72548
 
 DONE WHEN:
-  1. Closed in window sample (≤20) returns priority, assignee, cycleDays, resolutiondate alongside key/summary/status/resolution (no missing columns)
-  2. Age column for closed tickets shows cycle (e.g. 12d) = daysBetween(created, resolutiondate), not daysAgo(created)
-  3. Report email + UI drills show 4 columns Priority/Assignee/Age filled, not "—" or missing
-  4. Existing open-ticket Age still uses daysAgo(created) unchanged
+  1. Chase cites only open tickets (from openTickets prioritized by aged/needInfo/waiting), never closed gap taxonomy keys (duds/ndbGaps)
+  2. Owner is real assignee from stack (e.g. "Ask Alice to…") not generic "NDB owner" / "on-call owner"; when unassigned, use assignee field or "owner"
+  3. Deadline derived from workflow SLA (Need Info 3d, Waiting Customer 5d, Aged 7d) not arbitrary 7d/3d swap
 
 AGENT KPIs:
-  Developer: closedStacksPreview includes priority/assignee/cycleDays/created/resolutiondate; ticketRowsHtml uses cycleDays for closed scope
-  Impact Scout: grep closedStacksPreview consumers (OncallsV2Page, oncallReportService, oncallDashboardV2) all patched
-  Code Review: no hardcoded product strings, minimal-arch kept, cycleDays via daysBetween not daysAgo
-  QA: closed sample fields non-null, Age = cycleDays not ageDays, open Age unchanged
-  UX: tables show 4 columns without truncation
-  PM: closed Age semantic correct (how long it lived before close)
-  JIRA: no JQL change
-  Compile Gate: node --check on 3 server files PASS
-  Merge: branch fix/closed-age-cycle → origin/main via --no-ff
+  Developer: validKeys built from openTickets filtered/sorted by aged/needInfo/waiting (not gapMeta closed), stack blurbs include assignee, system prompt says chase open tickets with assignee deadline rules
+  Impact Scout: grep validKeys consumers (routes/ai.js, naiService.js, buildOncallPrompt.ts) all patched
+  Code Review: no generic owners, minimal-arch kept, no hardcoded product strings
+  QA: chase keys are subset of openTickets, not gapMeta; assignee present
+  Compile Gate: node --check PASS
+  Merge: fix/oncall-chase-call-to-action → origin/main via --no-ff

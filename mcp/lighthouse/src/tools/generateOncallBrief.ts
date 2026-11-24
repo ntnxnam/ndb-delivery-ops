@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Env } from '../../../shared/config/env.js';
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be Quantitative: then Qualitative: then Hotspot: then 2-line chase. Use ticket content. Input: TIMEFRAME/HERO/HEALTH/WORKFLOW/GAP_TAXONOMY + HOTSPOT top2 + STACK SAMPLE (summary + Relief/RootCause/Workaround/Prelim — e.g. oracle + upgrade 2.11). Quantitative: 40-45w counts only. Qualitative: 45-50w what counts mean. Hotspot: 50-60w thematic hotspot from content (oracle+upgrade 2.11 MPLS/marker pattern vs diffuse) + gap/workflow tied to theme, not status labels. Never quote full Workaround. Copy keys verbatim.`;
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be Quantitative: then Qualitative: then Hotspot: then 2-line chase. Use ticket content. Input: TIMEFRAME/HERO/HEALTH/WORKFLOW/GAP_TAXONOMY + HOTSPOT top2 + STACK SAMPLE (summary + assignee + status + ageDays + Relief/RootCause/Workaround/Prelim — e.g. oracle + upgrade 2.11). Quantitative: 40-45w counts only. Qualitative: 45-50w what counts mean. Hotspot: 50-60w thematic hotspot from content (oracle+upgrade 2.11 MPLS/marker pattern vs diffuse) + gap/workflow tied to theme, not status labels. Never quote full Workaround. Copy keys verbatim. Chase ONLY open tickets needing action (Need Info 3d, Waiting 5d, Aged 7d) using assignee as owner — never chase closed/dud tickets.`;
 
 const inputSchema = {
   userPrompt: z.string().describe('User prompt from build_oncall_prompt (Loom)'),
