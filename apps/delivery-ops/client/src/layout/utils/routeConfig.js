@@ -160,11 +160,20 @@ export const routeConfig = {
     {
       path: '/cfdcfi',
       exact: true,
-      component: 'CfdCfiPage',
+      component: 'CfdCfiV2Page',
       title: 'CFD / CFI',
-      description: 'CFD and CFI KPI pulse — heroes, trends, open-ticket drill',
+      description: 'CFD and CFI — VP-first unified dashboard (heroes + chips + boomerang)',
       permissions: [PERMISSIONS.KPI_VIEW],
       showInNav: true,
+    },
+    {
+      path: '/cfdcfi-legacy',
+      exact: true,
+      component: 'CfdCfiPage',
+      title: 'CFD / CFI (Legacy)',
+      description: 'Legacy tab-per-KPI CFD/CFI pulse',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: false,
     },
     {
       path: '/sos-summary',

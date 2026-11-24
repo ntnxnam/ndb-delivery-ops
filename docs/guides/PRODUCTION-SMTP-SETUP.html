@@ -1,36 +1,27 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>PRODUCTION-SMTP-SETUP — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>PRODUCTION-SMTP-SETUP</span></nav><div class="container"><article class="prose"><pre># Production SMTP Setup Guide
-
-## Issue: Relay Access Denied in Production
-
-The error `554 5.7.1 Relay access denied` occurs when the production server's IP address is not authorized to relay emails through the corporate SMTP server.
-
-## Quick Diagnosis
-
-Run these diagnostic scripts on your production server:
-
-```bash
-cd /var/www/html/ndb-delivery-ops/server
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>PRODUCTION-SMTP-SETUP — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>PRODUCTION-SMTP-SETUP</span></nav><div class="container"><article class="prose"><h1>Production SMTP Setup Guide</h1>
+<h2>Issue: Relay Access Denied in Production</h2>
+<p>The error <code>554 5.7.1 Relay access denied</code> occurs when the production server&#39;s IP address is not authorized to relay emails through the corporate SMTP server.</p>
+<h2>Quick Diagnosis</h2>
+<p>Run these diagnostic scripts on your production server:</p>
+<pre><code class="language-bash">cd /var/www/html/ndb-delivery-ops/server
 
 # 1. Run comprehensive SMTP diagnostics
 node diagnose-smtp-production.js
 
 # 2. Test alternative SMTP configurations
 node test-smtp-alternatives.js
-```
-
-## Solution Options
-
-### Option 1: Contact IT Support (Recommended)
-Request IT to whitelist your production server's IP address for SMTP relay access:
-- **Server**: `santhosh-s-1.umsvm.nutanix.com`
-- **SMTP Server**: `secure-mailrelay.corp.nutanix.com:587`
-- **Service Account**: `smtp.ndb.team@nutanix.com`
-
-### Option 2: Use Internal SMTP Server
-Try these alternative SMTP servers in production `.env`:
-
-```bash
-# Option 2A: Internal mail server (no relay restrictions)
+</code></pre>
+<h2>Solution Options</h2>
+<h3>Option 1: Contact IT Support (Recommended)</h3>
+<p>Request IT to whitelist your production server&#39;s IP address for SMTP relay access:</p>
+<ul>
+<li><strong>Server</strong>: <code>santhosh-s-1.umsvm.nutanix.com</code></li>
+<li><strong>SMTP Server</strong>: <code>secure-mailrelay.corp.nutanix.com:587</code></li>
+<li><strong>Service Account</strong>: <code>smtp.ndb.team@nutanix.com</code></li>
+</ul>
+<h3>Option 2: Use Internal SMTP Server</h3>
+<p>Try these alternative SMTP servers in production <code>.env</code>:</p>
+<pre><code class="language-bash"># Option 2A: Internal mail server (no relay restrictions)
 SMTP_HOST=mail.corp.nutanix.com
 SMTP_PORT=587
 
@@ -42,33 +33,32 @@ SMTP_PORT=587
 SMTP_HOST=secure-mailrelay.corp.nutanix.com
 SMTP_PORT=25
 # Comment out SMTP_USER and SMTP_PASS for port 25
-```
-
-### Option 3: Automatic Fallback (Already Implemented)
-The email service now includes automatic fallback logic that:
-1. Tries the primary SMTP configuration
-2. If "Relay access denied" occurs, automatically tries:
-   - Port 25 without authentication
-   - Common internal mail servers
-3. Logs successful configurations for permanent fix
-
-## Testing in Production
-
-1. **Deploy the updated code** with fallback logic
-2. **Test email functionality** - it should now work automatically
-3. **Check server logs** for successful fallback configuration
-4. **Update .env permanently** with the working configuration
-
-## Production .env Template
-
-Based on diagnostic results, update your production `.env`:
-
-```bash
-# SMTP Configuration - Update based on diagnostic results
+</code></pre>
+<h3>Option 3: Automatic Fallback (Already Implemented)</h3>
+<p>The email service now includes automatic fallback logic that:</p>
+<ol>
+<li>Tries the primary SMTP configuration</li>
+<li>If &quot;Relay access denied&quot; occurs, automatically tries:<ul>
+<li>Port 25 without authentication</li>
+<li>Common internal mail servers</li>
+</ul>
+</li>
+<li>Logs successful configurations for permanent fix</li>
+</ol>
+<h2>Testing in Production</h2>
+<ol>
+<li><strong>Deploy the updated code</strong> with fallback logic</li>
+<li><strong>Test email functionality</strong> - it should now work automatically</li>
+<li><strong>Check server logs</strong> for successful fallback configuration</li>
+<li><strong>Update .env permanently</strong> with the working configuration</li>
+</ol>
+<h2>Production .env Template</h2>
+<p>Based on diagnostic results, update your production <code>.env</code>:</p>
+<pre><code class="language-bash"># SMTP Configuration - Update based on diagnostic results
 SMTP_HOST=secure-mailrelay.corp.nutanix.com  # or working alternative
 SMTP_PORT=587                                 # or 25 if that works
 SMTP_USER=smtp.ndb.team@nutanix.com         # comment out for port 25
-SMTP_PASS=&lt;service-account-password>        # comment out for port 25
+SMTP_PASS=&lt;service-account-password&gt;        # comment out for port 25
 SMTP_FROM=smtp.ndb.team@nutanix.com
 
 # Server Configuration
@@ -78,31 +68,28 @@ NODE_ENV=production
 # Other settings...
 RELEASE_VERSIONS_PAGE_ACCESS=all
 RELEASE_VERSIONS_EMAIL_ACCESS=allowlist
-```
-
-## Monitoring
-
-After deployment, monitor the application logs:
-
-```bash
-# Check PM2 logs for SMTP success/failure
-ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com 'cd /var/www/html/ndb-delivery-ops &amp;&amp; pm2 logs'
+</code></pre>
+<h2>Monitoring</h2>
+<p>After deployment, monitor the application logs:</p>
+<pre><code class="language-bash"># Check PM2 logs for SMTP success/failure
+ssh santhosh.s@santhosh-s-1.umsvm.nutanix.com &#39;cd /var/www/html/ndb-delivery-ops &amp;&amp; pm2 logs&#39;
 
 # Look for these log messages:
-# ✓ Success: "[EmailService] Email sent: &lt;message-id>"
-# ✓ Fallback: "[EmailService] Fallback success with &lt;host>:&lt;port>"
-# ✗ Failure: "[EmailService] All fallback SMTP configurations failed"
-```
-
-## Permanent Fix
-
-Once you identify the working SMTP configuration:
-1. Update production `.env` with the working settings
-2. Remove the fallback logic (optional, but keeps it as safety net)
-3. Document the working configuration for future deployments
-
-## Files Modified
-
-- `server/services/emailService.js` - Added automatic fallback logic
-- `server/diagnose-smtp-production.js` - Diagnostic script
-- `server/test-smtp-alternatives.js` - Alternative configuration tester</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+# ✓ Success: &quot;[EmailService] Email sent: &lt;message-id&gt;&quot;
+# ✓ Fallback: &quot;[EmailService] Fallback success with &lt;host&gt;:&lt;port&gt;&quot;
+# ✗ Failure: &quot;[EmailService] All fallback SMTP configurations failed&quot;
+</code></pre>
+<h2>Permanent Fix</h2>
+<p>Once you identify the working SMTP configuration:</p>
+<ol>
+<li>Update production <code>.env</code> with the working settings</li>
+<li>Remove the fallback logic (optional, but keeps it as safety net)</li>
+<li>Document the working configuration for future deployments</li>
+</ol>
+<h2>Files Modified</h2>
+<ul>
+<li><code>server/services/emailService.js</code> - Added automatic fallback logic</li>
+<li><code>server/diagnose-smtp-production.js</code> - Diagnostic script</li>
+<li><code>server/test-smtp-alternatives.js</code> - Alternative configuration tester</li>
+</ul>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

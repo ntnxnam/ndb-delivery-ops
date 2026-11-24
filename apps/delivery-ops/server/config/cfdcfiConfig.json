@@ -1,7 +1,17 @@
 {
+  "defaultTeamId": "ndb",
   "kpiNamePattern": "CFD|CFI",
   "jiraBaseUrl": "https://jira.nutanix.com",
+  "agedOpenDays": 14,
+  "needInfoDays": 10,
+  "waitingForCustomerDays": 21,
+  "_note_agedOpenDays": "Open >14d bucket; drives agedOpen hero + RAG",
+  "_note_Overall": "Overall = no date clause handled in service (cfdcfiDashboardV2 timeframeClause returns null)",
+  "pastLookbackDays": 30,
   "openStatusJql": "statusCategory != Done",
+  "doneStatusJql": "statusCategory = Done",
+  "maxOpenIssuesFetch": 200,
+  "maxPastIssuesFetch": 200,
   "maxOpenTickets": 80,
   "optionalHeroes": {
     "p0": true,
@@ -13,12 +23,37 @@
     "p1Days": 30,
     "p2Days": 60
   },
+  "rag": {
+    "redAgedOpen": 5,
+    "yellowAgedShare": 30,
+    "yellowCreatedWowPct": 30,
+    "redBoomerangRate": 20
+  },
+  "escalation": {
+    "kpiNamePattern": "CFD|CFI",
+    "lookbackDays": 180,
+    "maxIssuesFetch": 300,
+    "maxRows": 40,
+    "clock": "created_to_resolved"
+  },
+  "techHelpProjects": ["TH", "TechHelp"],
+  "techPubsProjects": ["TECHPUBS"],
+  "knowledgeProjects": ["SR"],
+  "teams": {
+    "ndb": {}
+  },
+  "customFields": {
+    "_note": "CFD/CFI screen fields — CF IDs discovered via oncallConfig field scan (jira.nutanix.com/rest/api/2/field). Single source per D1 product-agnostic.",
+    "testEscape": { "id": "customfield_12672", "label": "Test Escape?", "jiraName": "Test Escape?" },
+    "rootCause": { "id": "customfield_12670", "label": "Root Cause", "jiraName": "Root Cause" },
+    "correctiveActionCompleted": { "id": "customfield_12674", "label": "Corrective Action(s) Completed?", "jiraName": "Corrective Action(s) Completed?" },
+    "rcaStatus": { "id": "customfield_40067", "label": "RCA Status", "jiraName": "RCA Status" }
+  },
   "triage": {
     "owners": [],
     "defaultAssignee": "",
     "autoAssignOnCreate": false
   },
-  "customFields": {},
   "display": {
     "defaultSortBy": "priority",
     "showLinkedOncalls": true,

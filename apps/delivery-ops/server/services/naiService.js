@@ -1726,6 +1726,79 @@ async function generateOncallSlice(slice) {
   return trimmed;
 }
 
+const CFDCFI_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused CFD/CFI concern for a VP. Output MUST be labeled with exactly three sections. Use ticket content — status alone is not insight.
+
+Input: TIMEFRAME, COMPUTED_RAG + REASON (use verbatim — never re-derive), HERO, HEALTH, BREAKDOWNS (by-component, by-fixVersion, age buckets, test-escape, linkage), BOOMERANG (rate + by-component + by-release), STACK SAMPLE (summary + Test Escape + Root Cause).
+
+RAG: Use COMPUTED_RAG + COMPUTED_RAG_REASON verbatim — do not re-derive. Start Quantitative with "<RAG word> — " + COMPUTED_RAG_REASON.
+
+Output format (exact headings, keep order):
+Quantitative: 1 paragraph 40-45 words — counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%, boomerang rate. Plain English.
+
+Qualitative: 1 paragraph 45-50 words — what do counts mean? 40% aged + MTTR 12d = stalling? Boomerang rate signals deferred quality? Reading content, not labels.
+
+Hotspot: 1 paragraph 50-60 words — thematic hotspot from STACK SAMPLE + componentMix top2 (not status). Tie age/test-escape/TH linkage patterns to that theme.
+
+Then 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent.`;
+
+const CFDCFI_SLICE_SYSTEM_PROMPT = `You are a TPM writing a 2-line drawer slice for one CFD/CFI view (by-component, by-release, age bucket, test-escape, TH linkage, boomerang). Input gives slice keys, timeframe, breakdown context. Output exactly 2 lines: line 1 = why stuck in this view (age/test-escape/boomerang context), line 2 = "Ask <owner> to <action> on <keys> by <timeframe>" with concrete next step. Keep each line under 180 characters. Copy ticket keys verbatim — never invent.`;
+
+function buildCfdcfiConcernPrompt(intelligence) {
+  const i = intelligence || {};
+  const tf = i.timeframe || '7d';
+  const hero = i.hero || {};
+  const health = i.health || {};
+  const rag = i.rag || {};
+  const breakdowns = i.breakdowns || {};
+  const boomerang = i.boomerang || {};
+  const topComponents = i.componentMix || [];
+  const top2 = (topComponents || []).slice(0, 2).map((c) => `${c.name} (${c.count})`).join(' + ') || 'no component hotspot';
+  const validKeys = Array.isArray(i.validKeys) ? i.validKeys : (Array.isArray(i.gapMeta?.boomerangKeys) ? i.gapMeta.boomerangKeys.slice(0, 20) : (Array.isArray(i.openTickets) ? i.openTickets.slice(0, 8).map((t) => t.key) : []));
+  const validBlock = validKeys.length ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${validKeys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}` : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+  const heroLine = `HERO: open=${hero.open?.count ?? 0} aged>${i.agedOpenDays || 14}d=${hero.agedOpen?.count ?? 0} p0Open=${hero.p0Open?.count ?? 0} p1Open=${hero.p1Open?.count ?? 0} closedInWindow=${hero.closedInWindow?.count ?? 0} timeframe=${tf}`;
+  const healthLine = `HEALTH: mttrMedian=${health.mttrMedian ?? '—'}d p90=${health.p90 ?? '—'}d throughput=${health.throughput ?? 0} net=${health.net ?? 0} agedShare=${health.agedShare ?? '—'}%`;
+  const bdLine = `BREAKDOWNS: byComponent top2=${top2} ageBuckets=${JSON.stringify(breakdowns.ageBuckets || {})} testEscape=${JSON.stringify((breakdowns.testEscape || []).slice(0, 3))} linkage TH=${breakdowns.linkage?.thLinked ?? 0} TechPubs=${breakdowns.linkage?.techPubsLinked ?? 0}`;
+  const boomLine = `BOOMERANG: rate=${boomerang.rate ?? 0}% deferredTotal=${boomerang.deferredTotal ?? 0} byComponent=${JSON.stringify((boomerang.byComponent || []).slice(0, 2))}`;
+  const stacks = Array.isArray(i.stacksPreview) ? i.stacksPreview : Array.isArray(i.openTickets) ? i.openTickets : [];
+  const blurbLines = stacks.slice(0, 5).map((s) => {
+    const cf = s.cfdcfiFields || {};
+    const bits = [`${s.key}: ${String(s.summary || '').slice(0, 120)} [${s.status || '?'} ${s.ageDays ?? '?'}d]`];
+    if (cf.testEscape) bits.push(`TestEscape:${cf.testEscape}`);
+    if (cf.rootCause) bits.push(`RootCause:${String(cf.rootCause).slice(0, 180).replace(/\n/g, ' ')}`);
+    return `- ${bits.join(' | ')}`;
+  }).join('\n');
+  const stackBlock = blurbLines ? `STACK SAMPLE (top 5 — use for hotspot themes):\n${blurbLines}` : '';
+  const ragLine = `COMPUTED_RAG: ${rag.level || 'YELLOW'}\nCOMPUTED_RAG_REASON: ${rag.why || ''}`;
+  return `${ragLine}\nTIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${bdLine}\n${boomLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the concern now with exactly the headings Quantitative: then Qualitative: then Hotspot: then 2-line chase. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+function buildCfdcfiSlicePrompt(slice) {
+  const s = slice || {};
+  const view = s.view || s.slice || 'component';
+  const tf = s.timeframe || '7d';
+  const keys = Array.isArray(s.keys) ? s.keys : (Array.isArray(s.validKeys) ? s.validKeys : []);
+  const validBlock = keys.length ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${keys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}` : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+  return `TIMEFRAME: ${tf}\nVIEW: ${view}\nKEYS: ${keys.join(', ') || 'none'}\nMETA: ${JSON.stringify(s.meta || {})}\n\n${validBlock}\n\nWrite the 2-liner for this slice now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+async function generateCfdcfiConcern(intelligence) {
+  if (!intelligence) throw new Error('intelligence is required for CFD/CFI concern');
+  const messages = [{ role: 'system', content: CFDCFI_CONCERN_SYSTEM_PROMPT }, { role: 'user', content: buildCfdcfiConcernPrompt(intelligence) }];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty CFD/CFI concern after trim');
+  return trimmed;
+}
+
+async function generateCfdcfiSlice(slice) {
+  if (!slice) throw new Error('slice is required for CFD/CFI slice');
+  const messages = [{ role: 'system', content: CFDCFI_SLICE_SYSTEM_PROMPT }, { role: 'user', content: buildCfdcfiSlicePrompt(slice) }];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty CFD/CFI slice after trim');
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
@@ -1741,6 +1814,10 @@ module.exports = {
   generatePageCompressBrief,
   generateOncallConcern,
   generateOncallSlice,
+  generateCfdcfiConcern,
+  generateCfdcfiSlice,
+  buildCfdcfiConcernPrompt,
+  buildCfdcfiSlicePrompt,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT,
@@ -1754,6 +1831,8 @@ module.exports = {
   PAGE_BRIEFING_COMPRESS_SYSTEM_PROMPT,
   ONCALL_CONCERN_SYSTEM_PROMPT,
   ONCALL_SLICE_SYSTEM_PROMPT,
+  CFDCFI_CONCERN_SYSTEM_PROMPT,
+  CFDCFI_SLICE_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
     buildUserPrompt,
@@ -1775,5 +1854,7 @@ module.exports = {
     TIER_LABELS,
     buildOncallConcernPrompt,
     buildOncallSlicePrompt,
+    buildCfdcfiConcernPrompt,
+    buildCfdcfiSlicePrompt,
   },
 };

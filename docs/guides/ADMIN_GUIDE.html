@@ -1,96 +1,197 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>ADMIN_GUIDE</span></nav><div class="container"><article class="prose"><pre># Admin Guide
-
-> For architects / admins. Maintained by `doc-specialist` via `doc-admin-guide`.
-
-## Prerequisites
-
-- Node 20+, PM2, Nginx
-- JIRA PAT (Bearer per D40) — `JIRA_PAT` env
-
-## Installation
-
-```bash
-./scripts/start.sh   # backend 8001, frontend 8899
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ADMIN_GUIDE — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>ADMIN_GUIDE</span></nav><div class="container"><article class="prose"><h1>Admin Guide</h1>
+<blockquote>
+<p>For architects / admins. Maintained by <code>doc-specialist</code> via <code>doc-admin-guide</code>.</p>
+</blockquote>
+<h2>Prerequisites</h2>
+<ul>
+<li>Node 20+, PM2, Nginx</li>
+<li>JIRA PAT (Bearer per D40) — <code>JIRA_PAT</code> env</li>
+</ul>
+<h2>Installation</h2>
+<pre><code class="language-bash">./scripts/start.sh   # backend 8001, frontend 8899
 ./scripts/stop.sh
-```
-
-## Configuration
-
-| Setting | File | Notes |
-|---|---|---|
-| `JIRA_PAT` | env | Bearer only, no Basic |
-| Team boards | `server/config/teamBoardConfig.json` | customfield_10360 for sprints |
-| Quality column | `server/config/releaseVersionsColumnsConfig.json` (`columns.quality`) | Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service `server/services/tcmsService.js` (time-filtered metrics via `/api/v1/all_test_cases/aggregate/metrics`, `time_filter=all|four_weeks`, `target={milestone}-qcow2`) |
-| Risk trail | `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`) + `server/services/releaseHistoryService.js` (`includeRiskIndicator:true`) | `POST /api/jira/release-items-history` → `checkpointHistory[key].riskIndicator`; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions) |
-| RBAC | `server/config/allowedUsers.json` + `server/routes/auth.js::LEGACY_PERMISSION_MAPPING` | Keep client mirror in sync |
-| SMTP | `mailrelay.dyn.nutanix.com:25` | No auth; see `server/services/emailService.js` (sacred) |
-| OnCalls V2 | `server/config/oncallConfig.json` + `server/services/oncallDashboardV2.js` + `oncallGapService.js` | Timeframe pills `7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall` (`Overall` = no date clause); workflow buckets `needInfoDays` (10) / `waitingForCustomerDays` (21) / `agedOpenDays` (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (`gapProjectPrefixes` tenant override, default `NDB`); health MTTR/throughput; component hotspot. See [Oncalls requirements](../pages/Oncalls-requirements.md) + [Oncalls data-layer](../pages/Oncalls-data-layer.md) + [API — OnCalls V2](../api/jira.md#oncalls) |
-| `jiraFieldsConfig.json` | `server/config` + `client/src/config` | Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via `server/utils/jiraFieldsConfig.js` getFieldId/getLabelJql and `client/src/utils/jiraFields` + fieldConfig ensureLoaded() via `GET /api/config/jira-fields` |
-| Teams Config (filter/sprint/people) | `server/config/teamBoardConfig.json` + `shared/src/services/teamBaseJqlService.ts` + `server/utils/sprintCalendar.js` | **Filter:** `is_shared_project` + `custom_project_key` (e.g. `ERA,NDBECO` private) + `components` (≥1, validated across ENG + 10 horizontals `ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR`) → `buildTeamBaseJql` → `(project in (ERA,NDBECO) OR (project in (shared 10) AND (component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype …)))`. **People:** `leader_outlook_dls[3]` (PM/Dev/QA) auto → `assignee in (membersOf(PM) OR membersOf(Dev) OR membersOf(QA))` inner OR with 8 contact rows (`team`/`serv_team`/`doc_team`/`security_team`/`legal`/`documentation`/`trade_compliance`/`others` each `{entries,isDL}`) via `buildInnerOr`; client `TeamForm.js:buildPreview` parity. **Sprint:** `boardId` + `sprintCalendar:{s1StartIso,sprintDays}` (default 21d, `snapSprintDays` 7/14/21) inferred from recent 10 sprints median (`inferSprintCalendarFromSprints` capped 4 pages), manual override allowed. Preview indented `formatJql`, saved as `base_jql`+`baseFilter`. See `docs/pages/Admin-*` + `docs/api/admin.md#post-apiteams`. |
-
-## Teams Config — filter/project + people/roles + sprint/board
-
-> Canonical: `docs/pages/Admin-requirements.md` + `Admin-data-layer.md` · API: `docs/api/admin.md#post-apiteams` · Code: `shared/src/services/teamBaseJqlService.ts` (SoT `SHARED_PROJECTS_ALL`=10), `apps/delivery-ops/server/services/teamAdminService.js` (`buildBaseJqlFromTeam`), `apps/delivery-ops/client/src/components/AdminPanel/TeamForm.js` (`buildPreview`/`formatJql`), `server/utils/sprintCalendar.js` (`inferSprintCalendarFromSprints` recent-10, `snapSprintDays`).
-
-### Filter / project shape
-
-| Mode | JQL generated |
-|------|---------------|
-| **Shared Project** (`is_shared_project: true`, `custom_project_key: null`) | `project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype in ("Era Oncall","ERA Oncall"))` |
-| **Not Shared / Custom** (`is_shared_project: false`, `custom_project_key: "ERA,NDBECO"`) | `(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR "primary component" in (…) OR assignee in (…) OR issuetype in ("Era Oncall","ERA Oncall"))))` |
-
-- 10 shared = `ENG` + 9 horizontals `FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR` (`shared/src/services/teamBaseJqlService.ts:SHARED_PROJECTS_ALL`, `LEGACY=[]`). NDB private is `ERA,NDBECO` per 2026-11-24 sample; other teams comma-separate their private keys.
-- Components are required (≥1) — validated against `GET /rest/api/2/project/{key}/components` for ENG + each horizontal; suggestions in `TeamForm.js:KNOWN_COMPONENTS` (Atlas).
-- `base_jql` + `baseFilter` both persisted for compat; `sprintScope` derived via `sprintScopeFromBaseFilter` (strip `ORDER BY` + trailing `statusCategory != Done`) is never stored.
-
-### People / assignee inner OR
-
-```
-assignee in (
-  membersOf("PM-DL") OR membersOf("Dev-DL") OR membersOf("QA-DL")  ← leader_outlook_dls[3]
-  OR membersOf("contact DLs")                                      ← 8 rows where isDL=true
+</code></pre>
+<h2>Configuration</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>File</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>JIRA_PAT</code></td>
+<td>env</td>
+<td>Bearer only, no Basic</td>
+</tr>
+<tr>
+<td>Team boards</td>
+<td><code>server/config/teamBoardConfig.json</code></td>
+<td>customfield_10360 for sprints</td>
+</tr>
+<tr>
+<td>Quality column</td>
+<td><code>server/config/releaseVersionsColumnsConfig.json</code> (<code>columns.quality</code>)</td>
+<td>Description documents 2 rows (Functional/System) × 2 cols (Manual/Automation); TCMS service <code>server/services/tcmsService.js</code> (time-filtered metrics via <code>/api/v1/all_test_cases/aggregate/metrics</code>, `time_filter=all</td>
+</tr>
+<tr>
+<td>Risk trail</td>
+<td><code>client/src/utils/riskHistoryDisplay.js</code> (SoT <code>RAG_COLORS</code>) + <code>server/services/releaseHistoryService.js</code> (<code>includeRiskIndicator:true</code>)</td>
+<td><code>POST /api/jira/release-items-history</code> → <code>checkpointHistory[key].riskIndicator</code>; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions)</td>
+</tr>
+<tr>
+<td>RBAC</td>
+<td><code>server/config/allowedUsers.json</code> + <code>server/routes/auth.js::LEGACY_PERMISSION_MAPPING</code></td>
+<td>Keep client mirror in sync</td>
+</tr>
+<tr>
+<td>SMTP</td>
+<td><code>mailrelay.dyn.nutanix.com:25</code></td>
+<td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
+</tr>
+<tr>
+<td>OnCalls V2</td>
+<td><code>server/config/oncallConfig.json</code> + <code>server/services/oncallDashboardV2.js</code> + <code>oncallGapService.js</code></td>
+<td>Timeframe pills <code>7d</code>/<code>15d</code>/<code>1M</code>/<code>1Q</code>/<code>2Q</code>/<code>1Y</code>/<code>18M</code>/<code>Overall</code> (<code>Overall</code> = no date clause); workflow buckets <code>needInfoDays</code> (10) / <code>waitingForCustomerDays</code> (21) / <code>agedOpenDays</code> (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (<code>gapProjectPrefixes</code> tenant override, default <code>NDB</code>); health MTTR/throughput; component hotspot. See <a href="../pages/Oncalls-requirements.md">Oncalls requirements</a> + <a href="../pages/Oncalls-data-layer.md">Oncalls data-layer</a> + <a href="../api/jira.md#oncalls">API — OnCalls V2</a></td>
+</tr>
+<tr>
+<td>CFD/CFI V2</td>
+<td><code>server/config/cfdcfiConfig.json</code> + <code>server/services/cfdcfiDashboardV2.js</code> + <code>cfdcfiConfigResolve.js</code> + <code>cfdcfiStacksService.js</code></td>
+<td>Timeframe pills <code>7d</code>/<code>15d</code>/<code>1M</code>/<code>1Q</code>/<code>2Q</code>/<code>1Y</code>/<code>18M</code>/<code>Overall</code> (<code>Overall</code> = no <code>resolved &gt;=</code> clause); heroes Open/Aged/P0/P1/Closed-window + health MTTR/throughput/aged-share; 6 breakdowns byComponent/byFixVersion/ageBuckets/testEscape/rootCause/linkage; boomerang <code>ndb-*-deferred ∩ baseScope</code> rate + byComponent/byFixVersion (<code>releaseVersionsEmailConfig.json</code> drives label enumeration); customFields Test Escape <code>12672</code>/Root Cause <code>12670</code>/Corrective <code>12674</code>/RCA <code>40067</code>; <code>SimpleCache(5m)</code> per <code>team:timeframe</code>. See <a href="../pages/cfdcfi/feature.md">CFD/CFI feature</a> + <a href="../pages/CfdCfi-data-layer.md">CfdCfi data-layer</a> + <a href="../api/cfdcfi.md">API — CFD/CFI V2</a></td>
+</tr>
+<tr>
+<td><code>jiraFieldsConfig.json</code></td>
+<td><code>server/config</code> + <code>client/src/config</code></td>
+<td>Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via <code>server/utils/jiraFieldsConfig.js</code> getFieldId/getLabelJql and <code>client/src/utils/jiraFields</code> + fieldConfig ensureLoaded() via <code>GET /api/config/jira-fields</code></td>
+</tr>
+<tr>
+<td>Teams Config (filter/sprint/people)</td>
+<td><code>server/config/teamBoardConfig.json</code> + <code>shared/src/services/teamBaseJqlService.ts</code> + <code>server/utils/sprintCalendar.js</code></td>
+<td><strong>Filter:</strong> <code>is_shared_project</code> + <code>custom_project_key</code> (e.g. <code>ERA,NDBECO</code> private) + <code>components</code> (≥1, validated across ENG + 10 horizontals <code>ENG,FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR</code>) → <code>buildTeamBaseJql</code> → <code>(project in (ERA,NDBECO) OR (project in (shared 10) AND (component in (…) OR &quot;primary component&quot; in (…) OR assignee in (…) OR issuetype …)))</code>. <strong>People:</strong> <code>leader_outlook_dls[3]</code> (PM/Dev/QA) auto → <code>assignee in (membersOf(PM) OR membersOf(Dev) OR membersOf(QA))</code> inner OR with 8 contact rows (<code>team</code>/<code>serv_team</code>/<code>doc_team</code>/<code>security_team</code>/<code>legal</code>/<code>documentation</code>/<code>trade_compliance</code>/<code>others</code> each <code>{entries,isDL}</code>) via <code>buildInnerOr</code>; client <code>TeamForm.js:buildPreview</code> parity. <strong>Sprint:</strong> <code>boardId</code> + <code>sprintCalendar:{s1StartIso,sprintDays}</code> (default 21d, <code>snapSprintDays</code> 7/14/21) inferred from recent 10 sprints median (<code>inferSprintCalendarFromSprints</code> capped 4 pages), manual override allowed. Preview indented <code>formatJql</code>, saved as <code>base_jql</code>+<code>baseFilter</code>. See <code>docs/pages/Admin-*</code> + <code>docs/api/admin.md#post-apiteams</code>.</td>
+</tr>
+</tbody></table>
+<h2>Teams Config — filter/project + people/roles + sprint/board</h2>
+<blockquote>
+<p>Canonical: <code>docs/pages/Admin-requirements.md</code> + <code>Admin-data-layer.md</code> · API: <code>docs/api/admin.md#post-apiteams</code> · Code: <code>shared/src/services/teamBaseJqlService.ts</code> (SoT <code>SHARED_PROJECTS_ALL</code>=10), <code>apps/delivery-ops/server/services/teamAdminService.js</code> (<code>buildBaseJqlFromTeam</code>), <code>apps/delivery-ops/client/src/components/AdminPanel/TeamForm.js</code> (<code>buildPreview</code>/<code>formatJql</code>), <code>server/utils/sprintCalendar.js</code> (<code>inferSprintCalendarFromSprints</code> recent-10, <code>snapSprintDays</code>).</p>
+</blockquote>
+<h3>Filter / project shape</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>JQL generated</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Shared Project</strong> (<code>is_shared_project: true</code>, <code>custom_project_key: null</code>)</td>
+<td><code>project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR &quot;primary component&quot; in (…) OR assignee in (…) OR issuetype in (&quot;Era Oncall&quot;,&quot;ERA Oncall&quot;))</code></td>
+</tr>
+<tr>
+<td><strong>Not Shared / Custom</strong> (<code>is_shared_project: false</code>, <code>custom_project_key: &quot;ERA,NDBECO&quot;</code>)</td>
+<td><code>(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (…) OR &quot;primary component&quot; in (…) OR assignee in (…) OR issuetype in (&quot;Era Oncall&quot;,&quot;ERA Oncall&quot;))))</code></td>
+</tr>
+</tbody></table>
+<ul>
+<li>10 shared = <code>ENG</code> + 9 horizontals <code>FEAT,ONCALL,TH,SDL,TECHPUBS,SR,LEG,ACP,LBDR</code> (<code>shared/src/services/teamBaseJqlService.ts:SHARED_PROJECTS_ALL</code>, <code>LEGACY=[]</code>). NDB private is <code>ERA,NDBECO</code> per 2026-11-24 sample; other teams comma-separate their private keys.</li>
+<li>Components are required (≥1) — validated against <code>GET /rest/api/2/project/{key}/components</code> for ENG + each horizontal; suggestions in <code>TeamForm.js:KNOWN_COMPONENTS</code> (Atlas).</li>
+<li><code>base_jql</code> + <code>baseFilter</code> both persisted for compat; <code>sprintScope</code> derived via <code>sprintScopeFromBaseFilter</code> (strip <code>ORDER BY</code> + trailing <code>statusCategory != Done</code>) is never stored.</li>
+</ul>
+<h3>People / assignee inner OR</h3>
+<pre><code>assignee in (
+  membersOf(&quot;PM-DL&quot;) OR membersOf(&quot;Dev-DL&quot;) OR membersOf(&quot;QA-DL&quot;)  ← leader_outlook_dls[3]
+  OR membersOf(&quot;contact DLs&quot;)                                      ← 8 rows where isDL=true
   OR handle1, handle2                                               ← 8 rows where isDL=false
 )
-```
-
-- **Leadership DLs — PM / Dev / QA (3):** dedicated inputs `pmDL`/`devDL`/`qaDL` → `leader_outlook_dls: string[0..3]` (trimmed, deduped) → auto `membersOf` inner OR; also stored for email distribution. No re-typing in Contacts needed.
-- **Role / Function Contacts — 8 rows:** `team`/`serv_team`/`doc_team`/`security_team`/`legal`/`documentation`/`trade_compliance`/`others` each `{entries: string[], isDL: boolean}` → `ChipInput` (Enter/`,`/paste/`blur` add, 24px × remove, `DL` checkbox `→ membersOf` vs `→ handle` label). All rows combined via `dedupeTrim` into single `assignee in (…)` clause inner-ORed with `component` / `"primary component"` / `issuetype` — see `shared/src/services/teamBaseJqlService.ts:buildInnerOr` SoT.
-- UX guard: typing a chip without pressing Enter still commits on blur — Save never ignores visible input. Preview updates live; `baseFilterTouched` preserves manual override on edit.
-
-### Sprint / board + calendar (S1 + 21d, recent-10)
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `boardId` | `number \| null` | Board number from Jira Agility board URL (`/rest/agile/1.0/board/{id}`) — one per team, not per component. InputMode numeric, strip non-digits. |
-| `sprintCalendar.s1StartIso` | `YYYY-MM-DD` | S1 start date — prefers sprint named `S1`/`Sprint 1` else earliest dated sprint; manual date input allowed. |
-| `sprintCalendar.sprintDays` | `1–90` int, default **21** | Sprint length snapped via `snapSprintDays`: 6–9→7, 13–16→14, 19–22→21 else rounded. Inferred from **recent 10** sprints median (`dated.slice(-10)` when >10) so 15×14d old + 8×21d recent correctly yields 21d. Fallback 21d when no durations. Manual number input 1–90. |
-
-- Collection: `server/utils/sprintCalendar.js:collectSprintCalendarFromBoard` paginates `GET /rest/agile/1.0/board/{id}/sprint` (50/page, max 4 pages) → `inferSprintCalendarFromSprints`. Board load errors return `calendarError` without failing Detect; form shows manual fallback.
-- UI: `Sprint Board — for full team` row has **Board #** + **Sprint duration** + **Base date S1** → **Load Calendar** (`POST /api/admin/board-calendar`) → **Auto-detect from project** (`POST /api/admin/project-scope` → best board by `projectKeyOrId`). Success shows `S1 2022-12-06 · 21 days`; missing calendar shows `Could not detect — fill manually`.
-- `parseSprintCalendar` validates `ISO_DATE` + 1–90 int; `sprintCalendar` is now optional on Save (auto-detect on first board fetch) but shown as required in form when present.
-
-## AI / NAI Configuration
-
-All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.
-
-### Environment variables (canonical `NAI_*`)
-
-Five `NAI_*` variables are canonical. No `AI_*` fallback is read — only `NAI_*` env vars (or `aiConfig.json` defaults for non-secrets) are considered.
-
-| Var | Secret? | Required | Default / fallback | Notes |
-|---|---|---|---|---|
-| `NAI_API_KEY` | yes | Required for any AI call | *(none)* — must be set in `server/.env` | NuToken from `tokens.corp.nutanix.com`. No fallback file. Server error: `NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.` |
-| `NAI_API_BASE_URL` | no | Yes, if overriding | `aiConfig.json:baseUrl` (`https://tokens.corp.nutanix.com/enterpriseai/gateway/v1`) | Env overrides `aiConfig.json` (no `AI_*` fallback). Server error: `NAI_API_BASE_URL is not set…` |
-| `NAI_DEFAULT_MODEL` | no | Yes, if overriding | `aiConfig.json:defaultModel` (`beam-1-501b`) | Also accepts legacy `NAI_MODEL`. Server error: `NAI_DEFAULT_MODEL is not set…` |
-| `NAI_MAX_TOKENS` | no | Yes, if overriding | `aiConfig.json:maxTokens` (8192) | Env parsed as int (no `AI_*` fallback). Server error: `NAI_MAX_TOKENS is not set…` |
-| `NAI_REQUEST_TIMEOUT` | no | Yes, if overriding | `aiConfig.json:requestTimeoutMs` (120000 ms) | Env parsed as int ms (no `AI_*` fallback). Server error: `NAI_REQUEST_TIMEOUT is not set…` |
-
-Full table + rationale in [AI_API_CONFIGURATION.md](./AI_API_CONFIGURATION.md) and [NAI_API_SETUP.md](./NAI_API_SETUP.md).
-
-### Precedence diagram
-
-```
-per-call override (aiConnector options)
+</code></pre>
+<ul>
+<li><strong>Leadership DLs — PM / Dev / QA (3):</strong> dedicated inputs <code>pmDL</code>/<code>devDL</code>/<code>qaDL</code> → <code>leader_outlook_dls: string[0..3]</code> (trimmed, deduped) → auto <code>membersOf</code> inner OR; also stored for email distribution. No re-typing in Contacts needed.</li>
+<li><strong>Role / Function Contacts — 8 rows:</strong> <code>team</code>/<code>serv_team</code>/<code>doc_team</code>/<code>security_team</code>/<code>legal</code>/<code>documentation</code>/<code>trade_compliance</code>/<code>others</code> each <code>{entries: string[], isDL: boolean}</code> → <code>ChipInput</code> (Enter/<code>,</code>/paste/<code>blur</code> add, 24px × remove, <code>DL</code> checkbox <code>→ membersOf</code> vs <code>→ handle</code> label). All rows combined via <code>dedupeTrim</code> into single <code>assignee in (…)</code> clause inner-ORed with <code>component</code> / <code>&quot;primary component&quot;</code> / <code>issuetype</code> — see <code>shared/src/services/teamBaseJqlService.ts:buildInnerOr</code> SoT.</li>
+<li>UX guard: typing a chip without pressing Enter still commits on blur — Save never ignores visible input. Preview updates live; <code>baseFilterTouched</code> preserves manual override on edit.</li>
+</ul>
+<h3>Sprint / board + calendar (S1 + 21d, recent-10)</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>boardId</code></td>
+<td><code>number | null</code></td>
+<td>Board number from Jira Agility board URL (<code>/rest/agile/1.0/board/{id}</code>) — one per team, not per component. InputMode numeric, strip non-digits.</td>
+</tr>
+<tr>
+<td><code>sprintCalendar.s1StartIso</code></td>
+<td><code>YYYY-MM-DD</code></td>
+<td>S1 start date — prefers sprint named <code>S1</code>/<code>Sprint 1</code> else earliest dated sprint; manual date input allowed.</td>
+</tr>
+<tr>
+<td><code>sprintCalendar.sprintDays</code></td>
+<td><code>1–90</code> int, default <strong>21</strong></td>
+<td>Sprint length snapped via <code>snapSprintDays</code>: 6–9→7, 13–16→14, 19–22→21 else rounded. Inferred from <strong>recent 10</strong> sprints median (<code>dated.slice(-10)</code> when &gt;10) so 15×14d old + 8×21d recent correctly yields 21d. Fallback 21d when no durations. Manual number input 1–90.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Collection: <code>server/utils/sprintCalendar.js:collectSprintCalendarFromBoard</code> paginates <code>GET /rest/agile/1.0/board/{id}/sprint</code> (50/page, max 4 pages) → <code>inferSprintCalendarFromSprints</code>. Board load errors return <code>calendarError</code> without failing Detect; form shows manual fallback.</li>
+<li>UI: <code>Sprint Board — for full team</code> row has <strong>Board #</strong> + <strong>Sprint duration</strong> + <strong>Base date S1</strong> → <strong>Load Calendar</strong> (<code>POST /api/admin/board-calendar</code>) → <strong>Auto-detect from project</strong> (<code>POST /api/admin/project-scope</code> → best board by <code>projectKeyOrId</code>). Success shows <code>S1 2022-12-06 · 21 days</code>; missing calendar shows <code>Could not detect — fill manually</code>.</li>
+<li><code>parseSprintCalendar</code> validates <code>ISO_DATE</code> + 1–90 int; <code>sprintCalendar</code> is now optional on Save (auto-detect on first board fetch) but shown as required in form when present.</li>
+</ul>
+<h2>AI / NAI Configuration</h2>
+<p>All AI surfaces (chat, exec summary, release briefing, bin-packing converter) use the NAI (Nutanix Enterprise AI) gateway. Secrets are never stored in config files.</p>
+<h3>Environment variables (canonical <code>NAI_*</code>)</h3>
+<p>Five <code>NAI_*</code> variables are canonical. No <code>AI_*</code> fallback is read — only <code>NAI_*</code> env vars (or <code>aiConfig.json</code> defaults for non-secrets) are considered.</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Secret?</th>
+<th>Required</th>
+<th>Default / fallback</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NAI_API_KEY</code></td>
+<td>yes</td>
+<td>Required for any AI call</td>
+<td><em>(none)</em> — must be set in <code>server/.env</code></td>
+<td>NuToken from <code>tokens.corp.nutanix.com</code>. No fallback file. Server error: <code>NAI_API_KEY is not set. Retrieve the key from tokens.corp.nutanix.com and set it in server/.env.</code></td>
+</tr>
+<tr>
+<td><code>NAI_API_BASE_URL</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:baseUrl</code> (<code>https://tokens.corp.nutanix.com/enterpriseai/gateway/v1</code>)</td>
+<td>Env overrides <code>aiConfig.json</code> (no <code>AI_*</code> fallback). Server error: <code>NAI_API_BASE_URL is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_DEFAULT_MODEL</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:defaultModel</code> (<code>beam-1-501b</code>)</td>
+<td>Also accepts legacy <code>NAI_MODEL</code>. Server error: <code>NAI_DEFAULT_MODEL is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_MAX_TOKENS</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:maxTokens</code> (8192)</td>
+<td>Env parsed as int (no <code>AI_*</code> fallback). Server error: <code>NAI_MAX_TOKENS is not set…</code></td>
+</tr>
+<tr>
+<td><code>NAI_REQUEST_TIMEOUT</code></td>
+<td>no</td>
+<td>Yes, if overriding</td>
+<td><code>aiConfig.json:requestTimeoutMs</code> (120000 ms)</td>
+<td>Env parsed as int ms (no <code>AI_*</code> fallback). Server error: <code>NAI_REQUEST_TIMEOUT is not set…</code></td>
+</tr>
+</tbody></table>
+<p>Full table + rationale in <a href="./AI_API_CONFIGURATION.md">AI_API_CONFIGURATION.md</a> and <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a>.</p>
+<h3>Precedence diagram</h3>
+<pre><code>per-call override (aiConnector options)
         │
         ▼
   NAI_* env var (no AI_* fallback)
@@ -101,56 +202,132 @@ per-call override (aiConnector options)
         │
         ▼
   missing → throw actionable error naming the NAI_* var
-```
-
-- **Secrets** (`NAI_API_KEY`): env only — never in `aiConfig.json`.
-- **Non-secrets** (`NAI_API_BASE_URL`, `NAI_DEFAULT_MODEL`, `NAI_MAX_TOKENS`, `NAI_REQUEST_TIMEOUT`): `NAI_*` env → `aiConfig.json` → throw `NAI_* is not set` (no `AI_*` fallback).
-- Implementation: `shared/src/connectors/aiConnector.ts` and `apps/delivery-ops/server/.env.example`.
-
-### Bin-Packing Converter — server / auth
-
-| Concern | Detail |
-|---|---|
-| Route | `POST /api/bin-packing/convert` → `apps/delivery-ops/server/routes/binPackingConvert.js` (mounted at `/api/bin-packing` in `server/index.js`) |
-| Auth | `apiLimiter` + `validateJiraTokenMiddleware` — same guard as `POST /api/ai/chat` and `/api/jira-digging`. Unauthenticated requests receive 401 before any file processing. |
-| Input | Accepts both `multipart/form-data` (primary) and `JSON { filename, contentBase64, mimeType, productId }` (alternate). Max file 10 MB (multipart) / ~13 MB b64 (JSON). |
-| Body parser | `bodyParser.json({ limit: '15mb' })` in `server/index.js` — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. `bodyParser.urlencoded` also `15mb`. |
-| Temp files | Per-request `mkdtemp` via `shared/src/services/csvConverterService.ts`; never executes from the upload dir (downloaded files are untrusted — see project `AGENTS.md` environment note). |
-
-## OnCalls V2 — extra config
-
-| Concern | Detail |
-|---------|--------|
-| Route | `GET /api/jira/oncalls?timeframe=&amp;v2=` + `GET /api/jira/oncalls/v2` + `POST /api/jira/oncalls/refresh` + `POST /api/ai/oncall-concern` / `oncall-slice` — see [API — OnCalls](../api/jira.md#oncalls) |
-| Auth | `validateJiraTokenMiddleware` + `apiLimiter` (same as `POST /api/ai/chat`); permission `kpi_view` |
-| MCP | `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only, builds concern prompt) → `mcp/lighthouse` `generateOncallBrief` (calls NAI) |
-| NDB override | `oncallConfig.json:gapProjectPrefixes` — set your tenant prefix (e.g. `["ENG","PRISM"]`) to replace `NDB` default; component-contains-NDB fallback stays |
-| Overall | `Overall` pill sends no `resolved >= -Nd` clause — payload uses `seed AND statusCategory=Done` only; QA spot-check: pick one pill and verify hero JQL matches count |
-
-## RBAC
-
-See `RBAC_GUIDE.md` and `docs/api/` per `api-docs-required.mdc`.
-
-## Deployment
-
-- PM2: `pm2 start ecosystem.config.js`
-- Nginx: proxy 8899 → delivery-ops
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| Missing sidebar tab | Permission not mapped | Sync `LEGACY_PERMISSION_MAPPING` both sides, re-test permissions |
-| 401 from JIRA | PAT expired | Rotate `JIRA_PAT`, Bearer header |
-| `NAI_API_KEY is not set` on AI call | `NAI_API_KEY` missing from `server/.env` | Set `NAI_API_KEY` (NuToken from `tokens.corp.nutanix.com`); see [NAI_API_SETUP.md](./NAI_API_SETUP.md) |
-| `NAI_API_BASE_URL is not set` | No `NAI_API_BASE_URL` env and `aiConfig.json` missing/misconfigured | Set `NAI_API_BASE_URL` in env or ensure `server/config/aiConfig.json` has `baseUrl` |
-| 401 on `POST /api/bin-packing/convert` | Missing/invalid JIRA Bearer token | Same fix as `POST /api/ai/chat` — supply `Authorization: Bearer &lt;JIRA_PAT>` |
-| 401 on `POST /api/ai/oncall-concern` / `oncall-slice` | Missing JIRA token / `kpi_view` | Supply `Authorization: Bearer &lt;PAT>`; check `allowedUsers.json` maps `kpi_view` |
-| 413 / 422 on bin-packing upload | File > 10 MB or unsupported type | Reduce file or convert to CSV/XLSX; see [CSV_CONVERTER_GUIDE.md](../product/CSV_CONVERTER_GUIDE.md) |
-| TCMS Quality shows "Not Set" | TCMS timeout / no runs in window | Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`). |
-| TCMS Functional/System identical | Clone caveat (pending `test_category` filter) | Expected until TCMS ships filter; see `docs/tcms-rows-followup.md` |
-
-## Appendix
-
-Full env var table in `TECH_DESIGN.md`.
-</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+</code></pre>
+<ul>
+<li><strong>Secrets</strong> (<code>NAI_API_KEY</code>): env only — never in <code>aiConfig.json</code>.</li>
+<li><strong>Non-secrets</strong> (<code>NAI_API_BASE_URL</code>, <code>NAI_DEFAULT_MODEL</code>, <code>NAI_MAX_TOKENS</code>, <code>NAI_REQUEST_TIMEOUT</code>): <code>NAI_*</code> env → <code>aiConfig.json</code> → throw <code>NAI_* is not set</code> (no <code>AI_*</code> fallback).</li>
+<li>Implementation: <code>shared/src/connectors/aiConnector.ts</code> and <code>apps/delivery-ops/server/.env.example</code>.</li>
+</ul>
+<h3>Bin-Packing Converter — server / auth</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Route</td>
+<td><code>POST /api/bin-packing/convert</code> → <code>apps/delivery-ops/server/routes/binPackingConvert.js</code> (mounted at <code>/api/bin-packing</code> in <code>server/index.js</code>)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>apiLimiter</code> + <code>validateJiraTokenMiddleware</code> — same guard as <code>POST /api/ai/chat</code> and <code>/api/jira-digging</code>. Unauthenticated requests receive 401 before any file processing.</td>
+</tr>
+<tr>
+<td>Input</td>
+<td>Accepts both <code>multipart/form-data</code> (primary) and <code>JSON { filename, contentBase64, mimeType, productId }</code> (alternate). Max file 10 MB (multipart) / ~13 MB b64 (JSON).</td>
+</tr>
+<tr>
+<td>Body parser</td>
+<td><code>bodyParser.json({ limit: &#39;15mb&#39; })</code> in <code>server/index.js</code> — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. <code>bodyParser.urlencoded</code> also <code>15mb</code>.</td>
+</tr>
+<tr>
+<td>Temp files</td>
+<td>Per-request <code>mkdtemp</code> via <code>shared/src/services/csvConverterService.ts</code>; never executes from the upload dir (downloaded files are untrusted — see project <code>AGENTS.md</code> environment note).</td>
+</tr>
+</tbody></table>
+<h2>OnCalls V2 — extra config</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Route</td>
+<td><code>GET /api/jira/oncalls?timeframe=&amp;v2=</code> + <code>GET /api/jira/oncalls/v2</code> + <code>POST /api/jira/oncalls/refresh</code> + <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code> — see <a href="../api/jira.md#oncalls">API — OnCalls</a></td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>validateJiraTokenMiddleware</code> + <code>apiLimiter</code> (same as <code>POST /api/ai/chat</code>); permission <code>kpi_view</code></td>
+</tr>
+<tr>
+<td>MCP</td>
+<td><code>mcp/shared/tools/buildOncallPrompt.ts</code> (Loom, read-only, builds concern prompt) → <code>mcp/lighthouse</code> <code>generateOncallBrief</code> (calls NAI)</td>
+</tr>
+<tr>
+<td>NDB override</td>
+<td><code>oncallConfig.json:gapProjectPrefixes</code> — set your tenant prefix (e.g. <code>[&quot;ENG&quot;,&quot;PRISM&quot;]</code>) to replace <code>NDB</code> default; component-contains-NDB fallback stays</td>
+</tr>
+<tr>
+<td>Overall</td>
+<td><code>Overall</code> pill sends no <code>resolved &gt;= -Nd</code> clause — payload uses <code>seed AND statusCategory=Done</code> only; QA spot-check: pick one pill and verify hero JQL matches count</td>
+</tr>
+</tbody></table>
+<h2>RBAC</h2>
+<p>See <code>RBAC_GUIDE.md</code> and <code>docs/api/</code> per <code>api-docs-required.mdc</code>.</p>
+<h2>Deployment</h2>
+<ul>
+<li>PM2: <code>pm2 start ecosystem.config.js</code></li>
+<li>Nginx: proxy 8899 → delivery-ops</li>
+</ul>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Missing sidebar tab</td>
+<td>Permission not mapped</td>
+<td>Sync <code>LEGACY_PERMISSION_MAPPING</code> both sides, re-test permissions</td>
+</tr>
+<tr>
+<td>401 from JIRA</td>
+<td>PAT expired</td>
+<td>Rotate <code>JIRA_PAT</code>, Bearer header</td>
+</tr>
+<tr>
+<td><code>NAI_API_KEY is not set</code> on AI call</td>
+<td><code>NAI_API_KEY</code> missing from <code>server/.env</code></td>
+<td>Set <code>NAI_API_KEY</code> (NuToken from <code>tokens.corp.nutanix.com</code>); see <a href="./NAI_API_SETUP.md">NAI_API_SETUP.md</a></td>
+</tr>
+<tr>
+<td><code>NAI_API_BASE_URL is not set</code></td>
+<td>No <code>NAI_API_BASE_URL</code> env and <code>aiConfig.json</code> missing/misconfigured</td>
+<td>Set <code>NAI_API_BASE_URL</code> in env or ensure <code>server/config/aiConfig.json</code> has <code>baseUrl</code></td>
+</tr>
+<tr>
+<td>401 on <code>POST /api/bin-packing/convert</code></td>
+<td>Missing/invalid JIRA Bearer token</td>
+<td>Same fix as <code>POST /api/ai/chat</code> — supply <code>Authorization: Bearer &lt;JIRA_PAT&gt;</code></td>
+</tr>
+<tr>
+<td>401 on <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code></td>
+<td>Missing JIRA token / <code>kpi_view</code></td>
+<td>Supply <code>Authorization: Bearer &lt;PAT&gt;</code>; check <code>allowedUsers.json</code> maps <code>kpi_view</code></td>
+</tr>
+<tr>
+<td>413 / 422 on bin-packing upload</td>
+<td>File &gt; 10 MB or unsupported type</td>
+<td>Reduce file or convert to CSV/XLSX; see <a href="../product/CSV_CONVERTER_GUIDE.md">CSV_CONVERTER_GUIDE.md</a></td>
+</tr>
+<tr>
+<td>TCMS Quality shows &quot;Not Set&quot;</td>
+<td>TCMS timeout / no runs in window</td>
+<td>Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use <code>/api/v1/all_test_cases/aggregate/metrics</code> (<code>time_filter=four_weeks</code>, <code>target={milestone}-qcow2</code>).</td>
+</tr>
+<tr>
+<td>TCMS Functional/System identical</td>
+<td>Clone caveat (pending <code>test_category</code> filter)</td>
+<td>Expected until TCMS ships filter; see <code>docs/tcms-rows-followup.md</code></td>
+</tr>
+</tbody></table>
+<h2>Appendix</h2>
+<p>Full env var table in <code>TECH_DESIGN.md</code>.</p>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

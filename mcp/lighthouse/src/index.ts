@@ -14,6 +14,7 @@ import { registerLeadershipCommitReport } from '../../shared/tools/leadershipCom
 import { registerConvertToBinPackingCsv } from '../../shared/tools/convertToBinPackingCsv.js';
 import { registerBuildOncallPrompt } from '../../shared/tools/buildOncallPrompt.js';
 import { registerGenerateOncallBrief } from './tools/generateOncallBrief.js';
+import { registerGenerateCfdcfiBrief } from './tools/generateCfdcfiBrief.js';
 import { registerNdbGlossary } from '../../shared/resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
   registerConvertToBinPackingCsv(server);
   registerBuildOncallPrompt(server, env);
   registerGenerateOncallBrief(server, env);
+  registerGenerateCfdcfiBrief(server, env);
   registerNdbGlossary(server);
   const transport = new StdioServerTransport();
   await server.connect(transport);

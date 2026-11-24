@@ -121,6 +121,8 @@ graph TD
     GanttChart --> HistoricalMarkers[Historical Markers]
 ```
 
+### 2.2 Backend Module Structure (CFD/CFI V2: `cfdcfiDashboardV2` + `cfdcfiConfigResolve` + `cfdcfiStacksService` serve `/cfdcfi` V2 with pills → heroes/health/breakdowns/boomerang/pulse; see [CFD/CFI feature](../pages/cfdcfi/feature.md) + [API](../api/cfdcfi.md))
+
 ### 2.2 Backend Module Structure
 
 ```mermaid

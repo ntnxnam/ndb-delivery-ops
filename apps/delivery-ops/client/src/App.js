@@ -23,6 +23,7 @@ import KPIPage from './components/KPIPage';
 import SystemTestScalePage from './components/SystemTestScalePage';
 import OncallsV2Page from './components/OncallsV2/OncallsV2Page';
 import CfdCfiPage from './components/CfdCfiPage';
+import CfdCfiV2Page from './components/CfdCfiV2/CfdCfiV2Page';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import ConfigManager from './components/ConfigManager/ConfigManager';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
@@ -212,6 +213,17 @@ const AuthenticatedApp = () => {
 
                 <Route
                   path="/cfdcfi"
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout wide>
+                        <CfdCfiV2Page />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/cfdcfi-legacy"
                   element={
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>

@@ -1,75 +1,70 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOY_ROCKY_LINUX — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOY_ROCKY_LINUX</span></nav><div class="container"><article class="prose"><pre># Deploy to Rocky Linux / RHEL — delivery-ops
-
-> **Canonical deploy reference:** [`DEPLOYMENT_GUIDE.md`](./DEPLOYMENT_GUIDE.md) is the
-> single source of truth for the one-command deploy flow. This guide covers the
-> same deploy in more detail for operators who need to provision or debug a
-> Rocky Linux / RHEL host by hand — firewall, SELinux, manual install, dev vs.
-> production run modes, and troubleshooting.
-
-Fixed ports (no fallback — see `AGENTS.md`):
-
-| Service | Port | Env / flag |
-|---|---|---|
-| React frontend (dev `react-scripts start`, prod Nginx `listen`) | `8899` | `FRONTEND_PORT` / `HTTP_PORT` |
-| Express backend (Node / PM2) | `8001` | `PORT` in `server/.env` / `BACKEND_PORT` |
-
-Do not reintroduce `8888`; it conflicts on shared hosts and is not used anywhere
-in this repo. All paths below use the canonical repo name `portfolio-delivery-ops`
-(which currently lives at `~/NDB-Ops-Tools/ndb-delivery-ops` on dev machines
-per `AGENTS.md`). The PM2 process name is `delivery-ops`.
-
----
-
-## Prerequisites
-
-### 1. System packages
-
-On the Rocky Linux 9 host, `apps/delivery-ops/scripts/server-deploy.sh` will
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>DEPLOY_ROCKY_LINUX — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>DEPLOY_ROCKY_LINUX</span></nav><div class="container"><article class="prose"><h1>Deploy to Rocky Linux / RHEL — delivery-ops</h1>
+<blockquote>
+<p><strong>Canonical deploy reference:</strong> <a href="./DEPLOYMENT_GUIDE.md"><code>DEPLOYMENT_GUIDE.md</code></a> is the
+single source of truth for the one-command deploy flow. This guide covers the
+same deploy in more detail for operators who need to provision or debug a
+Rocky Linux / RHEL host by hand — firewall, SELinux, manual install, dev vs.
+production run modes, and troubleshooting.</p>
+</blockquote>
+<p>Fixed ports (no fallback — see <code>AGENTS.md</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>Env / flag</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>React frontend (dev <code>react-scripts start</code>, prod Nginx <code>listen</code>)</td>
+<td><code>8899</code></td>
+<td><code>FRONTEND_PORT</code> / <code>HTTP_PORT</code></td>
+</tr>
+<tr>
+<td>Express backend (Node / PM2)</td>
+<td><code>8001</code></td>
+<td><code>PORT</code> in <code>server/.env</code> / <code>BACKEND_PORT</code></td>
+</tr>
+</tbody></table>
+<p>Do not reintroduce <code>8888</code>; it conflicts on shared hosts and is not used anywhere
+in this repo. All paths below use the canonical repo name <code>portfolio-delivery-ops</code>
+(which currently lives at <code>~/NDB-Ops-Tools/ndb-delivery-ops</code> on dev machines
+per <code>AGENTS.md</code>). The PM2 process name is <code>delivery-ops</code>.</p>
+<hr>
+<h2>Prerequisites</h2>
+<h3>1. System packages</h3>
+<p>On the Rocky Linux 9 host, <code>apps/delivery-ops/scripts/server-deploy.sh</code> will
 install what is missing (Node 20.x, Nginx, PM2, build tools) automatically when
-you use the canonical deploy in `DEPLOYMENT_GUIDE.md`. For a manual setup,
-ensure at minimum:
-
-```bash
-# Node 20.x (Nodesource)
+you use the canonical deploy in <code>DEPLOYMENT_GUIDE.md</code>. For a manual setup,
+ensure at minimum:</p>
+<pre><code class="language-bash"># Node 20.x (Nodesource)
 curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 sudo dnf install -y nodejs nginx gcc-c++ make python3 policycoreutils-python-utils
 
 # PM2 (global)
 sudo npm install -g pm2
-```
-
-Verify:
-
-```bash
-node -v   # v20.x
+</code></pre>
+<p>Verify:</p>
+<pre><code class="language-bash">node -v   # v20.x
 npm -v
 nginx -v
 pm2 -v
-```
-
-### 2. Open firewall ports
-
-Both ports must be reachable. The backend `:8001` is reverse-proxied via Nginx
-on `:8899`, but exposing it directly is useful for health checks and debugging.
-
-```bash
-sudo firewall-cmd --permanent --add-port=8899/tcp
+</code></pre>
+<h3>2. Open firewall ports</h3>
+<p>Both ports must be reachable. The backend <code>:8001</code> is reverse-proxied via Nginx
+on <code>:8899</code>, but exposing it directly is useful for health checks and debugging.</p>
+<pre><code class="language-bash">sudo firewall-cmd --permanent --add-port=8899/tcp
 sudo firewall-cmd --permanent --add-port=8001/tcp
 sudo firewall-cmd --reload
 sudo firewall-cmd --list-ports
 # expected: 8899/tcp 8001/tcp (plus any other host ports)
-```
-
-`server-deploy.sh` does this step idempotently on every deploy if `firewalld`
-is active — the commands above are for manual / first-time provisioning.
-
-### 3. Configure SELinux
-
-If SELinux is enforcing (default on Rocky Linux), allow Nginx to proxy to the
-backend and allow both ports under `http_port_t`:
-
-```bash
-# Allow Nginx to make outbound connections (reverse proxy to :8001)
+</code></pre>
+<p><code>server-deploy.sh</code> does this step idempotently on every deploy if <code>firewalld</code>
+is active — the commands above are for manual / first-time provisioning.</p>
+<h3>3. Configure SELinux</h3>
+<p>If SELinux is enforcing (default on Rocky Linux), allow Nginx to proxy to the
+backend and allow both ports under <code>http_port_t</code>:</p>
+<pre><code class="language-bash"># Allow Nginx to make outbound connections (reverse proxy to :8001)
 sudo setsebool -P httpd_can_network_connect 1
 
 # Allow the custom HTTP ports (only needed when not 80/443)
@@ -81,195 +76,156 @@ sudo semanage port -a -t http_port_t -p tcp 8001
 
 # If semanage is not found:
 sudo dnf install -y policycoreutils-python-utils
-```
-
-Verify:
-
-```bash
-getenforce
-# Enforcing  -> SELinux is active; the steps above apply
-# Disabled   -> SELinux is off; skip this section
+</code></pre>
+<p>Verify:</p>
+<pre><code class="language-bash">getenforce
+# Enforcing  -&gt; SELinux is active; the steps above apply
+# Disabled   -&gt; SELinux is off; skip this section
 
 sudo semanage port -l | grep http_port_t
 # should include 8899 and 8001
-```
-
-`server-deploy.sh` also applies `httpd_can_network_connect` and the
-`semanage port` registration idempotently.
-
----
-
-## Installation
-
-### Canonical path (from your Mac)
-
-This is the same one-command flow documented in `DEPLOYMENT_GUIDE.md`:
-
-```bash
-./apps/delivery-ops/scripts/deploy-to-production.sh
-```
-
-What it does under the hood:
-
-1. Runs the localhost guard (`npm run check:no-localhost`) — fails early if violated.
-2. Zips the repo (excludes `node_modules`, `.git`, `build`, `server/.env`).
-3. SCPs the archive to `PRODUCTION_SERVER` (`santhosh.s@santhosh-s-1` by default).
-4. SSHes in, extracts to `SERVER_PATH` (`/var/www/html/ndb-delivery-ops`), and runs
-   `apps/delivery-ops/scripts/server-deploy.sh` on the remote host, which installs
-   deps, builds the client, writes Nginx + PM2 config, and health-checks.
-
-Defaults are set at the top of `deploy-to-production.sh`:
-
-```
-PRODUCTION_SERVER=santhosh.s@santhosh-s-1.umsvm.nutanix.com
+</code></pre>
+<p><code>server-deploy.sh</code> also applies <code>httpd_can_network_connect</code> and the
+<code>semanage port</code> registration idempotently.</p>
+<hr>
+<h2>Installation</h2>
+<h3>Canonical path (from your Mac)</h3>
+<p>This is the same one-command flow documented in <code>DEPLOYMENT_GUIDE.md</code>:</p>
+<pre><code class="language-bash">./apps/delivery-ops/scripts/deploy-to-production.sh
+</code></pre>
+<p>What it does under the hood:</p>
+<ol>
+<li>Runs the localhost guard (<code>npm run check:no-localhost</code>) — fails early if violated.</li>
+<li>Zips the repo (excludes <code>node_modules</code>, <code>.git</code>, <code>build</code>, <code>server/.env</code>).</li>
+<li>SCPs the archive to <code>PRODUCTION_SERVER</code> (<code>santhosh.s@santhosh-s-1</code> by default).</li>
+<li>SSHes in, extracts to <code>SERVER_PATH</code> (<code>/var/www/html/ndb-delivery-ops</code>), and runs
+<code>apps/delivery-ops/scripts/server-deploy.sh</code> on the remote host, which installs
+deps, builds the client, writes Nginx + PM2 config, and health-checks.</li>
+</ol>
+<p>Defaults are set at the top of <code>deploy-to-production.sh</code>:</p>
+<pre><code>PRODUCTION_SERVER=santhosh.s@santhosh-s-1.umsvm.nutanix.com
 SERVER_PATH=/var/www/html/ndb-delivery-ops
 HTTP_PORT=8899
 BACKEND_PORT=8001   (passed through to server-deploy.sh)
 PM2_APP_NAME=delivery-ops
-```
+</code></pre>
+<p>Override per-run with flags (see <code>DEPLOYMENT_GUIDE.md</code> → Options) or by editing
+those variables in the script.</p>
+<p>Both scripts are <strong>idempotent</strong> — the same command works for first deploy and
+every redeploy.</p>
+<h3>Manual install (on the server)</h3>
+<p>Use this only when you need to provision a host without running the Mac-side
+deploy script (e.g. air-gapped copy, custom path).</p>
+<ol>
+<li><p><strong>Copy the repo to the server:</strong></p>
+<pre><code class="language-bash"># From your Mac — repo is portfolio-delivery-ops (currently at
+# ~/NDB-Ops-Tools/ndb-delivery-ops on dev machines; branch
+# weave/delivery-ops-all-phases-20261118)
+scp -r portfolio-delivery-ops santhosh.s@santhosh-s-1:/var/www/html/ndb-delivery-ops
 
-Override per-run with flags (see `DEPLOYMENT_GUIDE.md` → Options) or by editing
-those variables in the script.
+# Or as a zip/tarball if scp -r is slow:
+# cd ~/NDB-Ops-Tools &amp;&amp; zip -r portfolio-delivery-ops.zip portfolio-delivery-ops \
+#   -x &quot;*/node_modules/*&quot; -x &quot;*/.git/*&quot; -x &quot;*/build/*&quot; -x &quot;*/server/.env&quot;
+# scp portfolio-delivery-ops.zip santhosh.s@santhosh-s-1:/var/www/html/
+# ssh santhosh.s@santhosh-s-1 &#39;cd /var/www/html &amp;&amp; unzip -q portfolio-delivery-ops.zip&#39;
+</code></pre>
+</li>
+<li><p><strong>Install and build on the server:</strong></p>
+<pre><code class="language-bash">ssh santhosh.s@santhosh-s-1
 
-Both scripts are **idempotent** — the same command works for first deploy and
-every redeploy.
+# App lives at &lt;SERVER_PATH&gt;/apps/delivery-ops
+cd /var/www/html/ndb-delivery-ops
 
-### Manual install (on the server)
+# Server env — never commit secrets; seed from example if missing
+# server-deploy.sh does this automatically and writes PORT=8001
+cp -n apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
+# then edit SMTP_*, NAI_API_KEY, etc.:
+vi apps/delivery-ops/server/.env
 
-Use this only when you need to provision a host without running the Mac-side
-deploy script (e.g. air-gapped copy, custom path).
+# Ensure frontend/backend ports are correct (dev wrappers read these)
+cat apps/delivery-ops/.env
+# APP_NAME=delivery-ops
+# BACKEND_PORT=8001
+# FRONTEND_PORT=8899
 
-1. **Copy the repo to the server:**
+# Monorepo install (from repo root) + client build
+npm install --no-audit --no-fund
+CI= npm --workspace apps/delivery-ops/client run build
+# or: (cd apps/delivery-ops/client &amp;&amp; CI= npm run build)
 
-   ```bash
-   # From your Mac — repo is portfolio-delivery-ops (currently at
-   # ~/NDB-Ops-Tools/ndb-delivery-ops on dev machines; branch
-   # weave/delivery-ops-all-phases-20261118)
-   scp -r portfolio-delivery-ops santhosh.s@santhosh-s-1:/var/www/html/ndb-delivery-ops
+# Or run the server-side deploy script directly (handles Nginx + PM2 + SELinux)
+bash apps/delivery-ops/scripts/server-deploy.sh
+# overridable: HTTP_PORT=8899 BACKEND_PORT=8001 PM2_APP_NAME=delivery-ops bash apps/delivery-ops/scripts/server-deploy.sh
+</code></pre>
+</li>
+<li><p><strong>Nginx + PM2 (what <code>server-deploy.sh</code> does for you):</strong></p>
+<p>If you are not using <code>server-deploy.sh</code>, replicate these steps:</p>
+<pre><code class="language-bash"># Nginx site — serve React build, proxy /api to Node
+sudo tee /etc/nginx/conf.d/delivery-ops.conf &gt;/dev/null &lt;&lt;&#39;EOF&#39;
+server {
+    listen 8899 default_server;
+    listen [::]:8899 default_server;
+    server_name _;
+    root /var/www/html/ndb-delivery-ops/apps/delivery-ops/client/build;
+    index index.html;
+    client_max_body_size 25m;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+    location /bin-packing/ {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+sudo nginx -t &amp;&amp; sudo systemctl enable nginx &amp;&amp; sudo systemctl reload nginx
 
-   # Or as a zip/tarball if scp -r is slow:
-   # cd ~/NDB-Ops-Tools &amp;&amp; zip -r portfolio-delivery-ops.zip portfolio-delivery-ops \
-   #   -x "*/node_modules/*" -x "*/.git/*" -x "*/build/*" -x "*/server/.env"
-   # scp portfolio-delivery-ops.zip santhosh.s@santhosh-s-1:/var/www/html/
-   # ssh santhosh.s@santhosh-s-1 'cd /var/www/html &amp;&amp; unzip -q portfolio-delivery-ops.zip'
-   ```
-
-2. **Install and build on the server:**
-
-   ```bash
-   ssh santhosh.s@santhosh-s-1
-
-   # App lives at &lt;SERVER_PATH>/apps/delivery-ops
-   cd /var/www/html/ndb-delivery-ops
-
-   # Server env — never commit secrets; seed from example if missing
-   # server-deploy.sh does this automatically and writes PORT=8001
-   cp -n apps/delivery-ops/server/.env.example apps/delivery-ops/server/.env
-   # then edit SMTP_*, NAI_API_KEY, etc.:
-   vi apps/delivery-ops/server/.env
-
-   # Ensure frontend/backend ports are correct (dev wrappers read these)
-   cat apps/delivery-ops/.env
-   # APP_NAME=delivery-ops
-   # BACKEND_PORT=8001
-   # FRONTEND_PORT=8899
-
-   # Monorepo install (from repo root) + client build
-   npm install --no-audit --no-fund
-   CI= npm --workspace apps/delivery-ops/client run build
-   # or: (cd apps/delivery-ops/client &amp;&amp; CI= npm run build)
-
-   # Or run the server-side deploy script directly (handles Nginx + PM2 + SELinux)
-   bash apps/delivery-ops/scripts/server-deploy.sh
-   # overridable: HTTP_PORT=8899 BACKEND_PORT=8001 PM2_APP_NAME=delivery-ops bash apps/delivery-ops/scripts/server-deploy.sh
-   ```
-
-3. **Nginx + PM2 (what `server-deploy.sh` does for you):**
-
-   If you are not using `server-deploy.sh`, replicate these steps:
-
-   ```bash
-   # Nginx site — serve React build, proxy /api to Node
-   sudo tee /etc/nginx/conf.d/delivery-ops.conf >/dev/null &lt;&lt;'EOF'
-   server {
-       listen 8899 default_server;
-       listen [::]:8899 default_server;
-       server_name _;
-       root /var/www/html/ndb-delivery-ops/apps/delivery-ops/client/build;
-       index index.html;
-       client_max_body_size 25m;
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-       location /api/ {
-           proxy_pass http://127.0.0.1:8001;
-           proxy_http_version 1.1;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_read_timeout 300s;
-           proxy_send_timeout 300s;
-           proxy_buffering off;
-           proxy_cache off;
-       }
-       location /bin-packing/ {
-           proxy_pass http://127.0.0.1:8001;
-           proxy_http_version 1.1;
-           proxy_set_header Host $host;
-           proxy_set_header X-Forwarded-Proto $scheme;
-       }
-   }
-   EOF
-   sudo nginx -t &amp;&amp; sudo systemctl enable nginx &amp;&amp; sudo systemctl reload nginx
-
-   # PM2 backend
-   cd /var/www/html/ndb-delivery-ops/apps/delivery-ops
-   # ecosystem is written by server-deploy.sh; for a manual equivalent:
-   pm2 start server/index.js --name delivery-ops --cwd apps/delivery-ops/server --update-env
-   pm2 save
-   pm2 startup systemd -u "$(whoami)" --hp "$HOME"  # run the printed sudo command
-   ```
-
----
-
-## Running in Development
-
-Dev mode runs both services with hot-reload. The repo's lifecycle wrappers are
-thin shims — each one sets `PROJECT_ROOT` and execs the shared implementation
-under `~/.ntnx/app-lifecycle/`:
-
-```
-apps/delivery-ops/scripts/start.sh   -> exec ~/.ntnx/app-lifecycle/start.sh
-apps/delivery-ops/scripts/stop.sh    -> exec ~/.ntnx/app-lifecycle/stop.sh
-apps/delivery-ops/scripts/restart.sh -> exec ~/.ntnx/app-lifecycle/restart.sh
-```
-
-Ports are read from `apps/delivery-ops/.env`:
-
-```
-APP_NAME=delivery-ops
+# PM2 backend
+cd /var/www/html/ndb-delivery-ops/apps/delivery-ops
+# ecosystem is written by server-deploy.sh; for a manual equivalent:
+pm2 start server/index.js --name delivery-ops --cwd apps/delivery-ops/server --update-env
+pm2 save
+pm2 startup systemd -u &quot;$(whoami)&quot; --hp &quot;$HOME&quot;  # run the printed sudo command
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2>Running in Development</h2>
+<p>Dev mode runs both services with hot-reload. The repo&#39;s lifecycle wrappers are
+thin shims — each one sets <code>PROJECT_ROOT</code> and execs the shared implementation
+under <code>~/.ntnx/app-lifecycle/</code>:</p>
+<pre><code>apps/delivery-ops/scripts/start.sh   -&gt; exec ~/.ntnx/app-lifecycle/start.sh
+apps/delivery-ops/scripts/stop.sh    -&gt; exec ~/.ntnx/app-lifecycle/stop.sh
+apps/delivery-ops/scripts/restart.sh -&gt; exec ~/.ntnx/app-lifecycle/restart.sh
+</code></pre>
+<p>Ports are read from <code>apps/delivery-ops/.env</code>:</p>
+<pre><code>APP_NAME=delivery-ops
 BACKEND_PORT=8001
 FRONTEND_PORT=8899
-```
-
-And from `apps/delivery-ops/client/package.json` (`start` script):
-
-```
-"start": "PORT=8899 BROWSER=none react-scripts start"
-"proxy": "http://localhost:8001"
-```
-
-Backend default in `apps/delivery-ops/server/index.js:26`:
-
-```js
-const PORT = Number(process.env.PORT || 8001);
-```
-
-### Start / stop / restart
-
-```bash
-cd /var/www/html/ndb-delivery-ops/apps/delivery-ops   # or your local checkout
+</code></pre>
+<p>And from <code>apps/delivery-ops/client/package.json</code> (<code>start</code> script):</p>
+<pre><code>&quot;start&quot;: &quot;PORT=8899 BROWSER=none react-scripts start&quot;
+&quot;proxy&quot;: &quot;http://localhost:8001&quot;
+</code></pre>
+<p>Backend default in <code>apps/delivery-ops/server/index.js:26</code>:</p>
+<pre><code class="language-js">const PORT = Number(process.env.PORT || 8001);
+</code></pre>
+<h3>Start / stop / restart</h3>
+<pre><code class="language-bash">cd /var/www/html/ndb-delivery-ops/apps/delivery-ops   # or your local checkout
 
 ./scripts/start.sh     # backend on :8001, frontend on :8899
 ./scripts/stop.sh      # stops both
@@ -278,77 +234,60 @@ cd /var/www/html/ndb-delivery-ops/apps/delivery-ops   # or your local checkout
 # Or via npm workspaces from the monorepo root:
 npm run delivery-ops:dev        # same as start.sh (dev mode)
 npm run delivery-ops:restart    # cd apps/delivery-ops &amp;&amp; ./restart
-```
-
-Logs (lifecycle wrappers):
-
-```bash
-tail -f logs/backend.log
+</code></pre>
+<p>Logs (lifecycle wrappers):</p>
+<pre><code class="language-bash">tail -f logs/backend.log
 tail -f logs/frontend.log
 # or legacy paths on older hosts:
 tail -f /tmp/server.log
 tail -f /tmp/client.log
-```
-
-Access:
-
-```
-http://&lt;server-ip>:8899/          # React dev server
-http://&lt;server-ip>:8001/api/health  # backend health directly
-http://&lt;server-ip>:8899/api/health  # backend health via CRA proxy
-```
-
-> Do **not** add `DANGEROUSLY_DISABLE_HOST_CHECK` or a `client/.env` override
-> for FQDN access — the current setup does not need it. If you hit a host-check
-> issue in dev, verify `FRONTEND_PORT`/`PORT` and the proxy target instead.
-
----
-
-## Production with PM2 (and Nginx)
-
-Production does **not** use the CRA dev server. Nginx serves the static build
-on `:8899` and reverse-proxies `/api/*` to the PM2-managed Node process on
-`:8001`. This is what `DEPLOYMENT_GUIDE.md` deploys.
-
-### Deploy / redeploy
-
-```bash
-# From your Mac (monorepo root):
+</code></pre>
+<p>Access:</p>
+<pre><code>http://&lt;server-ip&gt;:8899/          # React dev server
+http://&lt;server-ip&gt;:8001/api/health  # backend health directly
+http://&lt;server-ip&gt;:8899/api/health  # backend health via CRA proxy
+</code></pre>
+<blockquote>
+<p>Do <strong>not</strong> add <code>DANGEROUSLY_DISABLE_HOST_CHECK</code> or a <code>client/.env</code> override
+for FQDN access — the current setup does not need it. If you hit a host-check
+issue in dev, verify <code>FRONTEND_PORT</code>/<code>PORT</code> and the proxy target instead.</p>
+</blockquote>
+<hr>
+<h2>Production with PM2 (and Nginx)</h2>
+<p>Production does <strong>not</strong> use the CRA dev server. Nginx serves the static build
+on <code>:8899</code> and reverse-proxies <code>/api/*</code> to the PM2-managed Node process on
+<code>:8001</code>. This is what <code>DEPLOYMENT_GUIDE.md</code> deploys.</p>
+<h3>Deploy / redeploy</h3>
+<pre><code class="language-bash"># From your Mac (monorepo root):
 ./apps/delivery-ops/scripts/deploy-to-production.sh              # defaults
 ./apps/delivery-ops/scripts/deploy-to-production.sh --yes        # skip confirm
 ./apps/delivery-ops/scripts/deploy-to-production.sh --server user@host --path /var/www/html/ndb-delivery-ops --http-port 8899
-```
-
-On the server, `server-deploy.sh` handles the full lifecycle:
-
-1. Installs Node 20.x / Nginx / PM2 if missing
-2. Seeds `server/.env` from `server/.env.example` if absent; **writes `PORT=8001`**
-   so the backend and the Nginx `proxy_pass` can never drift apart
-3. `npm install` from the repo root, then `CI= npm run build` in `client/`
-4. Writes `/etc/nginx/conf.d/delivery-ops.conf` (see Installation above)
-5. Applies SELinux (`httpd_can_network_connect`) and firewall (`firewall-cmd`)
-6. Writes `apps/delivery-ops/ecosystem.config.js` and runs `pm2 startOrReload`
-7. Health-checks `http://127.0.0.1:8001/api/health` and `http://127.0.0.1:8899/api/health`
-
-### Verifying a production deploy
-
-```bash
-# From your Mac or any host that can reach the server:
-curl http://&lt;server-ip>:8001/api/health   # direct backend
-curl http://&lt;server-ip>:8899/api/health   # via Nginx
+</code></pre>
+<p>On the server, <code>server-deploy.sh</code> handles the full lifecycle:</p>
+<ol>
+<li>Installs Node 20.x / Nginx / PM2 if missing</li>
+<li>Seeds <code>server/.env</code> from <code>server/.env.example</code> if absent; <strong>writes <code>PORT=8001</code></strong>
+so the backend and the Nginx <code>proxy_pass</code> can never drift apart</li>
+<li><code>npm install</code> from the repo root, then <code>CI= npm run build</code> in <code>client/</code></li>
+<li>Writes <code>/etc/nginx/conf.d/delivery-ops.conf</code> (see Installation above)</li>
+<li>Applies SELinux (<code>httpd_can_network_connect</code>) and firewall (<code>firewall-cmd</code>)</li>
+<li>Writes <code>apps/delivery-ops/ecosystem.config.js</code> and runs <code>pm2 startOrReload</code></li>
+<li>Health-checks <code>http://127.0.0.1:8001/api/health</code> and <code>http://127.0.0.1:8899/api/health</code></li>
+</ol>
+<h3>Verifying a production deploy</h3>
+<pre><code class="language-bash"># From your Mac or any host that can reach the server:
+curl http://&lt;server-ip&gt;:8001/api/health   # direct backend
+curl http://&lt;server-ip&gt;:8899/api/health   # via Nginx
 
 # On the server:
 pm2 status
 pm2 logs delivery-ops --lines 100
 sudo nginx -t
 sudo systemctl status nginx
-sudo ss -tulnp | grep -E ':(8001|8899)'
-```
-
-### Common production operations
-
-```bash
-# Restart backend only
+sudo ss -tulnp | grep -E &#39;:(8001|8899)&#39;
+</code></pre>
+<h3>Common production operations</h3>
+<pre><code class="language-bash"># Restart backend only
 pm2 restart delivery-ops
 
 # Restart Nginx
@@ -363,32 +302,24 @@ sudo systemctl reload nginx
 pm2 logs
 
 # Check listening ports
-sudo ss -tulnp | grep -E ':(8001|8899)'
+sudo ss -tulnp | grep -E &#39;:(8001|8899)&#39;
 
 # PM2 boot persistence (survives reboot)
 pm2 save
 # then run the sudo command printed by:
-pm2 startup systemd -u "$(whoami)" --hp "$HOME"
-```
-
-### Rollback
-
-Each deploy via `deploy-to-production.sh` extracts into `SERVER_PATH`
-(`server/.env` is never overwritten). To roll back code, redeploy an earlier
-archive. See `DEPLOYMENT_GUIDE.md` → Rollback for backup locations.
-
----
-
-## Troubleshooting
-
-### Port already in use (8899 or 8001)
-
-A leftover dev process or stale PM2 worker can hold the port and put PM2 into
-`errored` state.
-
-```bash
-# Find what is listening
-sudo ss -tulnp | grep -E ':(8001|8899)'
+pm2 startup systemd -u &quot;$(whoami)&quot; --hp &quot;$HOME&quot;
+</code></pre>
+<h3>Rollback</h3>
+<p>Each deploy via <code>deploy-to-production.sh</code> extracts into <code>SERVER_PATH</code>
+(<code>server/.env</code> is never overwritten). To roll back code, redeploy an earlier
+archive. See <code>DEPLOYMENT_GUIDE.md</code> → Rollback for backup locations.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Port already in use (8899 or 8001)</h3>
+<p>A leftover dev process or stale PM2 worker can hold the port and put PM2 into
+<code>errored</code> state.</p>
+<pre><code class="language-bash"># Find what is listening
+sudo ss -tulnp | grep -E &#39;:(8001|8899)&#39;
 sudo lsof -ti :8001
 sudo lsof -ti :8899
 
@@ -403,23 +334,19 @@ sudo fuser -k 8899/tcp
 pm2 restart delivery-ops
 # or dev mode:
 ./scripts/restart.sh
-```
-
-`server-deploy.sh` clears stale listeners on `:8001` automatically before
-`pm2 startOrReload`.
-
-### Cannot reach the app
-
-```bash
-# 1. Firewall
+</code></pre>
+<p><code>server-deploy.sh</code> clears stale listeners on <code>:8001</code> automatically before
+<code>pm2 startOrReload</code>.</p>
+<h3>Cannot reach the app</h3>
+<pre><code class="language-bash"># 1. Firewall
 sudo firewall-cmd --list-ports
 sudo firewall-cmd --list-all
 # must include 8899/tcp and 8001/tcp
 
-# 2. Backend is actually listening (not just PM2 "online")
-sudo ss -tlnp | grep -E ':(8001|8899)'
-curl -fsS http://127.0.0.1:8001/api/health &amp;&amp; echo "backend OK"
-curl -fsS http://127.0.0.1:8899/api/health &amp;&amp; echo "nginx proxy OK"
+# 2. Backend is actually listening (not just PM2 &quot;online&quot;)
+sudo ss -tlnp | grep -E &#39;:(8001|8899)&#39;
+curl -fsS http://127.0.0.1:8001/api/health &amp;&amp; echo &quot;backend OK&quot;
+curl -fsS http://127.0.0.1:8899/api/health &amp;&amp; echo &quot;nginx proxy OK&quot;
 
 # 3. Nginx config valid
 sudo nginx -t
@@ -433,60 +360,46 @@ sudo restorecon -R /var/www/html/ndb-delivery-ops/apps/delivery-ops/client/build
 # 5. PM2 status and logs
 pm2 status
 pm2 logs delivery-ops --lines 100 --err
-```
-
-### `502 Bad Gateway` from Nginx
-
-```bash
-pm2 status                          # backend must be online, not errored
+</code></pre>
+<h3><code>502 Bad Gateway</code> from Nginx</h3>
+<pre><code class="language-bash">pm2 status                          # backend must be online, not errored
 pm2 logs delivery-ops                # check for EADDRINUSE or missing env
 sudo tail -f /var/log/nginx/error.log
 curl -v http://127.0.0.1:8001/api/health   # bypass Nginx
-```
-
-Common causes: backend crashed (port conflict, missing `server/.env` secrets),
-or `PORT` in `server/.env` drifted from the Nginx `proxy_pass` — re-run
-`server-deploy.sh` to re-sync it to `8001`.
-
-### Frontend loads but API calls fail
-
-```bash
-sudo nginx -t
+</code></pre>
+<p>Common causes: backend crashed (port conflict, missing <code>server/.env</code> secrets),
+or <code>PORT</code> in <code>server/.env</code> drifted from the Nginx <code>proxy_pass</code> — re-run
+<code>server-deploy.sh</code> to re-sync it to <code>8001</code>.</p>
+<h3>Frontend loads but API calls fail</h3>
+<pre><code class="language-bash">sudo nginx -t
 sudo cat /etc/nginx/conf.d/delivery-ops.conf   # proxy_pass must be :8001
 curl http://127.0.0.1:8001/api/health          # direct backend check
-```
-
-### Dependency / build errors
-
-```bash
-# From the repo root (monorepo):
+</code></pre>
+<h3>Dependency / build errors</h3>
+<pre><code class="language-bash"># From the repo root (monorepo):
 rm -rf node_modules apps/delivery-ops/client/node_modules apps/delivery-ops/server/node_modules
 npm install --no-audit --no-fund
 CI= npm --workspace apps/delivery-ops/client run build
 
 # Or re-run the full server deploy (idempotent):
 bash apps/delivery-ops/scripts/server-deploy.sh
-```
-
-### SELinux blocking Nginx
-
-```bash
-sudo setsebool -P httpd_can_network_connect 1
+</code></pre>
+<h3>SELinux blocking Nginx</h3>
+<pre><code class="language-bash">sudo setsebool -P httpd_can_network_connect 1
 sudo semanage port -a -t http_port_t -p tcp 8899  # or -m if already exists
 sudo semanage port -a -t http_port_t -p tcp 8001
 sudo restorecon -R /var/www/html/ndb-delivery-ops/apps/delivery-ops/client/build
 sudo systemctl restart nginx
-```
-
----
-
-## See also
-
-- [`DEPLOYMENT_GUIDE.md`](./DEPLOYMENT_GUIDE.md) — one-command deploy, env overrides, post-deploy checks
-- `apps/delivery-ops/scripts/deploy-to-production.sh` — Mac-side deploy script (defaults: `PRODUCTION_SERVER`, `SERVER_PATH`, `HTTP_PORT`, `PM2_APP_NAME`)
-- `apps/delivery-ops/scripts/server-deploy.sh` — server-side idempotent provisioner (Node/Nginx/PM2/SELinux/firewall/build)
-- `apps/delivery-ops/.env` — `APP_NAME`, `BACKEND_PORT=8001`, `FRONTEND_PORT=8899` for lifecycle wrappers
-- `apps/delivery-ops/server/.env.example` — template for `server/.env` (`PORT`, `SMTP_*`, `NAI_API_KEY`, feature flags)
-- `apps/delivery-ops/server/index.js:26` — backend port default (`8001`)
-- `apps/delivery-ops/client/package.json` — frontend `PORT=8899` and `proxy: http://localhost:8001`
-</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+</code></pre>
+<hr>
+<h2>See also</h2>
+<ul>
+<li><a href="./DEPLOYMENT_GUIDE.md"><code>DEPLOYMENT_GUIDE.md</code></a> — one-command deploy, env overrides, post-deploy checks</li>
+<li><code>apps/delivery-ops/scripts/deploy-to-production.sh</code> — Mac-side deploy script (defaults: <code>PRODUCTION_SERVER</code>, <code>SERVER_PATH</code>, <code>HTTP_PORT</code>, <code>PM2_APP_NAME</code>)</li>
+<li><code>apps/delivery-ops/scripts/server-deploy.sh</code> — server-side idempotent provisioner (Node/Nginx/PM2/SELinux/firewall/build)</li>
+<li><code>apps/delivery-ops/.env</code> — <code>APP_NAME</code>, <code>BACKEND_PORT=8001</code>, <code>FRONTEND_PORT=8899</code> for lifecycle wrappers</li>
+<li><code>apps/delivery-ops/server/.env.example</code> — template for <code>server/.env</code> (<code>PORT</code>, <code>SMTP_*</code>, <code>NAI_API_KEY</code>, feature flags)</li>
+<li><code>apps/delivery-ops/server/index.js:26</code> — backend port default (<code>8001</code>)</li>
+<li><code>apps/delivery-ops/client/package.json</code> — frontend <code>PORT=8899</code> and <code>proxy: http://localhost:8001</code></li>
+</ul>
+</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
