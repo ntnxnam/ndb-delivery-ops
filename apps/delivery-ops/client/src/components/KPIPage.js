@@ -573,7 +573,7 @@ export default function KPIPage() {
                 </tr>
               )}
               {kpis.map((k, index) => (
-                <tr key={k.id} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={k.id} style={{ borderBottom: '1px solid #eee', ...(k.locked ? { background: '#f1f3f5', opacity: 0.85 } : {}) }}>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                       {k.locked ? (
@@ -602,13 +602,13 @@ export default function KPIPage() {
                       )}
                     </td>
                   )}
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.name}{k.locked && <span title="Company-standard — same JQL for every team, not editable. Team scope comes from team.baseFilter." style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#6c757d', border: '1px solid #dee2e6', borderRadius: '999px', padding: '0.1rem 0.4rem', background: '#f8f9fa' }}>🔒 standard</span>}</td>
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', wordBreak: 'break-all' }}>{k.baseQuery}</td>
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.displayType === 'list' ? 'List' : 'Count'}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', ...(k.locked ? { color: '#868e96' } : {}) }}>{k.name}{k.locked && <span title="Company-standard — same JQL for every team, not editable. Team scope comes from team.baseFilter." style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#495057', border: '1px solid #adb5bd', borderRadius: '999px', padding: '0.1rem 0.4rem', background: '#e9ecef' }}>⛔ blocked — standard</span>}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', wordBreak: 'break-all', ...(k.locked ? { color: '#868e96', background: '#e9ecef' } : {}) }}>{k.baseQuery}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', ...(k.locked ? { color: '#868e96' } : {}) }}>{k.displayType === 'list' ? 'List' : 'Count'}</td>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
                       {k.locked ? (
-                        <span style={{ fontSize: '0.7rem', color: '#6c757d' }} title="Standard KPI — JQL is fixed company-wide">Locked</span>
+                        <span style={{ fontSize: '0.7rem', color: '#868e96', background: '#e9ecef', border: '1px solid #ced4da', borderRadius: '4px', padding: '0.2rem 0.4rem' }} title="Standard KPI — JQL is fixed company-wide">⛔ Blocked</span>
                       ) : (
                         <>
                           <button
