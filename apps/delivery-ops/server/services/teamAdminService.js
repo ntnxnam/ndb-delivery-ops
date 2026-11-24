@@ -295,9 +295,20 @@ function updateTeam(teamId, body = {}) {
 
   const existing = teams[index];
   const merged = { ...existing, ...pickManagedFields(body), id: existing.id };
-  // Preserve contacts row-by-row (H3 fix): PATCH with only one row shouldn't wipe other 7
+  // Preserve contacts row-by-row: PATCH with only subset shouldn't wipe others, but explicit empty clears row (H1 fix)
   if (body.contacts !== undefined) {
-    merged.contacts = { ...(existing.contacts || {}), ...(pickManagedFields(body).contacts || {}) };
+    const incomingRaw = body.contacts || {};
+    const normalized = pickManagedFields(body).contacts || {};
+    const nextContacts = { ...(existing.contacts || {}) };
+    for (const k of CONTACT_ROW_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(incomingRaw, k)) {
+        if (normalized[k]) nextContacts[k] = normalized[k];
+        else delete nextContacts[k];
+      } else if (normalized[k]) {
+        nextContacts[k] = normalized[k];
+      }
+    }
+    merged.contacts = nextContacts;
   } else if (existing.contacts) {
     merged.contacts = existing.contacts;
   }
