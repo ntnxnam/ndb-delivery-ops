@@ -209,6 +209,7 @@ const AuthenticatedApp = () => {
                   }
                 />
 
+                {/* Legacy /oncalls-legacy now redirects to canonical /oncalls (V2) */}
                 <Route path="/oncalls-legacy" element={<Navigate to="/oncalls" replace />} />
 
                 <Route
@@ -321,6 +322,15 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['release_versions_view']}>
                       <Layout>
                         <WeeklySkimPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  element={
+                    <ProtectedRoute permissions={['release_versions_view']}>
+                      <Layout>
                       </Layout>
                     </ProtectedRoute>
                   }
