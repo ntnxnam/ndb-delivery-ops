@@ -1,9 +1,44 @@
 /**
  * OnCall open/past stack fetch, classify, and path cell builders.
+ * Enriched: OnCall screen fields discovered via Loom field scan 2026-11-24 — see oncallConfig.customFields.
  */
 
 const { searchPages } = require('../utils/jiraClient');
 const { mapLinkedIssues, daysAgo, daysBetween } = require('./ticketNarrativeService');
+
+/** Resolve OnCall customfield IDs from config (single source oncallConfig.customFields per D1). */
+function getOnCallFieldIds(cfg) {
+  const cf = cfg?.customFields || {};
+  return Object.values(cf)
+    .filter((v) => v && typeof v === 'object' && v.id && v.id.startsWith('customfield_'))
+    .map((v) => v.id);
+}
+
+function extractOnCallFields(f, cfg) {
+  const cf = cfg?.customFields || {};
+  const pick = (key) => {
+    const meta = cf[key];
+    if (!meta?.id) return null;
+    const raw = f[meta.id];
+    if (raw == null || raw === '') return null;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw)) return raw.map((o) => o.value || o.name || o.displayName || String(o)).join(', ') || null;
+    if (typeof raw === 'object') return raw.value || raw.name || raw.displayName || raw.text || null;
+    return String(raw);
+  };
+  return {
+    correctiveActionCompleted: pick('correctiveActionCompleted'),
+    onCallRelief: pick('onCallRelief'),
+    preliminaryAnalysis: pick('preliminaryAnalysis'),
+    workaroundUsed: pick('workaroundUsed'),
+    rootCause: pick('rootCause'),
+    testEscape: pick('testEscape'),
+    rcaStatus: pick('rcaStatus'),
+    panaceaFeedback: pick('panaceaFeedback'),
+    panaceaHoursSaved: pick('panaceaHoursSaved'),
+    panaceaUsefulChat: pick('panaceaUsefulChat'),
+  };
+}
 const {
   cell,
   keysInJql,
@@ -87,6 +122,7 @@ function classifyStacksFromIssues(issues, cfg, { sortBy = 'age' } = {}) {
       knowledge,
       engFixes,
       linked,
+      onCallFields: extractOnCallFields(f, cfg),
     });
   }
 
@@ -148,10 +184,13 @@ function classifyStacksFromIssues(issues, cfg, { sortBy = 'age' } = {}) {
 }
 
 async function fetchStacksByJql(token, cfg, jql, { maxTotal, sortBy } = {}) {
+  const onCallFields = getOnCallFieldIds(cfg).join(',');
+  const baseFields = 'key,summary,status,priority,assignee,created,updated,resolution,resolutiondate,issuelinks,labels,issuetype,components';
+  const fields = onCallFields ? `${baseFields},${onCallFields}` : baseFields;
   const issues = await searchPages(
     token,
     jql,
-    'key,summary,status,priority,assignee,created,updated,resolution,resolutiondate,issuelinks,labels,issuetype',
+    fields,
     {
       pageSize: 100,
       maxTotal: maxTotal || cfg.maxOpenIssuesFetch || 200,
@@ -222,6 +261,7 @@ function mapTicketRows(stacks) {
     techHelp: slimLinked(s.techHelp),
     engFixes: slimLinked(s.engFixes),
     techPubs: slimLinked(s.techPubs),
+    onCallFields: s.onCallFields || null,
   }));
 }
 

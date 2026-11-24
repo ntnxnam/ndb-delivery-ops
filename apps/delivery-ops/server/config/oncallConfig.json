@@ -53,14 +53,19 @@
     "p2Hours": 72,
     "breachWarningPct": 80
   },
-  "cfdCfiLinkage": {
-    "enabled": true,
-    "linkTypes": ["relates to", "caused by", "blocks"],
-    "autoLinkOnCreate": false,
-    "cfiJqlSnippet": "project = ERA AND type = Bug AND labels in (cfi)",
-    "cfdJqlSnippet": "project = ERA AND type = Bug AND labels in (cfd)"
+  "customFields": {
+    "_note": "OnCall screen fields — CF IDs discovered via Loom field scan 2026-11-24 (jira.nutanix.com/rest/api/2/field + ONCALL-25289). Single source per D1 product-agnostic.",
+    "correctiveActionCompleted": { "id": "customfield_12674", "label": "Corrective Action(s) Completed?", "jiraName": "Corrective Action(s) Completed?" },
+    "onCallRelief": { "id": "customfield_14374", "label": "OnCall Relief", "jiraName": "OnCall Relief" },
+    "preliminaryAnalysis": { "id": "customfield_15963", "label": "Preliminary Analysis", "jiraName": "Preliminary Analysis", "_note": "Template holds Technical Category_/Problem_/RootCause_/Key Takeaways_/Gaps_/New/Known/Config/Other Issue _" },
+    "workaroundUsed": { "id": "customfield_12284", "label": "Workaround used", "jiraName": "Workaround used" },
+    "rootCause": { "id": "customfield_12670", "label": "Root Cause", "jiraName": "Root Cause" },
+    "testEscape": { "id": "customfield_12672", "label": "Test Escape?", "jiraName": "Test Escape?" },
+    "rcaStatus": { "id": "customfield_40067", "label": "RCA Status", "jiraName": "RCA Status" },
+    "panaceaFeedback": { "id": "customfield_55360", "label": "Panacea.ai feedback", "jiraName": "Panacea.ai feedback" },
+    "panaceaHoursSaved": { "id": "customfield_54883", "label": "No of hours  saved by Panacea.ai", "jiraName": "No of hours  saved by Panacea.ai" },
+    "panaceaUsefulChat": { "id": "customfield_55962", "label": "How useful is Panacea.ai CHAT", "jiraName": "How useful is Panacea.ai CHAT" }
   },
-  "customFields": {},
   "notificationChannels": {
     "slackEnabled": false,
     "slackChannel": "",

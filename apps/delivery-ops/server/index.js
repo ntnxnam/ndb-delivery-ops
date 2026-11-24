@@ -1,5 +1,21 @@
-// Load environment variables from .env file (if it exists)
-require('dotenv').config();
+// Load environment variables from .env files (if they exist).
+// FIX: NAI_API_KEY lives in apps/delivery-ops/server/.env, but process cwd is
+// repo root when started via `node apps/delivery-ops/server/index.js`. Plain
+// dotenv.config() only loads <cwd>/.env (which doesn't have NAI vars), so
+// aiConnector always threw "NAI_API_KEY is not set" even though server/.env
+// was correct. Load both candidates explicitly — server/.env first (canonical
+// for NAI/SMTP), then cwd fallback. See shared/src/connectors/aiConnector.ts
+// which reads process.env.NAI_API_KEY only (no file fallback).
+(() => {
+  const path = require('path');
+  const dotenv = require('dotenv');
+  const candidates = [
+    path.join(__dirname, '.env'), // apps/delivery-ops/server/.env — canonical
+    path.join(__dirname, '..', '.env'), // apps/delivery-ops/.env — deploy/ports
+    path.join(process.cwd(), '.env'), // repo root — backward compat
+  ];
+  for (const p of candidates) dotenv.config({ path: p, override: false });
+})();
 
 const express = require('express');
 const cors = require('cors');

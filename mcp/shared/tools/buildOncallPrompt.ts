@@ -23,7 +23,8 @@ function buildOncallConcernPrompt(intelligence: any): { userPrompt: string; vali
   const health = i.health || {};
   const workflow = i.workflow || {};
   const gap = i.gapTaxonomy || {};
-  const topComponents = i.componentMix || i.topComponents || i.priorityMix || [];
+  const topComponents = i.componentMix || i.topComponents || [];
+  // no priority fallback — that leaked P2/P1 as fake hotspot
   const top2 = (topComponents || []).slice(0, 2).map((c: any) => `${c.name || c.component || c.key} (${c.count})`).join(' + ') || 'no component hotspot';
   const validKeys: string[] = Array.isArray(i.validKeys) ? i.validKeys : (Array.isArray(i.gapMeta?.dudsKeys) ? [...i.gapMeta.dudsKeys, ...i.gapMeta.ndbGapsKeys, ...i.gapMeta.otherTeamGapsKeys].slice(0, 20) : []);
   const validBlock = validKeys.length
@@ -34,7 +35,18 @@ function buildOncallConcernPrompt(intelligence: any): { userPrompt: string; vali
   const wfLine = `WORKFLOW: needInfo=${workflow.needInfo?.count ?? 0} waitingCustomer=${workflow.waiting?.count ?? 0}`;
   const gapLine = `GAP_TAXONOMY: duds=${gap.duds?.count ?? 0} ndbGaps=${gap.ndbGaps?.count ?? 0} otherTeamGaps=${gap.otherTeamGaps?.count ?? 0} ndbSub TH=${gap.ndbSub?.thLinked?.count ?? 0} bugs=${gap.ndbSub?.bugs?.count ?? 0} improvements=${gap.ndbSub?.improvements?.count ?? 0} other=${gap.ndbSub?.other?.count ?? 0}`;
   const hotspotLine = `HOTSPOT_COMPONENTS top2: ${top2}`;
-  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+  const stacks = Array.isArray((intelligence as any).stacksPreview) ? (intelligence as any).stacksPreview : Array.isArray((intelligence as any).openTickets) ? (intelligence as any).openTickets : [];
+  const blurbLines = stacks.slice(0, 5).map((s: any) => {
+    const oc = s.onCallFields || {};
+    const bits = [`${s.key}: ${String(s.summary||'').slice(0,120)} [${s.status||'?'} ${s.ageDays??'?'}d]`];
+    if (oc.onCallRelief) bits.push(`Relief:${oc.onCallRelief}`);
+    if (oc.correctiveActionCompleted) bits.push(`Corrective:${oc.correctiveActionCompleted}`);
+    if (oc.rootCause) bits.push(`RootCause:${String(oc.rootCause).slice(0,180).replace(/\n/g,' ')}`);
+    if (oc.workaroundUsed) bits.push(`Workaround:${String(oc.workaroundUsed).slice(0,200).replace(/\n/g,' ')}`);
+    return `- ${bits.join(' | ')}`;
+  }).join('\n');
+  const stackBlock = blurbLines ? `STACK SAMPLE (top 5 — use for hotspot themes):\n${blurbLines}` : '';
+  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above. Use stack sample themes for hotspot narrative.`;
   return { userPrompt, validKeys };
 }
 
