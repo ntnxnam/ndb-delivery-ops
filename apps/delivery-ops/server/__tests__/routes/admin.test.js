@@ -97,7 +97,7 @@ describe('Admin routes', () => {
     it('lists teams with derived sprint scope and KPI counts', async () => {
       const res = await request(app).get('/api/admin/teams').expect(200);
       const ndb = res.body.teams.find((t) => t.id === 'ndb');
-      expect(ndb.sprintScope).toBe('filter=NDB-All-Base-Filter');
+      expect(ndb.sprintScope).toBe('filter=NDB-All-Base-Filter and status not in (Closed, Done, Approved)');
       expect(ndb.kpiCount).toBe(1);
       expect(ndb).not.toHaveProperty('userConfig');
       expect(ndb).not.toHaveProperty('projectType');
@@ -260,8 +260,8 @@ describe('Admin routes', () => {
       const res = await request(app).post('/api/admin/test-team-config').send({ teamId: 'ndb' }).expect(200);
       expect(res.body.success).toBe(true);
       expect(res.body.results.versionAccess.totalVersions).toBe(1);
-      expect(res.body.results.sprintScope.jql).toBe('filter=NDB-All-Base-Filter');
-      expect(jira.searchCount).toHaveBeenCalledWith('filter=NDB-All-Base-Filter');
+      expect(res.body.results.sprintScope.jql).toBe('filter=NDB-All-Base-Filter and status not in (Closed, Done, Approved)');
+      expect(jira.searchCount).toHaveBeenCalledWith('filter=NDB-All-Base-Filter and status not in (Closed, Done, Approved)');
     });
 
     it('requires teamId', async () => {
