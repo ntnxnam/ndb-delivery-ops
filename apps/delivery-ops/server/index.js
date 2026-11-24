@@ -148,6 +148,9 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/config', configRoutes); // Config routes at /api/config/*
 app.use('/api/auth', authRoutes); // Auth routes at /api/auth/*
+const deferredInsightsRoutes = require('./routes/deferredInsights');
+// Mount specific /api/jira prefix before generic /api/jira to avoid shadowing via next() fallthrough
+app.use('/api/jira/deferred-insights', deferredInsightsRoutes);
 app.use('/api/jira', jiraRoutes); // JIRA routes at /api/jira/*
 const jiraProxyRoutes = require('./routes/jira/proxy');
 app.use('/api/jira/proxy', jiraProxyRoutes); // Apps Script / server-side Jira proxy
@@ -169,6 +172,7 @@ const releaseOutstandingWorkRoutes = require('./routes/releaseOutstandingWork');
 app.use('/api/release-outstanding-work', releaseOutstandingWorkRoutes);
 // Legacy alias — same router (old clients / bookmarks)
 app.use('/api/deferral-workbench', releaseOutstandingWorkRoutes);
+app.use('/api/deferred-insights', deferredInsightsRoutes);
 app.use('/api/bin-packing', binPackingConvertRoutes); // File→CSV conversion (multipart, tmp-isolated)
 const tpmSchedulesRoutes = require('./routes/tpmSchedules');
 app.use('/api/config/schedules', tpmSchedulesRoutes); // TPM schedules CRUD

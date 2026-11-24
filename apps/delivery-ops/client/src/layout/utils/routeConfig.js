@@ -176,6 +176,15 @@ export const routeConfig = {
       showInNav: false,
     },
     {
+      path: '/deferred-insights',
+      exact: true,
+      component: 'DeferredInsightsPage',
+      title: 'Deferred Insights',
+      description: 'Per-release deferred bugs — where they landed, what is still pending',
+      permissions: [PERMISSIONS.KPI_VIEW],
+      showInNav: true,
+    },
+    {
       path: '/sos-summary',
       exact: true,
       component: 'SosSummaryPage',

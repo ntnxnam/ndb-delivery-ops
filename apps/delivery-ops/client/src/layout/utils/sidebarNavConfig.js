@@ -163,6 +163,11 @@ export const SIDEBAR_NAV_GROUPS = [
         description: 'CFD and CFI KPI pulse — heroes, trends, open tickets',
       },
       {
+        path: '/deferred-insights',
+        label: 'Deferred Insights',
+        description: 'Per-release deferred bugs — where they landed, what is still pending',
+      },
+      {
         path: '/system-test-scale',
         label: 'System-Test Scale',
         description:

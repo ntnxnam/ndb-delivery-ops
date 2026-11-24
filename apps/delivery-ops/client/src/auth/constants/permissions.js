@@ -58,6 +58,7 @@ export const TAB_PERMISSIONS = {
   '/kpis': [PERMISSIONS.KPI_VIEW],
   '/oncalls': [PERMISSIONS.KPI_VIEW],
   '/cfdcfi': [PERMISSIONS.KPI_VIEW],
+  '/deferred-insights': [PERMISSIONS.KPI_VIEW],
   '/system-test-scale': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS],
   '/admin/config': [PERMISSIONS.ADMIN_PANEL_ACCESS],
