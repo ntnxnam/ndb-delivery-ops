@@ -15,6 +15,7 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
   beforeEach(() => jest.clearAllMocks());
 
   // Helper to mock both quality_index and milestone metrics endpoints
+  // Distinct per-category: functional (NOT SystemTest) vs system (SystemTest regex) return different leaf values
   function mockAxiosSuccess(qiValue = 85) {
     axios.get.mockImplementation((url, opts) => {
       if (url.includes('/quality_index')) {
@@ -29,29 +30,65 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
         });
       }
       if (url.includes('/all_test_cases/aggregate/metrics')) {
-        return Promise.resolve({
-          data: {
-            data: [
-              {
-                average_total_op_success_percentage: qiValue,
-                total: 100,
-                run: 90,
-                passed: 80,
-                failed: 10,
-                average_manual_op_success_percentage: 75,
-                manual_run: 40,
-                manual_passed: 30,
-                manual_failed: 10,
-                manual_passed_percentage: 75,
-                average_automation_op_success_percentage: 88,
-                automation_run: 50,
-                automation_passed: 44,
-                automation_failed: 6,
-                automation_passed_percentage: 88,
-              },
-            ],
-          },
-        });
+        const filtersStr = opts?.params?.filters || '';
+        const isSystem = filtersStr.includes('SystemTest') && !filtersStr.includes('$not');
+        const isFunctional = filtersStr.includes('$not') && filtersStr.includes('SystemTest');
+        // Return distinct payloads so functional != system can be asserted
+        const payload = isSystem
+          ? {
+              average_total_op_success_percentage: qiValue,
+              total: 60,
+              run: 50,
+              passed: 42,
+              failed: 8,
+              average_manual_op_success_percentage: 80,
+              manual_run: 20,
+              manual_passed: 16,
+              manual_failed: 4,
+              manual_passed_percentage: 80,
+              average_automation_op_success_percentage: 85,
+              automation_run: 30,
+              automation_passed: 26,
+              automation_failed: 4,
+              automation_passed_percentage: 87,
+            }
+          : isFunctional
+          ? {
+              average_total_op_success_percentage: qiValue,
+              total: 100,
+              run: 90,
+              passed: 80,
+              failed: 10,
+              average_manual_op_success_percentage: 75,
+              manual_run: 40,
+              manual_passed: 30,
+              manual_failed: 10,
+              manual_passed_percentage: 75,
+              average_automation_op_success_percentage: 88,
+              automation_run: 50,
+              automation_passed: 44,
+              automation_failed: 6,
+              automation_passed_percentage: 88,
+            }
+          : {
+              // fallback (no category) — treat as functional shape
+              average_total_op_success_percentage: qiValue,
+              total: 100,
+              run: 90,
+              passed: 80,
+              failed: 10,
+              average_manual_op_success_percentage: 75,
+              manual_run: 40,
+              manual_passed: 30,
+              manual_failed: 10,
+              manual_passed_percentage: 75,
+              average_automation_op_success_percentage: 88,
+              automation_run: 50,
+              automation_passed: 44,
+              automation_failed: 6,
+              automation_passed_percentage: 88,
+            };
+        return Promise.resolve({ data: { data: [payload] } });
       }
       return Promise.resolve({ data: {} });
     });
@@ -84,15 +121,20 @@ describe('tcmsService — TCMS table rows Functional/System', () => {
     expect(table.system).toHaveProperty('automation');
   });
 
-  // 3
-  test('UT-TCMS-003: toTable functional and system share same leaf until TCMS split (documented clone)', async () => {
+  // 3 — now distinct via test_case.test_sets SystemTest regex (no longer cloned)
+  test('UT-TCMS-003: functional and system rows are distinct (SystemTest regex split)', async () => {
     mockAxiosSuccess(80);
     const item = { key: 'FEAT-2' };
     await enrichItemWithQuality(item, 'NDB-2.12', false);
     const tbl = item.tcmsQuality.releaseOverall;
-    // Currently both rows share same source — intentional until TCMS category filter lands
-    expect(tbl.functional.manual).toEqual(tbl.system.manual);
-    expect(tbl.functional.automation).toEqual(tbl.system.automation);
+    // Functional (NOT SystemTest) vs System (SystemTest) must differ — proves D1 clone removed
+    expect(tbl.functional.manual).not.toEqual(tbl.system.manual);
+    expect(tbl.functional.automation).not.toEqual(tbl.system.automation);
+    // Functional keeps original 40/50 shape, System is 20/30 shape per mock
+    expect(tbl.functional.manual.run).toBe(40);
+    expect(tbl.system.manual.run).toBe(20);
+    expect(tbl.functional.automation.run).toBe(50);
+    expect(tbl.system.automation.run).toBe(30);
   });
 
   // 4
@@ -245,6 +287,33 @@ describe('tcmsService — fetchMilestoneMetrics endpoint/params', () => {
     expect(opts.params.time_filter).toBe('four_weeks');
     expect(opts.params.target).toBe('NDB-2.12-qcow2');
     expect(opts.params.feat_type).toBe('all');
+  });
+
+  test('UT-TCMS-012b: category=system injects SystemTest regex, category=functional injects $not', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ run: 10 }] } });
+    await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'all', 'system');
+    let [, opts] = axios.get.mock.calls[0];
+    let filters = JSON.parse(opts.params.filters);
+    expect(JSON.stringify(filters)).toContain('SystemTest');
+    expect(JSON.stringify(filters)).not.toContain('$not');
+    // functional -> $not
+    jest.clearAllMocks();
+    axios.get.mockResolvedValue({ data: { data: [{ run: 20 }] } });
+    await fetchMilestoneMetrics('FEAT-18520', 'NDB-2.12', 'all', 'functional');
+    [, opts] = axios.get.mock.calls[0];
+    filters = JSON.parse(opts.params.filters);
+    expect(JSON.stringify(filters)).toContain('$not');
+    expect(JSON.stringify(filters)).toContain('SystemTest');
+  });
+
+  test('UT-TCMS-012c: master milestone maps to test_sets master (NDB-master)', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ run: 5 }] } });
+    await fetchMilestoneMetrics('FEAT-1', 'NDB-master', 'all', 'system');
+    const [, opts] = axios.get.mock.calls[0];
+    const filters = JSON.parse(opts.params.filters);
+    const cat = filters.$and.find((c) => c['test_case.test_sets']);
+    expect(cat['test_case.test_sets'].$regex).toContain('milestones/master/');
+    expect(cat['test_case.test_sets'].$regex).not.toContain('NDB-master');
   });
 
   test('UT-TCMS-013: time_filter=all for Overall window', async () => {

@@ -483,6 +483,18 @@ export function ticketFromIssue(
     return d.length === 10 ? d : null;
   };
 
+  const userDisplay = (raw: unknown): string => {
+    if (!raw) return '';
+    if (Array.isArray(raw)) {
+      const names = (raw as Array<{ displayName?: string; name?: string; key?: string }>)
+        .map((u) => u?.displayName || u?.name || u?.key || '')
+        .filter(Boolean);
+      return names.join(', ');
+    }
+    const u = raw as { displayName?: string; name?: string; key?: string };
+    return u.displayName || u.name || u.key || '';
+  };
+
   // Story Points — applies to ALL work item types (Bug, Spike, Story, PoC, etc.).
   const rawSp = f.customfield_10002;
   const storyPoints: number | null =
@@ -552,17 +564,12 @@ export function ticketFromIssue(
     'FS/DS Done Date': toIsoDate(f.customfield_13861),
     'Status Update Date': toIsoDate(f.customfield_45660),
 
-    // People fields — extracting display name or username.
-    'QA Contact': (f.customfield_10860 as { displayName?: string; name?: string } | undefined)?.displayName
-      ?? (f.customfield_10860 as { displayName?: string; name?: string } | undefined)?.name ?? '',
-    'TPM Owner': (f.customfield_27764 as { displayName?: string; name?: string } | undefined)?.displayName
-      ?? (f.customfield_27764 as { displayName?: string; name?: string } | undefined)?.name ?? '',
-    'Test Lead': (f.customfield_11065 as { displayName?: string; name?: string } | undefined)?.displayName
-      ?? (f.customfield_11065 as { displayName?: string; name?: string } | undefined)?.name ?? '',
-    'GUI Lead': (f.customfield_11861 as { displayName?: string; name?: string } | undefined)?.displayName
-      ?? (f.customfield_11861 as { displayName?: string; name?: string } | undefined)?.name ?? '',
-    'PM Owner': (f.customfield_11260 as { displayName?: string; name?: string } | undefined)?.displayName
-      ?? (f.customfield_11260 as { displayName?: string; name?: string } | undefined)?.name ?? '',
+    // People fields — extracting display name or username (multiuserpicker may return array).
+    'QA Contact': userDisplay(f.customfield_10860),
+    'TPM Owner': userDisplay(f.customfield_27764),
+    'Test Lead': userDisplay(f.customfield_11065),
+    'GUI Lead': userDisplay(f.customfield_11861),
+    'PM Owner': userDisplay(f.customfield_11260),
 
     // Content / indicators.
     'Status Update': typeof f.customfield_23073 === 'string' ? f.customfield_23073 : '',

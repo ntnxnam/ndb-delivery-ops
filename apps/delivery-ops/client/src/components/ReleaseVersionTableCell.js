@@ -285,7 +285,7 @@ export function renderQualityCell(item, selectedVersion) {
     <div className="rv-quality">
       {visibleTables.map(t => <div key={t.title}>{renderQualityTable(t.title, t.data)}</div>)}
       {visibleTables.length < tables.length && <div className="rv-quality__hint">— No runs in other windows</div>}
-      <div className="rv-quality__footnote">Functional/System share source until TCMS category filter lands</div>
+      <div className="rv-quality__footnote">Functional = NOT SystemTest/, System = SystemTest/ (via test_case.test_sets)</div>
     </div>
   );
 }
@@ -424,14 +424,27 @@ export function renderTeamContacts(item) {
   const contacts = [
     { label: 'Assignee', value: item.assignee },
     { label: 'QA Contact', value: getFieldValue(item, 'qaContact') },
+    { label: 'Test Lead', value: getFieldValue(item, 'testLead') },
     { label: 'PM Owner', value: getFieldValue(item, 'pmOwner') },
     { label: 'Program Mgr', value: getFieldValue(item, 'tpmOwner') }
   ];
 
-  // Helper to format user value
+  // Helper to format user value (handles string, object, or multiuserpicker array)
   const formatUserValue = (userValue) => {
     if (!userValue) return null;
-    if (typeof userValue === 'string') return userValue;
+    if (Array.isArray(userValue)) {
+      const names = userValue.map(u => {
+        if (!u) return null;
+        if (typeof u === 'string') return u.trim() || null;
+        return u.displayName || u.name || u.emailAddress || u.email || u.key || null;
+      }).filter(Boolean).filter(v => v !== 'N/A');
+      return names.length ? names.join(', ') : null;
+    }
+    if (typeof userValue === 'string') {
+      const t = userValue.trim();
+      if (!t || t === 'N/A') return null;
+      return t;
+    }
     if (userValue.displayName) return userValue.displayName;
     if (userValue.name) return userValue.name;
     if (userValue.emailAddress) return userValue.emailAddress;

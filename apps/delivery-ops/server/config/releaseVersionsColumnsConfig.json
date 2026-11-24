@@ -87,6 +87,10 @@
           "label": "QA Contact",
           "customField": "customfield_10860"
         },
+        "testLead": {
+          "label": "Test Lead",
+          "customField": "customfield_11065"
+        },
         "pmOwner": {
           "label": "PM Owner",
           "customField": "customfield_11260"

@@ -12,7 +12,7 @@
       "boardId": 2888,
       "projectKey": "ERA",
       "featureProjectKey": "FEAT",
-      "baseFilter": "filter=NDB-All-Base-Filter and statusCategory!=Done",
+      "baseFilter": "filter=NDB-All-Base-Filter and status not in (Closed, Done, Approved)",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",

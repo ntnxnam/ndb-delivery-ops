@@ -230,7 +230,7 @@ export default function OncallsV2Page() {
             <div onDoubleClick={() => setShowNdbSub((v) => !v)} title="Double-click to expand NDB breakdown" style={{ cursor: 'pointer' }}>
               <ExplainHero label="NDB gaps" cell={taxonomy.ndbGaps} explain="Linked fix in NDB project family — double-click to expand" jiraBase={jiraBase} meta="our gaps" onOpen={() => openDrill('ndbGaps', 'past')} />
             </div>
-            <ExplainHero label="Other-team gaps" cell={taxonomy.otherTeamGaps} explain="Linked fix outside NDB" jiraBase={jiraBase} meta="externalize" onOpen={() => openDrill('otherTeamGaps', 'past')} />
+            <ExplainHero label="Other-team gaps" cell={taxonomy.otherTeamGaps} explain="Linked fix outside NDB (other product teams)" jiraBase={jiraBase} meta="linked to other teams" onOpen={() => openDrill('otherTeamGaps', 'past')} />
           </div>
 
           {/* NDB drill 4 sub-cards — hidden until double-click */}

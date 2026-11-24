@@ -90,11 +90,18 @@
         "lifecyclePhase": "overall"
       },
       {
+        "id": "kpi_mwp6911f_a6nbyfhy",
+        "name": "Pending Verification",
+        "baseQuery": "status=Resolved",
+        "displayType": "count",
+        "order": 11
+      },
+      {
         "id": "kpi_muhc9grs_lveeudij",
         "name": "Deferral",
         "baseQuery": "filter=ndb-deferred-tickets",
         "displayType": "count",
-        "order": 11,
+        "order": 12,
         "lifecyclePhase": "overall"
       },
       {
@@ -102,7 +109,7 @@
         "name": "Bugs Out of SLA",
         "baseQuery": "filter=NDB-Bugs-OutOfSLA",
         "displayType": "count",
-        "order": 12,
+        "order": 13,
         "lifecyclePhase": "overall"
       },
       {
@@ -110,7 +117,7 @@
         "name": "E-W Projects",
         "baseQuery": "(   labels in (ndb-ew, global-ew, nutanix-ew) OR   issueFunction in portfolioChildrenOf(     \"labels in (ndb-ew, global-ew, nutanix-ew)      AND issuetype in (Feature, Initiative)\"   ) OR   issueFunction in issuesInEpics(     \"issueFunction in portfolioChildrenOf(       'labels in (ndb-ew, global-ew, nutanix-ew)        AND issuetype in (Feature, Initiative)'     )\"   ) OR   issueFunction in subtasksOf(     \"labels in (ndb-ew, global-ew, nutanix-ew)\"   ) OR   issueFunction in subtasksOf(     \"issueFunction in issuesInEpics(       \\\"issueFunction in portfolioChildrenOf(         'labels in (ndb-ew, global-ew, nutanix-ew)          AND issuetype in (Feature, Initiative)'       )\\\"     )\"   ) )",
         "displayType": "count",
-        "order": 13,
+        "order": 14,
         "lifecyclePhase": "execution",
         "isSuperImportant": true,
         "releaseScoped": true

@@ -55,6 +55,16 @@ function extractUserName(userField, issueKey = 'UNKNOWN', fieldName = 'user') {
     return 'N/A';
   }
   
+  // Handle multiuserpicker array — join display names
+  if (Array.isArray(userField)) {
+    const names = userField.map(u => {
+      if (!u) return null;
+      if (typeof u === 'string') return u;
+      return u.displayName || u.name || u.emailAddress || u.email || u.key || u.value || null;
+    }).filter(Boolean);
+    return names.length ? names.join(', ') : 'N/A';
+  }
+  
   // If it's already a string, return it
   if (typeof userField === 'string') {
     return userField;

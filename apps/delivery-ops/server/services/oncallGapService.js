@@ -36,7 +36,7 @@ function classifyGapBuckets(closedStacks, cfg) {
     ? cfg.gapProjectPrefixes.map((p) => String(p).toUpperCase())
     : (cfg.engFixProjects || []).length
       ? (cfg.engFixProjects || []).map((p) => String(p).toUpperCase())
-      : ['NDB', 'NDB-']; // legacy NDB tenant fallback — override via oncallConfig.gapProjectPrefixes for other tenants
+      : (String(cfg.teamId || '').toLowerCase() === 'ndb' ? ['NDB', 'NDB-', 'ERA'] : ['NDB', 'NDB-']); // NDB team uses ERA project for fixes — include ERA, else product-agnostic
   const engProjectsUpper = (cfg.engFixProjects || []).map((p) => String(p).toUpperCase()).filter(Boolean);
 
   for (const s of stacks) {

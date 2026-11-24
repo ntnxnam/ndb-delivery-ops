@@ -20,7 +20,7 @@ Route `releaseOutstandingWork.js` → `releaseOutstandingDeferralService` / `out
 
 ### Actionable (heroes)
 - Universe base: `({release}-All)`
-- **Awaiting Verification** (`toBeResolved`): `(All) AND status = Resolved`
+- **Awaiting Verification** (`toBeResolved`): `(All) AND status = Resolved AND ("Integrated Version" = "{release}" OR fixVersion = "{release}")`
 - **Dev open** (deferred excluded): `(All) AND status not in (Resolved, Closed) AND issuetype not in (Feature, Initiative, Epic, X-FEAT, Capability, Test) AND project not in (TECHPUBS, SDL, LEG, SR, NDBQUAL, OSS) AND (labels is EMPTY OR labels not in ("…-deferred", "NDB-…-deferred"))`
   - Groups (same bar): **Task / Unit Test** · **Bug / Improvement** · **CVE** (`issuetype = CVE`) · **Dev other**
 - **Test open**: same companions + deferred exclusion; `issuetype = Test`

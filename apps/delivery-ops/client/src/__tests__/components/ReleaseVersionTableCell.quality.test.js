@@ -80,11 +80,15 @@ describe('ReleaseVersionTableCell — TCMS Quality Functional/System rows (stati
     const item = { key: 'FEAT-1', summary: 'Test', status: 'In Progress', fixVersions: 'NDB-2.12', assignee: 'a@test.com',[getFieldId('qaContact')]: null,[getFieldId('tpmOwner')]: null,[getFieldId('statusUpdate')]: null,[getFieldId('riskIndicator')]: null, tcmsQuality, tcmsQI: null };
     const columnsConfig = { columnOrder: ['key', 'quality'], columns: { key: { label: 'Key', includeInUI: true, order: 1 }, quality: { label: 'Quality', includeInUI: true, order: 2 } } };
     const html = generateTableHTMLForEmail({ commit: [item] }, {}, 'NDB-2.12', columnsConfig, () => null, () => null, () => null, () => null, 'https://jira.nutanix.com');
+    // 4 tables (each row label appears once per table) + 1 header occurrence in table title/footer = 5
     expect((html.match(/Functional/g) || []).length).toBe(5);
     expect((html.match(/System/g) || []).length).toBe(5);
     expect(html).toContain('scope="row"');
     expect(html).toContain('Manual</th>');
     expect(html).toContain('Automation</th>');
+    // New footnote must reflect SystemTest regex, not clone
+    expect(html).toContain('SystemTest');
+    expect(html).not.toContain('share source until TCMS category filter lands');
   });
 
   test('UT-UI-008: regression — no Overall/Automation row th in rendered HTML', () => {

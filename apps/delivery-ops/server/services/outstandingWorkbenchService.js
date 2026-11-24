@@ -203,7 +203,7 @@ function buildOutstandingJqls(
   const openDevQa = `status not in (Resolved, Closed)`;
 
   const notClosed = `${all} AND status != Closed`;
-  const toBeResolved = `${all} AND status = Resolved`;
+  const toBeResolved = `${all} AND status = Resolved AND ("Integrated Version" = ${quote(release)} OR fixVersion = ${quote(release)})`;
 
   const devBase = `${all} AND ${openDevQa} AND issuetype not in (${PORTFOLIO_TYPES})${notCompanion}${notDeferred}`;
   const dev = devBase;

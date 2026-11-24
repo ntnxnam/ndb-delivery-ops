@@ -22,19 +22,18 @@ Companion to `KNOWN_ISSUES.md` and the TCMS Quality table rendered by
   deprecated alias `releaseLast3Weeks` / `masterLast3Weeks` (kept for
   back-compat, see below).
 
-## Clone caveat (WAIVED — pending TCMS `test_category` filter)
+## Clone caveat — FIXED (2026-11-24 via `test_case.test_sets` SystemTest regex)
 
-`Functional` and `System` rows currently share the **same source metrics**
-(`tcmsService.enrichItemWithQuality` → `toTable` clones `functional` from
-`system`). TCMS does not yet expose a `test_category` filter, so distinct
-per-category aggregates cannot be fetched. Rows are intentionally identical;
-no UI/email label claims distinctness. Tracked as a known limitation in
-`KNOWN_ISSUES.md`.
+Previously `Functional` and `System` rows shared the **same source metrics**
+(`tcmsService.enrichItemWithQuality` → `toTable` clone). Now fixed:
+`tcmsService.fetchMilestoneMetrics(..., category)` injects a `test_case.test_sets`
+filter — `System` = `{"$regex":"^test_sets/milestones/{milestone}/[^/]+/SystemTest/"}`,
+`Functional` = `{"$not":{"$regex":...}}` — proven via `TCMS_XHR` HAR
+(`milestone_all_test_cases/aggregate/metrics` with `SystemTest` vs `$not`).
 
-**Unblock condition:** TCMS exposes a `test_category` (or equivalent)
-filter on `all_test_cases/aggregate/metrics` (or
-`quality_index`). When available, split `fetchMergedMetrics` into
-`functionalMetrics` vs `systemMetrics` in `tcmsService.js` and stop cloning.
+`enrichItemWithQuality` now fetches 8 distinct `fetchMergedMetrics` per item
+(2 categories × 2 milestones × 2 windows) and `tcmsConfig.json:endpoints.metrics`
+documents `supportedCategories: ["all","functional","system"]`.
 
 ## overall → system fallback (back-compat)
 

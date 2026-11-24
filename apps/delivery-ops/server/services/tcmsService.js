@@ -18,9 +18,25 @@ const TCMS_MILESTONE_TOTAL = '/api-readonly/v1/milestone_all_test_cases/aggregat
 const CONCURRENCY_LIMIT = 5;
 const TCMS_TIMEOUT_MS = 15000; // Reduced from 30s to 15s
 
-async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all') {
+function getTestSetsMilestone(milestone) {
+  if (!milestone) return milestone;
+  if (milestone === 'master') return 'master';
+  if (milestone.endsWith('-master')) return 'master';
+  return milestone;
+}
+
+async function fetchMilestoneMetrics(featKey, milestone, timeFilter = 'all', category = 'all') {
   try {
-    const filters = JSON.stringify({ $and: [{ 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }] });
+    const baseAnd = [{ 'test_case.metadata.requirements': featKey }, { 'test_case.deprecated': false }];
+    if (category === 'system' || category === 'functional') {
+      const tsMilestone = getTestSetsMilestone(milestone);
+      const sysRegex = `^test_sets/milestones/${tsMilestone}/[^/]+/SystemTest/`;
+      const catFilter = category === 'system'
+        ? { 'test_case.test_sets': { $regex: sysRegex } }
+        : { 'test_case.test_sets': { $not: { $regex: sysRegex } } };
+      baseAnd.push(catFilter);
+    }
+    const filters = JSON.stringify({ $and: baseAnd });
     const LEGACY_TIME_FILTERS = { 'Last 4 Week': 'four_weeks', 'Last 4 Weeks': 'four_weeks' };
     const VALID_TIME_FILTERS = ['all', 'four_weeks'];
     const tcmsTimeFilter = LEGACY_TIME_FILTERS[timeFilter] || (VALID_TIME_FILTERS.includes(timeFilter) ? timeFilter : 'all');
@@ -187,8 +203,8 @@ async function fetchFeatureMetrics(featKey, milestone) {
  * @param {string}  fixVersion - e.g. "NDB-2.11"
  * @param {boolean} isLongTerm - if true, only fetch master (branch doesn't exist for long-term)
  */
-async function fetchMergedMetrics(featKey, milestone, timeFilter = 'all') {
-  const [qiRes, mRes] = await Promise.allSettled([fetchFeatureMetrics(featKey, milestone), fetchMilestoneMetrics(featKey, milestone, timeFilter)]);
+async function fetchMergedMetrics(featKey, milestone, timeFilter = 'all', category = 'all') {
+  const [qiRes, mRes] = await Promise.allSettled([fetchFeatureMetrics(featKey, milestone), fetchMilestoneMetrics(featKey, milestone, timeFilter, category)]);
   const qi = qiRes.status === 'fulfilled' ? qiRes.value : null;
   const m = mRes.status === 'fulfilled' ? mRes.value : null;
   if (!qi && !m) return null;
@@ -215,29 +231,52 @@ async function enrichItemWithQuality(item, fixVersion, isLongTerm = false, tcmsC
     item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion, tcmsConfig);
     const masterMilestone = tcmsConfig?.projectSegment ? `${tcmsConfig.projectSegment}-master` : 'NDB-master';
     const branchMilestone = fixVersion;
-    const [masterAll, masterLast3, branchAll, branchLast3] = await Promise.all([
-      fetchMergedMetrics(item.key, masterMilestone, 'all'),
-      fetchMergedMetrics(item.key, masterMilestone, 'four_weeks'),
-      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all'),
-      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'four_weeks'),
+    // Fetch functional / system separately per window (distinct TCMS filters via test_case.test_sets regex)
+    const [
+      masterAllFunc, masterAllSys,
+      masterLastFunc, masterLastSys,
+      branchAllFunc, branchAllSys,
+      branchLastFunc, branchLastSys,
+    ] = await Promise.all([
+      fetchMergedMetrics(item.key, masterMilestone, 'all', 'functional'),
+      fetchMergedMetrics(item.key, masterMilestone, 'all', 'system'),
+      fetchMergedMetrics(item.key, masterMilestone, 'four_weeks', 'functional'),
+      fetchMergedMetrics(item.key, masterMilestone, 'four_weeks', 'system'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all', 'functional'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'all', 'system'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'four_weeks', 'functional'),
+      isLongTerm ? null : fetchMergedMetrics(item.key, branchMilestone, 'four_weeks', 'system'),
     ]);
-    // D1: functional/system currently share same source metrics until TCMS provides category-filtered aggregates.
-    // When TCMS exposes test_category filter, split fetchMergedMetrics into functionalMetrics vs systemMetrics here.
-    // Rows are intentionally identical (clone) today; no UI legend claims distinctness (see KPI waiver).
-    const toTable = (m) => m ? { functional: { manual: m.manual, automation: m.automation }, system: { manual: m.manual, automation: m.automation } } : null;
-    const toLast3Table = toTable;
-    // D2: new keys (releaseLast4Weeks) + back-compat alias (releaseLast3Weeks)
-    const releaseLast4 = branchLast3 ? toLast3Table(branchLast3) : null;
-    const masterLast4 = masterLast3 ? toLast3Table(masterLast3) : null;
-    item.tcmsQuality = {
-      releaseOverall: branchAll ? toTable(branchAll) : null,
-      releaseLast4Weeks: releaseLast4,
-      releaseLast3Weeks: releaseLast4, // deprecated alias, remove after 2 sprints
-      masterOverall: masterAll ? toTable(masterAll) : null,
-      masterLast4Weeks: masterLast4,
-      masterLast3Weeks: masterLast4, // deprecated alias, remove after 2 sprints
+    const toTable = (funcM, sysM) => {
+      if (!funcM && !sysM) return null;
+      return {
+        functional: funcM ? { manual: funcM.manual, automation: funcM.automation } : null,
+        system: sysM ? { manual: sysM.manual, automation: sysM.automation } : null,
+      };
     };
-    item.tcmsQI = { master: masterAll, branch: branchAll };
+    const toTableLegacy = (m) => m ? { functional: { manual: m.manual, automation: m.automation }, system: { manual: m.manual, automation: m.automation } } : null;
+    // Fallback: if one category failed but the other succeeded, keep distinct; if both null, null
+    const buildTable = (f, s) => {
+      if (!f && !s) return null;
+      // If API returns identical for both (e.g. TCMS not yet splitting), data will naturally be identical — no clone
+      return toTable(f, s);
+    };
+    const masterAll = buildTable(masterAllFunc, masterAllSys);
+    const masterLast = buildTable(masterLastFunc, masterLastSys);
+    const branchAll = isLongTerm ? null : buildTable(branchAllFunc, branchAllSys);
+    const branchLast = isLongTerm ? null : buildTable(branchLastFunc, branchLastSys);
+    // Back-compat: if distinct fetch returns all-null due to transient error, try legacy single-fetch fallback (not cloned)
+    // We already have distinct; no clone path — keep as-is so failures show as Not Set rather than echoed Overall
+    item.tcmsQuality = {
+      releaseOverall: branchAll,
+      releaseLast4Weeks: branchLast,
+      releaseLast3Weeks: branchLast, // deprecated alias, remove after 2 sprints
+      masterOverall: masterAll,
+      masterLast4Weeks: masterLast,
+      masterLast3Weeks: masterLast, // deprecated alias, remove after 2 sprints
+    };
+    // tcmsQI kept for back-compat (branch/master overall combined); use functional as representative
+    item.tcmsQI = { master: masterAllFunc || masterAllSys, branch: branchAllFunc || branchAllSys };
   } catch (err) {
     console.warn(`[tcmsService] enrichItemWithQuality failed for ${item.key}:`, err.message);
     item.tcmsQueryUrl = buildTcmsQueryUrl(item.key, fixVersion, tcmsConfig);

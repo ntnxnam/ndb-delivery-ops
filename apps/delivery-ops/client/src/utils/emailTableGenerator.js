@@ -73,14 +73,27 @@ export function generateTableHTMLForEmail(
     const contacts = [
       { label: 'Assignee', value: item.assignee },
       { label: 'QA Contact', value: getFieldValue(item, 'qaContact') },
+      { label: 'Test Lead', value: getFieldValue(item, 'testLead') },
       { label: 'PM Owner', value: getFieldValue(item, 'pmOwner') },
       { label: 'Program Mgr', value: getFieldValue(item, 'tpmOwner') }
     ];
 
-    // Helper to format user value
+    // Helper to format user value (handles string, object, or multiuserpicker array)
     const formatUserValue = (userValue) => {
       if (!userValue) return null;
-      if (typeof userValue === 'string') return userValue;
+      if (Array.isArray(userValue)) {
+        const names = userValue.map(u => {
+          if (!u) return null;
+          if (typeof u === 'string') return u.trim() || null;
+          return u.displayName || u.name || u.emailAddress || u.email || u.key || null;
+        }).filter(Boolean).filter(v => v !== 'N/A');
+        return names.length ? names.join(', ') : null;
+      }
+      if (typeof userValue === 'string') {
+        const t = userValue.trim();
+        if (!t || t === 'N/A') return null;
+        return t;
+      }
       if (userValue.displayName) return userValue.displayName;
       if (userValue.name) return userValue.name;
       if (userValue.emailAddress) return userValue.emailAddress;
@@ -291,7 +304,7 @@ export function generateTableHTMLForEmail(
       if (visible.length === 0) return '<span style="background:#fff3cd;font-weight:600;padding:2px 4px;border-radius:2px;">Not Set</span>';
       let html = visible.map(t => buildTable(t.title, t.data)).join('');
       if (visible.length < tables.length) html += '<div style="color:#999;font-style:italic;font-size:10px;margin-top:4px;">— No runs in other windows</div>';
-      html += '<div style="font-size:9px;color:#6c757d;margin-top:4px;font-style:italic;">Functional/System share source until TCMS category filter lands</div>';
+      html += '<div style="font-size:9px;color:#6c757d;margin-top:4px;font-style:italic;">Functional = NOT SystemTest/, System = SystemTest/ (via test_case.test_sets)</div>';
       return html;
     }
     if (columnKey === 'statusUpdate') {

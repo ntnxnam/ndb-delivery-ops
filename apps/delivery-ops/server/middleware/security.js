@@ -1,5 +1,13 @@
 const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = require('express-rate-limit');
+let ipKeyGenerator;
+try {
+  ({ ipKeyGenerator } = require('express-rate-limit'));
+  if (typeof ipKeyGenerator !== 'function') ipKeyGenerator = null;
+} catch {}
+if (typeof ipKeyGenerator !== 'function') {
+  // fallback for older express-rate-limit without helper — use raw IP
+  ipKeyGenerator = (ip) => String(ip || 'unknown');
+}
 const helmet = require('helmet');
 
 // Plain-text 429 bodies break clients that always call response.json()

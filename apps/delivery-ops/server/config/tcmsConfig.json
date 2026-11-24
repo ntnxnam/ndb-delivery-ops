@@ -21,17 +21,15 @@
     "metrics": {
       "path": "/api/v1/all_test_cases/aggregate/metrics",
       "method": "GET",
-      "description": "Per-FEAT pass/fail rollup (from your HAR drill-down). time_filter: all | four_weeks. target: {milestone}-qcow2.",
-      "supportedTimeFilters": [
-        "all",
-        "four_weeks"
-      ],
+      "description": "Per-FEAT pass/fail rollup (from HAR). time_filter: all | four_weeks. target: {milestone}-qcow2. Functional = NOT SystemTest/, System = SystemTest/ via test_case.test_sets regex.",
+      "supportedTimeFilters": ["all", "four_weeks"],
+      "supportedCategories": ["all", "functional", "system"],
       "query": {
         "aggregation_field": "test_case.metadata.requirements",
         "time_filter": "all | four_weeks",
         "target": "{milestone}-qcow2",
         "feat_type": "all",
-        "filters": "{\"$and\":[{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false}]}"
+        "filters": "{\"$and\":[{\"test_case.metadata.requirements\":\"{featKey}\"},{\"test_case.deprecated\":false},{\"test_case.test_sets\":{\"$regex\":\"^test_sets/milestones/{milestone}/[^/]+/SystemTest/\"} | {\"$not\":{\"$regex\":...}}]}"
       },
       "response": "{ total, data:[{ _id, total, run, passed, failed, manual_run, manual_passed, manual_failed, automation_run, automation_passed, automation_failed, average_total_op_success_percentage, average_run_op_success_percentage, average_manual_op_success_percentage, average_automation_op_success_percentage }], success }"
     },
