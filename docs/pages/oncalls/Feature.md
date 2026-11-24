@@ -2,7 +2,7 @@
 
 ## Outcome
 
-VP-first OnCalls dashboard where one timeframe pill controls the business story: heroes + workflow buckets + gap taxonomy + health + graph + fused AI concern. Drill keeps the timeframe. Legacy pulse-only view kept at `/oncalls-legacy`.
+VP-first OnCalls dashboard where one timeframe pill controls the business story: heroes + workflow buckets + gap taxonomy + health + graph + fused AI concern. Drill keeps the timeframe. V1 pulse view removed 2026-11-24 — `/oncalls-legacy` redirects to `/oncalls`. Report: Download Report + Send Email HTML via `POST /api/jira/oncalls/report`.
 
 ## Constraints (preserve)
 

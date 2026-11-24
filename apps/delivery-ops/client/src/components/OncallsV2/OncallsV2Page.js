@@ -6,7 +6,10 @@ import { TeamRequiredGate } from '../../layout/components/TeamRequiredGate';
 import { Hero, jiraHref, ticketHref, linkify } from '../Oncalls/OncallsParts';
 import KpiPulseBand from '../KpiPulse/KpiPulseBand';
 import PathDrill from '../Oncalls/PathDrill';
+import '../Oncalls/Oncalls.css';
 import './OncallsV2.css';
+import OncallReportSection from './OncallReportSection';
+import { useOncallReport } from '../../hooks/useOncallReport';
 
 function PillBar({ timeframe, setTimeframe }) {
   return (
@@ -91,6 +94,7 @@ export default function OncallsV2Page() {
 
   const [drill, setDrill] = useState(null); // { mode, scope }
   const [showNdbSub, setShowNdbSub] = useState(false);
+  const { busy: reportBusy, error: reportError, preview: previewReport, send: sendReport } = useOncallReport({ teamId: selectedTeamId, timeframe, dashboard: data, aiConcern });
   const closeDrill = useCallback(() => {
     setDrill(null);
     resetAiSlice();
@@ -246,9 +250,8 @@ export default function OncallsV2Page() {
             </>
           )}
 
-          <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--surface)', padding: '4px 0' }}>
-            <PillBar timeframe={timeframe} setTimeframe={setTimeframe} />
-          </div>
+          <OncallReportSection teamId={selectedTeamId} timeframe={timeframe} busy={reportBusy} error={reportError} onPreview={previewReport} onSend={sendReport} />
+
           <PathDrill
             mode={drill?.mode}
             tickets={['duds','ndbGaps','otherTeamGaps','thLinked','bugs','improvements','other','closedInWindow','throughput','mttr'].includes(drill?.mode) ? (data.closedStacksPreview || []) : data.openTickets}

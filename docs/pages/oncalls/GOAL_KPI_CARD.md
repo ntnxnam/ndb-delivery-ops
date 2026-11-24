@@ -1,23 +1,52 @@
-# Goal KPI Card — OnCalls V2 (VP-first 2-lens rebuild)
+# Goal KPI Card — weave/oncall-report-email
 
-GOAL: Rebuild OnCalls dashboard as V2 with global timeframe pills (15d/1M/1Q/2Q/1Y/18M/Overall), at-a-glance heroes with one-line explainers, health MTTR throughput heroes, fused quant+qual AI concern with hotspot (Upgrade/MSSQL etc.), workflow buckets Need Info vs Waiting for Customer, gap taxonomy duds/NDB gaps/other-team with NDB sub-drill TH/Bugs/Improvements/Other, Loom JIRA pull + prompt build → Lighthouse AI consume, weekly scheduled report, TPM Pulse + SchedulePage integration.
+GOAL: OnCalls is V2-only at /oncalls (V1 removed) with Download Report + Send Email HTML email reusing Outstanding report pattern, timeframe-driven (7d..Overall), CSS fixed — like other pages.
 
-SCOPE: apps/delivery-ops/client/src/components/OncallsV2/*, hooks/useOncallsV2.js + useOncallSlice.js, App.js route /oncalls (canonical V2) + /oncalls-legacy (pulse fallback), server/services/oncallDashboardV2.js, oncallGapService.js, config/oncallConfig.json (needInfoDays/waitingForCustomerDays), routes/jira/oncalls.js (timeframe param + /v2 aliases), routes/ai.js (oncall-concern + oncall-slice), services/naiService.js (ONCALL_CONCERN + ONCALL_SLICE prompts), mcp/shared/tools/buildOncallPrompt.ts, mcp/lighthouse product tool, docs/pages/oncalls/* + wireframe.html
+SCOPE: apps/delivery-ops/client/src/App.js (route), components/OncallsV2/OncallsV2Page.js + OncallReportSection.js, hooks/useOncallReport.js + useOncallsV2.js, server/services/oncallDashboardV2.js + oncallReportService.js (new) + oncallBlurbService.js, server/routes/jira/oncalls.js (report endpoint), server/services/oncallService.js (legacy orphan), docs/pages/oncalls/*, docs/api/jira.md, USER_GUIDE
+BASE: origin/main @ 1d59110
 
 DONE WHEN:
-1. /oncalls renders wireframe IA: sticky global pills (8) drive all heroes/health/concern/age/graph/taxonomy + drills inherit (no reset), each hero shows count + explain + Open in JIRA proof
-2. Server returns timeframe-aware dashboard (counts + pulse window + stacks + gap taxonomy) for any pill including Overall (no date clause) with correct JQL per bucket (Need Info/Waiting status) and thresholds from config
-3. AI concern fuses quant (open/MTTR/net) + qual (hotspot component top2 + gap% + view) in ~100w and regenerates on pill/hero/taxonomy/view; drawer 2-liner + full briefing retained; Loom builds prompt, Lighthouse calls NAI
-WAIVED for V2.0 (deferred to V2.1): weekly scheduled report (cron→email), TPM Pulse card + SchedulePage hook — tracked as follow-up; no blocking for V2.0 merge
+  1. /oncalls renders V2 (8 pills 7d/15d/1M/1Q/2Q/1Y/18M/Overall, Overall=no clause), /oncalls-legacy → /oncalls redirect, V1 files deleted (OncallsPage.js, useOncalls.js, pulse test)
+  2. CSS fixed: OncallsV2Page imports Oncalls.css for oc-* + ocv2-* styles, no unstyled page
+  3. Download Report produces standalone HTML (heroes/health/taxonomy/workflow + ticket tables + JQL proof links) via client triggerDownload
+  4. Send Email preview/send via POST /api/jira/oncalls/report → buildOncallReportHtml + sendEmailDirect (same SMTP/CC as Outstanding), subject [OnCalls tf] team — N open
 
 AGENT KPIs:
-  Developer: [V2 route + sticky pills + hero explain rows + health MTTR strip + concern + age table + graph toggle + taxonomy + NDB drill + drawer with fix suggestion all render; server timeframe-aware with Overall; config thresholds wired; no hardcoded product strings]
-  Impact Scout: [All oncall consumers grep'd: oncallService, oncallStacksService, oncallEscalationService, kpiPulseService, ticketNarrativeService, OncallsPage, KpiPulseBand, TpmPulsePage, SchedulePage, emailScheduler — patched or N/A]
-  Code Review: [No localhost, no duplicate connectors, minimal-architecture respected, no silent JQL edit without approval flag]
-  QA: [Counts verified: timeframe pill JQL matches hero count proof; Overall = no date clause; Need Info/Waiting JQL valid; gap taxonomy counts sum to closed; live JQL spot-check for one pill]
-  UX: [Sticky pills stay on scroll + in drawers; hero explain visible without hover; MTTR heroes distinct from at-a-glance; graph toggle flow/snapshot works; taxonomy double-click opens NDB sub-cards; no crushed flex on 1280px]
-  PM: [VP can answer hotpots + too-long owner + fix-this in 10s; persona team-exec/tpm covered; scope matches wireframe; no missing must-have (Overall, MTTR, pills global)]
-  Exec: [High-level story first (concern 100w + hotspot) then drill-down; every hero count has JQL proof; no data dump]
-  JIRA Query Check: [Every hero count JQL uses baseScopeJql + correct status/resolution clause; dual-click count→panel, Open in JIRA→JQL; linkedOut uses linkedIssuesOf exact baseQuery]
-  Compile Gate: [0 errors]
-  Merge: [Branch weave/oncalls-v2 pushed, PR-ready]
+  Developer:
+    - V1 removed: App.js no OncallsPage import, legacy route is Navigate redirect, deleted files not importable
+    - CSS re-wired: OncallsV2Page imports ../Oncalls/Oncalls.css + ./OncallsV2.css
+    - Report service exists: oncallReportService.js buildOncallReportHtml + previewOrSendOncallReport, uses sendEmailDirect, defaultRecipients
+    - Route exists: POST /api/jira/oncalls/report with previewOnly + dashboard passthrough, kpi_view auth
+    - Client hook + section: useOncallReport + OncallReportSection with Download/Preview/Send, wired into OncallsV2Page
+    - No hardcoded NDB/ERA in new code — uses cfg.teamId / cfg.baseScopeJql (product-agnostic D1)
+    - oncallBlurbService refactored to oncallConfigResolve (no oncallService import)
+  Impact Scout:
+    - All consumers of deleted files grep'd: OncallsPage, useOncalls, oncallService importers patched or confirmed orphan (only oncallAiSummaryService legacy, not on hot path)
+  Code Review:
+    - no localhost in client/src (relative /api + proxy)
+    - minimal-architecture: component renders, hook fetches, service transforms; no fetch in JSX
+    - no JQL edit without approval; gap taxonomy uses cfg.gapProjectPrefixes
+    - server/index.js dotenv still loads server/.env + apps/delivery-ops/.env (no regression)
+  QA:
+    - /oncalls with teamId+timeframe returns 200 with hero/health/gapTaxonomy (live JQL proof)
+    - /oncalls/report preview returns 200 HTML containing hero counts + JQL links; send returns messageId (mocked SMTP in test)
+    - Overall timeframe omits resolved >= clause
+  UX:
+    - Pill bar sticky, active state, 8 pills visible at 1280/768
+    - Download/Preview/Send bar aligned, not crushing hero grid; drill overlay still works (z-index, overflow hidden)
+    - Print hides sidebar (Layout.css @media print)
+  PM:
+    - OnCalls value prop preserved: one timeframe drives all, AI Concern + health + taxonomy, drill keeps timeframe
+    - Email subject + HTML answers team-exec question: how many open/aged, where gap, what to chase — like Outstanding
+    - No scope creep: no new KPI, no Streamlit
+  Exec:
+    - /oncalls shows RAG + AI Concern first, then heroes/health as evidence (high-level first, drill-down)
+    - Every count has JQL proof: count → PathDrill, Open in JIRA ↗ → exact JQL per metric-click-dual-action
+  JIRA Query Check:
+    - timeframeClause returns null for Overall, else "resolved >= -Nd" / "created >= -Nd" with correct field
+    - linkedOutJql = issueFunction in linkedIssuesOf("<OnCalls KPI baseQuery>") per kpiConfig, not invented wrapper
+    - All hero JQLs via buildTimeframeHeroQueries (seed + status + timeframe clause)
+  Compile Gate:
+    - node --check server/index.js + oncallReportService.js + oncalls.js pass; tsc --noEmit for shared/mcp passes when tsc available (server OK is blocking gate)
+  Merge:
+    - Branch weave/oncall-report-email → origin/main via --no-ff, status clean, pushed

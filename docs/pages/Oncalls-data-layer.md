@@ -1,8 +1,8 @@
 # Oncalls V2 — Data Layer
 
-**Route**: `/oncalls` (V2) · `/oncalls-legacy` (pulse-era)  
-**Component**: `OncallsV2Page` · `OncallsPage` (legacy)  
-**Hooks**: `useOncallsV2` · `useOncalls` (legacy)
+**Route**: `/oncalls` (V2) — `/oncalls-legacy` redirects to `/oncalls` (V1 removed 2026-11-24)  
+**Component**: `OncallsV2Page` (V1 `OncallsPage` removed)  
+**Hooks**: `useOncallsV2` (V1 `useOncalls` removed)
 
 ---
 
@@ -51,9 +51,9 @@ POST /api/ai/oncall-slice  Body: { teamId, timeframe, view, keys, meta }
   → naiService.generateOncallSlice({ view, keys, timeframe, meta })  (ONCALL_SLICE)
 ```
 
-Legacy flow (no timeframe): `GET/POST /api/jira/oncalls` → `checkKpiViewAuthorization` → `oncallService.getDashboard({ token, teamId })` → `oncallConfigResolve` → `buildPulse` → `oncallStacksService` → `oncallEscalationService` → RAG. See pre-V2 docs.
+Legacy flow removed 2026-11-24: V1 `oncallService.getDashboard` at `GET/POST /api/jira/oncalls` (no timeframe) deleted; all requests now go to `oncallDashboardV2.getDashboard` (V2, timeframe-aware).
 
-Modules (V2): `oncallDashboardV2.js` (orchestrator) · `oncallGapService.js` (taxonomy) · `oncallConfigResolve.js` · `oncallStacksService.js` · `kpiPulseService.js` · `oncallService.js` (legacy) · `naiService.js` (ONCALL_CONCERN + ONCALL_SLICE) · `routes/jira/oncalls.js` · `routes/ai.js` · `mcp/shared/tools/buildOncallPrompt.ts`
+Modules (V2): `oncallDashboardV2.js` (orchestrator) · `oncallGapService.js` (taxonomy) · `oncallConfigResolve.js` · `oncallStacksService.js` · `kpiPulseService.js` · `oncallReportService.js` (report email) · `naiService.js` (ONCALL_CONCERN + ONCALL_SLICE) · `routes/jira/oncalls.js` · `routes/ai.js` · `mcp/shared/tools/buildOncallPrompt.ts`
 
 ---
 
@@ -104,7 +104,7 @@ OncallsV2Page
   PathDrill({ mode, tickets, jql, cellCount, scope, timeframe, aiSlice })
 ```
 
-Legacy: `useOncalls` → `GET /api/jira/oncalls?teamId=` (no timeframe) → `OncallsPage` with `KpiPulseBand`.
+Legacy removed: V1 `useOncalls` → `OncallsPage` deleted; V2 `useOncallsV2` → `OncallsV2Page` is sole consumer.
 
 ---
 
