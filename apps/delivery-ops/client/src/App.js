@@ -327,15 +327,6 @@ const AuthenticatedApp = () => {
                 />
 
                 <Route
-                  element={
-                    <ProtectedRoute permissions={['release_versions_view']}>
-                      <Layout>
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
                   path="/release/:name/brief"
                   element={
                     <ProtectedRoute permissions={['release_versions_view']}>

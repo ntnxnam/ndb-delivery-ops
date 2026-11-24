@@ -1,4 +1,6 @@
 /**
+ * TODO(orphan): only consumer of oncallService (V1 orchestrator); V2 uses oncallDashboardV2.
+ * When LLM briefing migrates to V2 snapshot, delete this module and oncallService.js.
  * Build OnCall intelligence packet for LLM briefing.
  * Deterministic stack graphs + dwell + VALID TICKET KEYS; RAG from oncallService.
  */

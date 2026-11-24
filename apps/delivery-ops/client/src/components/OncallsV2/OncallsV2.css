@@ -125,3 +125,23 @@
   overflow: auto;
   box-shadow: var(--shadow-lg);
 }
+
+/* Report section — tokens only, no inline-style soup */
+.ocv2-report-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+  background: var(--surface);
+}
+.ocv2-report-title { margin: 0 0 var(--space-1); }
+.ocv2-report-desc { margin: 0 0 var(--space-2); font-size: var(--fs-small); color: var(--muted); }
+.ocv2-report-hint { margin: 0 0 var(--space-2); font-size: var(--fs-xs); color: var(--muted); }
+.ocv2-report-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: end; margin-bottom: var(--space-2); }
+.ocv2-report-label { flex: 1 1 260px; font-size: var(--fs-small); }
+.ocv2-report-input { width: 100%; padding: var(--space-1) var(--space-2); margin-top: var(--space-1); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--fs-small); }
+.ocv2-report-error { color: var(--danger); font-size: var(--fs-xs); }
+.ocv2-report-success { color: var(--success); font-size: var(--fs-xs); }
+.ocv2-report-preview { margin-top: var(--space-3); }
+.ocv2-report-preview-summary { cursor: pointer; font-weight: var(--fw-semibold); font-size: var(--fs-small); }
+.ocv2-report-preview-body { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-3); margin-top: var(--space-2); background: var(--surface-raised); overflow: auto; max-height: 600px; }

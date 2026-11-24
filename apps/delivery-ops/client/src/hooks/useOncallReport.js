@@ -14,7 +14,7 @@ export function useOncallReport({ teamId, timeframe, dashboard, aiConcern }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const run = useCallback(async ({ previewOnly, to, cc, dashOverride } = {}) => {
+  const run = useCallback(async ({ previewOnly, to, dashOverride } = {}) => {
     setBusy(true);
     setError('');
     try {
@@ -22,7 +22,6 @@ export function useOncallReport({ teamId, timeframe, dashboard, aiConcern }) {
         teamId,
         timeframe,
         to,
-        cc,
         previewOnly: Boolean(previewOnly),
         dashboard: dashOverride || dashboard,
         aiConcern: aiConcern || undefined,
@@ -37,7 +36,7 @@ export function useOncallReport({ teamId, timeframe, dashboard, aiConcern }) {
     } finally {
       setBusy(false);
     }
-  }, [teamId, timeframe, dashboard, aiConcern]);
+  }, [teamId, timeframe, dashboard?.asOf, aiConcern]);
 
   const preview = useCallback((opts = {}) => run({ ...opts, previewOnly: true }), [run]);
   const send = useCallback((opts = {}) => run({ ...opts, previewOnly: false }), [run]);

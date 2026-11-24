@@ -892,6 +892,11 @@ timeframe pill (7d|15d|1M|1Q|2Q|1Y|18M|Overall)
 
 All hero/taxonomy cells expose `cell(count, jql)` for dual-click.
 
+### 14.4 Report architecture (OnCalls Download + Email — reuses Outstanding pattern)
+
+- `server/services/oncallReportService.js`: `buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern })` → standalone HTML email (heroes/health/taxonomy + ticket tables with JQL proof links) + `previewOrSendOncallReport({ token, teamId, timeframe, to, previewOnly, dashboard, aiConcern })` → validates `timeframe` against `TIMEFRAMES` (case-insensitive, defaults `7d`), re-fetches via `oncallDashboardV2.getDashboard` when `!dash||!dash.hero` (dashboard passthrough), builds subject `[OnCalls tf] tid — N open, N aged — YYYY-MM-DD` (`tid` sanitized `[\r\n]→space`, `aiConcern` sliced `0..5000`), resolves `defaultRecipients()` from `releaseVersionsCCConfig.json` (`to` override, `cc` server-owned via `leadershipCc()` — `mustFixLeadershipCC` or fallback `ndb-tech-leads@`/`ndb-managers@`, client `cc` ignored), then `previewOnly:true` → `{subject,to,cc,html,story}` without SMTP / `previewOnly:false` → `sendEmailDirect({to,cc,subject,html})` → `{messageId}`. Payload guard in `server/routes/jira/oncalls.js` `POST /api/jira/oncalls/report`: `dashboard` JSON >200 KB or `aiConcern` >5 000 chars → `413`; auth `validateJiraTokenMiddleware` + `checkKpiViewAuthorization` (`kpi_view`) + `apiLimiter`.
+- `apps/delivery-ops/client/src/hooks/useOncallReport.js` + `apps/delivery-ops/client/src/components/OncallsV2/OncallReportSection.js`: `useOncallReport({ teamId, timeframe, dashboard, aiConcern })` exposes `preview`/`send` (`authenticatedPost` to `POST /api/jira/oncalls/report` with `previewOnly` toggle) + editable `To` input → `Preview` (renders drawer HTML) / `Send Email` (server-owned CC) / `Download Report` (client `Blob` → `OnCalls-{team}-{timeframe}-{date}.html`, e.g. `OnCalls-ndb-7d-2026-11-24.html`, `URL.createObjectURL` append + `setTimeout(revoke)` Firefox-safe). Wired into `OncallsV2Page` below taxonomy.
+
 ## 15. Deployment Architecture
 
 ### 15.1 Development Environment

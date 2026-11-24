@@ -12,8 +12,9 @@
 |--------|------|------|
 | GET | `/api/jira/oncalls?teamId=&timeframe=&v2=` | Initial load / team or timeframe change (V2) |
 | GET | `/api/jira/oncalls/v2?teamId=&timeframe=` | Explicit V2 alias (same) |
-| POST | `/api/jira/oncalls/refresh` | Pull from JIRA (V2 when `timeframe`/`v2` present, else legacy) |
+| POST | `/api/jira/oncalls/refresh` | Pull from JIRA (V2, timeframe-aware) |
 | POST | `/api/jira/oncalls/v2/refresh` | Pull V2 alias |
+| POST | `/api/jira/oncalls/report` | Preview (`previewOnly:true`→`{subject,html}`) or Send email (`→{messageId}`) — reuses `sendEmailDirect`, server-owned CC |
 | POST | `/api/ai/oncall-concern` | Generate fused AI Concern (auto after metrics load + on Regenerate + on pill/hero/taxonomy change) |
 | POST | `/api/ai/oncall-slice` | Per-view AI 2-liner for drill drawer (on open drill) |
 | GET | `/api/jira/oncalls?teamId=` | Legacy initial load (no timeframe) |
@@ -130,6 +131,8 @@ MCP: `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only) + `mcp/lighthouse
 - Dashboard counts + pulse + stacks + gaps: live on load / Pull (no durable cache)
 - Ticket narrative / blurbs (legacy): short-lived per key
 - `oncallDashboardV2.getDashboard` parallelizes with `allSettled`; partial errors surface in `errors` map
+
+**Live JQL verification — STALE (re-run before sign-off):** `curl -H "Authorization: Bearer $PAT" "$HOST/api/jira/oncalls?teamId=ndb&timeframe=Overall"` must return `hero.open.jql` without `resolved >=` clause.
 
 ---
 

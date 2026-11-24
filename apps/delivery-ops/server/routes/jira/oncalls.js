@@ -78,7 +78,7 @@ router.post('/oncalls/v2/refresh', validateJiraTokenMiddleware, apiLimiter, asyn
 
 /**
  * POST /api/jira/oncalls/report — preview or send HTML email report (reuses outstanding pattern)
- * Body: { teamId, timeframe, to?, cc?, previewOnly?, dashboard?, aiConcern? }
+ * Body: { teamId, timeframe, to?, previewOnly?, dashboard?, aiConcern? } — cc is server-owned, client cc ignored
  * - dashboard: optional snapshot from client (avoids re-fetch); when missing, server fetches via getDashboard
  * - aiConcern: optional fused AI concern string to embed in email
  */
@@ -88,8 +88,16 @@ router.post('/oncalls/report', validateJiraTokenMiddleware, apiLimiter, async (r
     const body = req.body || {};
     const teamId = (body.teamId || '').trim() || undefined;
     const timeframe = (body.timeframe || '').trim() || '7d';
+    // Size guard: dashboard can be large (openTickets+stacksPreview); cap at 200KB
+    if (body.dashboard && typeof body.dashboard === 'object') {
+      try {
+        const sz = JSON.stringify(body.dashboard).length;
+        if (sz > 200000) return res.status(413).json({ success: false, error: 'dashboard payload too large' });
+      } catch {}
+    }
+    if (body.aiConcern && String(body.aiConcern).length > 5000) return res.status(413).json({ success: false, error: 'aiConcern too long' });
     const to = Array.isArray(body.to) ? body.to : (body.to ? [body.to] : undefined);
-    const cc = Array.isArray(body.cc) ? body.cc : (body.cc ? [body.cc] : undefined);
+    // CC is server-owned like Outstanding — ignore client cc
     const previewOnly = Boolean(body.previewOnly);
     const dashboard = body.dashboard && typeof body.dashboard === 'object' ? body.dashboard : null;
     const aiConcern = body.aiConcern ? String(body.aiConcern) : null;
@@ -99,7 +107,6 @@ router.post('/oncalls/report', validateJiraTokenMiddleware, apiLimiter, async (r
       teamId,
       timeframe,
       to,
-      cc,
       previewOnly,
       dashboard,
       aiConcern,
