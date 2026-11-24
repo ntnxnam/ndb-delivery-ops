@@ -1639,14 +1639,16 @@ async function generatePageCompressBrief(story, validKeys = []) {
 
 // ── OnCall V2 — Concern (fused quant+qual) + Slice prompts ──────────────────
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly two sections. Use ticket content to add value — status alone is not insight.
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly three sections. Use ticket content — status alone is not insight.
 
-Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY, HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5: summary + OnCall Relief + Corrective + Root Cause + Workaround + Preliminary Analysis themes). Summaries carry product signals (e.g. oracle, upgrade, patch on 2.11 family).
+Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY, HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5: summary + OnCall Relief + Corrective + Root Cause + Workaround + Preliminary Analysis). Summaries carry product signals (e.g. oracle, upgrade on 2.11 family).
 
 Output format (exact headings, keep order):
-Quantitative: 1 paragraph 45-55 words — counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. No interpretation, plain English.
+Quantitative: 1 paragraph 40-45 words — counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. Plain English.
 
-Qualitative: 1 paragraph 60-70 words — read STACK SAMPLE content (summary + RootCause/Workaround), not status. Name the thematic hotspot (e.g. "oracle + upgrade infra on 2.11 family with MPLS timeout + stale marker pattern" vs "diffuse"), name recurring Problem/Technical Category, connect gap story (duds vs NDB other) to content, and workflow pressure in content terms. Do not parrot status labels; do not quote full Workaround commands. Decisive.
+Qualitative: 1 paragraph 45-50 words — what do counts mean? 58% aged + MTTR 15d = stalling? throughput covers net? Reading content, not labels.
+
+Hotspot: 1 paragraph 50-60 words — thematic hotspot from STACK SAMPLE content (not status). Name recurring Technical Category/Problem + concrete pattern e.g. "oracle + upgrade infra on 2.11 family — MPLS 130m timeout + stale PRE_REBOOT marker + PYTHON_BIN gap" vs "diffuse — no concentration". Tie gap (duds vs NDB other) + workflow pressure to that theme. Do not quote full Workaround commands.
 
 Then 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent.`;
 
@@ -1685,7 +1687,7 @@ function buildOncallConcernPrompt(intelligence) {
     return `- ${bits.join(' | ')}`;
   }).join('\n');
   const stackBlock = blurbLines ? `STACK SAMPLE (top 5 open — use for qualitative hotspot/gap themes, not just counts):\n${blurbLines}` : '';
-  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the concern now with exactly the headings Quantitative: then Qualitative: then 2-line chase. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the concern now with exactly the headings Quantitative: then Qualitative: then Hotspot: then 2-line chase. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
 }
 
 function buildOncallSlicePrompt(slice) {
