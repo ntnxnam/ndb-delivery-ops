@@ -120,7 +120,18 @@
   line-height: 1.5;
   padding: 12px 14px;
   resize: vertical;
-  outline: none;
+}
+
+.config-manager__json-area:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.config-manager__nav-item:focus-visible,
+.config-manager__btn:focus-visible,
+.config-manager__input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
 }
 
 .config-manager__actions {
@@ -166,6 +177,10 @@
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .config-manager__notice--success {
@@ -210,6 +225,21 @@
   flex-wrap: wrap;
 }
 
+.config-manager__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.config-manager__field-help {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
 .config-manager__input {
   padding: 7px 10px;
   border: 1px solid #d1d5db;
@@ -217,6 +247,7 @@
   font-size: 13px;
   min-width: 0;
   flex: 1;
+  width: 100%;
 }
 
 .config-manager__hint {

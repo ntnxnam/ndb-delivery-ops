@@ -249,7 +249,10 @@ router.get('/configs/:key', requireSuperAdmin, (req, res) => {
  */
 router.put('/configs/:key', requireSuperAdmin, (req, res) => {
   try {
-    const payload = req.body?.data !== undefined ? req.body.data : req.body;
+    if (req.body?.data === undefined) {
+      return res.status(400).json({ success: false, error: 'Body must be { data: <object> }' });
+    }
+    const payload = req.body.data;
     const result = configAdminService.saveConfig(req.params.key, payload);
     return res.json({ success: true, ...result, message: `${result.file} saved.` });
   } catch (error) {

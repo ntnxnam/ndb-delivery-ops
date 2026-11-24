@@ -121,12 +121,36 @@ function listConfigs() {
   });
 }
 
+function isAllowedConfigKey(key) {
+  return typeof key === 'string' && Object.prototype.hasOwnProperty.call(CONFIG_REGISTRY, key);
+}
+
+/**
+ * Recursively check object keys for forbidden names (avoids false positives on values).
+ */
+function hasForbiddenKeys(obj) {
+  if (obj === null || typeof obj !== 'object') return false;
+  for (const k of Object.keys(obj)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') return true;
+    if (hasForbiddenKeys(obj[k])) return true;
+  }
+  if (Array.isArray(obj)) {
+    for (const item of obj) if (hasForbiddenKeys(item)) return true;
+  }
+  return false;
+}
+
 /**
  * Read and parse a registered config file.
  * @param {string} configKey - registry key
  * @returns {{ key, file, label, data }}
  */
 function getConfig(configKey) {
+  if (!isAllowedConfigKey(configKey)) {
+    const err = new Error(`Unknown config key: ${configKey}`);
+    err.statusCode = 404;
+    throw err;
+  }
   const meta = CONFIG_REGISTRY[configKey];
   if (!meta) {
     const err = new Error(`Unknown config key: ${configKey}`);
@@ -169,12 +193,12 @@ function assertSafePayload(value) {
     err.statusCode = 400;
     throw err;
   }
-  const serialized = JSON.stringify(value);
-  if (serialized.includes('__proto__') || serialized.includes('constructor')) {
-    const err = new Error('Payload contains forbidden keys.');
+  if (hasForbiddenKeys(value)) {
+    const err = new Error('Payload contains forbidden keys (__proto__/constructor/prototype).');
     err.statusCode = 400;
     throw err;
   }
+  const serialized = JSON.stringify(value);
   // Size guard: 500KB max
   if (Buffer.byteLength(serialized, 'utf8') > 500 * 1024) {
     const err = new Error('Config payload too large (max 500KB).');
@@ -191,6 +215,11 @@ function assertSafePayload(value) {
  * @returns {{ key, file, label, data }}
  */
 function saveConfig(configKey, newData) {
+  if (!isAllowedConfigKey(configKey)) {
+    const err = new Error(`Unknown config key: ${configKey}`);
+    err.statusCode = 404;
+    throw err;
+  }
   const meta = CONFIG_REGISTRY[configKey];
   if (!meta) {
     const err = new Error(`Unknown config key: ${configKey}`);
@@ -239,6 +268,16 @@ function saveConfig(configKey, newData) {
  * @returns {{ key, file, label, data }}
  */
 function patchField(configKey, fieldPath, value) {
+  if (!isAllowedConfigKey(configKey)) {
+    const err = new Error(`Unknown config key: ${configKey}`);
+    err.statusCode = 404;
+    throw err;
+  }
+  if (value !== null && typeof value === 'object' && hasForbiddenKeys(value)) {
+    const err = new Error('Value contains forbidden keys.');
+    err.statusCode = 400;
+    throw err;
+  }
   if (!fieldPath || typeof fieldPath !== 'string') {
     const err = new Error('fieldPath is required (dot-notation, e.g. "rag.redOpenP0").');
     err.statusCode = 400;
@@ -283,12 +322,17 @@ function patchField(configKey, fieldPath, value) {
  * @returns {{ key, file, label, data }}
  */
 function deleteField(configKey, fieldPath) {
+  if (!isAllowedConfigKey(configKey)) {
+    const err = new Error(`Unknown config key: ${configKey}`);
+    err.statusCode = 404;
+    throw err;
+  }
   if (!fieldPath || typeof fieldPath !== 'string') {
     const err = new Error('fieldPath is required.');
     err.statusCode = 400;
     throw err;
   }
-  if (fieldPath.includes('__proto__') || fieldPath.includes('constructor')) {
+  if (fieldPath.includes('__proto__') || fieldPath.includes('constructor') || fieldPath.includes('prototype')) {
     const err = new Error('Forbidden field path.');
     err.statusCode = 400;
     throw err;

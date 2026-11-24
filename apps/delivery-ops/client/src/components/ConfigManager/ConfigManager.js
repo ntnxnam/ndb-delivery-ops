@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageLoading } from '../../shared/components/PageLoading';
-import { useTeamAdmin } from '../../hooks/useTeamAdmin';
 import {
   authenticatedGet,
   authenticatedPut,
@@ -55,10 +54,6 @@ function parseJsonLoose(text) {
 }
 
 export default function ConfigManager() {
-  const { adminAuth: _unused } = { adminAuth: null }; // keep hook dep stable if needed
-  const adminHook = useTeamAdmin(); // reuses adminAuth helper shape
-  void adminHook;
-
   const [configs, setConfigs] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState('');
@@ -84,16 +79,17 @@ export default function ConfigManager() {
       const res = await authenticatedGet('/api/admin/configs', {}, adminAuth());
       const list = res.data?.configs || [];
       setConfigs(list);
-      if (list.length && !list.find((c) => c.key === selectedKey)) {
-        setSelectedKey(list[0].key);
-      }
+      setSelectedKey((prev) => {
+        if (!prev || !list.find((c) => c.key === prev)) return list[0]?.key || prev;
+        return prev;
+      });
     } catch (err) {
       const msg = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Failed to load configs';
       setListError(msg);
     } finally {
       setLoadingList(false);
     }
-  }, [selectedKey]);
+  }, []);
 
   const loadConfig = useCallback(async (key) => {
     if (!key) return;
@@ -120,6 +116,7 @@ export default function ConfigManager() {
 
   useEffect(() => {
     if (!notice) return;
+    if (notice.type === 'error') return undefined; // errors persist until dismissed
     const id = setTimeout(() => setNotice(null), 5000);
     return () => clearTimeout(id);
   }, [notice]);
@@ -134,6 +131,13 @@ export default function ConfigManager() {
     return Object.entries(g).sort((a, b) => groupOrder(a[0]) - groupOrder(b[0]));
   }, [configs]);
 
+  const handleNavSelect = (key) => {
+    if (jsonDirty && !window.confirm('You have unsaved JSON changes — discard them and switch config?')) return;
+    setSelectedKey(key);
+  };
+
+  const previewRows = useMemo(() => (configData ? flattenForPreview(configData) : []), [configData]);
+
   const handleSave = async () => {
     const parsed = parseJsonLoose(jsonText);
     if (!parsed.ok) {
@@ -147,7 +151,7 @@ export default function ConfigManager() {
       setConfigData(res.data?.data ?? parsed.value);
       setJsonText(JSON.stringify(res.data?.data ?? parsed.value, null, 2));
       setJsonDirty(false);
-      setNotice({ type: 'success', text: res.data?.message || 'Saved.' });
+      setNotice({ type: 'success', text: `${res.data?.message || 'Saved.'} Backup: ${res.data?.file || selectedKey}.bak` });
     } catch (err) {
       const msg = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Save failed';
       setNotice({ type: 'error', text: msg });
@@ -157,8 +161,12 @@ export default function ConfigManager() {
   };
 
   const handleAddField = async () => {
-    const path = newFieldPath.trim();
-    if (!path) {
+    if (jsonDirty) {
+      setNotice({ type: 'error', text: 'You have unsaved JSON edits — save or reload the config before adding a field.' });
+      return;
+    }
+    const fieldPath = newFieldPath.trim();
+    if (!fieldPath) {
       setNotice({ type: 'error', text: 'Field path is required (e.g. customFields.myFlag or slaThresholds.p0Hours).' });
       return;
     }
@@ -168,18 +176,16 @@ export default function ConfigManager() {
       value = '';
     } else {
       const parsed = parseJsonLoose(raw);
-      // If it parses as JSON, use parsed value; otherwise treat as string
       value = parsed.ok ? parsed.value : raw;
-      // If raw was a plain string without quotes that parsed as error, keep raw string
       if (!parsed.ok && raw.length > 0) value = raw;
     }
     setAddingField(true);
     try {
-      const res = await authenticatedPost(`/api/admin/configs/${encodeURIComponent(selectedKey)}/field`, { fieldPath: path, value }, adminAuth());
+      const res = await authenticatedPost(`/api/admin/configs/${encodeURIComponent(selectedKey)}/field`, { fieldPath, value }, adminAuth());
       setConfigData(res.data?.data ?? null);
       setJsonText(JSON.stringify(res.data?.data ?? {}, null, 2));
       setJsonDirty(false);
-      setNotice({ type: 'success', text: res.data?.message || `Field "${path}" added.` });
+      setNotice({ type: 'success', text: res.data?.message || `Field "${fieldPath}" added.` });
       setNewFieldPath('');
       setNewFieldValue('');
     } catch (err) {
@@ -191,7 +197,8 @@ export default function ConfigManager() {
   };
 
   const handleDeleteField = async (fieldPath) => {
-    if (!window.confirm(`Remove field "${fieldPath}"? This writes the config file immediately.`)) return;
+    if (jsonDirty && !window.confirm(`You have unsaved JSON changes. Discard them and remove field "${fieldPath}"?`)) return;
+    if (!jsonDirty && !window.confirm(`Remove field "${fieldPath}"? This writes the config file immediately.`)) return;
     try {
       const res = await authenticatedDelete(`/api/admin/configs/${encodeURIComponent(selectedKey)}/field`, { fieldPath }, adminAuth());
       setConfigData(res.data?.data ?? null);
@@ -202,6 +209,11 @@ export default function ConfigManager() {
       const msg = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Delete failed';
       setNotice({ type: 'error', text: msg });
     }
+  };
+
+  const handleReload = () => {
+    if (jsonDirty && !window.confirm('Discard unsaved JSON changes and reload from server?')) return;
+    loadConfig(selectedKey);
   };
 
   const onJsonChange = (e) => {
@@ -215,7 +227,7 @@ export default function ConfigManager() {
   if (listError) {
     return (
       <div className="config-manager">
-        <div className="config-manager__notice config-manager__notice--error">{listError}</div>
+        <div className="config-manager__notice config-manager__notice--error" role="alert">{listError}</div>
       </div>
     );
   }
@@ -226,22 +238,22 @@ export default function ConfigManager() {
         <div>
           <h1 className="config-manager__title">Config Manager</h1>
           <p className="config-manager__subtitle">
-            Super-admin only. Edit allowlisted JSON configs without a deploy. Changes write the file and create a <code>.bak</code> backup. For OnCall / CFD / CFI you can add custom fields here instead of going via backend.
+            Super-admin only · Edits write the file and keep a <code>.bak</code> backup. Use this to add custom fields for OnCall / CFD / CFI without a deploy.
           </p>
         </div>
       </div>
 
       <div className="config-manager__layout">
-        <nav className="config-manager__nav" aria-label="Config files">
+        <nav className="config-manager__nav" aria-label="Configuration files">
           {grouped.map(([group, items]) => (
             <div key={group}>
-              <div className="config-manager__nav-group">{GROUP_LABELS[group] || group}</div>
+              <div className="config-manager__nav-group" role="heading" aria-level={3}>{GROUP_LABELS[group] || group} {items.length > 1 ? `· ${items.length}` : ''}</div>
               {items.map((c) => (
                 <button
                   key={c.key}
                   type="button"
                   className={`config-manager__nav-item ${c.key === selectedKey ? 'config-manager__nav-item--active' : ''}`}
-                  onClick={() => setSelectedKey(c.key)}
+                  onClick={() => handleNavSelect(c.key)}
                   title={c.description}
                 >
                   {c.label}
@@ -254,17 +266,17 @@ export default function ConfigManager() {
         <div className="config-manager__panel">
           <div className="config-manager__panel-head">
             <div>
-              <h2 className="config-manager__panel-title">{selectedLabel}</h2>
+              <h2 className="config-manager__panel-title">{selectedLabel}{jsonDirty ? ' · ● Unsaved changes' : ''}</h2>
               {configMeta && (
-                <div className="config-manager__panel-meta">
+                <div className="config-manager__panel-meta" title={configMeta.description || ''}>
                   <code>{configMeta.file}</code>
                   {configMeta.description ? ` — ${configMeta.description}` : ''}
                 </div>
               )}
             </div>
             <div className="config-manager__actions">
-              <button type="button" className="config-manager__btn config-manager__btn--secondary" onClick={() => loadConfig(selectedKey)} disabled={loadingConfig}>
-                Reload
+              <button type="button" className="config-manager__btn config-manager__btn--secondary" onClick={handleReload} disabled={loadingConfig}>
+                Refresh
               </button>
               <button type="button" className="config-manager__btn config-manager__btn--primary" onClick={handleSave} disabled={saving || !jsonDirty}>
                 {saving ? 'Saving…' : 'Save JSON'}
@@ -273,12 +285,13 @@ export default function ConfigManager() {
           </div>
 
           {notice && (
-            <div className={`config-manager__notice config-manager__notice--${notice.type}`} role="status">
-              {notice.text}
+            <div className={`config-manager__notice config-manager__notice--${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'} aria-live={notice.type === 'error' ? 'assertive' : 'polite'}>
+              <span style={{ flex: 1 }}>{notice.text}</span>
+              <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" style={{ marginLeft: 12, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
             </div>
           )}
           {configError && (
-            <div className="config-manager__notice config-manager__notice--error">{configError}</div>
+            <div className="config-manager__notice config-manager__notice--error" role="alert">{configError}</div>
           )}
 
           {loadingConfig ? (
@@ -298,38 +311,52 @@ export default function ConfigManager() {
               </div>
 
               <div className="config-manager__add-field">
-                <input
-                  className="config-manager__input"
-                  placeholder='Field path, e.g. customFields.myFlag or slaThresholds.p0Hours'
-                  value={newFieldPath}
-                  onChange={(e) => setNewFieldPath(e.target.value)}
-                />
-                <input
-                  className="config-manager__input"
-                  placeholder='Value as JSON (e.g. 42, true, "hello", ["a","b"]) or plain text'
-                  value={newFieldValue}
-                  onChange={(e) => setNewFieldValue(e.target.value)}
-                />
-                <button type="button" className="config-manager__btn config-manager__btn--primary" onClick={handleAddField} disabled={addingField}>
-                  {addingField ? 'Adding…' : 'Add / Update field'}
-                </button>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label htmlFor="cm-field-path" className="config-manager__label">Field path</label>
+                  <input
+                    id="cm-field-path"
+                    className="config-manager__input"
+                    placeholder="customFields.myFlag"
+                    value={newFieldPath}
+                    onChange={(e) => setNewFieldPath(e.target.value)}
+                    aria-label="Field path (dot-notation)"
+                  />
+                  <div className="config-manager__field-help">Dot-notation, e.g. <code>customFields.myFlag</code> or <code>slaThresholds.p0Hours</code>. New segments are created.</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label htmlFor="cm-field-value" className="config-manager__label">Value</label>
+                  <input
+                    id="cm-field-value"
+                    className="config-manager__input"
+                    placeholder='e.g. 42, true, "hello", ["a","b"]'
+                    value={newFieldValue}
+                    onChange={(e) => setNewFieldValue(e.target.value)}
+                    aria-label="Field value (JSON or plain text)"
+                  />
+                  <div className="config-manager__field-help">JSON value; bare text becomes a string. Use <code>true</code>/<code>42</code>/<code>"hello"</code>/<code>["a","b"]</code>.</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 18 }}>
+                  <button type="button" className="config-manager__btn config-manager__btn--primary" onClick={handleAddField} disabled={addingField}>
+                    {addingField ? 'Adding…' : 'Add / Update field'}
+                  </button>
+                </div>
               </div>
 
               {configData && typeof configData === 'object' && (
                 <div style={{ borderTop: '1px solid #e5e7eb' }}>
                   <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280', background: '#f9fafb' }}>
-                    Quick remove — click × to delete a leaf field (writes file):
+                    Quick remove — {previewRows.length} fields · click Remove to delete (writes file):
                   </div>
-                  {flattenForPreview(configData).slice(0, 80).map(({ path: p, value: v }) => (
+                  {previewRows.slice(0, 80).map(({ path: p, value: v }) => (
                     <div key={p} className="config-manager__field-row">
-                      <span className="config-manager__field-label">{p}</span>
-                      <span className="config-manager__field-value">{Array.isArray(v) ? `[${v.length}] ${JSON.stringify(v).slice(0, 120)}` : typeof v === 'object' && v !== null ? JSON.stringify(v).slice(0, 120) : String(v)}</span>
-                      <button type="button" className="config-manager__btn config-manager__btn--danger" onClick={() => handleDeleteField(p)} title={`Remove ${p}`}>
-                        ×
+                      <span className="config-manager__field-label" title={p}>{p}</span>
+                      <span className="config-manager__field-value" title={typeof v === 'object' ? JSON.stringify(v) : String(v)}>{Array.isArray(v) ? `[${v.length}] ${JSON.stringify(v).slice(0, 120)}` : typeof v === 'object' && v !== null ? JSON.stringify(v).slice(0, 120) : String(v)}</span>
+                      <button type="button" className="config-manager__btn config-manager__btn--danger" onClick={() => handleDeleteField(p)} aria-label={`Remove field ${p}`}>
+                        × Remove
                       </button>
                     </div>
                   ))}
-                  {flattenForPreview(configData).length > 80 && (
+                  {previewRows.length > 80 && (
                     <div className="config-manager__hint">Showing first 80 leaf fields — use the JSON editor for deeper edits.</div>
                   )}
                 </div>
