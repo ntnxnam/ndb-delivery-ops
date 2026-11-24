@@ -860,7 +860,7 @@ Returns:
 
 ### 14.1 Route & Component
 
-- `apps/delivery-ops/client/src/App.js`: `path="/oncalls"` → `OncallsV2Page` (canonical V2), `path="/oncalls-legacy"` → `OncallsPage` (pulse-era fallback)
+- `apps/delivery-ops/client/src/App.js`: `path="/oncalls"` → `OncallsV2Page` (canonical V2), `path="/oncalls-legacy"` → redirect to `/oncalls` (V1 removed 2026-11-24)
 - `apps/delivery-ops/client/src/components/OncallsV2/OncallsV2Page.js` + `OncallsV2.css` — sticky `PillBar(8)`, `ExplainHero` with dual-click, health row, age table, `KpiPulseBand`, taxonomy + NDB sub-drill double-click, `PathDrill` with inherited timeframe + AI slice
 - `apps/delivery-ops/client/src/hooks/useOncallsV2.js` + `useOncallSlice.js` — `timeframe` state, `authenticatedGet/Post` to `/api/jira/oncalls` with `v2`, auto `POST /api/ai/oncall-concern`, drill-triggered `POST /api/ai/oncall-slice`
 

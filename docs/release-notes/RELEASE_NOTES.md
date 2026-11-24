@@ -55,7 +55,7 @@ See [NDB-2.11.md](./NDB-2.11.md) when cut.
 - **Health + workflow buckets:** MTTR median/p90, throughput + net, aged share; How-long-open table (Open now / Need Info / Waiting for Customer); pulse graph with timeframe window override (`window: computePulseWindow(tf)`). Need Info = `status="Need Info"`, Waiting = `status="Waiting for Customer"`; thresholds from `oncallConfig.json` (`needInfoDays`/`waitingForCustomerDays`/`agedOpenDays`).
 - **Gap taxonomy:** `duds` (duplicate/Won't Do/Cannot Reproduce/no linked fix) · `ndbGaps` (linked fix in NDB family via `gapProjectPrefixes`) · `other-team gaps`; NDB double-click expands TH linked / Bugs / Improvements / Other. Cells are `key in (…)` JQL proofs; [Oncalls data-layer](../pages/Oncalls-data-layer.md#domain-classification--v2-gap-taxonomy) documents rules.
 - **Fused AI concern + per-view slice:** `POST /api/ai/oncall-concern` merges open/MTTR/net + hotspot top-2 components + gap% into ~100w (regenerates on pill/hero/taxonomy/view); `POST /api/ai/oncall-slice` gives drawer 2-liner + fix suggestion. Loom builds prompt (`buildOncallPrompt.ts`), Lighthouse calls NAI. See [API — OnCalls V2](../api/jira.md#oncalls).
-- **Legacy preserved:** `/oncalls` now mounts V2; pulse-era page at `/oncalls-legacy` (no removal).
+- **Legacy removed 2026-11-24:** V1 pulse page deleted; `/oncalls-legacy` redirects to `/oncalls` (V2). Added `POST /api/jira/oncalls/report` Download + Email HTML (reuses Outstanding pattern).
 - **Deferred to V2.1 (WAIVED):** weekly scheduled report cron→email + TPM Pulse card + SchedulePage hook — tracked in [GOALS.md](../pages/oncalls/GOALS.md).
 - **Known limitations added:** [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md) — NDB fallback tenant override + weekly report deferred.
 

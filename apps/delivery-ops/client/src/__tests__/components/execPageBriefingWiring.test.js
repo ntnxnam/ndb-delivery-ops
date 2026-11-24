@@ -6,7 +6,7 @@
 describe('What ails the team — page wiring', () => {
   const pages = [
     { name: 'KPIPage', path: '../../components/KPIPage' },
-    { name: 'OncallsPage', path: '../../components/OncallsPage' },
+    { name: 'OncallsV2Page', path: '../../components/OncallsV2/OncallsV2Page' },
     { name: 'CfdCfiPage', path: '../../components/CfdCfiPage' },
     { name: 'SystemTestScalePage', path: '../../components/SystemTestScalePage' },
     { name: 'ReleaseVersionTab', path: '../../components/ReleaseVersionTab' },

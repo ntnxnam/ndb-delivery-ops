@@ -10,7 +10,7 @@
  *   comment excerpt.
  */
 
-const oncallService = require('./oncallService');
+const { resolveRuntimeConfig } = require('./oncallConfigResolve');
 const {
   fetchTicketNarrativeBundle,
   buildDeterministicStackBlurb,
@@ -196,7 +196,7 @@ async function enrichAboutWithNai(packets) {
  * @param {{ token: string, teamId?: string, keys: string[] }} opts
  */
 async function buildOncallBlurbs({ token, teamId, keys } = {}) {
-  const cfg = oncallService.resolveRuntimeConfig(teamId);
+  const cfg = resolveRuntimeConfig(teamId);
   const uniq = [...new Set((keys || []).map((k) => String(k || '').trim()).filter(Boolean))].slice(
     0,
     MAX_KEYS

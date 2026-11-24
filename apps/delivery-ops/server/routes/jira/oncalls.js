@@ -3,7 +3,6 @@ const router = express.Router();
 const { validateJiraTokenMiddleware } = require('../../middleware/auth/jira');
 const { apiLimiter } = require('../../middleware/security');
 const { checkKpiViewAuthorization } = require('../../services/userService');
-const oncallService = require('../../services/oncallService');
 const oncallDashboardV2 = require('../../services/oncallDashboardV2');
 const { extractApiError } = require('../../utils/errorMessages');
 
@@ -15,24 +14,6 @@ function requireKpiView(req, res) {
     return false;
   }
   return true;
-}
-
-async function handleDashboard(req, res, { teamId }) {
-  try {
-    if (!requireKpiView(req, res)) return;
-    const data = await oncallService.getDashboard({
-      token: req.jiraToken,
-      teamId,
-    });
-    return res.json({ success: true, ...data });
-  } catch (err) {
-    const apiError = extractApiError(err);
-    console.error('Error in /api/jira/oncalls:', apiError.message);
-    return res.status(err.statusCode || apiError.statusCode || 500).json({
-      success: false,
-      error: apiError.message || err.message || 'OnCalls dashboard failed',
-    });
-  }
 }
 
 async function handleDashboardV2(req, res, { teamId, timeframe }) {
@@ -56,21 +37,16 @@ async function handleDashboardV2(req, res, { teamId, timeframe }) {
 
 /**
  * GET /api/jira/oncalls
- * Live OnCalls quantitative dashboard. Supports ?timeframe= (15d/1M/1Q/2Q/1Y/18M/Overall) and ?v2=1.
- * Backward compat: if no timeframe and no v2, delegate to old oncallService.
+ * OnCalls V2 — all requests go to V2 (timeframe-aware). Legacy v1 removed 2026-11-24.
  */
 router.get('/oncalls', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   const teamId = (req.query.teamId || '').trim() || undefined;
-  const timeframe = (req.query.timeframe || '').trim();
-  const v2Flag = String(req.query.v2 || '').trim();
-  if (timeframe || v2Flag === '1' || v2Flag === 'true') {
-    return handleDashboardV2(req, res, { teamId, timeframe: timeframe || '2Q' });
-  }
-  return handleDashboard(req, res, { teamId });
+  const timeframe = (req.query.timeframe || '').trim() || '2Q';
+  return handleDashboardV2(req, res, { teamId, timeframe });
 });
 
 /**
- * GET /api/jira/oncalls/v2 explicit route
+ * GET /api/jira/oncalls/v2 explicit route (kept for backward compat)
  */
 router.get('/oncalls/v2', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   return handleDashboardV2(req, res, {
@@ -80,17 +56,13 @@ router.get('/oncalls/v2', validateJiraTokenMiddleware, apiLimiter, async (req, r
 });
 
 /**
- * POST /api/jira/oncalls/refresh
- * Explicit Pull from JIRA — same as GET.
+ * POST /api/jira/oncalls/refresh — explicit Pull from JIRA (same as GET)
  */
 router.post('/oncalls/refresh', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
   const body = req.body || {};
   const teamId = (body.teamId || '').trim() || undefined;
-  const timeframe = (body.timeframe || req.query.timeframe || '').trim();
-  if (timeframe || String(body.v2 || '').trim() === '1') {
-    return handleDashboardV2(req, res, { teamId, timeframe: timeframe || '2Q' });
-  }
-  return handleDashboard(req, res, { teamId });
+  const timeframe = (body.timeframe || req.query.timeframe || '').trim() || '2Q';
+  return handleDashboardV2(req, res, { teamId, timeframe });
 });
 
 /**
@@ -102,6 +74,45 @@ router.post('/oncalls/v2/refresh', validateJiraTokenMiddleware, apiLimiter, asyn
     teamId: (body.teamId || '').trim() || undefined,
     timeframe: (body.timeframe || '').trim() || '2Q',
   });
+});
+
+/**
+ * POST /api/jira/oncalls/report — preview or send HTML email report (reuses outstanding pattern)
+ * Body: { teamId, timeframe, to?, cc?, previewOnly?, dashboard?, aiConcern? }
+ * - dashboard: optional snapshot from client (avoids re-fetch); when missing, server fetches via getDashboard
+ * - aiConcern: optional fused AI concern string to embed in email
+ */
+router.post('/oncalls/report', validateJiraTokenMiddleware, apiLimiter, async (req, res) => {
+  try {
+    if (!requireKpiView(req, res)) return;
+    const body = req.body || {};
+    const teamId = (body.teamId || '').trim() || undefined;
+    const timeframe = (body.timeframe || '').trim() || '7d';
+    const to = Array.isArray(body.to) ? body.to : (body.to ? [body.to] : undefined);
+    const cc = Array.isArray(body.cc) ? body.cc : (body.cc ? [body.cc] : undefined);
+    const previewOnly = Boolean(body.previewOnly);
+    const dashboard = body.dashboard && typeof body.dashboard === 'object' ? body.dashboard : null;
+    const aiConcern = body.aiConcern ? String(body.aiConcern) : null;
+    const oncallReportService = require('../../services/oncallReportService');
+    const data = await oncallReportService.previewOrSendOncallReport({
+      token: req.jiraToken,
+      teamId,
+      timeframe,
+      to,
+      cc,
+      previewOnly,
+      dashboard,
+      aiConcern,
+    });
+    return res.json({ success: true, data });
+  } catch (err) {
+    const apiError = extractApiError(err);
+    console.error('[oncalls/report] failed:', apiError.message);
+    return res.status(err.statusCode || apiError.statusCode || 500).json({
+      success: false,
+      error: apiError.message || err.message || 'OnCalls report failed',
+    });
+  }
 });
 
 module.exports = router;

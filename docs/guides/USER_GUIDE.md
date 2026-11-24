@@ -105,7 +105,7 @@ Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-colu
 ## OnCalls V2
 
 **Who:** Team Executive / VP, TPM, Director, EM  
-**Route:** `/oncalls` (V2) — legacy pulse view at `/oncalls-legacy`
+**Route:** `/oncalls` (V2) — `/oncalls-legacy` redirects to `/oncalls` (V1 removed 2026-11-24); Report: Download Report + Send Email HTML (preview/send)
 
 This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim *what's hot, too-long, and what to fix*.
 
@@ -125,7 +125,7 @@ Pick a pill at the top (sticky): `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` �
 
 **Dual-click rule (all heroes):** **Count → in-app drill**, **Open in JIRA ↗ → exact JQL** — never both external.
 
-See [Oncalls requirements](../pages/Oncalls-requirements.md) and [Oncalls data-layer](../pages/Oncalls-data-layer.md) for JQL contracts, gap rules, and config. Legacy `/oncalls-legacy` keeps the pulse-only comparison.
+See [Oncalls requirements](../pages/Oncalls-requirements.md), [Oncalls data-layer](../pages/Oncalls-data-layer.md), and [API — OnCalls](../api/jira.md#oncalls) for JQL contracts, gap rules, report email, and config.
 
 ## CFD / CFI
 **Who:** TPM, QA Lead

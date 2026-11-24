@@ -1,6 +1,6 @@
 # Oncalls V2 — Requirements
 
-**Route**: `/oncalls` (canonical — mounts `OncallsV2Page`; `/oncalls-legacy` retains `OncallsPage` pulse-era view)  
+**Route**: `/oncalls` (canonical — mounts `OncallsV2Page`; `/oncalls-legacy` redirects to `/oncalls`, V1 removed 2026-11-24)  
 **Component**: `OncallsV2Page` (`apps/delivery-ops/client/src/components/OncallsV2/OncallsV2Page.js`)  
 **Permission**: `kpi_view`  
 **Audience**: `team-exec`, `tpm`, `director`, `team`, `rm`
@@ -47,7 +47,7 @@ Loom JIRA pull + prompt build → Lighthouse AI consume (dual MCP: `loom-mcp bui
 | OC-V2-08 | As a TPM, opening any hero/taxonomy shows PathDrill drawer with per-view AI slice (2-liner + fix suggestion) plus ticket rows; drill inherits pills. |
 | OC-V2-09 | As a TPM, the Created→Resolved graph (KpiPulseBand) uses the timeframe window override (Overall → default 2Q pulse) and supports flow/snapshot toggle. |
 | OC-V2-10 | As a TPM, changing team reloads the V2 dashboard for that team's `baseScopeJql` (via `kpiConfig.OnCalls`). |
-| OC-V2-11 | As a TPM, the OnCalls KPI chip on `/kpis` deep-links to `/oncalls`. Legacy `/oncalls-legacy` remains for pulse-only comparison. |
+| OC-V2-11 | As a TPM, the OnCalls KPI chip on `/kpis` deep-links to `/oncalls`. `/oncalls-legacy` redirects to `/oncalls` (V1 removed). |
 | OC-V2-12 | As a TPM, when NAI is unavailable the quantitative page still loads; AI panel shows `NAI_API_KEY not set` or timeout with retry. |
 | OC-09 | As a TPM, field-ticket status in escalation drill (legacy) is the real JIRA workflow status (Closed stays Closed). |
 | OC-10 | As a TPM, when About inference is unavailable I see one drawer banner — not per-row NAI chrome (legacy). |
@@ -66,7 +66,7 @@ Loom JIRA pull + prompt build → Lighthouse AI consume (dual MCP: `loom-mcp bui
 - **Taxonomy (3 cards):** Duds (resolution gaps) · NDB gaps (our gaps) · Other-team gaps (externalize) — count → past drill; double-click NDB gaps toggles sub-drill
 - **NDB sub-drill (4 cards, hidden until double-click):** TH linked · Bugs · Improvements · Other — each inherits timeframe
 - **Drill drawer:** `PathDrill mode={drill.mode} tickets={gapMeta ? closedStacksPreview : openTickets} jql={…/gapTaxonomy/hero/pulse} scope={past|open} timeframe={timeframe} aiSlice={aiSlice} aiSliceView={aiSliceView}` — per-view AI slice auto-generates on open
-- **Legacy:** `OncallsPage` preserved at `/oncalls-legacy` with old pulse+stacks IA; no removal in this weave
+- **Legacy:** V1 (`OncallsPage` at `/oncalls-legacy`) removed 2026-11-24 — legacy route redirects to `/oncalls` (V2)
 
 Metric-click dual-action (all pages): count → in-app drill; Open in JIRA → exact JQL.
 
@@ -92,7 +92,7 @@ Metric-click dual-action (all pages): count → in-app drill; Open in JIRA → e
 
 ## Acceptance Criteria
 
-- [x] Route `/oncalls` mounts `OncallsV2Page` for `kpi_view`; legacy at `/oncalls-legacy`
+- [x] Route `/oncalls` mounts `OncallsV2Page` for `kpi_view`; `/oncalls-legacy` redirects to `/oncalls`
 - [x] Sticky global pills (8) drive all heroes/health/concern/age/graph/taxonomy; `Overall` = no date clause; pills inherited in drawers
 - [x] Each hero shows count + explain + Open in JIRA (exact JQL); count → in-app drill (dual-action)
 - [x] Need Info / Waiting for Customer buckets use exact `status = "Need Info"` / `"Waiting for Customer"` + `statusCategory != Done`
