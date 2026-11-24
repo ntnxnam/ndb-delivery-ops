@@ -12,8 +12,9 @@
 |--------|------|------|
 | GET | `/api/jira/oncalls?teamId=&timeframe=&v2=` | Initial load / team or timeframe change (V2) |
 | GET | `/api/jira/oncalls/v2?teamId=&timeframe=` | Explicit V2 alias (same) |
-| POST | `/api/jira/oncalls/refresh` | Pull from JIRA (V2 when `timeframe`/`v2` present, else legacy) |
+| POST | `/api/jira/oncalls/refresh` | Pull from JIRA (V2, timeframe-aware) |
 | POST | `/api/jira/oncalls/v2/refresh` | Pull V2 alias |
+| POST | `/api/jira/oncalls/report` | Preview (`previewOnly:true`→`{subject,html}`) or Send email (`→{messageId}`) — reuses `sendEmailDirect`, server-owned CC |
 | POST | `/api/ai/oncall-concern` | Generate fused AI Concern (auto after metrics load + on Regenerate + on pill/hero/taxonomy change) |
 | POST | `/api/ai/oncall-slice` | Per-view AI 2-liner for drill drawer (on open drill) |
 | GET | `/api/jira/oncalls?teamId=` | Legacy initial load (no timeframe) |

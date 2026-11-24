@@ -21,11 +21,18 @@ function toEmail(v) {
 function uniqEmails(list) {
   return [...new Set((list || []).map(toEmail).filter(Boolean))];
 }
+let ccCache = { data: null, mtimeMs: -1 };
 function leadershipCc() {
   try {
+    const mtimeMs = fs.statSync(CC_CONFIG_PATH).mtimeMs;
+    if (ccCache.data && ccCache.mtimeMs === mtimeMs) return ccCache.data;
     const cfg = JSON.parse(fs.readFileSync(CC_CONFIG_PATH, 'utf8'));
-    if (Array.isArray(cfg.mustFixLeadershipCC) && cfg.mustFixLeadershipCC.length) return uniqEmails(cfg.mustFixLeadershipCC);
+    if (Array.isArray(cfg.mustFixLeadershipCC) && cfg.mustFixLeadershipCC.length) {
+      ccCache = { data: uniqEmails(cfg.mustFixLeadershipCC), mtimeMs };
+      return ccCache.data;
+    }
   } catch {}
+  if (ccCache.data) return ccCache.data;
   return uniqEmails(DEFAULT_LEADERSHIP_CC);
 }
 function defaultRecipients() {
@@ -54,11 +61,11 @@ function heroCellHtml(cell, jiraBaseUrl) {
   const jql = cell?.jql || '';
   if (!jql) return `${n}`;
   const url = jiraIssuesUrl(jiraBaseUrl, jql);
-  return `<a href="${escapeHtml(url)}" style="color:#2563eb;text-decoration:none;font-weight:600;">${n}</a> <a href="${escapeHtml(url)}" style="font-size:11px;color:#2563eb;">Open in JIRA ↗</a>`;
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600;">${n}</a> <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2563eb;">Open in JIRA ↗</a>`;
 }
 function ticketRowsHtml(tickets, jiraBaseUrl) {
   if (!tickets || !tickets.length) return '<p style="font-size:12px;color:#71717a;">No tickets in sample.</p>';
-  return `<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;"><thead><tr><th style="${TH}">Key</th><th style="${TH}">Summary</th><th style="${TH}">Status</th><th style="${TH}">Priority</th><th style="${TH}">Assignee</th><th style="${TH}">Age</th></tr></thead><tbody>${tickets.map((t) => `<tr><td style="${TD}"><a href="${escapeHtml(jiraBrowseUrl(jiraBaseUrl, t.key))}" style="color:#2563eb;text-decoration:none;font-weight:600;">${escapeHtml(t.key)}</a></td><td style="${TD}">${escapeHtml(t.summary || '—')}</td><td style="${TD}">${escapeHtml(t.status || '—')}</td><td style="${TD}">${escapeHtml(t.priority || '—')}</td><td style="${TD}">${escapeHtml(t.assignee || '—')}</td><td style="${TD}">${t.ageDays != null ? `${t.ageDays}d` : t.cycleDays != null ? `${t.cycleDays}d` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;"><thead><tr><th style="${TH}">Key</th><th style="${TH}">Summary</th><th style="${TH}">Status</th><th style="${TH}">Priority</th><th style="${TH}">Assignee</th><th style="${TH}">Age</th></tr></thead><tbody>${tickets.map((t) => `<tr><td style="${TD}"><a href="${escapeHtml(jiraBrowseUrl(jiraBaseUrl, t.key))}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600;">${escapeHtml(t.key)}</a></td><td style="${TD}">${escapeHtml(t.summary || '—')}</td><td style="${TD}">${escapeHtml(t.status || '—')}</td><td style="${TD}">${escapeHtml(t.priority || '—')}</td><td style="${TD}">${escapeHtml(t.assignee || '—')}</td><td style="${TD}">${t.ageDays != null ? `${t.ageDays}d` : t.cycleDays != null ? `${t.cycleDays}d` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
   const d = dashboard || {};
@@ -83,9 +90,9 @@ function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
 <!-- audience: team-exec -->
 <div style="box-sizing:border-box;width:99%;max-width:99%;margin:0 auto;padding:0 0.5%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18181b;font-size:14px;line-height:1.4;">
   <h1 style="font-size:clamp(18px,2.2vw,22px);margin:0 0 6px;">OnCalls — ${escapeHtml(teamId)} · ${escapeHtml(timeframe)}</h1>
-  <p style="margin:0 0 8px;font-size:12px;color:#52525b;">as of ${escapeHtml(asOf)} · <a href="${escapeHtml(jiraIssuesUrl(jiraBaseUrl, d.baseScopeJql || ''))}" style="color:#2563eb;">Scope JQL</a> ${d.elapsedMs ? `· ${d.elapsedMs}ms` : ''}</p>
+  <p style="margin:0 0 8px;font-size:12px;color:#52525b;">as of ${escapeHtml(asOf)} · <a href="${escapeHtml(jiraIssuesUrl(jiraBaseUrl, d.baseScopeJql || ''))}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;">Scope JQL</a> ${d.elapsedMs ? `· ${d.elapsedMs}ms` : ''}</p>
   ${rag ? `<div style="display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;margin:0 0 12px;background:${rag.level === 'RED' ? '#fee2e2' : rag.level === 'YELLOW' ? '#ffedd5' : '#dcfce7'};color:${rag.level === 'RED' ? '#b91c1c' : rag.level === 'YELLOW' ? '#c2410c' : '#15803d'};border:1px solid ${rag.level === 'RED' ? '#fecaca' : rag.level === 'YELLOW' ? '#fed7aa' : '#bbf7d0'};">${escapeHtml(rag.level)} — ${escapeHtml(rag.why || '')}</div>` : ''}
-  ${aiConcern ? `<div style="border:1px solid #e4e4e7;border-radius:8px;padding:12px;background:#f9fafb;margin:0 0 14px;white-space:pre-wrap;font-size:13px;"><strong>AI Concern — ${escapeHtml(timeframe)}</strong><div style="margin-top:6px;">${escapeHtml(aiConcern)}</div></div>` : ''}
+  ${aiConcern ? `<div style="border:1px solid #e4e4e7;border-radius:8px;padding:12px;background:#f9fafb;margin:0 0 14px;white-space:pre-wrap;font-size:13px;"><strong>AI Concern — ${escapeHtml(timeframe)} <span title="AI generated">✨</span></strong><div style="margin-top:6px;">${escapeHtml(aiConcern)}</div></div>` : ''}
   <h2 style="font-size:15px;margin:14px 0 6px;">Heroes — current stock</h2>
   <div style="width:100%;overflow-x:auto;margin:0 0 12px;"><table style="width:100%;min-width:600px;border-collapse:collapse;"><tr>
     <td style="width:20%;padding:10px 12px;border:1px solid #e4e4e7;vertical-align:top;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#71717a;">Open now</div><div style="font-size:22px;font-weight:700;">${heroCellHtml(hero.open, jiraBaseUrl)}</div><div style="font-size:11px;color:#52525b;">All open OnCalls in scope</div></td>
@@ -118,14 +125,18 @@ function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
   ${ticketRowsHtml(openTickets.slice(0, 40), jiraBaseUrl)}
   <h2 style="font-size:15px;margin:16px 0 6px;">Closed in window sample (${closedPreview.length})</h2>
   ${ticketRowsHtml(closedPreview.slice(0, 30), jiraBaseUrl)}
-  <p style="font-size:12px;color:#71717a;margin-top:16px;">Live view: ${(() => { const base = (process.env.APP_BASE_URL || process.env.CLIENT_BASE_URL || '').replace(/\/$/, ''); const url = base ? `${base}/oncalls` : '/oncalls'; return `<a href="${escapeHtml(url)}" style="color:#2563eb;">${escapeHtml(url)}</a>`; })()} · Timeframe ${escapeHtml(timeframe)} · Team ${escapeHtml(teamId)}</p>
+  <p style="font-size:12px;color:#71717a;margin-top:16px;">Live view: ${(() => { const base = (process.env.APP_BASE_URL || process.env.CLIENT_BASE_URL || '').replace(/\/$/, ''); const url = base ? `${base}/oncalls` : '/oncalls'; return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;">${escapeHtml(url)}</a>`; })()} · Timeframe ${escapeHtml(timeframe)} · Team ${escapeHtml(teamId)}</p>
 </div>`;
 }
 async function previewOrSendOncallReport({ token, teamId, timeframe, to, cc, previewOnly, dashboard, aiConcern }) {
   const { resolveRuntimeConfig: resolveCfg } = require('./oncallConfigResolve');
   const { TIMEFRAMES } = require('./oncallDashboardV2');
   const rawTf = String(timeframe || '7d').trim();
-  const tf = TIMEFRAMES.hasOwnProperty(rawTf) ? rawTf : '7d';
+  let tf = rawTf;
+  if (!TIMEFRAMES.hasOwnProperty(rawTf)) {
+    const hit = Object.keys(TIMEFRAMES).find((k) => k.toLowerCase() === rawTf.toLowerCase());
+    tf = hit || '7d';
+  }
   const tid = resolveCfg(teamId).teamId || String(teamId || 'ndb').trim() || 'ndb';
   let dash = dashboard;
   if (!dash || !dash.hero) {
@@ -138,7 +149,8 @@ async function previewOrSendOncallReport({ token, teamId, timeframe, to, cc, pre
   const dateStr = new Date().toISOString().slice(0, 10);
   const safeTid = String(tid).replace(/[\r\n]+/g, ' ');
   const subject = `[OnCalls ${tf}] ${safeTid} — ${dash.hero?.open?.count ?? 0} open, ${dash.hero?.agedOpen?.count ?? 0} aged — ${dateStr}`;
-  const html = buildOncallReportHtml({ teamId: tid, timeframe: tf, dashboard: dash, aiConcern: aiConcern || null });
+  const safeConcern = aiConcern ? String(aiConcern).slice(0, 5000) : null;
+  const html = buildOncallReportHtml({ teamId: tid, timeframe: tf, dashboard: dash, aiConcern: safeConcern });
   if (previewOnly) {
     return { preview: true, subject, to: toList, cc: ccList, html, story: dash.rag?.why || '', teamId: tid, timeframe: tf };
   }

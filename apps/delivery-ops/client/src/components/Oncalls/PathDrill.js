@@ -408,6 +408,7 @@ export default function PathDrill({
                   fontSize: 'var(--fs-small)',
                 }}
               >
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--muted)', marginBottom: 4 }}>AI summary <span title="AI generated" aria-label="AI generated">✨</span></div>
                 {String(effectiveSlice)
                   .split('\n')
                   .map((line, idx) => (
@@ -443,7 +444,7 @@ export default function PathDrill({
             <table className="oc-table">
               <thead>
                 <tr>
-                  <th>OnCall · status · about</th>
+                  <th>OnCall · status · about <span title="AI generated" aria-label="AI generated">✨</span></th>
                   <th>Linked {linkedSpec.linkedNoun}</th>
                   <th>OnCall comments</th>
                 </tr>
@@ -494,7 +495,7 @@ export default function PathDrill({
                   <th>Owner</th>
                   <th>{past ? 'Cycle' : 'Age'}</th>
                   <th>Status</th>
-                  <th>About</th>
+                  <th>About <span title="AI generated" aria-label="AI generated">✨</span></th>
                   <th>Comments</th>
                 </tr>
               </thead>

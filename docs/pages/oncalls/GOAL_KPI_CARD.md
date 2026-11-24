@@ -1,18 +1,25 @@
 # Goal KPI Card — weave/oncall-report-email
 
-GOAL: OnCalls is V2-only at /oncalls (V1 removed) with Download Report + Send Email HTML email reusing Outstanding report pattern, timeframe-driven (7d..Overall), CSS fixed — like other pages.
+GOAL: OnCalls V2 explains each hero — what it counts, how to read it, why it matters — so TPM/team-exec can act without guessing; previous V1→V2 + Download/Email still intact.
 
-SCOPE: apps/delivery-ops/client/src/App.js (route), components/OncallsV2/OncallsV2Page.js + OncallReportSection.js, hooks/useOncallReport.js + useOncallsV2.js, server/services/oncallDashboardV2.js + oncallReportService.js (new) + oncallBlurbService.js, server/routes/jira/oncalls.js (report endpoint), server/services/oncallService.js (legacy orphan), docs/pages/oncalls/*, docs/api/jira.md, USER_GUIDE
-BASE: origin/main @ 1d59110
+SCOPE: apps/delivery-ops/client/src/components/OncallsV2/OncallsV2Page.js (heroes + explainer guide + per-hero tooltips) + OncallReportSection.js (email footnote), server/services/oncallReportService.js (report glossary), docs/pages/Oncalls-requirements.md + Oncalls-data-layer.md + oncalls/Feature.md + api/jira.md (hero glossary)
+BASE: origin/main @ 698e813 (follow-up on weave/oncall-report-email → base weave/oncall-report-fix)
 
 DONE WHEN:
-  1. /oncalls renders V2 (8 pills 7d/15d/1M/1Q/2Q/1Y/18M/Overall, Overall=no clause), /oncalls-legacy → /oncalls redirect, V1 files deleted (OncallsPage.js, useOncalls.js, pulse test)
-  2. CSS fixed: OncallsV2Page imports Oncalls.css for oc-* + ocv2-* styles, no unstyled page
-  3. Download Report produces standalone HTML (heroes/health/taxonomy/workflow + ticket tables + JQL proof links) via client triggerDownload
-  4. Send Email preview/send via POST /api/jira/oncalls/report → buildOncallReportHtml + sendEmailDirect (same SMTP/CC as Outstanding), subject [OnCalls tf] team — N open
+  1. /oncalls shows "What each number means" guide (collapsible) listing all heroes/health/taxonomy with What/How/Why columns
+  2. Every hero card (Open now, Aged, Need Info, Waiting, Closed in window, MTTR median/p90, Throughput, Aged share, Duds/NDB gaps/Other-team + NDB sub) shows ℹ︎ tooltip with What/How/Why + meta/JQL hint; explain one-liner still visible
+  3. Email HTML (Download + Send) includes matching glossary footnote so offline readers understand counts
+  4. Docs updated: requirements AC for explainer, data-layer hero table with JQL + meaning, Feature one-liner, api/jira hero glossary
+  5. Every JIRA hyperlink (hero JQL, ticket key, scope, live view) opens in new tab (target="_blank" rel="noopener noreferrer")
+  6. Every AI-generated section (AI Concern card, PathDrill About column + AI slice header, email AI block) shows ✨ icon with title="AI generated"
 
 AGENT KPIs:
   Developer:
+    - Explainer guide: OncallsV2Page renders <details> "What each number means" with table Hero→What/How/Why (covers all 13 heroes inc NDB sub)
+    - Per-hero tooltip: ExplainHero shows ℹ︎ with title = What + How + Why + meta; no layout break, token CSS
+    - Email glossary: oncallReportService buildOncallReportHtml appends matching <h2>What each number means</h2> footnote with same What/How/Why
+    - No hardcoded tenant strings in explainer — uses cfg.agedOpenDays gapProjectPrefixes generic labels
+  Impact Scout:
     - V1 removed: App.js no OncallsPage import, legacy route is Navigate redirect, deleted files not importable
     - CSS re-wired: OncallsV2Page imports ../Oncalls/Oncalls.css + ./OncallsV2.css
     - Report service exists: oncallReportService.js buildOncallReportHtml + previewOrSendOncallReport, uses sendEmailDirect, defaultRecipients

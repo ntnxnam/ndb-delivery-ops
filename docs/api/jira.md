@@ -912,6 +912,36 @@ Same as V2 `GET /api/jira/oncalls`.
 **Caching**
 No.
 
+### POST /api/jira/oncalls/report
+
+**Purpose**: Preview or send OnCalls HTML email report — reuses Outstanding pattern. Download via client `Blob` or preview HTML in drawer. Timeframe-scoped heroes/health/taxonomy + ticket tables with JQL proof links. `previewOnly:true` returns `{subject,html}` without SMTP; `previewOnly:false` sends via `sendEmailDirect` (server-owned CC).
+
+**Auth**: `kpi_view` (`validateJiraTokenMiddleware` + `checkKpiViewAuthorization` + `apiLimiter`) — same as `GET /api/jira/oncalls`
+
+**Request**
+- Method + path: `POST /api/jira/oncalls/report`
+- Body:
+  ```json
+  {
+    "teamId": "ndb",
+    "timeframe": "7d",
+    "to": ["ndb-exec-updates@nutanix.com"],
+    "previewOnly": true,
+    "dashboard": { "hero": {}, "health": {}, "gapTaxonomy": {}, "openTickets": [], "closedStacksPreview": [], "asOf": "2026-11-24T00:00:00Z" },
+    "aiConcern": "optional fused concern string"
+  }
+  ```
+  `timeframe` is `7d|15d|1M|1Q|2Q|1Y|18M|Overall` (validated against `TIMEFRAMES`, falls back to `7d`; case-insensitive like dashboard). `dashboard` optional — when missing/!hero server re-fetches via `oncallDashboardV2.getDashboard`. `to` overrides default `ndb-exec-updates@nutanix.com`; `cc` is server-owned (ignored from client, from `releaseVersionsCCConfig.json` → `ndb-tech-leads@`/`ndb-managers@`). Payload guard: `dashboard` >200KB or `aiConcern` >5000 chars → `413`.
+
+**Server flow**
+`POST /api/jira/oncalls/report` → `checkKpiViewAuthorization` → `oncallReportService.previewOrSendOncallReport({ token, teamId, timeframe: tf, to, previewOnly, dashboard, aiConcern })` → if `!dash||!dash.hero` then `getDashboard` → `buildOncallReportHtml({ teamId: tid, timeframe: tf, dashboard: dash, aiConcern })` → subject `[OnCalls tf] tid — N open, N aged — YYYY-MM-DD` (tid sanitized `[\r\n]→space`) → if preview: return `{subject,to,cc,html,story}`; else `sendEmailDirect({to,cc,subject,html})` → `{messageId}`.
+
+**Response shape** (preview)
+```json
+{ "success": true, "data": { "preview": true, "subject": "[OnCalls 7d] ndb — 12 open, 3 aged — 2026-11-24", "to": ["ndb-exec-updates@nutanix.com"], "cc": ["ndb-tech-leads@nutanix.com"], "html": "<div>…heroes/health/taxonomy…ticket tables…</div>", "story": "YELLOW — 3 aged" } }
+```
+Send adds `messageId`. Errors: `413 dashboard payload too large`, `400 To required`, `403 kpi_view`.
+
 ### POST /api/ai/oncall-concern
 
 **Purpose**: Fused quant+qual AI concern for OnCalls V2 — merges open/MTTR/net + hotspot component + gap% for the selected timeframe pill into a ~100w concern paragraph. Triggered on timeframe/hero/taxonomy/view change and on demand.

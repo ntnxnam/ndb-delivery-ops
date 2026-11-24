@@ -49,6 +49,7 @@ Loom JIRA pull + prompt build → Lighthouse AI consume (dual MCP: `loom-mcp bui
 | OC-V2-10 | As a TPM, changing team reloads the V2 dashboard for that team's `baseScopeJql` (via `kpiConfig.OnCalls`). |
 | OC-V2-11 | As a TPM, the OnCalls KPI chip on `/kpis` deep-links to `/oncalls`. `/oncalls-legacy` redirects to `/oncalls` (V1 removed). |
 | OC-V2-12 | As a TPM, when NAI is unavailable the quantitative page still loads; AI panel shows `NAI_API_KEY not set` or timeout with retry. |
+| OC-V2-13 | As a TPM, I can Download Report (standalone HTML via client Blob) and Send Email (Preview → Send via `POST /api/jira/oncalls/report`) — subject `[OnCalls tf] team — N open, N aged — date`, HTML reuses Outstanding pattern heroes/health/taxonomy + ticket tables + JQL proof, CC server-owned. |
 | OC-09 | As a TPM, field-ticket status in escalation drill (legacy) is the real JIRA workflow status (Closed stays Closed). |
 | OC-10 | As a TPM, when About inference is unavailable I see one drawer banner — not per-row NAI chrome (legacy). |
 
@@ -102,4 +103,5 @@ Metric-click dual-action (all pages): count → in-app drill; Open in JIRA → e
 - [x] `KpiPulseBand` mounted with timeframe window; not forked
 - [x] Config thresholds wired from `oncallConfig.json` (`needInfoDays`/`waitingForCustomerDays`/`agedOpenDays`)
 - [x] No hardcoded product strings (D1); NDB fallback is tenant-overrideable via `gapProjectPrefixes`
+- [x] Report: `OncallReportSection` with `useOncallReport` → `POST /api/jira/oncalls/report` preview/send + Download standalone HTML (`Blob` append, Firefox-safe)
 - [x] Page docs + API docs present; docs-verify PASS
