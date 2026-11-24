@@ -616,8 +616,7 @@ export default function KPIPage() {
                     </td>
                   )}
                 </tr>
-              ))
-            );
+              ));
             const renderTable = (list, title) => (
               <>
                 <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', fontWeight: 700, color: title === 'Standard' ? '#495057' : '#212529' }}>{title} <span style={{ fontWeight: 400, color: '#6c757d', fontSize: '0.75rem' }}>({list.length})</span>{title === 'Standard' && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', background: '#e9ecef', border: '1px solid #ced4da', borderRadius: '999px', padding: '0.15rem 0.4rem', color: '#868e96' }}>\u26d4 blocked \u2014 read-only</span>}</h4>
