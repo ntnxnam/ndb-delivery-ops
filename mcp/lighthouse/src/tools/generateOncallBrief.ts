@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Env } from '../../../shared/config/env.js';
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Don't parrot numbers in a table — interpret them. Input: TIMEFRAME, HERO, HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY + ndbSub, HOTSPOT_COMPONENTS top2. Write 1 paragraph 95-115 words + 2-line chase. Paragraph must headline real concern (what does agedShare 58% + MTTR 15d/19d + throughput/net mean?), name hotspot verbatim like "last 7d hotspot in <A> (9) + <B> (7)" or "no component hotspot — diffuse", give gap story duds vs NDB vs other-team + where eng gaps land, and workflow Need Info vs Waiting pressure. Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive, no table dump.`;
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly two sections. Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY + ndbSub, HOTSPOT top2, STACK SAMPLE (OnCall Relief/Root Cause/Workaround). Write Quantitative: 1 para 45-55w — counts only (open, aged, closed, MTTR median/p90, throughput/net, agedShare%). Then Qualitative: 1 para 60-70w — interpret: what does aged 58% + MTTR mean? hotspot verbatim or diffuse + gap duds vs NDB + where eng gaps land + Need Info vs Waiting pressure. Use STACK SAMPLE themes, no invented themes. Then 2-line chase Ask <owner> on <KEY> by timeframe. Copy keys verbatim — never invent.`;
 
 const inputSchema = {
   userPrompt: z.string().describe('User prompt from build_oncall_prompt (Loom)'),

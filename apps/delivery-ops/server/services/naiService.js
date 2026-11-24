@@ -1639,17 +1639,16 @@ async function generatePageCompressBrief(story, validKeys = []) {
 
 // ── OnCall V2 — Concern (fused quant+qual) + Slice prompts ──────────────────
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Don't parrot numbers in a table — interpret them.
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly two sections.
 
-Input: TIMEFRAME, HERO (open, aged>Xd, needInfo, waitingCustomer, closedInWindow), HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY (duds/ndbGaps/otherTeamGaps + ndbSub TH/bugs/improvements/other), HOTSPOT_COMPONENTS top2.
+Input: TIMEFRAME, HERO (open, aged>Xd, needInfo, waitingCustomer, closedInWindow), HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY (duds/ndbGaps/otherTeamGaps + ndbSub TH/bugs/improvements/other), HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5 OnCall fields: OnCall Relief, Root Cause, Workaround).
 
-Write 1 paragraph 95-115 words + 2-line chase. Paragraph must:
-- Headline the real concern: what does 58% agedShare + MTTR 15d/19d + throughput 6/net 1 mean? Is backlog clearing or stalling? Say it in plain English.
-- Hotspot: name top2 components verbatim like "last 7d hotspot in <A> (9) + <B> (7)" — if "no component hotspot" say backlog is diffuse, not concentrated.
-- Gap story: duds vs NDB gaps vs other-team — is quality self-inflicted or downstream? Use ndbSub split to name where eng gaps land.
-- Workflow pressure: Need Info vs Waiting — who stalls whom? Customer or us?
+Output format (exact headings, keep order):
+Quantitative: 1 paragraph 45-55 words — headline counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. No interpretation, no chase, just numbers in plain English.
 
-Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive, no jargon, no table dump.`;
+Qualitative: 1 paragraph 60-70 words — interpret: what does 58% aged + MTTR mean? Hotspot top2 verbatim like "last 7d hotspot in <A> (9) + <B> (7)" or "no component hotspot — diffuse" + gap story duds vs NDB vs other-team + ndbSub theme + workflow pressure Need Info vs Waiting (who stalls whom). Use STACK SAMPLE Root Cause/Workaround themes for hotspot narrative — do not quote full Workaround. Decisive, no table dump.
+
+Then 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent.`;
 
 const ONCALL_SLICE_SYSTEM_PROMPT = `You are a TPM writing a 2-line drawer slice for one OnCalls view (Need Info, Waiting for Customer, Duds, NDB gaps, Other-team, or NDB sub-drill). Input gives slice keys, timeframe, ages, and owners. Output exactly 2 lines: line 1 = why stuck in this view (status dwell + gap% context), line 2 = "Ask <owner> to <action> on <keys> by <timeframe>" with concrete next step. Keep each line under 180 characters. Copy ticket keys verbatim — never invent or paraphrase keys.`;
 
@@ -1686,7 +1685,7 @@ function buildOncallConcernPrompt(intelligence) {
     return `- ${bits.join(' | ')}`;
   }).join('\n');
   const stackBlock = blurbLines ? `STACK SAMPLE (top 5 open — use for qualitative hotspot/gap themes, not just counts):\n${blurbLines}` : '';
-  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above. Use Technical Category/RootCause/Workaround themes from STACK SAMPLE for hotspot narrative — do not invent themes.`;
+  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the concern now with exactly the headings Quantitative: then Qualitative: then 2-line chase. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
 }
 
 function buildOncallSlicePrompt(slice) {
