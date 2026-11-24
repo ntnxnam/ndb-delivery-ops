@@ -222,7 +222,7 @@ export default function OncallsV2Page() {
           </div>
 
           {/* Created vs Resolved graph reuse KpiPulseBand */}
-          <KpiPulseBand pulse={data.pulse} jiraBaseUrl={jiraBase} title={`OnCalls pulse · ${timeframe}`} domainHint="OnCalls" loading={loading && !data.pulse} error={data.errors?.pulse || null} />
+          <KpiPulseBand pulse={data.pulse} jiraBaseUrl={jiraBase} title={`OnCalls pulse · ${timeframe}`} domainHint="OnCalls" hideResolved loading={loading && !data.pulse} error={data.errors?.pulse || null} />
 
           {/* Taxonomy 3 cards — count → gap drawer (past scope), Jira link → exact JQL */}
           <div className="ocv2-taxonomy">

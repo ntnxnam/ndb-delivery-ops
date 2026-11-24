@@ -35,6 +35,7 @@ export default function CreatedResolvedChart({
   jiraBaseUrl,
   caption,
   outflowMode = 'transitions',
+  hideResolved = false,
 }) {
   const [chartType, setChartType] = useState('line'); // line | bars
   const [aggregation, setAggregation] = useState('weekly'); // weekly | cumulative
@@ -100,12 +101,11 @@ export default function CreatedResolvedChart({
       ? 'Cumulative from window start'
       : 'Point-in-time (each week)';
   const typeLabel = chartType === 'bars' ? 'Grouped bars (side-by-side)' : 'Line';
-  const title =
-    aggregation === 'cumulative'
-      ? 'Created · →Resolved · →Closed (cumulative)'
-      : 'Created · →Resolved · →Closed (weekly)';
+  const title = hideResolved
+    ? (aggregation === 'cumulative' ? 'Created · →Closed (cumulative)' : 'Created · →Closed (weekly)')
+    : (aggregation === 'cumulative' ? 'Created · →Resolved · →Closed (cumulative)' : 'Created · →Resolved · →Closed (weekly)');
 
-  const seriesKeys = ['created', 'toResolved', 'closed'];
+  const seriesKeys = hideResolved ? ['created', 'closed'] : ['created', 'toResolved', 'closed'];
 
   return (
     <div className="kpi-pulse-chart">

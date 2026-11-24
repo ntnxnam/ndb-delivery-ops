@@ -185,7 +185,8 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
   const windowOverride = computePulseWindow(normalizedTf);
   const pulseOpts = (() => {
     if (!cfg.baseScopeJql) return null;
-    const opts = { token, baseJql: cfg.baseScopeJql, optionalHeroes: { p0: true, p1: true }, agedOpenDays: cfg.agedOpenDays };
+    // OnCalls: all are P0 by project, so p0/p1 tiles are noise — hide them (learning #7)
+    const opts = { token, baseJql: cfg.baseScopeJql, optionalHeroes: {}, agedOpenDays: cfg.agedOpenDays };
     if (windowOverride) opts.window = windowOverride;
     return opts;
   })();

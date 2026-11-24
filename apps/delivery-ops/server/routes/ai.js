@@ -732,13 +732,23 @@ router.post('/oncall-concern', validateJiraTokenMiddleware, async (req, res) => 
       validKeys: intelligence.gapMeta ? [...(intelligence.gapMeta.dudsKeys || []), ...(intelligence.gapMeta.ndbGapsKeys || []), ...(intelligence.gapMeta.otherTeamGapsKeys || [])].slice(0, 20) : (intelligence.openTickets || []).slice(0, 8).map((t) => t.key),
       agedOpenDays: intelligence.agedOpenDays,
     };
-    const summary = await generateOncallConcern(concernInput);
+    let summary;
+    try {
+      summary = await generateOncallConcern(concernInput);
+    } catch (naiErr) {
+      if (naiErr.message?.includes('NAI API key not configured') || naiErr.message?.includes('NAI_API_KEY')) {
+        // deterministic fallback — no 400, keep UI story alive
+        const top2 = (concernInput.componentMix || []).slice(0, 2).map((c) => `${c.name || c.component} (${c.count})`).join(' + ') || 'no component hotspot';
+        const openN = concernInput.hero?.open?.count ?? 0;
+        const closedN = concernInput.hero?.closedInWindow?.count ?? 0;
+        const mttr = concernInput.health?.mttrMedian ?? '—';
+        const aged = concernInput.hero?.agedOpen?.count ?? 0;
+        summary = `In last ${timeframe}, ${openN} open (${closedN} closed in window, median ${mttr}d) — hotspot: ${top2}. ${aged} aged >${concernInput.agedOpenDays || 14}d. AI concern unavailable (NAI key not set) — quantitative pulse above is live; use Pull from JIRA + drill JQLs.`;
+      } else throw naiErr;
+    }
     return res.json({ summary, intelligence: concernInput, timeframe, generatedAt: new Date().toISOString() });
   } catch (err) {
     logger.error(`[oncall-concern] Failed for team=${teamId}`, err, { naiDebug: err.naiDebug });
-    if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
-      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
-    }
     return naiFailureResponse(res, err, 'OnCall concern generation failed');
   }
 });
@@ -757,10 +767,11 @@ router.post('/oncall-slice', validateJiraTokenMiddleware, async (req, res) => {
     const summary = await generateOncallSlice({ teamId, view, keys, timeframe, meta: req.body?.meta || {} });
     return res.json({ summary, view, keys, timeframe, generatedAt: new Date().toISOString() });
   } catch (err) {
-    logger.error(`[oncall-slice] Failed for view=${view}`, err, { naiDebug: err.naiDebug });
     if (err.message?.includes('NAI API key not configured') || err.message?.includes('NAI_API_KEY')) {
-      return res.status(400).json({ error: 'NAI_API_KEY not configured on the server' });
+      const fallback = `${view} — ${keys.length} ticket(s) in last ${timeframe}. AI slice unavailable (NAI key not set) — use drill table + JQL proof.`;
+      return res.json({ summary: fallback, view, keys, timeframe, generatedAt: new Date().toISOString(), fallback: true });
     }
+    logger.error(`[oncall-slice] Failed for view=${view}`, err, { naiDebug: err.naiDebug });
     return naiFailureResponse(res, err, 'OnCall slice generation failed');
   }
 });

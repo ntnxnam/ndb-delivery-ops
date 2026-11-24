@@ -27,6 +27,7 @@ export default function KpiPulseBand({
   loading = false,
   error = null,
   onHeroClick,
+  hideResolved = false,
 }) {
   if (loading) {
     return (
@@ -162,14 +163,16 @@ export default function KpiPulseBand({
           jiraBaseUrl={jiraBaseUrl}
           onOpen={openFn('createdWindow', h.createdWindow)}
         />
-        <PulseHero
-          label="Resolved"
-          cell={h.resolvedWindow}
-          sub="resolutiondate in window"
-          jiraBaseUrl={jiraBaseUrl}
-          title="Issues with resolutiondate in the pulse window (not the same as →Closed in the chart)"
-          onOpen={openFn('resolvedWindow', h.resolvedWindow)}
-        />
+        {hideResolved ? null : (
+          <PulseHero
+            label="Resolved"
+            cell={h.resolvedWindow}
+            sub="resolutiondate in window"
+            jiraBaseUrl={jiraBaseUrl}
+            title="Issues with resolutiondate in the pulse window (not the same as →Closed in the chart)"
+            onOpen={openFn('resolvedWindow', h.resolvedWindow)}
+          />
+        )}
         <PulseHero
           label="Typical wait"
           cell={h.mttrMedian}
@@ -210,6 +213,7 @@ export default function KpiPulseBand({
         jiraBaseUrl={jiraBaseUrl}
         caption={pulse.seriesCaption}
         outflowMode={pulse.seriesOutflowMode || 'transitions'}
+        hideResolved={hideResolved}
       />
 
       <div className="kpi-pulse-dwell-label">Where work stalls (median days · sample)</div>
