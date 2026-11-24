@@ -554,26 +554,11 @@ export default function KPIPage() {
         <PageLoading message="Loading KPIs…" />
       ) : (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
-            <thead>
-              <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                {isAdmin && <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '40px' }}>Order</th>}
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>KPI</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>Base Query</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>Widget</th>
-                {isAdmin && <th style={{ width: 200, padding: '0.6rem 0.75rem', fontSize: '0.875rem' }} />}
-              </tr>
-            </thead>
-            <tbody>
-              {kpis.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 3} style={{ padding: '1.25rem', color: '#6c757d', fontSize: '0.875rem' }}>
-                    {isAdmin ? 'No KPIs defined. Add one below.' : 'No KPIs defined.'}
-                  </td>
-                </tr>
-              )}
-              {kpis.map((k, index) => (
-                <tr key={k.id} style={{ borderBottom: '1px solid #eee' }}>
+          {(() => {
+            const standardKpis = kpis.filter((k) => k.locked);
+            const teamKpis = kpis.filter((k) => !k.locked);
+            const renderRows = (list) => list.map((k, index) => (
+                <tr key={k.id} style={{ borderBottom: '1px solid #eee', ...(k.locked ? { background: '#f1f3f5', opacity: 0.85 } : {}) }}>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                       {k.locked ? (
@@ -602,13 +587,13 @@ export default function KPIPage() {
                       )}
                     </td>
                   )}
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.name}{k.locked && <span title="Company-standard — same JQL for every team, not editable. Team scope comes from team.baseFilter." style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#6c757d', border: '1px solid #dee2e6', borderRadius: '999px', padding: '0.1rem 0.4rem', background: '#f8f9fa' }}>🔒 standard</span>}</td>
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', wordBreak: 'break-all' }}>{k.baseQuery}</td>
-                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>{k.displayType === 'list' ? 'List' : 'Count'}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', ...(k.locked ? { color: '#868e96' } : {}) }}>{k.name}{k.locked && <span title="Company-standard — same JQL for every team, not editable. Team scope comes from team.baseFilter." style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#495057', border: '1px solid #adb5bd', borderRadius: '999px', padding: '0.1rem 0.4rem', background: '#e9ecef' }}>⛔ blocked — standard</span>}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', wordBreak: 'break-all', ...(k.locked ? { color: '#868e96', background: '#e9ecef' } : {}) }}>{k.baseQuery}</td>
+                  <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', ...(k.locked ? { color: '#868e96' } : {}) }}>{k.displayType === 'list' ? 'List' : 'Count'}</td>
                   {isAdmin && (
                     <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
                       {k.locked ? (
-                        <span style={{ fontSize: '0.7rem', color: '#6c757d' }} title="Standard KPI — JQL is fixed company-wide">Locked</span>
+                        <span style={{ fontSize: '0.7rem', color: '#868e96', background: '#e9ecef', border: '1px solid #ced4da', borderRadius: '4px', padding: '0.2rem 0.4rem' }} title="Standard KPI — JQL is fixed company-wide">⛔ Blocked</span>
                       ) : (
                         <>
                           <button
@@ -632,8 +617,35 @@ export default function KPIPage() {
                   )}
                 </tr>
               ))}
-            </tbody>
-          </table>
+            ));
+            const renderTable = (list, title) => (
+              <>
+                <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', fontWeight: 700, color: title === 'Standard' ? '#495057' : '#212529' }}>{title} <span style={{ fontWeight: 400, color: '#6c757d', fontSize: '0.75rem' }}>({list.length})</span>{title === 'Standard' && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', background: '#e9ecef', border: '1px solid #ced4da', borderRadius: '999px', padding: '0.15rem 0.4rem', color: '#868e96' }}>\u26d4 blocked \u2014 read-only</span>}</h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <thead>
+                    <tr style={{ background: title === 'Standard' ? '#e9ecef' : '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                      {isAdmin && <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '40px' }}>Order</th>}
+                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>KPI</th>
+                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>Base Query</th>
+                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', fontSize: '0.875rem' }}>Widget</th>
+                      {isAdmin && <th style={{ width: 200, padding: '0.6rem 0.75rem', fontSize: '0.875rem' }} />}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.length === 0 ? (
+                      <tr><td colSpan={isAdmin ? 5 : 3} style={{ padding: '1.25rem', color: '#6c757d', fontSize: '0.875rem' }}>{title === 'Standard' ? 'No standard KPIs.' : (isAdmin ? 'No team KPIs. Add one below.' : 'No team KPIs.')}</td></tr>
+                    ) : renderRows(list)}
+                  </tbody>
+                </table>
+              </>
+            );
+            return (
+              <>
+                {renderTable(standardKpis, 'Standard')}
+                {renderTable(teamKpis, 'Team Specific')}
+              </>
+            );
+          })()}
 
           {teamId && isAdmin && (
             <form onSubmit={handleAddOrUpdate} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end', marginBottom: '2rem' }}>

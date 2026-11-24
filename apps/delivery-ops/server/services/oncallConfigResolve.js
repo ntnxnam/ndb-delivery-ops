@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId } = require('../utils/teamConfig');
+const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId, getTeamBaseFilter } = require('../utils/teamConfig');
 
 const CONFIG_PATH = path.join(__dirname, '../config/oncallConfig.json');
 
@@ -39,7 +39,7 @@ function resolveRuntimeConfig(teamId) {
   const teamCfg = (cfg.teams && (cfg.teams[requested] || cfg.teams[normalizeTeamId(requested)])) || {};
 
   let onCallProject = teamCfg.onCallProject || cfg.onCallProject || 'OnCall';
-  // Scope from kpiConfig OnCalls KPI baseQuery only — never hard-code filter names here
+  // Scope from kpiConfig OnCalls KPI baseQuery + team baseFilter (AND) — never hard-code filter names here
   let baseScopeJql = String(teamCfg.baseScopeJql || cfg.baseScopeJql || '').trim();
   try {
     // loadKpiConfigSync() returns the teams map directly (not { teams: ... })
@@ -48,13 +48,19 @@ function resolveRuntimeConfig(teamId) {
     const onCallsKpi = (kpis || []).find((k) => /oncalls?/i.test(k.name || ''));
     if (onCallsKpi?.baseQuery) {
       baseScopeJql = String(onCallsKpi.baseQuery).trim();
-      // Seed project for stack/escalation classification (OnCall keys), not the full KPI union
       const m = baseScopeJql.match(/project\s*=\s*([A-Za-z][A-Za-z0-9_]*)/i);
       if (m && !/TH|TechHelp/i.test(m[1])) onCallProject = m[1];
     }
   } catch (_) {
     // keep config override / empty
   }
+  // AND with team baseFilter so OnCalls is team-scoped (NDB sees only NDB OnCalls)
+  try {
+    const teamBaseFilter = getTeamBaseFilter(requested);
+    if (teamBaseFilter && baseScopeJql) {
+      baseScopeJql = `(${teamBaseFilter}) AND (${baseScopeJql})`;
+    }
+  } catch (_) {}
 
   const esc = { ...(cfg.escalation || {}), ...(teamCfg.escalation || {}) };
 
