@@ -386,6 +386,14 @@ Cursor / Claude Code / Codex discover it via host skill symlinks.
 - **Smoke harness — main vs branch parity:** Stash main → `7 failed, 440 passed, 43 suites passed` (pre-existing `teamOverallReport 7×500` unrelated to KPI/config), unstash branch → same `7 failed, 440 passed` proves no new regression; run `check-no-localhost`, `check-product-agnostic`, `check-mcp`, `check-compile PASS` `shared/src/services/jqlBuilder.ts:113` before merge. `scripts/loom/checks/check-compile.sh` catches `teamBaseJqlService` type drift.
 - **Config Manager pipeline residue:** `weave/admin-config-manager` + `weave/oncall-quant-qual-labels` + `weave/fix-nai-env-no-fallback` merged `53e97e9` + `9c2a669` — batch merges needed `git checkout -- .` cleanup of untracked scaffolding (`server/index.js:1`, `client/package.json:1` dirty from older stash pop) before `status` clean; `teamOverallReport.test.js:58` 500 remains known-issue, not KPI-gating.
 
+## Learnings — CFD/CFI V2 unified dashboard (2026-11-24, weave/cfdcfi-v2)
+
+- **Tabs → unified heroes is the product win:** CFD/CFI was 4 siloed KPI tabs (Top-CFD/CFI, Non-Top-CFD/CFI) — hid the backlog. V2 clubs `kpiConfig` `CFD|CFI` baseQueries + `teamBaseFilter` → `baseScopeJql` and shows 5 heroes (Open now / Aged >Nd / Closed in window / P0 / P1) + 4 health (MTTR median/p90/throughput/agedShare) + chips (component/fixVersion/type/boomerang) + 6 breakdowns + ⚡ deferred boomerang. P0/P1 stay visible (CFD/CFI has real priority variance; unlike OnCalls where all OnCalls are P0 by project).
+- **Deferred boomerang (ndb-*-deferred ∩ CFD/CFI by key):** Sweep `releaseVersionsEmailConfig.json` `releaseGateDates` → `ndb-{version}-deferred` labels → `labels in (ndb-*-deferred)` capped 200keys → chunked 80 `key in (...) AND (baseScope)` membership vs `baseScopeJql` → `boomerangKeys/boomerangRate/boomerangCells` + `byComponent/byFixVersion`. GateDates empty → graceful 0% (known limitation). RAG: RED if `agedOpen ≥ redAgedOpen(5)` or `boomerangRate ≥ redBoomerangRate(20)`.
+- **CSS namespace must match JSX:** V2 page uses `cfdcfi-v2-*` classes — CSS must use same prefix, not `cfv2-*`. Mismatch made pills not sticky, heroes unstyled. Fix: rename all `.cfv2-*` → `.cfdcfi-v2-*` in `CfdCfiV2.css`.
+- **customfield raw ID leakage:** Titles showed `customfield_12672` literals → violates D1. Use `cfdcfiFields.testEscape/rootCause` via `cfdcfiStacksService.extractCfdcfiFields` and plain labels "Test escape"/"Root cause".
+- **Breakdown JQL proofs:** Every breakdown row needs JQL — enrich via `withJql(arr, field)` → `andParts(openSeed, field = "value")` + `ageBucketsWithJql` with date clauses. Without this, tables show `—` and Exec citation-first fails.
+
 ## Code Review modes (stage 2)
 
 Pick one mode (or combine bugbot + multi-model for high-risk diffs). Never skip
