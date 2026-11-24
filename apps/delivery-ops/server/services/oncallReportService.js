@@ -74,9 +74,11 @@ function heroCellHtml(cell, jiraBaseUrl) {
   const url = jiraIssuesUrl(jiraBaseUrl, jql);
   return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600;">${n}</a> <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2563eb;">Open in JIRA ↗</a>`;
 }
-function ticketRowsHtml(tickets, jiraBaseUrl) {
+function ticketRowsHtml(tickets, jiraBaseUrl, opts = {}) {
+  const closed = opts.closed === true;
+  const ageHeader = closed ? 'Age (at close · cycle)' : 'Age (days open)';
   if (!tickets || !tickets.length) return '<p style="font-size:12px;color:#71717a;">No tickets in sample.</p>';
-  return `<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;"><thead><tr><th style="${TH}">Key</th><th style="${TH}">Summary</th><th style="${TH}">Status</th><th style="${TH}">Priority</th><th style="${TH}">Assignee</th><th style="${TH}">Age</th></tr></thead><tbody>${tickets.map((t) => `<tr><td style="${TD}"><a href="${escapeHtml(jiraBrowseUrl(jiraBaseUrl, t.key))}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600;">${escapeHtml(t.key)}</a></td><td style="${TD}">${escapeHtml(t.summary || '—')}</td><td style="${TD}">${escapeHtml(t.status || '—')}</td><td style="${TD}">${escapeHtml(t.priority || '—')}</td><td style="${TD}">${escapeHtml(t.assignee || '—')}</td><td style="${TD}">${t.ageDays != null ? `${t.ageDays}d` : t.cycleDays != null ? `${t.cycleDays}d` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;"><thead><tr><th style="${TH}">Key</th><th style="${TH}">Summary</th><th style="${TH}">Status</th><th style="${TH}">Priority</th><th style="${TH}">Assignee</th><th style="${TH}">${ageHeader}</th></tr></thead><tbody>${tickets.map((t) => `<tr><td style="${TD}"><a href="${escapeHtml(jiraBrowseUrl(jiraBaseUrl, t.key))}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600;">${escapeHtml(t.key)}</a></td><td style="${TD}">${escapeHtml(t.summary || '—')}</td><td style="${TD}">${escapeHtml(t.status || '—')}</td><td style="${TD}">${escapeHtml(t.priority || '—')}</td><td style="${TD}">${escapeHtml(t.assignee || '—')}</td><td style="${TD}">${closed ? (t.cycleDays != null ? `${t.cycleDays}d` : '—') : (t.ageDays != null ? `${t.ageDays}d` : t.cycleDays != null ? `${t.cycleDays}d` : '—')}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
   const d = dashboard || {};
@@ -135,9 +137,9 @@ function buildOncallReportHtml({ teamId, timeframe, dashboard, aiConcern }) {
     <td style="width:25%;padding:8px;border:1px solid #e4e4e7;"><div style="font-size:11px;color:#71717a;">Other</div><div style="font-weight:700;">${heroCellHtml(ndbSub.other, jiraBaseUrl)}</div></td>
   </tr></table></div>` : ''}
   <h2 style="font-size:15px;margin:16px 0 6px;">Open OnCalls sample (${openTickets.length}${d.errors?.openStacks ? ' — truncated' : ''})</h2>
-  ${ticketRowsHtml(openTickets.slice(0, 40), jiraBaseUrl)}
+  ${ticketRowsHtml(openTickets.slice(0, 40), jiraBaseUrl, { closed: false })}
   <h2 style="font-size:15px;margin:16px 0 6px;">Closed in window sample (${closedPreview.length})</h2>
-  ${ticketRowsHtml(closedPreview.slice(0, 30), jiraBaseUrl)}
+  ${ticketRowsHtml(closedPreview.slice(0, 30), jiraBaseUrl, { closed: true })}
   <p style="font-size:12px;color:#71717a;margin-top:16px;">Live view: ${(() => { const base = (process.env.APP_BASE_URL || process.env.CLIENT_BASE_URL || '').replace(/\/$/, ''); const url = base ? `${base}/oncalls` : '/oncalls'; return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;">${escapeHtml(url)}</a>`; })()} · Timeframe ${escapeHtml(timeframe)} · Team ${escapeHtml(teamId)}</p>
 </div>`;
 }
