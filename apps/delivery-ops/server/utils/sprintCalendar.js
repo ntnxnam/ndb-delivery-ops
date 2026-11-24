@@ -101,7 +101,9 @@ function inferSprintCalendarFromSprints(sprints) {
     throw err;
   }
 
-  const durations = dated
+  // Use recent sprints for sprintDays (latest 3-week cadence may differ from old 14-day history)
+  const recent = dated.length > 10 ? dated.slice(-10) : dated;
+  const durations = recent
     .filter((s) => s.end && s.end > s.start)
     .map((s) => daysBetween(s.start, s.end) + 1);
 

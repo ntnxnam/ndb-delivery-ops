@@ -12,7 +12,7 @@
       "boardId": 2888,
       "projectKey": "ERA",
       "featureProjectKey": "FEAT",
-      "baseFilter": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
+      "baseFilter": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",
@@ -49,7 +49,7 @@
       ],
       "sprintCalendar": {
         "s1StartIso": "2022-12-06",
-        "sprintDays": 14
+        "sprintDays": 21
       },
       "defaultReleaseVersion": "NDB-2.12",
       "featureComponents": {
@@ -120,7 +120,7 @@
       "defaultRelease": "NDB-2.12",
       "storyPointsField": "customfield_10002",
       "displayName": "NDB",
-      "base_jql": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
+      "base_jql": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
       "is_shared_project": false,
       "custom_project_key": "ERA, NDBECO",
       "components": [

@@ -177,7 +177,7 @@ function initialComponentsFor(team) {
 function buildPreview({ isShared, customKey, components, contactRows }) {
   const comps = dedupeTrim(components.filter(Boolean));
   if (comps.length === 0) return '(add at least one component to preview)';
-  const shared = 'ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO';
+  const shared = 'ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR';
   const innerParts = [];
   innerParts.push(`component in (${comps.map(c => /\s/.test(c) || c.includes('"') ? `"${esc(c)}"` : c).join(', ')})`);
   innerParts.push(`"primary component" in (${comps.map(c => `"${esc(c)}"`).join(', ')})`);
@@ -379,7 +379,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       )}
 
       <div style={{ marginBottom: '12px' }}>
-        <label style={fieldLabel}>Components * (validated across ENG + FEAT/SDL/TECHPUBS/SR/LEG/NDBECO)</label>
+        <label style={fieldLabel}>Components * (validated across ENG + FEAT/ONCALL/TH/SDL/TECHPUBS/SR/LEG/ACP/LBDR)</label>
         <ChipInput value={components} onChange={setComponents} placeholder="Type component and press Enter, or pick suggestion" suggestions={KNOWN_COMPONENTS} error={Boolean(compError)} />
         {compError ? <div style={fieldError}>{compError}</div> : <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Press Enter or comma to add. Paste comma-separated. Suggestions from Atlas.</p>}
       </div>
