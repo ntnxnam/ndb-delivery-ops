@@ -311,8 +311,21 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>Saved as <code>base_jql</code> + <code>baseFilter</code> (compat). Rest of app reads it unchanged.</div>
       </div>
 
-      <div style={{ marginBottom: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
+        <label style={fieldLabel}>Sprint Board ID (Jira board number, e.g. 2888 for NDB)</label>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input style={input} value={selection.boardId || ''} onChange={e => setSelection(p => ({ ...p, boardId: e.target.value ? Number(e.target.value) : null }))} placeholder="2888" />
+          <button type="button" onClick={runDetectForBoard} disabled={detecting || !selection.boardId} style={button(detecting ? '#9ca3af' : '#2563eb', 'white')}>{detecting ? 'Detecting…' : 'Fetch Calendar'}</button>
+          <button type="button" onClick={async () => {
+            const id = selection.boardId;
+            if (!id) return;
+            const out = await loadBoardCalendar(id);
+            setSelection(p => ({ ...p, sprintCalendar: out?.sprintCalendar || null, calendarError: out?.calendarError || '' }));
+          }} disabled={!selection.boardId || calendarLoading} style={button(!selection.boardId || calendarLoading ? '#9ca3af' : '#0ea5e9')}>{calendarLoading ? 'Loading…' : 'Load Calendar'}</button>
+        </div>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Enter board number from Jira (e.g. NDB is 2888). Click Fetch Calendar to auto-fill S1 + sprint length, or type manually below.</p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#6b7280' }}>Or detect from project key:</span>
           <button type="button" onClick={runDetectForBoard} disabled={detecting} style={button(detecting ? '#9ca3af' : '#2563eb')}>{detecting ? 'Detecting…' : 'Detect Board Calendar'}</button>
           <span style={{ fontSize: '12px', color: '#6b7280' }}>Fills sprint board + calendar from project key.</span>
         </div>
