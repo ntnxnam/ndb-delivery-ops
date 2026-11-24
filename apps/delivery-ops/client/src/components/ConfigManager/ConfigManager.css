@@ -1,0 +1,259 @@
+.config-manager {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.config-manager__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.config-manager__title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.config-manager__subtitle {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.config-manager__layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 800px) {
+  .config-manager__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.config-manager__nav {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.config-manager__nav-group {
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.config-manager__nav-group:first-child {
+  border-top: none;
+}
+
+.config-manager__nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #374151;
+  border-left: 3px solid transparent;
+}
+
+.config-manager__nav-item:hover {
+  background: #f3f4f6;
+}
+
+.config-manager__nav-item--active {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-left-color: #3b82f6;
+  font-weight: 600;
+}
+
+.config-manager__panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.config-manager__panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.config-manager__panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.config-manager__panel-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.config-manager__json-area {
+  width: 100%;
+  min-height: 420px;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.config-manager__json-area:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.config-manager__nav-item:focus-visible,
+.config-manager__btn:focus-visible,
+.config-manager__input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.config-manager__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.config-manager__btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.config-manager__btn--primary {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.config-manager__btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.config-manager__btn--secondary {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.config-manager__btn--danger {
+  background: #fff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.config-manager__notice {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.config-manager__notice--success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.config-manager__notice--error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.config-manager__field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.config-manager__field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  word-break: break-all;
+}
+
+.config-manager__field-value {
+  font-size: 13px;
+  color: #374151;
+  word-break: break-all;
+}
+
+.config-manager__add-field {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.config-manager__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.config-manager__field-help {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.config-manager__input {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+}
+
+.config-manager__hint {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #6b7280;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}

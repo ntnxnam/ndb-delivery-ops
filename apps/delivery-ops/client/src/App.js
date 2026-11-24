@@ -25,6 +25,7 @@ import OncallsPage from './components/OncallsPage';
 import OncallsV2Page from './components/OncallsV2/OncallsV2Page';
 import CfdCfiPage from './components/CfdCfiPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
+import ConfigManager from './components/ConfigManager/ConfigManager';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
 import ReleaseBriefPage from './release/ReleaseBriefPage';
 import WeeklySkimPage from './release/WeeklySkimPage';
@@ -279,6 +280,16 @@ const AuthenticatedApp = () => {
                   }
                 />
                 <Route path="/admin" element={<Navigate to="/team-management" replace />} />
+                <Route
+                  path="/admin/config"
+                  element={
+                    <ProtectedRoute permissions={['admin_panel_access']}>
+                      <Layout>
+                        <ConfigManager />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
                 
                 <Route
                   path="/design"

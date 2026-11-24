@@ -216,6 +216,11 @@ export const SIDEBAR_NAV_GROUPS = [
         label: 'Team Management',
         description: 'Add and edit teams',
       },
+      {
+        path: '/admin/config',
+        label: 'Config Manager',
+        description: 'Edit OnCall / CFD-CFI and other configs without a deploy',
+      },
     ],
   },
   {

@@ -60,6 +60,7 @@ export const TAB_PERMISSIONS = {
   '/cfdcfi': [PERMISSIONS.KPI_VIEW],
   '/system-test-scale': [PERMISSIONS.KPI_VIEW],
   '/team-management': [PERMISSIONS.ADMIN_PANEL_ACCESS],
+  '/admin/config': [PERMISSIONS.ADMIN_PANEL_ACCESS],
   '/schedules': [PERMISSIONS.TPM_PULSE_VIEW],
   '/tpm/pulse': [PERMISSIONS.TPM_PULSE_VIEW],
   '/tpm/jql-builder': [PERMISSIONS.TPM_PULSE_VIEW]
