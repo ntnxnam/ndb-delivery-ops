@@ -851,15 +851,49 @@ Returns:
 - `paginationInfo`: Object with total, fetched, strategies used
 - `warnings`: Array of warning messages
 
-## 14. Deployment Architecture
+## 14. OnCalls V2 Architecture (VP-first, 2 lenses)
 
-### 13.1 Development Environment
+### 14.1 Route & Component
+
+- `apps/delivery-ops/client/src/App.js`: `path="/oncalls"` → `OncallsV2Page` (canonical V2), `path="/oncalls-legacy"` → `OncallsPage` (pulse-era fallback)
+- `apps/delivery-ops/client/src/components/OncallsV2/OncallsV2Page.js` + `OncallsV2.css` — sticky `PillBar(8)`, `ExplainHero` with dual-click, health row, age table, `KpiPulseBand`, taxonomy + NDB sub-drill double-click, `PathDrill` with inherited timeframe + AI slice
+- `apps/delivery-ops/client/src/hooks/useOncallsV2.js` + `useOncallSlice.js` — `timeframe` state, `authenticatedGet/Post` to `/api/jira/oncalls` with `v2`, auto `POST /api/ai/oncall-concern`, drill-triggered `POST /api/ai/oncall-slice`
+
+### 14.2 Server Orchestrator
+
+- `server/services/oncallDashboardV2.js`: `TIMEFRAMES`, `timeframeToDays`, `timeframeClause('resolved', tf)`, `buildTimeframeHeroQueries`, `fetchClosedStacks(tf)`, `computePulseWindow(tf)`, `getDashboard({token,teamId,timeframe})` — 5-way parallel (`runCounts` + open + closed + linkedOut + pulse)
+- `server/services/oncallGapService.js`: `classifyGapBuckets` (duds `DUD_RESOLUTIONS` or no linked fix → ndbGaps/otherTeam), `classifyNdbSubGaps` (TH/Bugs/Improvements/Other), `buildGapCells/buildNdbSubCells` (`key in (…)` JQL)
+- `server/config/oncallConfig.json`: `agedOpenDays`/`needInfoDays`/`waitingForCustomerDays`, `gapProjectPrefixes` tenant override, `onCallProject`/`techHelpProjects`
+- `server/routes/jira/oncalls.js`: `GET /oncalls?timeframe=&v2=` + `GET /oncalls/v2` + `POST /oncalls/refresh` (force) → `oncallDashboardV2.getDashboard`; legacy path preserved
+- `server/routes/ai.js`: `POST /oncall-concern` (concernInput → `naiService.generateOncallConcern`) + `POST /oncall-slice` (`generateOncallSlice`) — Loom builds prompt, Lighthouse calls NAI
+- `server/services/naiService.js`: `ONCALL_CONCERN` + `ONCALL_SLICE` prompts, `generateOncallConcern/generateOncallSlice`
+
+### 14.3 JQL & Data Flow
+
+```
+timeframe pill (7d|15d|1M|1Q|2Q|1Y|18M|Overall)
+  → timeframeClause('resolved', tf) = "resolved >= -Nd" or null (Overall → no clause)
+  → hero closedInWindow = seed AND statusCategory=Done AND clause? (or no clause)
+  → needInfoOpen = statusCategory!=Done AND status="Need Info"
+  → waitingCustomerOpen = statusCategory!=Done AND status="Waiting for Customer"
+  → openAged = open seeds where ageDays >= agedOpenDays
+  → gap taxonomy via closedStacks classification (duds/ndbGaps/otherTeam → ndbSub)
+  → health { mttrMedian/p90 from pulse.mttr, throughput=resolvedWindow, agedShare }
+  → pulse windowOverride = computePulseWindow(tf) (Overall → default 2Q)
+  → componentMix topN for hotspot → AI concern
+```
+
+All hero/taxonomy cells expose `cell(count, jql)` for dual-click.
+
+## 15. Deployment Architecture
+
+### 15.1 Development Environment
 
 - **Frontend**: React development server (port 8899)
 - **Backend**: Node.js server (port 8001)
 - **Hot Reload**: Enabled for both frontend and backend
 
-### 13.2 Production Environment
+### 15.2 Production Environment
 
 - **Frontend**: Static build served via Nginx/Apache
 - **Backend**: Node.js process managed by PM2
@@ -867,9 +901,9 @@ Returns:
 - **SSL/TLS**: HTTPS enabled
 - **Monitoring**: Log aggregation and error tracking
 
-## 14. Future Architecture Improvements
+## 16. Future Architecture Improvements
 
-### 14.1 Planned Refactoring
+### 16.1 Planned Refactoring
 
 1. **Backend Modularization**:
    - Extract routes to separate modules
@@ -890,7 +924,7 @@ Returns:
    - Set up React Testing Library
    - Set up E2E testing framework
 
-### 14.2 Scalability Considerations
+### 16.2 Scalability Considerations
 
 - **Database**: Consider adding database for persistent storage
 - **Caching**: Redis for API response caching

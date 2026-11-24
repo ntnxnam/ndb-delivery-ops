@@ -151,9 +151,9 @@ export const routeConfig = {
     {
       path: '/oncalls',
       exact: true,
-      component: 'OncallsPage',
+      component: 'OncallsV2Page',
       title: 'OnCalls',
-      description: 'OnCall → TechHelp → eng-fix metrics and AI briefing',
+      description: 'OnCall → TechHelp → eng-fix metrics and AI briefing (V2)',
       permissions: [PERMISSIONS.KPI_VIEW],
       showInNav: true,
     },

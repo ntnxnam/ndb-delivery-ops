@@ -22,6 +22,7 @@ import SprintPerformancePage from './components/SprintPerformancePage';
 import KPIPage from './components/KPIPage';
 import SystemTestScalePage from './components/SystemTestScalePage';
 import OncallsPage from './components/OncallsPage';
+import OncallsV2Page from './components/OncallsV2/OncallsV2Page';
 import CfdCfiPage from './components/CfdCfiPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
@@ -198,6 +199,17 @@ const AuthenticatedApp = () => {
 
                 <Route
                   path="/oncalls"
+                  element={
+                    <ProtectedRoute permissions={['kpi_view']}>
+                      <Layout wide>
+                        <OncallsV2Page />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/oncalls-legacy"
                   element={
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>

@@ -9,6 +9,7 @@ import { registerBinPackProjects } from '../../shared/tools/binPackProjects.js';
 import { registerGanttReleaseTimeline } from '../../shared/tools/ganttReleaseTimeline.js';
 import { registerPlanCapacity } from '../../shared/tools/planCapacity.js';
 import { registerLeadershipCommitReport } from '../../shared/tools/leadershipCommitReport.js';
+import { registerBuildOncallPrompt } from '../../shared/tools/buildOncallPrompt.js';
 import { registerNdbGlossary } from '../../shared/resources/ndbGlossary.js';
 
 const SERVER_INSTRUCTIONS = [
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   registerGanttReleaseTimeline(server, env);
   registerPlanCapacity(server);
   registerLeadershipCommitReport(server);
+  registerBuildOncallPrompt(server, env);
   registerNdbGlossary(server);
   const transport = new StdioServerTransport();
   await server.connect(transport);

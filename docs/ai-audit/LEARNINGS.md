@@ -43,3 +43,10 @@ _Seeded on 2026-11-20 with the initial audit trail. No cross-page mistakes have 
 - **Correction:** Consolidated to `client/src/utils/riskHistoryDisplay.js` SoT (`RAG_COLORS`, `riskWord`, `getRagColor`, `formatRiskWithHistoryHTML` with `escapeHtml`); server `releaseHistoryService` now passes `includeRiskIndicator:true`.
 - **Prevention:** Grep `RAG_COLORS` — must have single definition in `riskHistoryDisplay.js`; docs-verify SoT check; always escape HTML-bound derived words.
 - **Source:** `apps/delivery-ops/client/src/components/ai-audit-docs/ProjectStatus/2026-11-19__risk-indicator-trail__weave-risk-indicator-trail.md`
+
+## 2026-11-24 — docs — timeframe-pill doc drift (stale feature folder + API lag)
+- **Page:** Oncalls (`/oncalls`)
+- **Mistake:** `docs/pages/oncalls/GOALS.md`/`Feature.md`/`PLAN.md`/`STATUS.md` still described pulse-era (G1=buildPulse, G2=dual-click open-family) and `docs/api/jira.md` OnCalls section was pulse-only (no timeframe pills, no gap taxonomy, no `POST /api/ai/oncall-concern`/`oncall-slice`); `docs/pages/oncalls/GOAL_KPI_CARD.md` still said `/oncalls-next` after route became `/oncalls` canonical.
+- **Correction:** Overwrote all four feature-folder docs with V2 (8 pills, Overall no-clause, health MTTR, gap taxonomy + NDB sub-drill, fused AI concern, WAIVED V2.1); rewrote `docs/api/jira.md` OnCalls to V2 with timeframe pills, gap taxonomy, Overall, and AI routes; fixed KPI card SCOPE to `/oncalls` canonical.
+- **Prevention:** When `TIMEFRAMES`/`timeframeClause` exists in code, Doc gate must verify `docs/pages/oncalls/GOALS.md` mentions `timeframe`+`Overall` and `docs/api/jira.md` documents `?timeframe=`; lint `GOAL_KPI_CARD.md` SCOPE route against `routeConfig.js`; enforce `api-docs-required` retrofit for any `req.query.*` read.
+- **Source:** `apps/delivery-ops/client/src/components/Oncalls/ai-audit-docs/2026-11-24__oncalls-v2-vp-rebuild__weave-oncalls-v2.md`

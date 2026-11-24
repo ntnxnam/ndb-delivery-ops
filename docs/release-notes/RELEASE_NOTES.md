@@ -1,7 +1,7 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-05-19
-source: doc-release-notes @ 2026-05-19
+lastUpdated: 2026-11-24
+source: doc-release-notes @ 2026-11-24
 ---
 
 # Release Notes
@@ -46,6 +46,18 @@ See [NDB-2.11.md](./NDB-2.11.md) when cut.
 - **385→0 (resilience):** Hardcoded field IDs/labels removed from client services — all resolved via SoT; badge contrast fix on status pills.
 - **P2 cache labels:** trainAsk/longTerm cache keys use taxonomy patterns (no inline strings).
 - **Live proof 3× HTTP200:** `/api/config/jira-fields`, project-status, and dependency-view all 200 on QA run.
+
+## Unreleased — `weave/oncalls-v2` (OnCalls V2: VP-first timeframe pills + gap taxonomy + fused AI concern)
+
+> Merge target: `main`. Source: `apps/delivery-ops/client/src/components/OncallsV2/*`, `hooks/useOncallsV2.js`, `server/services/oncallDashboardV2.js`, `oncallGapService.js`, `server/config/oncallConfig.json`, `server/routes/jira/oncalls.js` (timeframe), `server/routes/ai.js` (oncall-concern + oncall-slice), `services/naiService.js` (ONCALL_CONCERN + ONCALL_SLICE), `mcp/shared/tools/buildOncallPrompt.ts`, `docs/pages/oncalls/*`.
+
+- **OnCalls V2 — global timeframe pills:** sticky `7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall` drives all heroes/health/concern/age/graph/taxonomy; `Overall` = no `resolved >= -Nd` clause (all history). Every hero shows count + one-line explainer + **Open in JIRA** proof (dual-click: count → in-app drill, link → exact JQL). See [USER_GUIDE — OnCalls V2](../guides/USER_GUIDE.md#oncalls-v2) and [Oncalls requirements](../pages/Oncalls-requirements.md).
+- **Health + workflow buckets:** MTTR median/p90, throughput + net, aged share; How-long-open table (Open now / Need Info / Waiting for Customer); pulse graph with timeframe window override (`window: computePulseWindow(tf)`). Need Info = `status="Need Info"`, Waiting = `status="Waiting for Customer"`; thresholds from `oncallConfig.json` (`needInfoDays`/`waitingForCustomerDays`/`agedOpenDays`).
+- **Gap taxonomy:** `duds` (duplicate/Won't Do/Cannot Reproduce/no linked fix) · `ndbGaps` (linked fix in NDB family via `gapProjectPrefixes`) · `other-team gaps`; NDB double-click expands TH linked / Bugs / Improvements / Other. Cells are `key in (…)` JQL proofs; [Oncalls data-layer](../pages/Oncalls-data-layer.md#domain-classification--v2-gap-taxonomy) documents rules.
+- **Fused AI concern + per-view slice:** `POST /api/ai/oncall-concern` merges open/MTTR/net + hotspot top-2 components + gap% into ~100w (regenerates on pill/hero/taxonomy/view); `POST /api/ai/oncall-slice` gives drawer 2-liner + fix suggestion. Loom builds prompt (`buildOncallPrompt.ts`), Lighthouse calls NAI. See [API — OnCalls V2](../api/jira.md#oncalls).
+- **Legacy preserved:** `/oncalls` now mounts V2; pulse-era page at `/oncalls-legacy` (no removal).
+- **Deferred to V2.1 (WAIVED):** weekly scheduled report cron→email + TPM Pulse card + SchedulePage hook — tracked in [GOALS.md](../pages/oncalls/GOALS.md).
+- **Known limitations added:** [KNOWN_ISSUES.md](../known-issues/KNOWN_ISSUES.md) — NDB fallback tenant override + weekly report deferred.
 
 ## Unreleased — `weave/feature-dashboard-shared-views` (bin-packing converter + `NAI_*` canonical)
 

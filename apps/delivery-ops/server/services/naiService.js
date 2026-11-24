@@ -1637,6 +1637,69 @@ async function generatePageCompressBrief(story, validKeys = []) {
   return trimmed;
 }
 
+// ── OnCall V2 — Concern (fused quant+qual) + Slice prompts ──────────────────
+
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Input gives timeframe, hero counts, health MTTR/throughput, workflow buckets, gap taxonomy and top 2 components. Output 1 paragraph of 95-105 words: open now/aged/closed in window/MTTR median/p90/net, then hotspot like "last 2Q saw hotspot in Upgrade area (9) + MSSQL (7)" using componentMix counts verbatim, then duds vs NDB vs other-team, then Need Info vs Waiting pressure. Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive tone.`;
+
+const ONCALL_SLICE_SYSTEM_PROMPT = `You are a TPM writing a 2-line drawer slice for one OnCalls view (Need Info, Waiting for Customer, Duds, NDB gaps, Other-team, or NDB sub-drill). Input gives slice keys, timeframe, ages, and owners. Output exactly 2 lines: line 1 = why stuck in this view (status dwell + gap% context), line 2 = "Ask <owner> to <action> on <keys> by <timeframe>" with concrete next step. Keep each line under 180 characters. Copy ticket keys verbatim — never invent or paraphrase keys.`;
+
+function buildOncallConcernPrompt(intelligence) {
+  const i = intelligence || {};
+  const tf = i.timeframe || i.windowLabel || '2Q';
+  const hero = i.hero || {};
+  const health = i.health || {};
+  const workflow = i.workflow || i.gapTaxonomy || {};
+  const gap = i.gapTaxonomy || {};
+  const topComponents = i.componentMix || i.topComponents || [];
+  const top2 = (topComponents || []).slice(0, 2).map((c) => `${c.name || c.component || c.key} (${c.count})`).join(' + ') || 'no component hotspot';
+  const validKeys = Array.isArray(i.validKeys) ? i.validKeys : [];
+  const validBlock = validKeys.length
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${validKeys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}`
+    : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+  const heroLine = `HERO: open=${hero.open?.count ?? hero.open ?? 0} aged>${i.agedOpenDays || 14}d=${hero.agedOpen?.count ?? 0} needInfo=${hero.needInfoOpen?.count ?? workflow.needInfo?.count ?? 0} waitingCustomer=${hero.waitingCustomerOpen?.count ?? workflow.waiting?.count ?? 0} closedInWindow=${hero.closedInWindow?.count ?? 0} timeframe=${tf}`;
+  const healthLine = `HEALTH: mttrMedian=${health.mttrMedian ?? health.medianDays ?? '—'}d p90=${health.p90 ?? health.p90Days ?? '—'}d throughput=${health.throughput ?? 0} net=${health.net ?? 0} agedShare=${health.agedShare ?? '—'}%`;
+  const wfLine = `WORKFLOW: needInfo=${workflow.needInfo?.count ?? 0} waitingCustomer=${workflow.waiting?.count ?? 0}`;
+  const gapLine = `GAP_TAXONOMY: duds=${gap.duds?.count ?? 0} ndbGaps=${gap.ndbGaps?.count ?? 0} otherTeamGaps=${gap.otherTeamGaps?.count ?? 0} ndbSub TH=${gap.ndbSub?.thLinked?.count ?? 0} bugs=${gap.ndbSub?.bugs?.count ?? 0} improvements=${gap.ndbSub?.improvements?.count ?? 0} other=${gap.ndbSub?.other?.count ?? 0}`;
+  const hotspotLine = `HOTSPOT_COMPONENTS top2: ${top2}`;
+  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+function buildOncallSlicePrompt(slice) {
+  const s = slice || {};
+  const view = s.view || s.slice || 'Need Info';
+  const tf = s.timeframe || '2Q';
+  const keys = Array.isArray(s.keys) ? s.keys : (Array.isArray(s.validKeys) ? s.validKeys : []);
+  const validBlock = keys.length
+    ? `VALID TICKET KEYS (copy these exactly — do not alter, combine, or generate new ones):\n${keys.map((k, idx) => `  ${idx + 1}. ${k}`).join('\n')}`
+    : 'VALID TICKET KEYS: none provided (do not fabricate ticket keys)';
+  const meta = s.meta || {};
+  return `TIMEFRAME: ${tf}\nVIEW: ${view}\nKEYS: ${keys.join(', ') || 'none'}\nMETA: ${JSON.stringify(meta)}\n\n${validBlock}\n\nWrite the 2-liner for this slice now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+}
+
+async function generateOncallConcern(intelligence) {
+  if (!intelligence) throw new Error('intelligence is required for OnCall concern');
+  const messages = [
+    { role: 'system', content: ONCALL_CONCERN_SYSTEM_PROMPT },
+    { role: 'user', content: buildOncallConcernPrompt(intelligence) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty OnCall concern after trim');
+  return trimmed;
+}
+
+async function generateOncallSlice(slice) {
+  if (!slice) throw new Error('slice is required for OnCall slice');
+  const messages = [
+    { role: 'system', content: ONCALL_SLICE_SYSTEM_PROMPT },
+    { role: 'user', content: buildOncallSlicePrompt(slice) },
+  ];
+  const text = await chatCompletion(messages, { temperature: 0.25 });
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('NAI returned an empty OnCall slice after trim');
+  return trimmed;
+}
+
 module.exports = {
   chatCompletion,
   generateExecSummary,
@@ -1650,6 +1713,8 @@ module.exports = {
   generatePageFacetBrief,
   generatePageStitchBrief,
   generatePageCompressBrief,
+  generateOncallConcern,
+  generateOncallSlice,
   EXEC_SUMMARY_SYSTEM_PROMPT,
   RELEASE_SUMMARY_SYSTEM_PROMPT,
   RELEASE_ANNOUNCEMENT_SYSTEM_PROMPT,
@@ -1661,6 +1726,8 @@ module.exports = {
   PAGE_BRIEFING_FACET_SYSTEM_PROMPT,
   PAGE_BRIEFING_STITCH_SYSTEM_PROMPT,
   PAGE_BRIEFING_COMPRESS_SYSTEM_PROMPT,
+  ONCALL_CONCERN_SYSTEM_PROMPT,
+  ONCALL_SLICE_SYSTEM_PROMPT,
   // Exposed for testing
   _internals: {
     buildUserPrompt,
@@ -1680,5 +1747,7 @@ module.exports = {
     collectCalloutKeys,
     formatCalloutsBlock,
     TIER_LABELS,
+    buildOncallConcernPrompt,
+    buildOncallSlicePrompt,
   },
 };

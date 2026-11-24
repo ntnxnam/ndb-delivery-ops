@@ -80,3 +80,11 @@
 @media (max-width: 576px) {
   .main-content { padding: var(--space-3); }
 }
+
+@media print {
+  .sidebar { display: none !important; }
+  .jira-banner { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: var(--space-4) !important; max-width: 100% !important; }
+  .main-content > * { max-width: 100% !important; margin: 0 !important; }
+  .ocv2-page { padding: 0 !important; }
+}

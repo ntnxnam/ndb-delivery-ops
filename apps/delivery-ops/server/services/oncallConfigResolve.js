@@ -69,6 +69,8 @@ function resolveRuntimeConfig(teamId) {
     techPubsProjects: teamCfg.techPubsProjects || cfg.techPubsProjects || ['TECHPUBS'],
     engFixProjects: teamCfg.engFixProjects || cfg.engFixProjects || [],
     agedOpenDays: teamCfg.agedOpenDays || cfg.agedOpenDays || 14,
+    needInfoDays: teamCfg.needInfoDays || cfg.needInfoDays || 10,
+    waitingForCustomerDays: teamCfg.waitingForCustomerDays || cfg.waitingForCustomerDays || 21,
     pastLookbackDays: teamCfg.pastLookbackDays || cfg.pastLookbackDays || 30,
     openStatusJql: teamCfg.openStatusJql || cfg.openStatusJql || 'statusCategory != Done',
     doneStatusJql: teamCfg.doneStatusJql || cfg.doneStatusJql || 'statusCategory = Done',

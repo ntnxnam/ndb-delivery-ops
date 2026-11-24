@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OnCalls — Wireframe (VP-first, 2 lenses)</title>
+<style>
+  :root{ --bg:#f6f8fb; --card:#fff; --border:#dfe3e8; --text:#172b4d; --muted:#6b778c; --accent:#0052cc; --red:#de350b; --yellow:#ff8b00; --green:#00875a; --chip:#ebecf0; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 18px 60px}
+  .top{position:sticky;top:0;z-index:10;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--border);margin-bottom:14px}
+  h1{margin:0 0 4px;font-size:20px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pill{border:1px solid var(--border);background:var(--card);padding:6px 10px;border-radius:999px;font-size:12.5px;cursor:pointer}
+  .pill.active{background:var(--text);color:#fff;border-color:var(--text)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .card h2{margin:0 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .heroes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  @media(max-width:960px){.heroes{grid-template-columns:repeat(2,1fr)}}
+  .hero{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--card);cursor:pointer}
+  .hero .label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .hero .value{font-size:28px;font-weight:800;line-height:1;margin:6px 0 4px}
+  .hero .meta{font-size:11.5px;color:var(--muted)}
+  .hero .explain{font-size:11px;color:#4b5a76;background:#f4f5f7;border:1px solid #eceff3;border-radius:8px;padding:6px 7px;margin-top:6px;line-height:1.35}
+  .hero .jql{font-size:11px;color:var(--accent);text-decoration:none}
+  .hero.active{outline:2px solid var(--text)}
+  .rag{padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:13px;margin-bottom:10px}
+  .rag.YELLOW{background:#fffae6;border-color:#ffec99}
+  .rag.RED{background:#ffebe6;border-color:#ffbdad}
+  .rag.GREEN{background:#e3fcef;border-color:#abf5d1}
+  .ai{font-size:13px;line-height:1.5;background:#f4f5f7;border:1px dashed #c1c7d0;border-radius:10px;padding:10px 12px}
+  .ai strong{color:var(--text)}
+  .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+  @media(max-width:960px){.grid2{grid-template-columns:1fr}}
+  .mini{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{ text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);padding:6px 8px}
+  td{padding:7px 8px;border-bottom:1px solid #f0f2f5;vertical-align:top}
+  .badge{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--chip);border:1px solid var(--border);white-space:nowrap}
+  .badge.warn{background:#fffae6;border-color:#ffec99}
+  .badge.bad{background:#ffebe6;border-color:#ffbdad}
+  .graph{height:140px;background:repeating-linear-gradient(90deg,#f4f5f7 0 1px,transparent 1px 44px), linear-gradient(180deg,#fff,#f6f8fb);border:1px solid var(--border);border-radius:10px;display:flex;align-items:flex-end;gap:6px;padding:10px 12px}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .bar i{display:block;width:100%;border-radius:6px 6px 0 0}
+  .bar.c i{background:#0052cc}
+  .bar.r i{background:#00875a}
+  .bar span{font-size:10px;color:var(--muted)}
+  .tabs{display:flex;gap:8px;margin:8px 0}
+  .tab{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-size:12px;cursor:pointer}
+  .tab.active{background:var(--text);color:#fff}
+  .taxonomy{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:860px){.taxonomy{grid-template-columns:1fr}}
+  .tax{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--card);cursor:pointer}
+  .tax .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .tax .v{font-size:22px;font-weight:800;margin:4px 0}
+  .tax .d{font-size:12px;color:var(--muted)}
+  .drill{margin-top:10px;border:1px solid var(--border);border-radius:12px;background:#fbfdff;padding:12px}
+  .drill .hdr{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .ghost{font-size:11.5px;color:var(--muted)}
+  .note{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:8px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>OnCalls — VP wireframe · 2 lenses</h1>
+    <p class="sub">Lens A: <strong>point-in-time vs timeframe</strong> (global sticky pills) · Lens B: <strong>overall vs history drill</strong> (taxonomy → drawer). Pill selection is <strong>global</strong> — drills inherit it, never reset. Not built — clickable mock.</p>
+    <div style="margin-top:10px" class="row">
+      <span class="mini" style="margin-right:4px">Timeframe — global, sticky (re-slices heroes, concern, age, graph, taxonomy + every drill):</span>
+      <button class="pill" data-tf="15d">15 days</button>
+      <button class="pill" data-tf="1M">1M</button>
+      <button class="pill" data-tf="1Q">1Q</button>
+      <button class="pill active" data-tf="2Q">2Q</button>
+      <button class="pill" data-tf="1Y">1Y</button>
+      <button class="pill" data-tf="18M">18M</button>
+      <button class="pill" data-tf="Overall">Overall</button>
+      <span class="mini">· same pills stay pinned on scroll & in drawers</span>
+    </div>
+  </div>
+
+  <!-- HERO ROW -->
+  <div class="card">
+    <h2>At a glance — <span id="tfLabel">last 2Q</span></h2>
+    <div class="heroes" id="heroes"></div>
+    <p class="mini" style="margin:8px 0 0">Count → side drawer + “Open in JIRA → exact JQL” (dual-click). <em>Need Info</em> = we need data to analyse · <em>Waiting for Customer</em> = they validate our fix.</p>
+  </div>
+  <div class="card" style="background:#fbfdff">
+    <h2>Health — MTTR & throughput · <span class="tfInline">last 2Q</span></h2>
+    <div class="heroes" id="healthHeroes" style="grid-template-columns:repeat(4,1fr)"></div>
+    <p class="mini" style="margin-top:6px">All from <code>kpiPulseService</code> + closed set for selected timeframe. Click any → drill (same timeframe). Overall = no date clause (all history).</p>
+  </div>
+
+  <!-- RAG + AI CONCERN -->
+  <div class="grid2">
+    <div class="card">
+      <h2>Areas of concern — AI (view-aware)</h2>
+      <div id="rag" class="rag YELLOW"><strong>YELLOW — 34 open, 6 waiting for customer >21d.</strong> Interrupt up 12% WoW; Need Info dwell p50 9d (stale probe).</div>
+      <div id="ai" class="ai">In <span class="tfInline">last 2Q</span>, <strong>34 open</strong> (142 created / 118 closed, median MTTR 11d, p90 26d) — <strong>hotspot: Upgrade area (9)</strong> + <strong>MSSQL LCM (7)</strong>, mostly patch/time-machine failures. <strong>6</strong> in Waiting for Customer (median 18d) — fix delivered, customer not yet confirmed. <strong>5</strong> need info (oldest: <a href="#">ONCALL-2041</a> 26d, Priya). 22% of closes were duds; of NDB gaps, 40% needed eng Bugs. Ask: ping customers on waiting tickets by Fri; chase Need Info owners.</div>
+      <p class="mini" style="margin-top:8px">Prompt = <code>pulse.story + dwell + gap% + escalation median</code> for selected timeframe. Regenerates on pill/hero change. ~100 words.</p>
+    </div>
+    <div class="card">
+      <h2>How long have they been open</h2>
+      <table>
+        <thead><tr><th>Bucket</th><th>Count</th><th>Median age</th><th>Who / what to do</th></tr></thead>
+        <tbody id="ageBody"></tbody>
+      </table>
+      <div class="note">
+        <strong>“Too long” definition (proposed):</strong> Aged = created &gt;14d &amp; still open. Need Info &gt;10d without reply → chase assignee. Waiting for Customer &gt;21d → nudge customer / SE. All thresholds in <code>oncallConfig.json</code> per team — you can tune.
+        <br><span class="ghost">Click a row → drawer filtered to that bucket for the selected timeframe.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Created vs Resolved — <span class="tfInline">last 2Q</span> (weekly)</h2>
+      <div class="row">
+        <button class="tab active" data-gmode="flow">Flow (timeframe)</button>
+        <button class="tab" data-gmode="snapshot">Snapshot (point-in-time status donut)</button>
+      </div>
+    </div>
+    <p class="mini">Flow uses Jira workflow: <em>Open</em> includes Need Info + Waiting (we wait at different stages) vs <em>Closed (Done)</em>. Bars = created (blue) / resolved+closed (green). Line = open backlog.</p>
+    <div id="graph" class="graph"></div>
+    <p class="mini" id="graphCap">Created ahead in 7 of 13 weeks — catch-up required. Median resolve 11d.</p>
+  </div>
+
+  <!-- TAXONOMY -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">What closed — duds vs real gaps (<span class="tfInline">last 2Q</span>)</h2>
+      <span class="mini">Source: closed in window (exact hero count). Double-click NDB gaps → second level.</span>
+    </div>
+    <div class="taxonomy" id="taxonomy"></div>
+
+    <!-- NDB drill -->
+    <div id="ndbDrill" class="drill" style="display:none">
+      <div class="hdr">
+        <strong>NDB gaps — double-click detail</strong>
+        <span class="ghost">Scope: <span class="tfInline">last 2Q</span> closed · inherits global pill (no second row — drill never resets timeframe).</span>
+      </div>
+      <p class="mini">For NDB gaps only — how did we remediate? TH = workaround path, Bug/Improvement = customer-found defect type. “Other” = edge (e.g., linked ERA-* improvement in NDB component but not Bug, or TH+Eng both). Switch global pills on top to see 6M/12M/18M/Overall — same row everywhere.</p>
+      <div class="heroes" id="ndbSub" style="grid-template-columns:repeat(4,1fr);margin-top:8px"></div>
+      <p class="mini" style="margin-top:8px">Click any sub-card → JQL drill: <code>closed in window AND NDB gap AND &lt;bucket&gt;</code> (keys filtered by linked project/issuetype).</p>
+    </div>
+    <div class="note">Rules (proposed, you confirm): <strong>Dud</strong> = closed with resolution ∈ {Duplicate, Won’t Do, Cannot Reproduce, Invalid} OR no linked fix/docs. <strong>NDB gap</strong> = linked fix project starts <code>NDB*</code> / component <code>NDB-*</code> OR linked issueType Bug/Improvement in NDB. <strong>Other-team gap</strong> = came via NDB OnCall route but linked fix project outside NDB (e.g., INFRA, CALM).</div>
+  </div>
+
+  <!-- DRAWER MOCK -->
+  <div id="drawer" class="card" style="display:none;border-style:dashed">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">🔍 Drill — <span id="drawerTitle">Open now</span> · <span class="tfInline">last 2Q</span></h2>
+      <span class="mini"><a href="#" onclick="alert('Open exact JQL in JIRA (proof)');return false">Open in JIRA ↗</a> · <a href="#" onclick="document.getElementById('drawer').style.display='none';return false">Close</a></span>
+    </div>
+    <p class="mini">Count → side drawer (this). JQL = exact count proof. View-aware AI Concern above already re-ran for this slice.</p>
+    <table>
+      <thead><tr><th>Key</th><th>Status</th><th>Age</th><th>Assignee</th><th>Linked</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#">ONCALL-2041</a></td><td><span class="badge warn">Need Info</span></td><td>26d</td><td>Priya Shah</td><td>TH-8821</td></tr>
+        <tr><td><a href="#">ONCALL-2103</a></td><td><span class="badge bad">Waiting for Customer</span></td><td>22d</td><td>Rahul K</td><td>ERA-41200 (Bug)</td></tr>
+        <tr><td><a href="#">ONCALL-2118</a></td><td>Open</td><td>8d</td><td>Unassigned</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="mini" style="margin-top:8px">Drawer timeframe pills (in drill header above): 6M / 12M / 18M / Overall — same JQL with narrowed <code>created/resolved</code> window. “Overall” = no date clause (all history for this lens).</p>
+  </div>
+
+  <div class="note">
+    <strong>What “too long” means — you asked.</strong> Today it’s one knob <code>agedOpenDays=14</code> (`oncallConfig.json:16`). Proposal: per-bucket —
+    Need Info &gt;10d = we’re blocked on customer/data (chase requestor, then close as dud if silent).
+    Waiting for Customer &gt;21d = our fix shipped, customer hasn’t validated (nudge SE/CSM).
+    Open (no state) &gt;14d = no movement at all (assign owner).
+    All drive the “who sat on it + what to do” table above and the AI Concern bullets.
+  </div>
+
+</div>
+<script>
+const TF = {
+  '15d': { open:18, aged:4, need:3, wait:2, closed:22, mttr:9, p90:18, net:'+4', story:'15d snap — burst last week.' },
+  '1M':  { open:24, aged:7, need:5, wait:4, closed:41, mttr:11, p90:22, net:'+19', story:'1M: inflow +18% vs prior 1M.' },
+  '1Q':  { open:31, aged:11, need:7, wait:6, closed:88, mttr:11, p90:24, net:'+14', story:'1Q: net +14 open, catch-up lag.' },
+  '2Q':  { open:34, aged:14, need:9, wait:6, closed:118, mttr:11, p90:26, net:'+24', story:'2Q: created 142 / closed 118, median 11d.' },
+  '1Y':  { open:34, aged:14, need:12, wait:9, closed:210, mttr:14, p90:31, net:'+42', story:'1Y: seasonal spike Q1, now stable.' },
+  '18M': { open:34, aged:14, need:15, wait:11, closed:298, mttr:14, p90:34, net:'+58', story:'18M: 316 created / 298 closed.' },
+  'Overall': { open:34, aged:14, need:18, wait:14, closed:412, mttr:13, p90:32, net:'+61', story:'Overall: all history (no date filter) — 473 created / 412 closed.' },
+};
+let tf='2Q', dtf='6M';
+function render(){
+  const d=TF[tf];
+  document.querySelectorAll('.pill[data-tf]').forEach(p=>p.classList.toggle('active', p.dataset.tf===tf));
+  document.querySelectorAll('.tfInline').forEach(el=>el.textContent='last '+tf);
+  document.getElementById('tfLabel').textContent='last '+tf;
+  document.getElementById('heroes').innerHTML = [
+    {k:'openNow', label:'Open now', v:d.open, m:'point-in-time', e:'Customers currently waiting for us — live interrupt load right now.', jql:'(OnCalls KPI) AND statusCategory != Done'},
+    {k:'aged', label:'Aged >14d', v:d.aged, m:'sat too long', e:'Open longer than 14 days — stalled, needs owner chase or closure.', jql:'… AND created <= -14d'},
+    {k:'needInfo', label:'Need Info', v:d.need, m:'we need data to analyse', e:'We’re blocked — waiting for customer/data to diagnose the issue.', jql:'… AND status = "Need Info"'},
+    {k:'waiting', label:'Waiting for Customer', v:d.wait, m:'they validate fix', e:'Fix sent — customer is validating, we wait for confirmation.', jql:'… AND status = "Waiting for Customer"'},
+    {k:'closed', label:'Closed in window', v:d.closed, m:'in last '+tf+' (overall flow)', e:'Shipped or dismissed in this timeframe — feeds dud vs gap split below.', jql:'… AND statusCategory = Done AND resolved >= -'+tf},
+  ].map(h=>`<div class="hero" data-hero="${h.k}"><div class="label">${h.label}</div><div class="value">${h.v}</div><div class="meta">${h.m}</div><div class="explain">${h.e}</div><a class="jql" href="#" onclick="event.stopPropagation();alert('JQL: '+this.parentElement.querySelector('.meta').textContent);return false">Open in JIRA ↗</a></div>`).join('');
+  document.querySelectorAll('.hero').forEach(el=>el.onclick=()=>openDrawer(el.dataset.hero));
+  document.getElementById('healthHeroes').innerHTML = [
+    {label:'MTTR (median)', v:d.mttr+'d', m:`p90 ${d.p90}d · in last ${tf}`, k:'mttr'},
+    {label:'Throughput (closed)', v:d.closed, m:`${d.net} net vs created`, k:'throughput'},
+    {label:'Aged share', v:Math.round(d.aged/Math.max(1,d.open)*100)+'%', m:`${d.aged} of ${d.open} open >14d`, k:'agedShare'},
+    {label:'Churn (WoW)', v:'+12%', m: d.story, k:'wow'},
+  ].map(h=>`<div class="hero" data-hero="${h.k}"><div class="label">${h.label}</div><div class="value">${h.v}</div><div class="meta">${h.m}</div><a class="jql" href="#" onclick="event.stopPropagation();alert('JQL: '+this.parentElement.querySelector('.meta').textContent);return false">Open in JIRA ↗</a></div>`).join('');
+  document.querySelectorAll('#healthHeroes .hero').forEach(el=>el.onclick=()=>openDrawer(el.dataset.hero));
+  document.getElementById('ageBody').innerHTML = `
+    <tr><td><span class="badge">Open (no state)</span></td><td>${d.open - d.need - d.wait}</td><td>8d med</td><td>— assign owner if &gt;14d</td></tr>
+    <tr><td><span class="badge warn">Need Info</span></td><td>${d.need}</td><td>9d med</td><td>Priya (2) — oldest ONCALL-2041 26d → chase customer</td></tr>
+    <tr><td><span class="badge bad">Waiting for Customer</span></td><td>${d.wait}</td><td>18d med</td><td>Rahul (3) → nudge CSM to validate</td></tr>
+  `;
+  document.getElementById('ai').innerHTML = `Open pressure is <strong>moderate but sticky</strong> in <span class="tfInline">last ${tf}</span>: ${d.open} open (${d.story}). <strong>${d.wait}</strong> in Waiting for Customer (median 18d) — fix delivered, customer not yet confirmed. <strong>${d.need}</strong> need info from requestor (oldest: <a href="#">ONCALL-2041</a> 26d, Priya). ${d.aged} aged &gt;14d. Ask: ping customers on waiting tickets by Fri; chase Need Info owners to close or convert to bug.`;
+  const taxClosed = d.closed;
+  const duds = Math.round(taxClosed*0.22), ndb=Math.round(taxClosed*0.48), other=taxClosed - duds - ndb;
+  document.getElementById('taxonomy').innerHTML = [
+    {k:'duds', label:'Duds — simply closed', v:duds, d:'no gap (dup/invalid) · resolution or no link'},
+    {k:'ndb', label:'NDB gaps (our gaps)', v:ndb, d:'linked NDB fix — double-click for TH/Bug view'},
+    {k:'other', label:'Other-team gaps', v:other, d:'via NDB OnCall route, fix outside NDB'},
+  ].map(t=>`<div class="tax" data-tax="${t.k}"><div class="k">${t.label}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`).join('');
+  document.querySelectorAll('.tax').forEach(el=>{
+    el.onclick=()=>{
+      if(el.dataset.tax==='ndb'){ document.getElementById('ndbDrill').style.display='block'; renderNdb(); }
+      else openDrawer(el.dataset.tax);
+    };
+  });
+  renderGraph(); renderNdb();
+}
+function renderGraph(){
+  const g=document.getElementById('graph');
+  const weeks = tf==='15d'? 2 : tf==='1M'?4 : tf==='1Q'?9 : tf==='2Q'?13 : tf==='1Y'?26 : 39;
+  let h=''; for(let i=0;i<weeks;i++){ const c= 8+Math.round(Math.random()*10), r=6+Math.round(Math.random()*9); h+=`<div class="bar"><div style="display:flex;gap:3px;align-items:flex-end;height:100px;width:100%"><i class="c" style="height:${c*6}px"></i><i class="r" style="height:${r*6}px"></i></div><span>W${i+1}</span></div>`; }
+  g.innerHTML=h;
+  document.getElementById('graphCap').textContent = TF[tf].story + ' Toggle to Snapshot for current status donut (Open/Need Info/Waiting/Done).';
+}
+function renderNdb(){
+  const total = TF[tf].closed; const ndb = Math.round(total*0.48);
+  const map = { '6M':[0.35,0.42,0.18,0.05], '12M':[0.32,0.40,0.20,0.08], '18M':[0.30,0.38,0.22,0.10], 'Overall':[0.28,0.35,0.24,0.13] };
+  const m=map[dtf]||map['6M'];
+  document.querySelectorAll('.pill[data-dtf]').forEach(p=>p.classList.toggle('active', p.dataset.dtf===dtf));
+  document.getElementById('ndbSub').innerHTML = [
+    {l:'Tech-Help linked', v:Math.round(ndb*m[0]), d:'workaround path · customer unblocked'},
+    {l:'Bugs (customer-found)', v:Math.round(ndb*m[1]), d:'Bug issuetype · eng gap'},
+    {l:'Improvements', v:Math.round(ndb*m[2]), d:'enhancement request · not a defect'},
+    {l:'Other', v:ndb - Math.round(ndb*m[0])-Math.round(ndb*m[1])-Math.round(ndb*m[2]), d:'e.g., docs/techpubs or TH+Eng'},
+  ].map(x=>`<div class="hero"><div class="label">${x.l}</div><div class="value">${x.v}</div><div class="meta">${x.d}</div><a class="jql" href="#" onclick="alert('Drill JQL for '+this.previousElementSibling.previousElementSibling.textContent);return false">Open in JIRA ↗</a></div>`).join('');
+}
+function openDrawer(k){
+  document.getElementById('drawer').style.display='block';
+  document.getElementById('drawerTitle').textContent = k;
+  document.getElementById('drawer').scrollIntoView({behavior:'smooth', block:'center'});
+}
+document.querySelectorAll('.pill[data-tf]').forEach(p=>p.onclick=()=>{ tf=p.dataset.tf; render(); });
+document.querySelectorAll('.pill[data-dtf]').forEach(p=>p.onclick=()=>{ dtf=p.dataset.dtf; renderNdb(); });
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.getElementById('graphCap').textContent = t.dataset.gmode==='snapshot' ? 'Snapshot: status distribution now (Open 14 · Need Info 9 · Waiting 6 · Done in window 118).' : TF[tf].story; });
+render();
+</script>
+</body>
+</html>

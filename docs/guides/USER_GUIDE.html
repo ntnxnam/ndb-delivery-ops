@@ -9,6 +9,7 @@
 <li><a href="#release-brief">Release Brief</a></li>
 <li><a href="#quality-column-tcms">Quality Column (TCMS)</a></li>
 <li><a href="#bin-packing-csv-converter">Bin-Packing CSV Converter</a></li>
+<li><a href="#oncalls-v2">OnCalls V2</a></li>
 <li><a href="#tips--faq">Tips &amp; FAQ</a></li>
 </ul>
 <h2>Getting Started</h2>
@@ -68,10 +69,23 @@ distinctness into the two rows yet. See <a href="../known-issues/KNOWN_ISSUES.md
 <li>If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.</li>
 <li>The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the <code>csv-to-binpacking</code> skill (prompt/orchestration only — deterministic logic stays in <code>shared</code>).</li>
 </ul>
-<h2>OnCalls</h2>
-<p><strong>Who:</strong> EM, TPM
-<strong>Steps:</strong> Open KPIs → OnCalls → select release → review counts by period.
-<strong>Tips:</strong> Click a count to see the filtered list; counts come from <code>kpiConfig</code> live JQL.</p>
+<h2>OnCalls V2</h2>
+<p><strong>Who:</strong> Team Executive / VP, TPM, Director, EM<br><strong>Route:</strong> <code>/oncalls</code> (V2) — legacy pulse view at <code>/oncalls-legacy</code></p>
+<p>This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim <em>what&#39;s hot, too-long, and what to fix</em>.</p>
+<p><strong>At a glance — timeframe pills (global)</strong></p>
+<p>Pick a pill at the top (sticky): <code>7d</code> · <code>15d</code> · <code>1M</code> · <code>1Q</code> · <code>2Q</code> · <code>1Y</code> · <code>18M</code> · <code>Overall</code>. Every hero, health strip, age table, graph, and gap taxonomy recomputes for that window. <code>Overall</code> shows all closed history (no date clause). The drawer inherits the pill — it never resets.</p>
+<p><strong>What you see</strong></p>
+<ol>
+<li><strong>AI Concern</strong> (~100 words) — fuses quant (open / MTTR / net) + qual (hotspot: top 2 components like Upgrade/MSSQL + gap% + workflow view). It auto-generates after metrics load and regenerates when you change pill, click a hero, or open a taxonomy. Use <strong>Regenerate AI Concern</strong> to refresh.</li>
+<li><strong>Hero row (5):</strong> <code>Open now</code> · <code>Aged &gt;Nd</code> · <code>Need Info</code> · <code>Waiting for Customer</code> · <code>Closed in window</code>. Each card shows count + one-line explainer + <strong>Open in JIRA ↗</strong> (exact JQL). Clicking a count opens the in-app drill; the JIRA link opens the JQL search.</li>
+<li><strong>Health row (4):</strong> <code>MTTR median</code> · <code>MTTR p90</code> · <code>Throughput</code> (with net) · <code>Aged share</code>. Click to drill into throughput/MTTR (past scope).</li>
+<li><strong>How-long-open table:</strong> bucket / count / median age / oldest / JQL proof.</li>
+<li><strong>Pulse graph:</strong> weekly Created→Resolved for the pill window (Overall → default 2Q); toggle flow vs snapshot.</li>
+<li><strong>Gap taxonomy (3 cards):</strong> <code>Duds</code> (duplicate/Won&#39;t Do/Cannot Reproduce/no linked fix) · <code>NDB gaps</code> (our gaps) · <code>Other-team gaps</code>. Double-click <strong>NDB gaps</strong> to expand the 4 sub-cards: <code>TH linked</code> · <code>Bugs</code> · <code>Improvements</code> · <code>Other</code>.</li>
+<li><strong>Drill drawer:</strong> clicking any count/taxonomy opens the ticket list for that view with a per-view AI 2-liner + fix suggestion. The drawer keeps the pill.</li>
+</ol>
+<p><strong>Dual-click rule (all heroes):</strong> <strong>Count → in-app drill</strong>, <strong>Open in JIRA ↗ → exact JQL</strong> — never both external.</p>
+<p>See <a href="../pages/Oncalls-requirements.md">Oncalls requirements</a> and <a href="../pages/Oncalls-data-layer.md">Oncalls data-layer</a> for JQL contracts, gap rules, and config. Legacy <code>/oncalls-legacy</code> keeps the pulse-only comparison.</p>
 <h2>CFD / CFI</h2>
 <p><strong>Who:</strong> TPM, QA Lead
 <strong>Steps:</strong> Open KPIs → CFD/CFI → Top / Non-Top → check created vs resolved.
