@@ -244,7 +244,10 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
     return '';
   });
   const [components, setComponents] = useState(() => initialComponentsFor(initialTeam));
-  const [leaderDLs, setLeaderDLs] = useState(initialTeam?.leader_outlook_dls || []);
+  const [pmDL, setPmDL] = useState(() => (initialTeam?.leader_outlook_dls || [])[0] || '');
+  const [devDL, setDevDL] = useState(() => (initialTeam?.leader_outlook_dls || [])[1] || '');
+  const [qaDL, setQaDL] = useState(() => (initialTeam?.leader_outlook_dls || [])[2] || '');
+  const leaderDLs = [pmDL, devDL, qaDL].map(s => String(s || '').trim()).filter(Boolean);
   const [baseFilter, setBaseFilter] = useState(initialTeam?.baseFilter || initialTeam?.base_jql || '');
   const [contactRows, setContactRows] = useState(() => {
     const init = {};
@@ -412,10 +415,23 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
         {compError ? <div style={fieldError}>{compError}</div> : <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Press Enter or comma to add. Paste comma-separated. Suggestions from Atlas.</p>}
       </div>
 
-      <div style={{ marginBottom: '12px' }}>
-        <label style={fieldLabel}>Leadership Outlook DL(s) — PM, Dev, QA (3) — auto-included in JQL</label>
-        <ChipInput value={leaderDLs} onChange={setLeaderDLs} placeholder="Team-PM-Org, Team-Dev-Org, Team-QA-Org (3)" suggestions={[]} />
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Auto-added to JQL as <code>assignee in (membersOf("PM") OR membersOf("Dev") OR membersOf("QA"))</code> — no re-typing in Contacts needed. Also for email.</p>
+      <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px', background: '#f9fafb' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Leadership DLs — PM / Dev / QA (3) — auto-included in JQL</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+          <div>
+            <label htmlFor="pm-dl" style={fieldLabel}>PM DL *</label>
+            <input id="pm-dl" style={input} value={pmDL} onChange={e => setPmDL(e.target.value)} placeholder="Team-PM-Org@nutanix.com" />
+          </div>
+          <div>
+            <label htmlFor="dev-dl" style={fieldLabel}>Dev DL *</label>
+            <input id="dev-dl" style={input} value={devDL} onChange={e => setDevDL(e.target.value)} placeholder="Team-Dev-Org@nutanix.com" />
+          </div>
+          <div>
+            <label htmlFor="qa-dl" style={fieldLabel}>QA DL *</label>
+            <input id="qa-dl" style={input} value={qaDL} onChange={e => setQaDL(e.target.value)} placeholder="Team-QA-Org@nutanix.com" />
+          </div>
+        </div>
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '8px 0 0' }}>Auto → <code>assignee in (membersOf("PM") OR membersOf("Dev") OR membersOf("QA"))</code> inner OR — no re-typing in Contacts. Also for email distribution.</p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
