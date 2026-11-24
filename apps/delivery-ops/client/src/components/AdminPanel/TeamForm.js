@@ -128,8 +128,26 @@ function summary(team) {
   ].join(' · ');
 }
 
+function parseComponentsFromJql(jql) {
+  if (!jql || typeof jql !== 'string') return [];
+  const m = jql.match(/component\s+in\s*\(([^)]+)\)/i);
+  if (!m) return [];
+  return m[1].split(',').map(s => s.trim().replace(/^"|"$/g, '').replace(/\\"/g, '"')).filter(Boolean);
+}
 function esc(v) { return String(v).replace(/"/g, '\\"'); }
 function dedupeTrim(arr) { const seen = new Set(); const out = []; for (const v of arr) { const s = String(v||'').trim(); if (!s) continue; const k = s.toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(s); } return out; }
+function initialComponentsFor(team) {
+  if (!team) return [];
+  if (Array.isArray(team.components) && team.components.length) return team.components;
+  const fromJql = parseComponentsFromJql(team.baseFilter || team.base_jql || team.baseJql || '');
+  if (fromJql.length) return fromJql;
+  if (team.featureComponents && typeof team.featureComponents === 'object') {
+    // featureComponents is {Ndb: [sub1,sub2]}, but base JQL components are often top-level keys; use keys as fallback
+    const keys = Object.keys(team.featureComponents);
+    if (keys.length) return keys;
+  }
+  return [];
+}
 function buildPreview({ isShared, customKey, components, contactRows }) {
   const comps = dedupeTrim(components.filter(Boolean));
   if (comps.length === 0) return '(add at least one component to preview)';
@@ -160,10 +178,11 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
   const [name, setName] = useState(initialTeam?.name || '');
   const [teamId, setTeamId] = useState(initialTeam?.id || '');
   const [idTouched, setIdTouched] = useState(editMode);
-  const [isShared, setIsShared] = useState(initialTeam?.is_shared_project ?? true);
-  const [customKey, setCustomKey] = useState(initialTeam?.custom_project_key || initialTeam?.projectKey === 'ENG' ? '' : (initialTeam?.custom_project_key || initialTeam?.projectKey || ''));
-  const [components, setComponents] = useState(initialTeam?.components || Object.keys(initialTeam?.featureComponents || {}) || []);
+  const [isShared, setIsShared] = useState(initialTeam?.is_shared_project ?? (initialTeam?.projectKey === 'ENG' ? true : initialTeam?.custom_project_key ? false : true));
+  const [customKey, setCustomKey] = useState(initialTeam?.custom_project_key || (initialTeam?.projectKey === 'ENG' ? '' : (initialTeam?.custom_project_key || initialTeam?.projectKey || '')));
+  const [components, setComponents] = useState(() => initialComponentsFor(initialTeam));
   const [leaderDLs, setLeaderDLs] = useState(initialTeam?.leader_outlook_dls || []);
+  const [baseFilter, setBaseFilter] = useState(initialTeam?.baseFilter || initialTeam?.base_jql || '');
   const [contactRows, setContactRows] = useState(() => {
     const init = {};
     for (const r of CONTACT_ROWS) {
@@ -198,6 +217,15 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
 
   const previewJql = buildPreview({ isShared, customKey, components, contactRows });
 
+  // Keep baseFilter in sync with preview unless user has manually edited it
+  const [baseFilterTouched, setBaseFilterTouched] = useState(false);
+  React.useEffect(() => { if (!baseFilterTouched) setBaseFilter(previewJql); }, [previewJql]); // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => { // re-init if initialTeam changes (edit switch)
+    setComponents(initialComponentsFor(initialTeam));
+    setBaseFilter(initialTeam?.baseFilter || initialTeam?.base_jql || '');
+    setBaseFilterTouched(false);
+  }, [initialTeam?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const canSave = Boolean(name.trim() && teamId && components.length > 0 && (!isShared ? customKey.trim() : true)) && !saving;
 
   const handleSave = async () => {
@@ -216,6 +244,8 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       contacts,
       boardId: selection.boardId,
       sprintCalendar: selection.sprintCalendar,
+      baseFilter: baseFilter.trim() || previewJql,
+      base_jql: baseFilter.trim() || previewJql,
     };
     if (!editMode) payload.id = teamId;
     // Keep legacy fields for compat
@@ -309,6 +339,12 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
         <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Auto-generated Base JQL (preview)</div>
         <div style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>{previewJql}</div>
         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>Saved as <code>base_jql</code> + <code>baseFilter</code> (compat). Rest of app reads it unchanged.</div>
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
+        <label htmlFor="team-base-filter" style={fieldLabel}>Base Filter (collected — editable, defaults to preview above)</label>
+        <textarea id="team-base-filter" rows={3} style={{ ...input, fontFamily: 'monospace', fontSize: '12px' }} value={baseFilter} onChange={e => { setBaseFilter(e.target.value); setBaseFilterTouched(true); }} placeholder='filter=NDB-All-Base-Filter or project in (ENG,FEAT...) AND (component in (...))' />
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Collected and saved with team. If left empty, preview JQL is used. Edit only if you need to override.</p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
