@@ -55,7 +55,6 @@ const KNOWN_COMPONENTS = [
 ];
 
 const CONTACT_ROWS = [
-  { key: 'team', label: 'Team' },
   { key: 'serv_team', label: 'Serv team' },
   { key: 'doc_team', label: 'Doc Team' },
   { key: 'security_team', label: 'Security team' },
@@ -199,7 +198,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
 
   const previewJql = buildPreview({ isShared, customKey, components, contactRows });
 
-  const canSave = Boolean(name.trim() && teamId && components.length > 0 && (!isShared ? customKey.trim() : true) && selection.sprintCalendar) && !saving;
+  const canSave = Boolean(name.trim() && teamId && components.length > 0 && (!isShared ? customKey.trim() : true)) && !saving;
 
   const handleSave = async () => {
     setSaving(true);
@@ -326,7 +325,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
         <button type="button" onClick={onCancel} style={button('#f3f4f6', '#374151')}>Cancel</button>
-        <button type="button" onClick={handleSave} disabled={!canSave} style={button(canSave ? '#16a34a' : '#9ca3af')} title={!canSave ? 'Fill Team Name, Components, Custom Project (if Not Shared), and detect board calendar' : ''}>{saving ? 'Saving…' : editMode ? 'Save changes' : 'Create team'}</button>
+        <button type="button" onClick={handleSave} disabled={!canSave} style={button(canSave ? '#16a34a' : '#9ca3af')} title={!canSave ? 'Fill Team Name, Components, Custom Project (if Not Shared)' : ''}>{saving ? 'Saving…' : editMode ? 'Save changes' : 'Create team'}</button>
       </div>
     </div>
   );
