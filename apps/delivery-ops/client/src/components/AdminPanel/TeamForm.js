@@ -129,26 +129,29 @@ function summary(team) {
   ].join(' · ');
 }
 
+function esc(v) { return String(v).replace(/"/g, '\\"'); }
+function dedupeTrim(arr) { const seen = new Set(); const out = []; for (const v of arr) { const s = String(v||'').trim(); if (!s) continue; const k = s.toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(s); } return out; }
 function buildPreview({ isShared, customKey, components, contactRows }) {
-  const comps = components.filter(Boolean);
+  const comps = dedupeTrim(components.filter(Boolean));
   if (comps.length === 0) return '(add at least one component to preview)';
   const shared = 'ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO';
   const innerParts = [];
-  innerParts.push(`component in (${comps.map(c => /\s/.test(c) ? `"${c}"` : c).join(', ')})`);
-  innerParts.push(`"primary component" in (${comps.map(c => `"${c}"`).join(', ')})`);
+  innerParts.push(`component in (${comps.map(c => /\s/.test(c) || c.includes('"') ? `"${esc(c)}"` : c).join(', ')})`);
+  innerParts.push(`"primary component" in (${comps.map(c => `"${esc(c)}"`).join(', ')})`);
   const dl = [];
   const handles = [];
   for (const r of Object.values(contactRows)) {
     if (!r || !r.entries) continue;
-    if (r.isDL) dl.push(...r.entries.map(v => `membersOf("${v}")`));
-    else handles.push(...r.entries);
+    if (r.isDL) dl.push(...dedupeTrim(r.entries).map(v => `membersOf("${esc(v)}")`));
+    else handles.push(...dedupeTrim(r.entries));
   }
   const assignee = [...dl, ...handles];
   if (assignee.length) innerParts.push(`assignee in (${assignee.join(', ')})`);
   innerParts.push(`issuetype in ("Era Oncall", "ERA Oncall")`);
   const inner = innerParts.join(' OR ');
   if (isShared) return `project in (${shared}) AND (${inner})`;
-  const custom = customKey.trim().toUpperCase() || 'ERA';
+  const customKeys = dedupeTrim(String(customKey||'').split(/[,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean));
+  const custom = customKeys.length ? customKeys.join(', ') : 'ERA';
   return `(project in (${custom}) OR (project in (${shared}) AND (${inner})))`;
 }
 
