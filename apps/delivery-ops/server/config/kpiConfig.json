@@ -229,6 +229,7 @@
     ],
     "prism-infra": [],
     "ncn": [],
-    "cerebro-dr": []
+    "cerebro-dr": [],
+    "test-jql-debug": []
   }
 }

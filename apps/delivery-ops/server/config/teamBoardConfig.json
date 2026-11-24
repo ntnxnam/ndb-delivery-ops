@@ -9,10 +9,10 @@
     {
       "id": "ndb",
       "name": "NDB",
-      "boardId": 4556,
+      "boardId": 2888,
       "projectKey": "ENG",
       "featureProjectKey": "FEAT",
-      "baseFilter": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
+      "baseFilter": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",
@@ -120,15 +120,18 @@
       "defaultRelease": "NDB-2.12",
       "storyPointsField": "customfield_10002",
       "displayName": "NDB",
-      "base_jql": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
+      "base_jql": "project in (ENG, FEAT, SDL, TECHPUBS, SR, LEG, NDBECO) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))",
       "is_shared_project": true,
       "custom_project_key": null,
       "components": [
         "NDB",
         "Era",
-        "NDB Databases"
+        "NDB Databases",
+        "NDB Service"
       ],
-      "leader_outlook_dls": [],
+      "leader_outlook_dls": [
+        "Team-Ashish-Mohindroo-Org"
+      ],
       "contacts": {}
     },
     {
