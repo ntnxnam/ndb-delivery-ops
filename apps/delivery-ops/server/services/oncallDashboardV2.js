@@ -301,8 +301,8 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
   }
   const componentMix = topN(compMix, 6);
 
-  // fallback: if no components, derive from linked project mix for hotspot visibility
-  const effectiveComponentMix = componentMix.length ? componentMix : topN(openData.priorityMix, 6);
+  // hotspot must be components only — priority fallback polluted concern with "Major - P2 (9)" as fake hotspot (see 7d qual bug)
+  const effectiveComponentMix = componentMix;
 
   const paths = {
     ...buildPathCells(openData.pathStats, { linkedOutCell: cell(linkedOutCount, outJql) }),
@@ -348,6 +348,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
       engFixKeys: s.engFixes.map((e) => e.key),
       techPubsKeys: (s.techPubs || []).map((t) => t.key),
       knowledgeKeys: (s.knowledge || []).map((k) => k.key),
+      onCallFields: s.onCallFields || null,
     })),
     openFetched: openData.pathStats.openFetched,
     closedStacksPreview: closedStacks.slice(0, 20).map((s) => ({ key: s.key, summary: s.summary, resolution: s.resolution, status: s.status })),

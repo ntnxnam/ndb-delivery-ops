@@ -728,7 +728,9 @@ router.post('/oncall-concern', validateJiraTokenMiddleware, async (req, res) => 
       health: intelligence.health,
       workflow: intelligence.workflow,
       gapTaxonomy: intelligence.gapTaxonomy,
-      componentMix: intelligence.componentMix || intelligence.priorityMix || [],
+      componentMix: intelligence.componentMix || [],
+      stacksPreview: intelligence.stacksPreview || [],
+      openTickets: intelligence.openTickets || [],
       validKeys: intelligence.gapMeta ? [...(intelligence.gapMeta.dudsKeys || []), ...(intelligence.gapMeta.ndbGapsKeys || []), ...(intelligence.gapMeta.otherTeamGapsKeys || [])].slice(0, 20) : (intelligence.openTickets || []).slice(0, 8).map((t) => t.key),
       agedOpenDays: intelligence.agedOpenDays,
     };

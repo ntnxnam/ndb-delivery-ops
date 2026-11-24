@@ -1639,7 +1639,17 @@ async function generatePageCompressBrief(story, validKeys = []) {
 
 // ── OnCall V2 — Concern (fused quant+qual) + Slice prompts ──────────────────
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Input gives timeframe, hero counts, health MTTR/throughput, workflow buckets, gap taxonomy and top 2 components. Output 1 paragraph of 95-105 words: open now/aged/closed in window/MTTR median/p90/net, then hotspot like "last 2Q saw hotspot in Upgrade area (9) + MSSQL (7)" using componentMix counts verbatim, then duds vs NDB vs other-team, then Need Info vs Waiting pressure. Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive tone.`;
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Don't parrot numbers in a table — interpret them.
+
+Input: TIMEFRAME, HERO (open, aged>Xd, needInfo, waitingCustomer, closedInWindow), HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY (duds/ndbGaps/otherTeamGaps + ndbSub TH/bugs/improvements/other), HOTSPOT_COMPONENTS top2.
+
+Write 1 paragraph 95-115 words + 2-line chase. Paragraph must:
+- Headline the real concern: what does 58% agedShare + MTTR 15d/19d + throughput 6/net 1 mean? Is backlog clearing or stalling? Say it in plain English.
+- Hotspot: name top2 components verbatim like "last 7d hotspot in <A> (9) + <B> (7)" — if "no component hotspot" say backlog is diffuse, not concentrated.
+- Gap story: duds vs NDB gaps vs other-team — is quality self-inflicted or downstream? Use ndbSub split to name where eng gaps land.
+- Workflow pressure: Need Info vs Waiting — who stalls whom? Customer or us?
+
+Add 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent. Decisive, no jargon, no table dump.`;
 
 const ONCALL_SLICE_SYSTEM_PROMPT = `You are a TPM writing a 2-line drawer slice for one OnCalls view (Need Info, Waiting for Customer, Duds, NDB gaps, Other-team, or NDB sub-drill). Input gives slice keys, timeframe, ages, and owners. Output exactly 2 lines: line 1 = why stuck in this view (status dwell + gap% context), line 2 = "Ask <owner> to <action> on <keys> by <timeframe>" with concrete next step. Keep each line under 180 characters. Copy ticket keys verbatim — never invent or paraphrase keys.`;
 
@@ -1651,6 +1661,7 @@ function buildOncallConcernPrompt(intelligence) {
   const workflow = i.workflow || i.gapTaxonomy || {};
   const gap = i.gapTaxonomy || {};
   const topComponents = i.componentMix || i.topComponents || [];
+  // no priority fallback — that leaked P2/P1 as fake hotspot "Major - P2 (9)"
   const top2 = (topComponents || []).slice(0, 2).map((c) => `${c.name || c.component || c.key} (${c.count})`).join(' + ') || 'no component hotspot';
   const validKeys = Array.isArray(i.validKeys) ? i.validKeys : [];
   const validBlock = validKeys.length
@@ -1661,7 +1672,21 @@ function buildOncallConcernPrompt(intelligence) {
   const wfLine = `WORKFLOW: needInfo=${workflow.needInfo?.count ?? 0} waitingCustomer=${workflow.waiting?.count ?? 0}`;
   const gapLine = `GAP_TAXONOMY: duds=${gap.duds?.count ?? 0} ndbGaps=${gap.ndbGaps?.count ?? 0} otherTeamGaps=${gap.otherTeamGaps?.count ?? 0} ndbSub TH=${gap.ndbSub?.thLinked?.count ?? 0} bugs=${gap.ndbSub?.bugs?.count ?? 0} improvements=${gap.ndbSub?.improvements?.count ?? 0} other=${gap.ndbSub?.other?.count ?? 0}`;
   const hotspotLine = `HOTSPOT_COMPONENTS top2: ${top2}`;
-  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+  // Enriched stack blurbs — top 5 open OnCalls with OnCall screen fields (Loom-discovered CFs via oncallConfig.customFields)
+  const stacks = Array.isArray(i.stacksPreview) ? i.stacksPreview : Array.isArray(i.openTickets) ? i.openTickets : [];
+  const blurbLines = stacks.slice(0, 5).map((s) => {
+    const oc = s.onCallFields || {};
+    const bits = [`${s.key}: ${String(s.summary || '').slice(0, 120)} [${s.status || '?'} ${s.ageDays ?? '?'}d]`];
+    if (oc.onCallRelief) bits.push(`Relief:${oc.onCallRelief}`);
+    if (oc.correctiveActionCompleted) bits.push(`Corrective:${oc.correctiveActionCompleted}`);
+    if (oc.rootCause) bits.push(`RootCause:${String(oc.rootCause).slice(0, 180).replace(/\n/g,' ')}`);
+    if (oc.workaroundUsed) bits.push(`Workaround:${String(oc.workaroundUsed).slice(0, 200).replace(/\n/g,' ')}`);
+    if (oc.rcaStatus) bits.push(`RCA:${oc.rcaStatus}`);
+    if (oc.testEscape) bits.push(`TestEscape:${oc.testEscape}`);
+    return `- ${bits.join(' | ')}`;
+  }).join('\n');
+  const stackBlock = blurbLines ? `STACK SAMPLE (top 5 open — use for qualitative hotspot/gap themes, not just counts):\n${blurbLines}` : '';
+  return `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${wfLine}\n${gapLine}\n${hotspotLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above. Use Technical Category/RootCause/Workaround themes from STACK SAMPLE for hotspot narrative — do not invent themes.`;
 }
 
 function buildOncallSlicePrompt(slice) {
