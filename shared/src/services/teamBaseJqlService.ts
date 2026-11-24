@@ -4,7 +4,7 @@
  * Replaces manual saved-filter `filter=NDB-All-Base-Filter` dependency with
  * component + DL/Handle driven construction:
  *   - ENG is shared engineering project
- *   - FEAT/SDL/TECHPUBS/SR/LEG/NDBECO are horizontal compliance shared projects
+ *   - FEAT/SDL/TECHPUBS/SR/LEG are horizontal compliance shared projects (NDBECO is private for NDB)
  *   - ERA/NDBECO/NCN are private custom projects (comma-separated)
  *
  * JQL is built to match existing codebase convention:
@@ -17,13 +17,12 @@
 // Horizontal shared compliance projects — derived from teamBoardConfig companionDisciplines
 // plus FEAT (global Feature intake) and ENG (shared eng basin).
 // TECHPUBS key is "TECHPUBS" (not "TECH PUBS"); NDBQUAL is legacy alias for NDBECO.
+// ONCALL, TH, ACP, LBDR are active shared projects (not legacy) per 2026-11-24 correction.
 export const SHARED_ENG_PROJECT = 'ENG';
-export const HORIZONTAL_PROJECTS = ['FEAT', 'SDL', 'TECHPUBS', 'SR', 'LEG', 'NDBECO'] as const;
+export const HORIZONTAL_PROJECTS = ['FEAT', 'ONCALL', 'TH', 'SDL', 'TECHPUBS', 'SR', 'LEG', 'ACP', 'LBDR'] as const;
 export const SHARED_PROJECTS_ALL = [SHARED_ENG_PROJECT, ...HORIZONTAL_PROJECTS] as const;
 
-// Known companion projects that may appear in old JQLs (ONCALL/TH/ACP/LBDR) — kept for parity
-// but not auto-included unless explicitly requested. Default shared set is the 7 above.
-export const LEGACY_SHARED_PROJECTS = ['ONCALL', 'TH', 'ACP', 'LBDR'] as const;
+export const LEGACY_SHARED_PROJECTS = [] as const;
 
 export interface BuildBaseJqlParams {
   teamName: string;

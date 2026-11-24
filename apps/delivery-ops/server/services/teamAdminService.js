@@ -26,8 +26,8 @@ const LEGACY_FIELDS = ['projectType', 'versionPatterns', 'sprintBaseFilter'];
 const CONTACT_ROW_KEYS = ['team', 'serv_team', 'doc_team', 'security_team', 'legal', 'documentation', 'trade_compliance', 'others'];
 
 // Shared projects — single source in teamBaseJqlService; mirrored here for CJS compat (keep in sync via CONSOLIDATION.md #B1)
-// TODO(B3): derive from teamBoardConfig companionDisciplines + ENG via productService (product-agnostic)
-const SHARED_PROJECTS_ALL = ['ENG', 'FEAT', 'SDL', 'TECHPUBS', 'SR', 'LEG', 'NDBECO'];
+// ONCALL, TH, ACP, LBDR are active shared (not legacy) — shared is ENG+FEAT/ONCALL/TH/SDL/TECHPUBS/SR/LEG/ACP/LBDR (10)
+const SHARED_PROJECTS_ALL = ['ENG', 'FEAT', 'ONCALL', 'TH', 'SDL', 'TECHPUBS', 'SR', 'LEG', 'ACP', 'LBDR'];
 
 function httpError(statusCode, error, message) {
   const err = new Error(message || error);

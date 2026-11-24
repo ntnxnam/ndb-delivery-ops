@@ -55,6 +55,24 @@ describe('sprintCalendar', () => {
     it('throws when the board has no dated sprints', () => {
       expect(() => inferSprintCalendarFromSprints([{ name: 'Future' }])).toThrow(/no dated sprints/);
     });
+
+    it('uses recent 10 sprints for 21d cadence — 15x14d old + 8x21d recent => 21', () => {
+      const sprints = [];
+      // 15 old 14-day sprints
+      for (let i = 0; i < 15; i += 1) {
+        const start = new Date(Date.UTC(2023, 0, 1 + i * 14));
+        const end = new Date(Date.UTC(2023, 0, 14 + i * 14));
+        sprints.push({ name: `S${i + 1}`, startDate: start.toISOString(), endDate: end.toISOString() });
+      }
+      // 8 recent 21-day sprints
+      for (let i = 0; i < 8; i += 1) {
+        const start = new Date(Date.UTC(2024, 5, 1 + i * 21));
+        const end = new Date(Date.UTC(2024, 5, 21 + i * 21));
+        sprints.push({ name: `S${16 + i}`, startDate: start.toISOString(), endDate: end.toISOString() });
+      }
+      const inferred = inferSprintCalendarFromSprints(sprints);
+      expect(inferred.sprintDays).toBe(21);
+    });
   });
 
   describe('collectSprintCalendarFromBoard', () => {
