@@ -1,8 +1,8 @@
-# Oncalls — Data Layer
+# Oncalls V2 — Data Layer
 
-**Route**: `/oncalls`  
-**Component**: `OncallsPage`  
-**Hook**: `useOncalls`
+**Route**: `/oncalls` (V2) · `/oncalls-legacy` (pulse-era)  
+**Component**: `OncallsV2Page` · `OncallsPage` (legacy)  
+**Hooks**: `useOncallsV2` · `useOncalls` (legacy)
 
 ---
 
@@ -10,73 +10,126 @@
 
 | Method | Path | When |
 |--------|------|------|
-| GET | `/api/jira/oncalls?teamId=` | Initial load / team change |
-| POST | `/api/jira/oncalls/refresh` | Pull from JIRA |
-| POST | `/api/ai/oncall-summary` | Generate AI Briefing |
-| POST | `/api/ai/oncall-blurbs` | Path / escalation drill About + comments |
+| GET | `/api/jira/oncalls?teamId=&timeframe=&v2=` | Initial load / team or timeframe change (V2) |
+| GET | `/api/jira/oncalls/v2?teamId=&timeframe=` | Explicit V2 alias (same) |
+| POST | `/api/jira/oncalls/refresh` | Pull from JIRA (V2 when `timeframe`/`v2` present, else legacy) |
+| POST | `/api/jira/oncalls/v2/refresh` | Pull V2 alias |
+| POST | `/api/ai/oncall-concern` | Generate fused AI Concern (auto after metrics load + on Regenerate + on pill/hero/taxonomy change) |
+| POST | `/api/ai/oncall-slice` | Per-view AI 2-liner for drill drawer (on open drill) |
+| GET | `/api/jira/oncalls?teamId=` | Legacy initial load (no timeframe) |
+| POST | `/api/ai/oncall-summary` | Legacy AI briefing (pulse-era) |
+| POST | `/api/ai/oncall-blurbs` | Legacy path drill About (pulse-era) |
 
 ---
 
-## Server flow
+## Server flow — V2
 
 ```
-GET/POST /api/jira/oncalls
-  → checkKpiViewAuthorization
-  → oncallService.getDashboard({ token, teamId })  [orchestrator]
-       → oncallConfigResolve (OnCalls KPI baseQuery from kpiConfig)
-       → buildPulse({ baseJql: baseScopeJql, optionalHeroes: p0/p1 })  [soft-fail]
-         Current: pulse/path = OnCall seeds; path chips may be sample-capped (key in (...))
-         Portfolio: gap chips sample-scoped; linked footprint = linkedIssuesOf(KPI baseQuery), all statuses
-         Past: closed seeds in pastLookbackDays + path chips + tickets table
-       → oncallStacksService (open/past classify)
-       → oncallEscalationService (CFD/CFI KPIs + days-to-clear)
-       → deterministic RAG
+GET /api/jira/oncalls?timeframe=&v2=         → checkKpiViewAuthorization
+GET /api/jira/oncalls/v2?timeframe=          → oncallDashboardV2.getDashboard({ token, teamId, timeframe })  [5-way parallel]
+  1. resolveRuntimeConfig(teamId)            → baseScopeJql (OnCalls KPI baseQuery from kpiConfig), onCallProject, techHelpProjects, agedOpenDays, needInfoDays/waitingForCustomerDays
+  2. buildTimeframeHeroQueries(cfg, tf)      → heroes + workflow + TIMEFRAMES{7d:7,15d:15,1M:30,1Q:90,2Q:180,1Y:365,18M:540,Overall:null} + timeframeClause('resolved', tf) = resolved >= -Nd or null
+  3. runCounts(queries)                      → jira.searchCount per hero (concurrency 6, soft-fail per hero)
+  4. fetchOpenStacks(token, cfg)              → searchPages open OnCalls + linked fetch + classifyStacksFromIssues → openStacks, assigneeMix, priorityMix, componentMix
+  5. fetchClosedStacks(token, cfg, tf)        → searchPages closed seeds (seed AND statusCategory=Done AND resolved >= -Nd || no clause) cap 500 → classifyStacksFromIssues → closedStacks
+  6. linkedOut searchCount linkedIssuesOf(baseScopeJql)
+  7. buildPulse({ token, baseJql, optionalHeroes:{p0,p1}, window: computePulseWindow(tf) }) — Overall → default 2Q pulse; soft-fail
+  8. classifyGapBuckets(closedStacks, cfg)   → duds/ndbGaps/otherTeamGaps; buildGapCells
+     classifyNdbSubGaps(ndbGaps, cfg)         → thLinked/bugs/improvements/other; buildNdbSubCells
+  9. health { mttrMedian, p90, net, throughput, agedShare } + workflow buckets + componentMix topN
+  → { teamId, baseScopeJql, timeframe, hero, workflow, gapTaxonomy, gapMeta, health, pulse, paths, componentMix, openTickets, stacksPreview, closedStacksPreview, errors }
 
-POST /api/ai/oncall-summary  Body: { teamId, dashboard? }
-  → oncallAiSummaryService.buildIntelligence
-  → naiService.generateOncallSummary
+POST /api/jira/oncalls/refresh               → same, force: true path (authenticatedPost) with { teamId, timeframe, v2 }
+GET/POST /api/jira/oncalls/v2/*             → same V2 orchestrator
 
-POST /api/ai/oncall-blurbs  Body: { teamId, keys }
-  → oncallBlurbService.buildOncallBlurbs
-       → narrative bundles + NAI About (20s batch timeout)
-       → about (NAI) or pathHint (structured); UI shows one drawer banner when about missing
+POST /api/ai/oncall-concern  Body: { teamId, timeframe, dashboard }
+  → oncallDashboardV2.getDashboard if dashboard missing
+  → naiService.buildOncallConcernPrompt / generateOncallConcern(concernInput { hero, health, workflow, gapTaxonomy, componentMix, validKeys })
+  → Loom builds prompt, Lighthouse calls NAI (ONCALL_CONCERN)
+
+POST /api/ai/oncall-slice  Body: { teamId, timeframe, view, keys, meta }
+  → naiService.generateOncallSlice({ view, keys, timeframe, meta })  (ONCALL_SLICE)
 ```
 
-Modules: `oncallService.js` (orchestrator) · `oncallConfigResolve.js` · `oncallStacksService.js` · `oncallEscalationService.js` · `kpiPulseService.js` · `oncallBlurbService.js`
+Legacy flow (no timeframe): `GET/POST /api/jira/oncalls` → `checkKpiViewAuthorization` → `oncallService.getDashboard({ token, teamId })` → `oncallConfigResolve` → `buildPulse` → `oncallStacksService` → `oncallEscalationService` → RAG. See pre-V2 docs.
+
+Modules (V2): `oncallDashboardV2.js` (orchestrator) · `oncallGapService.js` (taxonomy) · `oncallConfigResolve.js` · `oncallStacksService.js` · `kpiPulseService.js` · `oncallService.js` (legacy) · `naiService.js` (ONCALL_CONCERN + ONCALL_SLICE) · `routes/jira/oncalls.js` · `routes/ai.js` · `mcp/shared/tools/buildOncallPrompt.ts`
 
 ---
 
-## Domain classification
+## Domain classification — V2 gap taxonomy
 
-| Role | Rule |
-|------|------|
-| `oncall` | Seed issue in OnCall project |
-| `techhelp` | Linked issue whose project is in `oncallConfig.techHelpProjects` |
-| `knowledge` | Linked SR / knowledge projects |
-| `techpubs` | Linked TECHPUBS |
-| `eng_fix` | Linked issue that is neither OnCall nor TechHelp (optional allowlist `engFixProjects`; empty = any) |
+| Bucket | Rule |
+|--------|------|
+| `duds` | `resolution ∈ {duplicate, won't do, cannot reproduce, invalid}` (case-insensitive, see `DUD_RESOLUTIONS`) **or** no linked fix |
+| `ndbGaps` | Linked fix projectKey starts with `NDB` (or `cfg.gapProjectPrefixes` tenant override) or component contains NDB |
+| `otherTeamGaps` | Any other linked fix (outside NDB family) |
+| `ndbSub.thLinked` | `ndbGaps` with TechHelp linked |
+| `ndbSub.bugs` | Linked issuetype contains `bug` |
+| `ndbSub.improvements` | Linked issuetype contains `improvement`/`story`/`task` |
+| `ndbSub.other` | Remaining NDB gaps |
 
-### Escalation to CFD/CFI (or other KPIs)
+All taxonomy cells are `key in (…)` JQL proofs. JQL never edits `kpiConfig` baseQuery — composes `resolved >= -Nd` or `status = "…"` onto seed only.
 
-Config: `oncallConfig.escalation.kpiNamePattern` (default `CFD|CFI`).
+### Timeframe pills → JQL
 
-1. Fetch OnCalls in window: open OR `resolved >= -{lookbackDays}d`
-2. Collect linked non-OnCall/non-TechHelp keys
-3. For each matched KPI, resolve filter JQL and intersect `key in (linkedKeys) AND (kpiJql)`
-4. Days clock: `OnCall.created → linked.resolutiondate` (still-open rows show days so far)
-5. UI: `EscalationDrill` pairs; **status chip = real JIRA `status`** (Closed stays Closed). Modes: `stillOpen` / `resolved` (done bucket) / `withEscalation`.
-6. **Open in JIRA proof** (filter-style, not `key in (...)`):
-   - Reached: `(OnCall window) AND issueFunction in linkedIssuesOf("<CFD|CFI KPI union>")`
-   - Still open: same with KPI union ∧ `statusCategory != Done`
-   - Cleared: linked to done KPI tickets and `issueFunction not in linkedIssuesOf(open KPI union)`
-   Tile counts use `searchCount` on those JQLs so Open in JIRA matches the number.
+| Pill | `timeframeClause('resolved', pill)` | Notes |
+|------|-------------------------------------|-------|
+| `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` · `18M` | `resolved >= -Nd` (N = 7/15/30/90/180/365/540) | Windowed closed count |
+| `Overall` | `null` (no clause) | All closed history — server omits date filter |
+
+### Workflow buckets
+
+- `Need Info` → `status = "Need Info" AND statusCategory != Done`
+- `Waiting for Customer` → `status = "Waiting for Customer" AND statusCategory != Done`
+- Counts from `countSearch` (JQL) + bucket totals from `openTickets` status filter; `needInfoDays`/`waitingForCustomerDays` from `oncallConfig.json` are UI meta (dwell nudge), not JQL dwell (changelog dwell planned).
+
+---
+
+## Client flow — V2
+
+```
+useOncallsV2(teamId, initial='7d')
+  load({ force=false }) → authenticatedGet('/api/jira/oncalls', { teamId, timeframe, v2:'1' })
+  load({ force=true })  → authenticatedPost('/api/jira/oncalls/refresh', { teamId, timeframe, v2:'1' })
+  set timeframe → effect resets aiConcern + reloads
+
+  auto: after data.asOf changes → POST /api/ai/oncall-concern { teamId, timeframe, dashboard }
+  on drill open(view, keys, meta) → POST /api/ai/oncall-slice { view, keys, timeframe, meta }
+
+OncallsV2Page
+  PillBar(8) sticky top + in drawer → deriveKeysForView(mode) caps 12 keys from openTickets / gapMeta / closedStacksPreview
+  health + taxonomy cards: count→openDrill, jql→Open in JIRA ↗
+  NDB double-click → showNdbSub toggle
+  PathDrill({ mode, tickets, jql, cellCount, scope, timeframe, aiSlice })
+```
+
+Legacy: `useOncalls` → `GET /api/jira/oncalls?teamId=` (no timeframe) → `OncallsPage` with `KpiPulseBand`.
+
+---
+
+## Config
+
+`server/config/oncallConfig.json` (per D1 — no hardcoded product strings):
+
+| Field | Purpose |
+|-------|---------|
+| `onCallProject`, `techHelpProjects`, `knowledgeProjects`, `techPubsProjects`, `engFixProjects` | Project scoping for stacks/gaps |
+| `agedOpenDays` (14) | Aged threshold for hero/meta + drawer filter |
+| `needInfoDays` (10), `waitingForCustomerDays` (21) | UI dwell nudge meta (status-only JQL) |
+| `gapProjectPrefixes` (optional) | Tenant override for NDB-family detection; fallback `['NDB','NDB-']` |
+| `openStatusJql`, `doneStatusJql` | `statusCategory` clauses |
+| `pastLookbackDays` (legacy), `maxOpenIssuesFetch`, `maxPastIssuesFetch` | Fetch caps |
+
+MCP: `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only) + `mcp/lighthouse/src/tools/generateOncallBrief.ts` (Lighthouse, NAI call).
 
 ---
 
 ## Caching
 
-- Ticket narrative / blurbs: short-lived per key
-- Dashboard counts + pulse: live on load / Pull (no durable cache)
+- Dashboard counts + pulse + stacks + gaps: live on load / Pull (no durable cache)
+- Ticket narrative / blurbs (legacy): short-lived per key
+- `oncallDashboardV2.getDashboard` parallelizes with `allSettled`; partial errors surface in `errors` map
 
 ---
 
@@ -85,7 +138,8 @@ Config: `oncallConfig.escalation.kpiNamePattern` (default `CFD|CFI`).
 | Case | Client |
 |------|--------|
 | 403 | Show access denied |
-| JIRA timeout / partial count errors | Surface `errors` map; show zeros with warning |
-| `errors.pulse` | KpiPulseBand error; rest of page loads |
-| NAI missing key | 400 `NAI_API_KEY is not set` |
-| NAI / About timeout | Drawer banner once; pathHint on rows; AI panel error for briefing |
+| `errors.counts` / `errors.openStacks` / `errors.closedStacks` / `errors.gapTaxonomy` | Hero shows 0 with jql null; rest of page loads |
+| `errors.pulse` | KpiPulseBand error banner; heroes/taxonomy still load |
+| `notConfigured` (no baseScopeJql) | Show config hint ("Add OnCalls KPI in Admin → KPIs") |
+| `NAI_API_KEY not set` on AI call | 400 + setup hint; quantitative page works |
+| NAI timeout / 502 | AI panel shows error with retry; "Regenerate" reuses snapshot |

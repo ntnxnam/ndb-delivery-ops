@@ -51,6 +51,11 @@
 <td>No auth; see <code>server/services/emailService.js</code> (sacred)</td>
 </tr>
 <tr>
+<td>OnCalls V2</td>
+<td><code>server/config/oncallConfig.json</code> + <code>server/services/oncallDashboardV2.js</code> + <code>oncallGapService.js</code></td>
+<td>Timeframe pills <code>7d</code>/<code>15d</code>/<code>1M</code>/<code>1Q</code>/<code>2Q</code>/<code>1Y</code>/<code>18M</code>/<code>Overall</code> (<code>Overall</code> = no date clause); workflow buckets <code>needInfoDays</code> (10) / <code>waitingForCustomerDays</code> (21) / <code>agedOpenDays</code> (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (<code>gapProjectPrefixes</code> tenant override, default <code>NDB</code>); health MTTR/throughput; component hotspot. See <a href="../pages/Oncalls-requirements.md">Oncalls requirements</a> + <a href="../pages/Oncalls-data-layer.md">Oncalls data-layer</a> + <a href="../api/jira.md#oncalls">API — OnCalls V2</a></td>
+</tr>
+<tr>
 <td><code>jiraFieldsConfig.json</code></td>
 <td><code>server/config</code> + <code>client/src/config</code></td>
 <td>Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via <code>server/utils/jiraFieldsConfig.js</code> getFieldId/getLabelJql and <code>client/src/utils/jiraFields</code> + fieldConfig ensureLoaded() via <code>GET /api/config/jira-fields</code></td>
@@ -154,6 +159,35 @@
 <td>Per-request <code>mkdtemp</code> via <code>shared/src/services/csvConverterService.ts</code>; never executes from the upload dir (downloaded files are untrusted — see project <code>AGENTS.md</code> environment note).</td>
 </tr>
 </tbody></table>
+<h2>OnCalls V2 — extra config</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Route</td>
+<td><code>GET /api/jira/oncalls?timeframe=&amp;v2=</code> + <code>GET /api/jira/oncalls/v2</code> + <code>POST /api/jira/oncalls/refresh</code> + <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code> — see <a href="../api/jira.md#oncalls">API — OnCalls</a></td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>validateJiraTokenMiddleware</code> + <code>apiLimiter</code> (same as <code>POST /api/ai/chat</code>); permission <code>kpi_view</code></td>
+</tr>
+<tr>
+<td>MCP</td>
+<td><code>mcp/shared/tools/buildOncallPrompt.ts</code> (Loom, read-only, builds concern prompt) → <code>mcp/lighthouse</code> <code>generateOncallBrief</code> (calls NAI)</td>
+</tr>
+<tr>
+<td>NDB override</td>
+<td><code>oncallConfig.json:gapProjectPrefixes</code> — set your tenant prefix (e.g. <code>[&quot;ENG&quot;,&quot;PRISM&quot;]</code>) to replace <code>NDB</code> default; component-contains-NDB fallback stays</td>
+</tr>
+<tr>
+<td>Overall</td>
+<td><code>Overall</code> pill sends no <code>resolved &gt;= -Nd</code> clause — payload uses <code>seed AND statusCategory=Done</code> only; QA spot-check: pick one pill and verify hero JQL matches count</td>
+</tr>
+</tbody></table>
 <h2>RBAC</h2>
 <p>See <code>RBAC_GUIDE.md</code> and <code>docs/api/</code> per <code>api-docs-required.mdc</code>.</p>
 <h2>Deployment</h2>
@@ -194,6 +228,11 @@
 <td>401 on <code>POST /api/bin-packing/convert</code></td>
 <td>Missing/invalid JIRA Bearer token</td>
 <td>Same fix as <code>POST /api/ai/chat</code> — supply <code>Authorization: Bearer &lt;JIRA_PAT&gt;</code></td>
+</tr>
+<tr>
+<td>401 on <code>POST /api/ai/oncall-concern</code> / <code>oncall-slice</code></td>
+<td>Missing JIRA token / <code>kpi_view</code></td>
+<td>Supply <code>Authorization: Bearer &lt;PAT&gt;</code>; check <code>allowedUsers.json</code> maps <code>kpi_view</code></td>
 </tr>
 <tr>
 <td>413 / 422 on bin-packing upload</td>

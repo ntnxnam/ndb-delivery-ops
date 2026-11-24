@@ -336,7 +336,32 @@ Notes:
 - `aiConnector` also rejects `NAI_API_BASE_URL` containing `localhost`/`127.0.0.1` when `NODE_ENV=production`.
 - Admin setup is in [ADMIN_GUIDE.md](../guides/ADMIN_GUIDE.md#ai--nai-configuration) and [NAI_API_SETUP.md](../guides/NAI_API_SETUP.md); env template in `apps/delivery-ops/server/.env.example`.
 
-## 8. NAI API Call Pattern
+## 8. OnCalls V2 AI — Concern + Slice
+
+### 8.1 Prompts
+
+- `server/services/naiService.js` defines `ONCALL_CONCERN_SYSTEM_PROMPT` + `buildOncallConcernPrompt(concernInput)` and `ONCALL_SLICE_SYSTEM_PROMPT` + `buildOncallSlicePrompt({view,keys,meta})`
+- Concern fuses `hero{open,agedOpen,needInfoOpen,waitingCustomerOpen,closedInWindow}` + `health{mttrMedian,p90,net,throughput}` + `workflow` + `gapTaxonomy` + `componentMix top-2` for the pill
+- Slice contextualizes one view (e.g. `needInfo` + its top keys + count) with 2-line summary + fix suggestion; `view` drives tone (duds → dup triage, NDB gaps → eng owner)
+
+### 8.2 Endpoints
+
+```
+POST /api/ai/oncall-concern { teamId, timeframe, dashboard }
+  → concernInput { timeframe, hero, health, workflow, gapTaxonomy, componentMix, validKeys }
+  → naiService.generateOncallConcern → summary (~100w)
+
+POST /api/ai/oncall-slice { teamId, view, keys, timeframe, meta }
+  → naiService.generateOncallSlice → summary (2-liner + fix)
+```
+
+Both are `validateJiraTokenMiddleware` + `kpi_view` (same as chat), MCP split: `mcp/shared/tools/buildOncallPrompt.ts` (Loom, prompt build) → `mcp/lighthouse` tool calls NAI.
+
+### 8.3 Ticket Key Integrity
+
+OnCalls V2 prompts include `VALID TICKET KEYS` list (top keys from `gapMeta` or `openTickets`) same as exec-summary integrity rule §6. Model must cite only those keys.
+
+## 9. NAI API Call Pattern
 
 ```javascript
 async function callNAI({ systemPrompt, userPrompt, maxTokens = 2048 }) {

@@ -1,9 +1,9 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-11-19
-coversVersion: "3.0"
+lastUpdated: 2026-11-24
+coversVersion: "3.1"
 env: prod
-source: doc-admin-guide @ 2026-11-19
+source: doc-admin-guide @ 2026-11-24
 ---
 
 # Admin Guide
@@ -32,6 +32,7 @@ source: doc-admin-guide @ 2026-11-19
 | Risk trail | `client/src/utils/riskHistoryDisplay.js` (SoT `RAG_COLORS`) + `server/services/releaseHistoryService.js` (`includeRiskIndicator:true`) | `POST /api/jira/release-items-history` → `checkpointHistory[key].riskIndicator`; out-of-scope: FeatureDashboard/EmailSender (see data-layer dispositions) |
 | RBAC | `server/config/allowedUsers.json` + `server/routes/auth.js::LEGACY_PERMISSION_MAPPING` | Keep client mirror in sync |
 | SMTP | `mailrelay.dyn.nutanix.com:25` | No auth; see `server/services/emailService.js` (sacred) |
+| OnCalls V2 | `server/config/oncallConfig.json` + `server/services/oncallDashboardV2.js` + `oncallGapService.js` | Timeframe pills `7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall` (`Overall` = no date clause); workflow buckets `needInfoDays` (10) / `waitingForCustomerDays` (21) / `agedOpenDays` (14); gap taxonomy duds/NDB gaps/other-team + NDB sub-drill (`gapProjectPrefixes` tenant override, default `NDB`); health MTTR/throughput; component hotspot. See [Oncalls requirements](../pages/Oncalls-requirements.md) + [Oncalls data-layer](../pages/Oncalls-data-layer.md) + [API — OnCalls V2](../api/jira.md#oncalls) |
 | `jiraFieldsConfig.json` | `server/config` + `client/src/config` | Single SoT for fields+labels JQL taxonomy (fields: 8 cats checkpoint/people/content/links/indicators/classification/relationships/agile; labels: porExclude, lifecycle{deferred,mustfix,wishlist,longTermFunded,extension}, dependency.trainAsk, testType.systemTest) — consumers via `server/utils/jiraFieldsConfig.js` getFieldId/getLabelJql and `client/src/utils/jiraFields` + fieldConfig ensureLoaded() via `GET /api/config/jira-fields` |
 
 ## AI / NAI Configuration
@@ -82,6 +83,16 @@ per-call override (aiConnector options)
 | Body parser | `bodyParser.json({ limit: '15mb' })` in `server/index.js` — raised from 1 MB to accommodate 10 MB binary (≈13.3 MB b64) via the JSON path. `bodyParser.urlencoded` also `15mb`. |
 | Temp files | Per-request `mkdtemp` via `shared/src/services/csvConverterService.ts`; never executes from the upload dir (downloaded files are untrusted — see project `AGENTS.md` environment note). |
 
+## OnCalls V2 — extra config
+
+| Concern | Detail |
+|---------|--------|
+| Route | `GET /api/jira/oncalls?timeframe=&v2=` + `GET /api/jira/oncalls/v2` + `POST /api/jira/oncalls/refresh` + `POST /api/ai/oncall-concern` / `oncall-slice` — see [API — OnCalls](../api/jira.md#oncalls) |
+| Auth | `validateJiraTokenMiddleware` + `apiLimiter` (same as `POST /api/ai/chat`); permission `kpi_view` |
+| MCP | `mcp/shared/tools/buildOncallPrompt.ts` (Loom, read-only, builds concern prompt) → `mcp/lighthouse` `generateOncallBrief` (calls NAI) |
+| NDB override | `oncallConfig.json:gapProjectPrefixes` — set your tenant prefix (e.g. `["ENG","PRISM"]`) to replace `NDB` default; component-contains-NDB fallback stays |
+| Overall | `Overall` pill sends no `resolved >= -Nd` clause — payload uses `seed AND statusCategory=Done` only; QA spot-check: pick one pill and verify hero JQL matches count |
+
 ## RBAC
 
 See `RBAC_GUIDE.md` and `docs/api/` per `api-docs-required.mdc`.
@@ -100,6 +111,7 @@ See `RBAC_GUIDE.md` and `docs/api/` per `api-docs-required.mdc`.
 | `NAI_API_KEY is not set` on AI call | `NAI_API_KEY` missing from `server/.env` | Set `NAI_API_KEY` (NuToken from `tokens.corp.nutanix.com`); see [NAI_API_SETUP.md](./NAI_API_SETUP.md) |
 | `NAI_API_BASE_URL is not set` | No `NAI_API_BASE_URL` env and `aiConfig.json` missing/misconfigured | Set `NAI_API_BASE_URL` in env or ensure `server/config/aiConfig.json` has `baseUrl` |
 | 401 on `POST /api/bin-packing/convert` | Missing/invalid JIRA Bearer token | Same fix as `POST /api/ai/chat` — supply `Authorization: Bearer <JIRA_PAT>` |
+| 401 on `POST /api/ai/oncall-concern` / `oncall-slice` | Missing JIRA token / `kpi_view` | Supply `Authorization: Bearer <PAT>`; check `allowedUsers.json` maps `kpi_view` |
 | 413 / 422 on bin-packing upload | File > 10 MB or unsupported type | Reduce file or convert to CSV/XLSX; see [CSV_CONVERTER_GUIDE.md](../product/CSV_CONVERTER_GUIDE.md) |
 | TCMS Quality shows "Not Set" | TCMS timeout / no runs in window | Check TCMS reachability; Last 4 weeks shows Not Set when no runs in window (no fallback to Overall). Time-filtered calls use `/api/v1/all_test_cases/aggregate/metrics` (`time_filter=four_weeks`, `target={milestone}-qcow2`). |
 | TCMS Functional/System identical | Clone caveat (pending `test_category` filter) | Expected until TCMS ships filter; see `docs/tcms-rows-followup.md` |

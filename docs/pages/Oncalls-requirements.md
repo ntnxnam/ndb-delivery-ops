@@ -1,25 +1,24 @@
-# Oncalls — Requirements
+# Oncalls V2 — Requirements
 
-**Route**: `/oncalls`  
-**Component**: `OncallsPage`  
+**Route**: `/oncalls` (canonical — mounts `OncallsV2Page`; `/oncalls-legacy` retains `OncallsPage` pulse-era view)  
+**Component**: `OncallsV2Page` (`apps/delivery-ops/client/src/components/OncallsV2/OncallsV2Page.js`)  
 **Permission**: `kpi_view`  
-**Audience**: `tpm`, `team`, `rm`, `team-exec`
+**Audience**: `team-exec`, `tpm`, `director`, `team`, `rm`
 
 ---
 
 ## Purpose
 
-Ops info page for the OnCalls KPI: shared KPI Pulse (last 2 Nutanix Qs + weekly graph) plus chase outcomes for the OnCall → TechHelp → eng/docs stack (path coverage, portfolio gaps, CFD/CFI escalation).
+VP-first OnCalls dashboard — one global timeframe pill drives every hero, health strip, AI concern, age table, graph, and gap taxonomy so a VP can answer *what's hot, what's stuck too long, and what to fix now* in one skim. Product-agnostic (D1); NDB is one tenant — tenant-specific strings live in `oncallConfig.json` + `kpiConfig`.
 
-Domain model (canonical taxonomy: `agent-pack/context/domain/oncall-outcome-taxonomy.md`):
+Two lenses (B3 spec):
 
-```
-OnCall     — customer hit an issue (seed)
-├── TechHelp — workaround / guidance
-├── SR       — knowledge byte / self-help
-├── TECHPUBS — documentation outcome
-└── Eng fix  — genuine engineering miss (linked non-OnCall/non-TH work)
-```
+- **Lens 1 — Health:** at-a-glance heroes + MTTR/health strip (open/aged/need-info/waiting/closed-in-window; MTTR median/p90/throughput/aged-share) + How-long-open table + Created→Resolved pulse graph.
+- **Lens 2 — Outcome:** gap taxonomy (duds / NDB gaps / other-team) with NDB sub-drill (TH linked / Bugs / Improvements / Other) + AI concern (fused quant+qual with hotspot + gap%) + per-view AI slice (2-liner + fix suggestion).
+
+Global pills: `7d` · `15d` · `1M` · `1Q` · `2Q` (default) · `1Y` · `18M` · `Overall` — sticky, inherited in drawers (no reset). `Overall` = no date clause (all closed history).
+
+Loom JIRA pull + prompt build → Lighthouse AI consume (dual MCP: `loom-mcp buildOncallPrompt` + `lighthouse-mcp generateOncallBrief`).
 
 ---
 
@@ -27,10 +26,10 @@ OnCall     — customer hit an issue (seed)
 
 | Audience | Use |
 |----------|-----|
-| TPM / Portfolio Manager | Weekly OnCall pulse + graph, missing remediation paths, chase list |
-| EM / team | Who is getting hit, stuck dwell, eng ownership |
-| RM | Interrupt load vs release work |
-| Team Executive | Story caption + RAG-friendly pulse (no JQL in narrative) |
+| Team Executive / VP | One-paragraph AI Concern + hotspot (top 2 components) + fix-this; drill only when needed |
+| TPM / Portfolio Manager | Timeframe skim, chase Need Info vs Waiting for Customer, own NDB gaps, close loop |
+| Director / EM | Who is hit, aging, MTTR trend, throughput |
+| IC / RM | Interrupt load vs release work; per-hero JQL proof |
 
 ---
 
@@ -38,60 +37,69 @@ OnCall     — customer hit an issue (seed)
 
 | ID | Story |
 |----|-------|
-| OC-01 | As a TPM, I open `/oncalls` and see KPI Pulse for the last 2 Nutanix Qs: open / aged / P0-P1 / created / resolved / net / MTTR / status dwell + weekly Created→Resolved→Closed chart. |
-| OC-02 | As a TPM, I see path coverage (TechHelp / eng / docs linked) and portfolio outcomes that put chase gaps first (no path → need eng → need TechHelp → in flight). |
-| OC-02b | As a TPM, the linked-downstream universe count is proof-only (footprint), not the primary chase signal. |
-| OC-03 | As an EM, I see assignee and priority mix for open OnCalls. |
-| OC-04 | As a TPM, after metrics load I get an AI portfolio narrative grounded in stack packets (OnCall + TechHelp + eng); I can regenerate. |
-| OC-05 | As a TPM, each briefing cites only real ticket keys from the packet. |
-| OC-06 | As a TPM, the OnCalls KPI chip on `/kpis` deep-links to `/oncalls`. |
-| OC-07 | As a TPM, changing team reloads metrics for that team's OnCall config. |
-| OC-08 | As a TPM, I see OnCalls that linked into CFD/CFI (or other configured) KPIs, with days from OnCall created to linked ticket cleared (median / p90). |
-| OC-09 | As a TPM, field-ticket status in escalation drill is the real JIRA workflow status (Closed stays Closed — never labeled Resolved unless that is the status). |
-| OC-10 | As a TPM, when About inference is unavailable I see one drawer note — not “NAI limited” on every row. |
+| OC-V2-01 | As a VP, I open `/oncalls` and see AI Concern (~100w) that fuses quant (open/MTTR/net) + qual (hotspot top-2 components + gap% + workflow view) for the selected pill, and it regenerates when I change pill/hero/taxonomy/view. |
+| OC-V2-02 | As a TPM, I pick a timeframe pill (7d→Overall) and every hero/health/concern/age/graph/taxonomy recomputes for that window; Overall shows all closed with no date clause. |
+| OC-V2-03 | As a TPM, each hero shows count + one-line explainer + Open in JIRA proof (exact JQL) — count click drills in-app, Open in JIRA opens search. |
+| OC-V2-04 | As a TPM, I see Need Info and Waiting for Customer as first-class workflow buckets (status-only JQL; dwell threshold from `oncallConfig.json` shown as meta). |
+| OC-V2-05 | As a TPM, I see gap taxonomy: Duds (duplicate/Won't Do/Cannot Reproduce/no-linked-fix) · NDB gaps (linked fix in NDB family) · Other-team gaps — each with JQL proof and in-app past drill. |
+| OC-V2-06 | As a TPM, double-clicking NDB gaps expands NDB sub-drill: TH linked · Bugs · Improvements · Other — each drillable with inherited timeframe. |
+| OC-V2-07 | As a TPM, health strip shows MTTR median/p90/throughput/aged-share; clicking MTTR/throughput opens throughput drill (past scope) and regenerates AI slice. |
+| OC-V2-08 | As a TPM, opening any hero/taxonomy shows PathDrill drawer with per-view AI slice (2-liner + fix suggestion) plus ticket rows; drill inherits pills. |
+| OC-V2-09 | As a TPM, the Created→Resolved graph (KpiPulseBand) uses the timeframe window override (Overall → default 2Q pulse) and supports flow/snapshot toggle. |
+| OC-V2-10 | As a TPM, changing team reloads the V2 dashboard for that team's `baseScopeJql` (via `kpiConfig.OnCalls`). |
+| OC-V2-11 | As a TPM, the OnCalls KPI chip on `/kpis` deep-links to `/oncalls`. Legacy `/oncalls-legacy` remains for pulse-only comparison. |
+| OC-V2-12 | As a TPM, when NAI is unavailable the quantitative page still loads; AI panel shows `NAI_API_KEY not set` or timeout with retry. |
+| OC-09 | As a TPM, field-ticket status in escalation drill (legacy) is the real JIRA workflow status (Closed stays Closed). |
+| OC-10 | As a TPM, when About inference is unavailable I see one drawer banner — not per-row NAI chrome (legacy). |
 
 ---
 
 ## UI Behaviour
 
-- Sections: **Pulse** (`KpiPulseBand`) · **Current** (path coverage + who is hit) · **Portfolio** (chase gaps + linked footprint proof) · **Past** · **Escalation**
-- Header: title, team (from TeamContext), Pull from JIRA, as-of stamp, Generate AI Briefing
-- Pulse mounted via shared kit only — no forked created/resolved chart; chart height ≤ 280px; toggles Line|Bars and Point-in-time|Cumulative
-- Open-family pulse heroes (**Open now**, **Aged**, **P0**, **P1**): count → in-app PathDrill; **Open in JIRA ↗** → exact JQL. Created / Resolved / MTTR → JIRA only
-- Path / portfolio / escalation heroes: count → drill; separate Open in JIRA ↗
-- Escalation field tickets: **one** status chip = real `status` from JIRA; hero label **KPI cleared** (not “KPI resolved”)
-- Escalation **Open in JIRA**: filter-style proof — OnCall window ∩ `linkedIssuesOf(CFD|CFI KPI union)` (not a frozen `key in (...)` list); tile count = that JQL’s `searchCount`
-- About: inferred sentence when present; else muted path/status line; **one** drawer banner if About missing for the whole set
-- Qualitative band: portfolio markdown + expandable per-OnCall stack cards
-- AI briefing auto-runs after metrics load (suppressed for exec audience dual-auto); Regenerate reuses snapshot
+- **Header:** title `OnCalls V2` + team (TeamContext) + as-of + Pull from JIRA + Regenerate AI Concern
+- **Global pills:** sticky `ocv2-pills` (`7d`/`15d`/`1M`/`1Q`/`2Q`/`1Y`/`18M`/`Overall`); active pill has `active` class; stored in `useOncallsV2` state and sent as `?timeframe=` on every fetch
+- **AI Concern card:** fused quant+hotspot; states `idle` → `loading` → `done` (linkified JQL) / `error`; Regenerate reuses dashboard snapshot
+- **Hero row (5):** Open now · Aged >Nd · Need Info · Waiting for Customer · Closed in window — each `ExplainHero` with count → drill, explain one-liner, and `Open in JIRA ↗` (exact JQL). Meta shows threshold/window.
+- **Health row (4):** MTTR median · MTTR p90 · Throughput (with net) · Aged share — neutral tone; count → past drill; JQL from `pulse.mttr.jql` or `pulse.heroes.resolvedWindow.jql`
+- **How-long-open table:** Bucket / Count / Median age / Oldest / JQL proof (Open now, Need Info, Waiting for Customer)
+- **Graph:** `KpiPulseBand pulse={data.pulse}` titled `OnCalls pulse · {timeframe}`; inherits windowOverride; flow vs snapshot toggle
+- **Taxonomy (3 cards):** Duds (resolution gaps) · NDB gaps (our gaps) · Other-team gaps (externalize) — count → past drill; double-click NDB gaps toggles sub-drill
+- **NDB sub-drill (4 cards, hidden until double-click):** TH linked · Bugs · Improvements · Other — each inherits timeframe
+- **Drill drawer:** `PathDrill mode={drill.mode} tickets={gapMeta ? closedStacksPreview : openTickets} jql={…/gapTaxonomy/hero/pulse} scope={past|open} timeframe={timeframe} aiSlice={aiSlice} aiSliceView={aiSliceView}` — per-view AI slice auto-generates on open
+- **Legacy:** `OncallsPage` preserved at `/oncalls-legacy` with old pulse+stacks IA; no removal in this weave
+
+Metric-click dual-action (all pages): count → in-app drill; Open in JIRA → exact JQL.
 
 ---
 
 ## Permissions
 
-- **View / refresh / AI**: `kpi_view`
+- **View / refresh / AI**: `kpi_view` (`checkKpiViewAuthorization` + `validateJiraTokenMiddleware`)
 
 ---
 
 ## Edge Cases
 
-- No open OnCalls → empty pulse heroes + empty briefing message
-- `buildPulse` failure → pulse error on band; path/escalation still load
-- TechHelp project missing / unlinkable → “without TechHelp” chips still work
-- Eng project is not a fixed list — any linked non-OnCall/non-TechHelp ticket counts as eng_fix (SR/TECHPUBS classified separately in stacks)
-- NAI unavailable → quantitative page works; About banner once per drawer; AI panel shows error
+- No team selected → `TeamRequiredGate` ("Select a team for OnCalls V2")
+- `!baseScopeJql` (team not in `kpiConfig` OnCalls) → `notConfigured` payload with message; page shows config hint
+- No open OnCalls → heroes show 0; Pulse may be empty; AI concern still attempts with zero counts
+- `Overall` → no date clause; closed window uses `seed AND statusCategory=Done` only
+- `buildPulse` failure → `errors.pulse` set; page renders pulse error but heroes/taxonomy still load
+- NAI unavailable / timeout → `aiConcernError` / `aiSliceError` banner; quantitative page unaffected
+- Empty gap bucket → cell shows 0 with no JQL; drill shows fallback closed preview
 
 ---
 
 ## Acceptance Criteria
 
-- [x] Route `/oncalls` in sidebar for `kpi_view`
-- [x] Pulse mounted via `buildPulse` + `KpiPulseBand` (no one-off 7d created/closed strip as primary)
-- [x] Open-family pulse counts open PathDrill; Created/Resolved/MTTR are count → JIRA only
-- [x] Path + escalation + open-family dual-click: never both external
-- [x] Escalation Closed tickets never show a fake “Resolved” badge
-- [x] About inference miss → ≤1 drawer banner; no per-row NAI-limited chrome
-- [x] Stack classification: OnCall seed → TechHelp vs eng_fix / techpubs / knowledge via config
-- [x] RAG is deterministic server-side; LLM copies it
-- [x] KPI OnCalls widget deep-links to `/oncalls`
-- [x] Page docs + API docs present
+- [x] Route `/oncalls` mounts `OncallsV2Page` for `kpi_view`; legacy at `/oncalls-legacy`
+- [x] Sticky global pills (8) drive all heroes/health/concern/age/graph/taxonomy; `Overall` = no date clause; pills inherited in drawers
+- [x] Each hero shows count + explain + Open in JIRA (exact JQL); count → in-app drill (dual-action)
+- [x] Need Info / Waiting for Customer buckets use exact `status = "Need Info"` / `"Waiting for Customer"` + `statusCategory != Done`
+- [x] Gap taxonomy counts sum correctly; `duds` = resolution dud or no linked fix; `ndbGaps`/`otherTeamGaps` split by linked projectKey prefix; NDB sub-drill keys match taxonomy
+- [x] Health MTTR strip distinct from at-a-glance heroes; throughput net shown; pulse window override per timeframe
+- [x] AI Concern fuses quant+hotspot in ~100w and regenerates on pill/hero/taxonomy/view; per-view AI slice regenerates on drill
+- [x] `KpiPulseBand` mounted with timeframe window; not forked
+- [x] Config thresholds wired from `oncallConfig.json` (`needInfoDays`/`waitingForCustomerDays`/`agedOpenDays`)
+- [x] No hardcoded product strings (D1); NDB fallback is tenant-overrideable via `gapProjectPrefixes`
+- [x] Page docs + API docs present; docs-verify PASS

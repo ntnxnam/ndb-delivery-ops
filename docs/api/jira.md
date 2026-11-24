@@ -734,9 +734,11 @@ No.
 
 ## OnCalls
 
-### GET /api/jira/oncalls
+> **V2 (current):** `/oncalls` now mounts `OncallsV2Page` (VP-first, timeframe pills). Legacy pulse-only contract is preserved for backward compat when `?timeframe=` is absent.
 
-**Purpose**: Live OnCalls quantitative dashboard — KPI Pulse (`buildPulse` on OnCalls KPI `baseQuery`), path/portfolio chips, escalation to CFD/CFI, assignee/priority mix, deterministic RAG.
+### GET /api/jira/oncalls (V2 — timeframe-aware)
+
+**Purpose**: Live OnCalls V2 dashboard — timeframe-scoped heroes (Open / Aged / Need Info / Waiting for Customer / Closed in window), workflow buckets, gap taxonomy (duds / NDB gaps / other-team + NDB sub-drill), health MTTR/throughput, KPI Pulse window override, component hotspot.
 
 **Auth**: required · KPI view authorization (`kpi_view`)
 
@@ -744,12 +746,86 @@ No.
 - Method + path: `GET /api/jira/oncalls`
 - Query params:
   - `teamId` (string, optional) — team board id (e.g. `ndb`)
-- Required headers: JIRA token (middleware)
+  - `timeframe` (string, optional) — one of `7d` (legacy default) · `15d` · `1M` · `1Q` · `2Q` · `1Y` · `18M` · `Overall`. If `Overall`, server omits the date clause (all history). Defaults to `7d` when omitted.
+  - `v2` (string, optional) — `1` / `true` forces V2 even without `timeframe`; otherwise V2 triggers when `timeframe` is present.
+- Required headers: JIRA token (middleware via `validateJiraTokenMiddleware` + `apiLimiter`)
 
-**Server flow**
-Route handler → `checkKpiViewAuthorization` → `oncallService.getDashboard` → counts + stacks + `buildPulse({ baseJql: baseScopeJql })` (soft-fail) + escalation → respond
+**Server flow — V2**
+`GET /api/jira/oncalls?timeframe=` → `checkKpiViewAuthorization` → `oncallDashboardV2.getDashboard({ token, teamId, timeframe })`:
+  1. `resolveRuntimeConfig(teamId)` → `baseScopeJql`, `onCallProject`, `techHelpProjects`, `needInfoDays`/`waitingForCustomerDays`, `agedOpenDays`
+  2. `buildTimeframeHeroQueries(cfg, timeframe)` composes `closedInWindow = seed AND statusCategory=Done AND resolved >= -Nd` (or no date clause for Overall), plus `needInfoOpen = statusCategory!=Done AND status="Need Info"` and `waitingCustomerOpen = statusCategory!=Done AND status="Waiting for Customer"`
+  3. Parallel JIRA fetch (5-way `Promise.allSettled`): `runCounts(heroQueries)` + `fetchOpenStacks` + `fetchClosedStacks(timeframe)` + `linkedOut searchCount` + `buildPulse({ baseJql, windowOverride })`
+  4. `computeWorkflowBuckets`, `classifyGapBuckets` → `buildGapCells`, `classifyNdbSubGaps` → `buildNdbSubCells`, `health { mttrMedian, p90, net, throughput, agedShare }`, `pulse` (window = `computePulseWindow(timeframe)`, Overall → default 2Q)
+  → respond `{ success: true, timeframe, hero, workflow, gapTaxonomy, gapMeta, health, pulse, paths, componentMix, … }`
 
-**Response shape**
+**Backward compat — legacy (no timeframe, no v2 flag)**
+Route handler delegates to `oncallService.getDashboard` → counts + stacks + `buildPulse({ baseJql: baseScopeJql })` (soft-fail) + escalation. See legacy response below.
+
+**Response shape — V2**
+```json
+{
+  "success": true,
+  "teamId": "ndb",
+  "onCallProject": "OnCall",
+  "baseScopeJql": "filter = NDB-OnCalls",
+  "timeframe": "2Q",
+  "asOf": "2026-10-16T09:00:00.000Z",
+  "elapsedMs": 4200,
+  "hero": {
+    "open": { "count": 43, "jql": "filter=NDB-OnCalls AND statusCategory != Done" },
+    "agedOpen": { "count": 9, "jql": "filter=NDB-OnCalls AND statusCategory != Done AND statusCategory != Done …" },
+    "needInfoOpen": { "count": 6, "jql": "filter=NDB-OnCalls AND statusCategory != Done AND status = \"Need Info\"" },
+    "waitingCustomerOpen": { "count": 4, "jql": "filter=NDB-OnCalls AND statusCategory != Done AND status = \"Waiting for Customer\"" },
+    "closedInWindow": { "count": 87, "jql": "project = OnCall AND filter=NDB-OnCalls AND statusCategory = Done AND resolved >= -180d" },
+    "p0Open": { "count": 1, "jql": "... AND priority = P0 AND statusCategory != Done" }
+  },
+  "workflow": {
+    "needInfo": { "count": 6, "jql": "…" },
+    "waiting": { "count": 4, "jql": "…" }
+  },
+  "gapTaxonomy": {
+    "duds": { "count": 21, "jql": "key in (ONCALL-1, …)" },
+    "ndbGaps": { "count": 38, "jql": "key in (…)" },
+    "otherTeamGaps": { "count": 28, "jql": "key in (…)" },
+    "ndbSub": {
+      "thLinked": { "count": 12, "jql": "key in (…)" },
+      "bugs": { "count": 18, "jql": "key in (…)" },
+      "improvements": { "count": 5, "jql": "key in (…)" },
+      "other": { "count": 3, "jql": "key in (…)" }
+    }
+  },
+  "gapMeta": {
+    "dudsKeys": ["ONCALL-1"],
+    "ndbGapsKeys": ["ONCALL-2"],
+    "otherTeamGapsKeys": ["ONCALL-9"],
+    "ndbSubKeys": { "thLinked": [], "bugs": [], "improvements": [], "other": [] }
+  },
+  "health": { "mttrMedian": 4.2, "p90": 18, "net": -12, "throughput": 87, "agedShare": 21, "churn": 88 },
+  "pulse": { "window": { "start": "2026-05-01", "end": "2026-10-16", "label": "Last 2Q" }, "story": "...", "heroes": {}, "series": [] },
+  "paths": { "withTechHelp": { "count": 4, "jql": "key in (...)" } },
+  "componentMix": [{ "name": "Upgrade", "count": 7 }],
+  "priorityMix": [],
+  "assigneeMix": [],
+  "openTickets": [],
+  "stacksPreview": [],
+  "closedStacksPreview": []
+}
+```
+
+Legend: `timeframe = "Overall"` sends no `resolved >= -Nd` clause — JQL is `seed AND statusCategory=Done` only. Legacy callers omit `timeframe` entirely.
+
+**Gap taxonomy (V2)**
+- `duds` — closed OnCall where `resolution ∈ {Duplicate, Won't Do, Cannot Reproduce, Invalid}` **or** no linked fix.
+- `ndbGaps` — linked fix projectKey starts with `NDB` (or tenant `gapProjectPrefixes`) or component contains NDB.
+- `otherTeamGaps` — remainder with a linked fix outside NDB.
+- NDB sub-drill inside `ndbGaps`: `thLinked` (has TH) · `bugs` (linked Bug) · `improvements` (Improvement/Story/Task) · `other`.
+
+Counts are `key in (...)` proofs; all use `baseScopeJql` as seed. See `server/services/oncallGapService.js` (`DUD_RESOLUTIONS`, `classifyGapBuckets`, `classifyNdbSubGaps`).
+
+**Timeframe pills**
+`TIMEFRAMES = { 7d:7, 15d:15, 1M:30, 1Q:90, 2Q:180, 1Y:365, 18M:540, Overall:null }` — `timeframeClause('resolved', tf)` returns `resolved >= -Nd` or `null` for Overall. Pill selection drives heroes / health / pulse window / gap window together (global pills, inherit in drawers).
+
+**Legacy response (no timeframe)**
 ```json
 {
   "success": true,
@@ -781,16 +857,129 @@ No — live on load / Pull.
 
 ### POST /api/jira/oncalls/refresh
 
-**Purpose**: Explicit Pull from JIRA — same payload as GET.
+**Purpose**: Explicit Pull from JIRA — same payload as GET (timeframe-aware when `timeframe` or `v2` present, else legacy).
 
 **Auth**: required · `kpi_view`
 
 **Request**
 - Method + path: `POST /api/jira/oncalls/refresh`
-- Body: `{ "teamId": "ndb" }` (optional)
+- Body: `{ "teamId": "ndb", "timeframe": "2Q", "v2": "1" }` — `teamId` optional, `timeframe` one of the 8 pills, `v2` optional force flag. Query `?timeframe=` also honored.
+- Also accepts `teamId` in query for bookmarked pulls.
 
 **Response shape**
-Same as GET `/api/jira/oncalls`.
+Same as GET `/api/jira/oncalls` for the selected timeframe (V2) or legacy shape when no timeframe.
+
+**Caching**
+No.
+
+### GET /api/jira/oncalls/v2
+
+**Purpose**: Explicit V2 alias — same as `GET /api/jira/oncalls?timeframe=&v2=1` (defaults `timeframe=2Q`).
+
+**Auth**: required · `kpi_view`
+
+**Request**
+- Method + path: `GET /api/jira/oncalls/v2`
+- Query params: `teamId` (optional), `timeframe` (optional, default `2Q`)
+- Required headers: JIRA token
+
+**Server flow**
+`GET /api/jira/oncalls/v2` → `oncallDashboardV2.getDashboard({ token, teamId, timeframe })` (same as V2 path above).
+
+**Response shape**
+Same as V2 `GET /api/jira/oncalls` (with `timeframe`).
+
+**Caching**
+No.
+
+### POST /api/jira/oncalls/v2/refresh
+
+**Purpose**: Explicit V2 pull alias.
+
+**Auth**: required · `kpi_view`
+
+**Request**
+- Method + path: `POST /api/jira/oncalls/v2/refresh`
+- Body: `{ "teamId": "ndb", "timeframe": "2Q" }` (both optional)
+- Required headers: JIRA token
+
+**Server flow**
+Same as `POST /api/jira/oncalls/refresh` with timeframe → `oncallDashboardV2.getDashboard`.
+
+**Response shape**
+Same as V2 `GET /api/jira/oncalls`.
+
+**Caching**
+No.
+
+### POST /api/ai/oncall-concern
+
+**Purpose**: Fused quant+qual AI concern for OnCalls V2 — merges open/MTTR/net + hotspot component + gap% for the selected timeframe pill into a ~100w concern paragraph. Triggered on timeframe/hero/taxonomy/view change and on demand.
+
+**Auth**: required · `kpi_view` (same guard as `POST /api/ai/chat` — `validateJiraTokenMiddleware`)
+
+**Request**
+- Method + path: `POST /api/ai/oncall-concern`
+- Body:
+  ```json
+  {
+    "teamId": "ndb",
+    "timeframe": "2Q",
+    "dashboard": { "hero": {}, "health": {}, "workflow": {}, "gapTaxonomy": {}, "componentMix": [], "gapMeta": {}, "agedOpenDays": 14 }
+  }
+  ```
+  `dashboard` is optional — when missing or lacking `hero`, server re-fetches via `oncallDashboardV2.getDashboard({ token, teamId, timeframe })`.
+
+**Server flow**
+`POST /api/ai/oncall-concern` → optionally `oncallDashboardV2.getDashboard` → build `concernInput { timeframe, hero, health, workflow, gapTaxonomy, componentMix, validKeys, agedOpenDays }` → `naiService.generateOncallConcern(concernInput)` (`ONCALL_CONCERN` prompt) → `{ summary }`.
+
+Loom builds the prompt (prompt template + quant packet), Lighthouse (this route) calls NAI.
+
+**Response shape**
+```json
+{ "summary": "Concern in ~100 words with hotspot + gap signal …", "intelligence": { "timeframe": "2Q", "hero": {}, "health": {}, "workflow": {}, "gapTaxonomy": {} }, "timeframe": "2Q", "generatedAt": "2026-11-24T00:00:00.000Z" }
+```
+
+**Error responses**
+| HTTP code | When | Client should |
+|-----------|------|---------------|
+| 400 | `NAI_API_KEY` not configured | Show NAI setup hint (see ADMIN_GUIDE) |
+| 502 | NAI gateway error | Retry |
+| 504 | NAI timeout | Retry |
+
+**Caching**
+No.
+
+### POST /api/ai/oncall-slice
+
+**Purpose**: Per-view AI 2-liner + fix suggestion for the drill drawer — scoped to the selected hero/taxonomy pill and its top keys. Regenerates when pill changes; inherits timeframe.
+
+**Auth**: required · `kpi_view` (`validateJiraTokenMiddleware`)
+
+**Request**
+- Method + path: `POST /api/ai/oncall-slice`
+- Body:
+  ```json
+  {
+    "teamId": "ndb",
+    "view": "needInfo",
+    "keys": ["ONCALL-1", "ONCALL-2"],
+    "timeframe": "2Q",
+    "meta": { "count": 6, "agedDays": 14 }
+  }
+  ```
+  `view` is the drill mode (e.g. `open` / `agedOpen` / `needInfo` / `waiting` / `duds` / `ndbGaps` / `thLinked` / `bugs` / `closedInWindow` / `throughput` / `mttr`), `keys` capped to ~20, `timeframe` inherited from pills, `meta` carries hero count + thresholds.
+
+**Server flow**
+`POST /api/ai/oncall-slice` → `naiService.generateOncallSlice({ teamId, view, keys, timeframe, meta })` (`ONCALL_SLICE` prompt) → `{ summary }`.
+
+**Response shape**
+```json
+{ "summary": "2-line slice briefing + fix suggestion for view …", "view": "needInfo", "keys": ["ONCALL-1"], "timeframe": "2Q", "generatedAt": "2026-11-24T00:00:00.000Z" }
+```
+
+**Error responses**
+Same as `oncall-concern`.
 
 **Caching**
 No.

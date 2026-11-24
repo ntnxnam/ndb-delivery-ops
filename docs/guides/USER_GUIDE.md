@@ -1,8 +1,8 @@
 ---
 product: NDB Delivery Ops
-lastUpdated: 2026-11-19
-coversVersion: "3.0"
-source: doc-user-guide @ 2026-11-19
+lastUpdated: 2026-11-24
+coversVersion: "3.1"
+source: doc-user-guide @ 2026-11-24
 ---
 
 # User Guide
@@ -15,6 +15,7 @@ source: doc-user-guide @ 2026-11-19
 - [Release Brief](#release-brief)
 - [Quality Column (TCMS)](#quality-column-tcms)
 - [Bin-Packing CSV Converter](#bin-packing-csv-converter)
+- [OnCalls V2](#oncalls-v2)
 - [Tips & FAQ](#tips--faq)
 
 ## Getting Started
@@ -85,10 +86,30 @@ Convert any JIRA export, spreadsheet, or pasted table into the canonical 26-colu
 - If a mandatory column is missing, the converter shows which aliases are accepted for that column — rename and retry.
 - The chat panel can also convert files: ask the ops assistant to convert a file and it delegates to the `csv-to-binpacking` skill (prompt/orchestration only — deterministic logic stays in `shared`).
 
-## OnCalls
-**Who:** EM, TPM
-**Steps:** Open KPIs → OnCalls → select release → review counts by period.
-**Tips:** Click a count to see the filtered list; counts come from `kpiConfig` live JQL.
+## OnCalls V2
+
+**Who:** Team Executive / VP, TPM, Director, EM  
+**Route:** `/oncalls` (V2) — legacy pulse view at `/oncalls-legacy`
+
+This is the VP-first OnCalls dashboard — one timeframe pill controls every number so you can skim *what's hot, too-long, and what to fix*.
+
+**At a glance — timeframe pills (global)**
+
+Pick a pill at the top (sticky): `7d` · `15d` · `1M` · `1Q` · `2Q` · `1Y` · `18M` · `Overall`. Every hero, health strip, age table, graph, and gap taxonomy recomputes for that window. `Overall` shows all closed history (no date clause). The drawer inherits the pill — it never resets.
+
+**What you see**
+
+1. **AI Concern** (~100 words) — fuses quant (open / MTTR / net) + qual (hotspot: top 2 components like Upgrade/MSSQL + gap% + workflow view). It auto-generates after metrics load and regenerates when you change pill, click a hero, or open a taxonomy. Use **Regenerate AI Concern** to refresh.
+2. **Hero row (5):** `Open now` · `Aged >Nd` · `Need Info` · `Waiting for Customer` · `Closed in window`. Each card shows count + one-line explainer + **Open in JIRA ↗** (exact JQL). Clicking a count opens the in-app drill; the JIRA link opens the JQL search.
+3. **Health row (4):** `MTTR median` · `MTTR p90` · `Throughput` (with net) · `Aged share`. Click to drill into throughput/MTTR (past scope).
+4. **How-long-open table:** bucket / count / median age / oldest / JQL proof.
+5. **Pulse graph:** weekly Created→Resolved for the pill window (Overall → default 2Q); toggle flow vs snapshot.
+6. **Gap taxonomy (3 cards):** `Duds` (duplicate/Won't Do/Cannot Reproduce/no linked fix) · `NDB gaps` (our gaps) · `Other-team gaps`. Double-click **NDB gaps** to expand the 4 sub-cards: `TH linked` · `Bugs` · `Improvements` · `Other`.
+7. **Drill drawer:** clicking any count/taxonomy opens the ticket list for that view with a per-view AI 2-liner + fix suggestion. The drawer keeps the pill.
+
+**Dual-click rule (all heroes):** **Count → in-app drill**, **Open in JIRA ↗ → exact JQL** — never both external.
+
+See [Oncalls requirements](../pages/Oncalls-requirements.md) and [Oncalls data-layer](../pages/Oncalls-data-layer.md) for JQL contracts, gap rules, and config. Legacy `/oncalls-legacy` keeps the pulse-only comparison.
 
 ## CFD / CFI
 **Who:** TPM, QA Lead

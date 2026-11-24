@@ -1,22 +1,26 @@
-# Feature — OnCalls pulse (`/oncalls`)
+# Feature — OnCalls V2 (VP-first, 2 lenses) — `/oncalls`
 
 ## Outcome
 
-OnCalls KPI page: shared KPI Pulse (heroes + weekly graph) above chase/path/escalation bands. Status and About chrome stay truthful for TPM skim.
+VP-first OnCalls dashboard where one timeframe pill controls the business story: heroes + workflow buckets + gap taxonomy + health + graph + fused AI concern. Drill keeps the timeframe. Legacy pulse-only view kept at `/oncalls-legacy`.
 
 ## Constraints (preserve)
 
-- `kpi-config-driven` — OnCalls `baseQuery` from kpiConfig only
-- `kpi-pulse-analytics` — mount `KpiPulseBand` / `buildPulse`; no forked chart
-- `jira-authenticity-links` / `metric-click-dual-action` — count → panel; Open in JIRA → JQL
-- `jql-edit-approval` — compose onto baseQuery only
-- `no-defensive-statements` — no per-row “NAI limited” apology chrome
-- `visual-storyteller-ui` — story / chase first; footprint proof-only
+- `kpi-config-driven` — OnCalls `baseScopeJql` from `kpiConfig.OnCalls.baseQuery` only; hero JQL composes onto it, never edits it
+- `kpi-pulse-analytics` — mount `KpiPulseBand` + `buildPulse({ window: computePulseWindow(tf) })`; no forked chart
+- `jira-authenticity-links` / `metric-click-dual-action` — count → in-app `PathDrill`; Open in JIRA → exact hero JQL (`key in (…)` for taxonomy)
+- `jql-edit-approval` — any JQL shape change needs explicit approval flag
+- `no-hardcoding` / D1 — NDB is one tenant; `gapProjectPrefixes` makes gap detection product-agnostic
+- `product-agnostic` — `oncallConfig.json` owns `needInfoDays`/`waitingForCustomerDays`/`agedOpenDays` and project lists
 
-## Status authenticity
+## Lenses
 
-Field ticket chip = JIRA `status` name. Done bucket hero = **KPI cleared**. Never invent “Resolved” for Closed tickets (Nutanix: Resolved = TBV).
+- **Health:** Open/Aged/Need Info/Waiting/Closed-in-window heroes + MTTR median/p90/throughput/aged-share + age table + weekly Created→Resolved graph
+- **Outcome:** Duds (no linked fix or dud resolution) / NDB gaps / Other-team gaps + NDB sub-drill (TH/Bugs/Improvements/Other) + gap% in AI concern
 
-## About
+## Data shapes
 
-Inferred About when NAI returns; else structured pathHint. Drawer-level banner when About missing for the set.
+- `TIMEFRAMES = {7d:7,15d:15,1M:30,1Q:90,2Q:180,1Y:365,18M:540,Overall:null}` — `timeframeClause` returns `resolved >= -Nd` or `null` (Overall)
+- `gapTaxonomy { duds, ndbGaps, otherTeamGaps, ndbSub{thLinked,bugs,improvements,other} }` each `cell(count, jql)` where `jql = key in (...)` or null
+- `health { mttrMedian, p90, net, throughput, agedShare }` derived from `pulse` + hero counts
+- Component hotspot: `topN(componentMix,6)` → AI concern top-2
