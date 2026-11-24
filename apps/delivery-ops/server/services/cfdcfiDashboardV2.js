@@ -58,6 +58,43 @@ function buildTimeframeHeroQueries(cfg, timeframe) {
   return { ...base, closedInWindow };
 }
 
+// Top qualifier sub-clauses per D1 company-wide locked definition — literals from kpiConfig.json TOP qualifier
+// (priority in ("Blocker - P0","Critical - P1") AND (...)) OR labels in (NPS_Impacting). Not product-specific filters (D1 clean).
+const TOP_QUALIFIER_SUBCLAUSES = [
+  { key: 'oncallLinked', label: 'ONCALL-linked', jql: 'issueFunction in linkedIssuesOf("Project = ONCALL")' },
+  { key: 'sfCases5', label: 'SF cases ≥5', jql: '"Number of Salesforce Cases" >= 5' },
+  { key: 'eelLabels', label: 'EELIST/DevEx/Serviceability', jql: 'labels in (EELIST, DevEx-Top-Issue, Serviceability-Promoted)' },
+  { key: 'impact', label: 'Impact (Unavailability/Data Loss/Corruption)', jql: '"Number of Salesforce Cases" >= 1 AND Impact in ("Unavailability - Permanent", "Data Loss", Corruption)' },
+  { key: 'nps', label: 'NPS_Impacting', jql: 'labels in (NPS_Impacting)' },
+];
+
+function buildCustomerFoundQueries(cfg, baseScope) {
+  const base = String(baseScope || (cfg && cfg.baseScopeJql) || '').trim();
+  const openStatus = String((cfg && cfg.openStatusJql) || 'statusCategory != Done').trim();
+  if (!base) return {};
+  const out = {};
+  for (const s of TOP_QUALIFIER_SUBCLAUSES) {
+    // Each JQL = (baseScope) AND (subClause) AND (openStatusJql) — use andParts(baseScope, subClause, openJql)
+    out[s.key] = andParts(`(${base})`, `(${s.jql})`, `(${openStatus})`);
+  }
+  return out;
+}
+
+async function fetchCustomerFoundBreakdown(token, cfg, baseScope) {
+  const base = String(baseScope || (cfg && cfg.baseScopeJql) || '').trim();
+  if (!base) return [];
+  const queries = buildCustomerFoundQueries(cfg, base);
+  const keys = Object.keys(queries);
+  if (!keys.length) return [];
+  const { results } = await runCounts(token, queries);
+  return TOP_QUALIFIER_SUBCLAUSES.map((s) => ({ key: s.key, label: s.label, count: results[s.key] ?? 0, jql: queries[s.key] }));
+}
+
+// Backwards-compat alias — existing code calls fetchCustomerFound(token,cfg)
+async function fetchCustomerFound(token, cfg, baseScope) {
+  return fetchCustomerFoundBreakdown(token, cfg, baseScope || (cfg && cfg.baseScopeJql));
+}
+
 async function runCounts(token, queries, concurrency = 6) {
   const jira = await getJira(token);
   const keys = Object.keys(queries);
@@ -171,7 +208,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
       teamId: cfg.teamId, timeframe: normalizedTf, notConfigured: true,
       message: `CFD/CFI not configured for team "${cfg.teamId}". Add a CFD/CFI KPI in Admin → KPIs or configure cfdcfiConfig.json.`,
       baseScopeJql: '', hero: {}, paths: {}, rag: { level: 'GREEN', why: 'Not configured' }, pulse: null, priorityMix: [], assigneeMix: [], componentMix: [], fixVersionMix: [], openTickets: [], stacksPreview: [], health: { mttrMedian: null, p90: null, net: 0 },
-      breakdowns: {}, boomerang: null, gapMeta: null,
+      breakdowns: { customerFound: [] }, customerFound: [], boomerang: null, gapMeta: null,
     };
   }
 
@@ -190,13 +227,14 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
     return opts;
   })();
 
-  const [countsRes, openRes, closedRes, linkedOutRes, pulseRes, boomerangRes] = await Promise.allSettled([
+  const [countsRes, openRes, closedRes, linkedOutRes, pulseRes, boomerangRes, customerFoundRes] = await Promise.allSettled([
     runCounts(token, queries),
     fetchOpenStacks(token, cfg).catch((e) => { throw e; }),
     fetchClosedCfdcfiStacks(token, cfg, normalizedTf).catch((e) => { throw e; }),
     outJql ? fetchLinkedOut(token, cfg) : Promise.resolve(0),
     pulseOpts ? buildPulse(pulseOpts) : Promise.resolve(null),
     fetchDeferredBoomerangs(token, cfg).catch(() => ({ boomerangs: [], boomerangRate: 0, deferredTotal: 0, gapMeta: { boomerangKeys: [] }, boomerangCells: {} })),
+    fetchCustomerFoundBreakdown(token, cfg, cfg.baseScopeJql).catch(() => []),
   ]);
 
   const errors = {};
@@ -224,6 +262,10 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
   let boomerang = { boomerangs: [], boomerangRate: 0, deferredTotal: 0, gapMeta: { boomerangKeys: [] }, boomerangCells: {} };
   if (boomerangRes.status === 'fulfilled') boomerang = boomerangRes.value;
   else errors.boomerang = boomerangRes.reason?.message || String(boomerangRes.reason);
+
+  let customerFound = [];
+  if (customerFoundRes.status === 'fulfilled') customerFound = Array.isArray(customerFoundRes.value) ? customerFoundRes.value : [];
+  else errors.customerFound = customerFoundRes.reason?.message || String(customerFoundRes.reason);
 
   const hero = {
     open: cell(results.open, queries.open),
@@ -336,6 +378,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
       testEscape: withJql(topN(testEscapeMix, 8), '"Test Escape?"'),
       rootCause: withJql(topN(rootCauseMix, 8), '"Root Cause"'),
       linkage: { thLinked, techPubsLinked, totalOpen: openData.stacks.length },
+      customerFound,
     },
     boomerang: {
       keys: boomerang.boomerangs || [],
@@ -349,6 +392,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
       boomerangKeys: boomerang.gapMeta?.boomerangKeys || boomerang.boomerangs || [],
       boomerangCells: boomerang.boomerangCells || {},
     },
+    customerFound,
     openTickets: mapTicketRows(openData.stacks),
     stacksPreview: openData.stacks.slice(0, 40).map((s) => ({
       key: s.key, summary: s.summary, status: s.status, priority: s.priority, assignee: s.assignee, ageDays: s.ageDays,
@@ -366,4 +410,4 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
   return result;
 }
 
-module.exports = { TIMEFRAMES, timeframeToDays, timeframeClause, buildTimeframeHeroQueries, computePulseWindow, getDashboard };
+module.exports = { TIMEFRAMES, timeframeToDays, timeframeClause, buildTimeframeHeroQueries, computePulseWindow, getDashboard, fetchCustomerFoundBreakdown, fetchCustomerFound, buildCustomerFoundQueries, TOP_QUALIFIER_SUBCLAUSES };

@@ -30,6 +30,8 @@ function buildCfdcfiConcernPrompt(intelligence: any): { userPrompt: string; vali
   const healthLine = `HEALTH: mttrMedian=${health.mttrMedian ?? '—'}d p90=${health.p90 ?? '—'}d throughput=${health.throughput ?? 0} net=${health.net ?? 0} agedShare=${health.agedShare ?? '—'}%`;
   const bdLine = `BREAKDOWNS: byComponent top2=${top2} ageBuckets=${JSON.stringify(breakdowns.ageBuckets || {})} linkage TH=${breakdowns.linkage?.thLinked ?? 0}`;
   const boomLine = `BOOMERANG: rate=${boomerang.rate ?? 0}% deferredTotal=${boomerang.deferredTotal ?? 0}`;
+  const cfArr: any[] = (i.customerFound as any[]) || (breakdowns as any).customerFound || [];
+  const cfLine = cfArr.length ? `CUSTOMER_FOUND: ${cfArr.map((c: any) => `${c.label}=${c.count ?? 0}`).join(' | ')}` : `CUSTOMER_FOUND: none`;
   const stacks = Array.isArray((intelligence as any).stacksPreview) ? (intelligence as any).stacksPreview : [];
   const blurbLines = stacks.slice(0, 5).map((s: any) => {
     const cf = s.cfdcfiFields || {};
@@ -39,7 +41,7 @@ function buildCfdcfiConcernPrompt(intelligence: any): { userPrompt: string; vali
     return `- ${bits.join(' | ')}`;
   }).join('\n');
   const stackBlock = blurbLines ? `STACK SAMPLE (top 5 — use for hotspot themes):\n${blurbLines}` : '';
-  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${bdLine}\n${boomLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
+  const userPrompt = `TIMEFRAME: ${tf}\n${heroLine}\n${healthLine}\n${bdLine}\n${boomLine}\n${cfLine}\n\n${stackBlock ? stackBlock + '\n\n' : ''}${validBlock}\n\nWrite the 95-105 word concern paragraph + 2-line chase now. When citing ticket keys, use ONLY the keys listed in VALID TICKET KEYS above.`;
   return { userPrompt, validKeys };
 }
 
