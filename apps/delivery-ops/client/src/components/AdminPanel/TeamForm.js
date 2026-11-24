@@ -253,8 +253,8 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
 
   const previewJql = buildPreview({ isShared, customKey, components, contactRows });
 
-  // Keep baseFilter in sync with preview unless user has manually edited it; for legacy teams keep original baseFilter
-  const [baseFilterTouched, setBaseFilterTouched] = useState(() => Boolean(initialTeam && initialTeam.is_shared_project === undefined));
+  // Keep baseFilter in sync with preview unless user has manually edited it
+  const [baseFilterTouched, setBaseFilterTouched] = useState(false);
   React.useEffect(() => { if (!baseFilterTouched) setBaseFilter(previewJql); }, [previewJql]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => { // re-init if initialTeam changes (edit switch)
     setComponents(initialComponentsFor(initialTeam));
@@ -298,26 +298,19 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       contacts[r.key] = contactRows[r.key];
     }
     const boardIdNum = selection.boardId ? Number(String(selection.boardId).trim()) : null;
-    const isLegacyEdit = editMode && initialTeam?.is_shared_project === undefined;
     const payload = {
       name: name.trim(),
+      is_shared_project: isShared,
+      custom_project_key: isShared ? null : customKey.trim().toUpperCase(),
+      components,
+      leader_outlook_dls: leaderDLs,
+      contacts,
       boardId: Number.isInteger(boardIdNum) && boardIdNum > 0 ? boardIdNum : null,
       sprintCalendar: selection.sprintCalendar,
       baseFilter: baseFilter.trim() || previewJql,
       base_jql: baseFilter.trim() || previewJql,
+      projectKey: isShared ? 'ENG' : customKey.trim().split(',')[0].toUpperCase(),
     };
-    // For legacy teams, preserve original baseFilter unless user explicitly edited it (baseFilterTouched false means using preview → migrating)
-    if (isLegacyEdit && baseFilterTouched) {
-      // Keep original baseFilter path: don't trigger auto-JQL generation
-      payload.projectKey = initialTeam.projectKey;
-    } else {
-      payload.is_shared_project = isShared;
-      payload.custom_project_key = isShared ? null : customKey.trim().toUpperCase();
-      payload.components = components;
-      payload.leader_outlook_dls = leaderDLs;
-      payload.contacts = contacts;
-      payload.projectKey = isShared ? 'ENG' : customKey.trim().split(',')[0].toUpperCase();
-    }
     if (!editMode) payload.id = teamId;
     // Keep legacy fields for compat
     payload.projectKey = isShared ? 'ENG' : customKey.trim().split(',')[0].toUpperCase();
