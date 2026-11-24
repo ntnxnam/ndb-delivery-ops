@@ -1,6 +1,6 @@
 {
   "_schema_version": "2.0-team-agnostic",
-  "_description": "Multi-team registry. Each Admin-onboarded team is one entry (NDB, Prism-Infra, …). NDB remains the default tenant. ProductService reads this file. D43 — the 2026-05-20 NDB-only freeze is lifted.",
+  "_description": "Multi-team registry. Each Admin-onboarded team is one entry (NDB, Prism-Infra, \u2026). NDB remains the default tenant. ProductService reads this file. D43 \u2014 the 2026-05-20 NDB-only freeze is lifted.",
   "sprintFieldId": "customfield_10360",
   "storyPointsFieldId": "customfield_10002",
   "completedStatusName": "Closed",
@@ -12,7 +12,7 @@
       "boardId": 2888,
       "projectKey": "ERA",
       "featureProjectKey": "FEAT",
-      "baseFilter": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR assignee in (membersOf(\"Team-Karan-Singh-Org\"), membersOf(\"Team-BharatKumar-Beedu-Org\"), membersOf(\"Team-Ashish-Kumar-Org\")) OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
+      "baseFilter": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR assignee in (membersOf(\"Team-Karan-Singh-Org\"), membersOf(\"Team-BharatKumar-Beedu-Org\"), membersOf(\"Team-Ashish-Kumar-Org\")) OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
       "sosBaseFilter": "filter=ndb-all-sos",
       "labelPrefix": "ndb-",
       "releasePrefix": "NDB-",
@@ -120,7 +120,7 @@
       "defaultRelease": "NDB-2.12",
       "storyPointsField": "customfield_10002",
       "displayName": "NDB",
-      "base_jql": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR \"primary component\" in (\"NDB\", \"Era\", \"NDB Databases\", \"NDB Service\") OR assignee in (membersOf(\"Team-Karan-Singh-Org\"), membersOf(\"Team-BharatKumar-Beedu-Org\"), membersOf(\"Team-Ashish-Kumar-Org\")) OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
+      "base_jql": "(project in (ERA, NDBECO) OR (project in (ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR) AND (component in (NDB, Era, \"NDB Databases\", \"NDB Service\") OR assignee in (membersOf(\"Team-Karan-Singh-Org\"), membersOf(\"Team-BharatKumar-Beedu-Org\"), membersOf(\"Team-Ashish-Kumar-Org\")) OR issuetype in (\"Era Oncall\", \"ERA Oncall\"))))",
       "is_shared_project": false,
       "custom_project_key": "ERA, NDBECO",
       "components": [
