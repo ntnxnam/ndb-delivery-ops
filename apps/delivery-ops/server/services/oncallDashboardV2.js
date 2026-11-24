@@ -351,7 +351,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
       onCallFields: s.onCallFields || null,
     })),
     openFetched: openData.pathStats.openFetched,
-    closedStacksPreview: closedStacks.slice(0, 20).map((s) => ({ key: s.key, summary: s.summary, resolution: s.resolution, status: s.status })),
+    closedStacksPreview: closedStacks.slice(0, 20).map((s) => ({ key: s.key, summary: s.summary, resolution: s.resolution, status: s.status, priority: s.priority, assignee: s.assignee, ageDays: s.ageDays, cycleDays: s.cycleDays, created: s.created, resolutiondate: s.resolutiondate })),
     errors: Object.keys(errors).length ? errors : undefined,
   };
 }
