@@ -25,7 +25,8 @@ const PROJECT_KEY_PATTERN = /^[A-Z][A-Z0-9_]+$/;
 const LEGACY_FIELDS = ['projectType', 'versionPatterns', 'sprintBaseFilter'];
 const CONTACT_ROW_KEYS = ['team', 'serv_team', 'doc_team', 'security_team', 'legal', 'documentation', 'trade_compliance', 'others'];
 
-// Shared projects — matches teamBaseJqlService.SHARED_PROJECTS_ALL
+// Shared projects — single source in teamBaseJqlService; mirrored here for CJS compat (keep in sync via CONSOLIDATION.md #B1)
+// TODO(B3): derive from teamBoardConfig companionDisciplines + ENG via productService (product-agnostic)
 const SHARED_PROJECTS_ALL = ['ENG', 'FEAT', 'SDL', 'TECHPUBS', 'SR', 'LEG', 'NDBECO'];
 
 function httpError(statusCode, error, message) {
@@ -84,7 +85,7 @@ function parseCommaList(v) {
   return dedupeTrim(String(v || '').split(/[,;\n]+/));
 }
 
-function esc(v) { return String(v).replace(/"/g, '\\"'); }
+function esc(v) { return String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
 
 function normalizeContacts(raw) {
   if (!raw || typeof raw !== 'object') return {};
@@ -294,8 +295,12 @@ function updateTeam(teamId, body = {}) {
 
   const existing = teams[index];
   const merged = { ...existing, ...pickManagedFields(body), id: existing.id };
-  // Preserve contacts that weren't sent — merge row by row
-  if (body.contacts === undefined && existing.contacts) merged.contacts = existing.contacts;
+  // Preserve contacts row-by-row (H3 fix): PATCH with only one row shouldn't wipe other 7
+  if (body.contacts !== undefined) {
+    merged.contacts = { ...(existing.contacts || {}), ...(pickManagedFields(body).contacts || {}) };
+  } else if (existing.contacts) {
+    merged.contacts = existing.contacts;
+  }
   let team = stripLegacy(merged);
   team = enrichTeamWithJql(team);
   assertValidTeam(team);

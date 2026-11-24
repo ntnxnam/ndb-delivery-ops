@@ -40,7 +40,7 @@ export interface BuildBaseJqlParams {
 }
 
 function esc(v: string): string {
-  return String(v).replace(/"/g, '\\"');
+  return String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function quoteIfNeeded(v: string): string {
@@ -52,10 +52,8 @@ function quoteIfNeeded(v: string): string {
 }
 
 function quoteComponent(v: string): string {
-  // Always quote components to match existing JQL style: component in (Era, ERA, NDB, "NDB Databases")
-  // Era/NDB without spaces were unquoted historically, but quoting is valid and safer. Keep minimal quoting for parity.
-  if (/\s/.test(v) || v.includes('"')) return `"${esc(v)}"`;
-  return v;
+  if (/[\s",()]/.test(v)) return `"${esc(v)}"`;
+  return esc(v);
 }
 
 function dedupeAndTrim(arr: string[]): string[] {
