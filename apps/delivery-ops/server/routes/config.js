@@ -33,6 +33,14 @@ function normalizeTeamId(teamId) {
   return String(teamId).trim().toLowerCase();
 }
 
+function normalizeKpiEntry(k, idx) {
+  const order = typeof k.order === 'number' ? k.order : idx;
+  if (k && k.id) {
+    return { id: k.id, name: k.name || '', baseQuery: k.baseQuery || '', displayType: k.displayType === 'list' ? 'list' : 'count', order, ...(k.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k.isSuperImportant ? { isSuperImportant: true } : {}), ...(k.releaseScoped ? { releaseScoped: true } : {}), ...(k.locked ? { locked: true } : {}) };
+  }
+  return { id: generateKpiId(), name: k?.name || '', baseQuery: k?.baseQuery || '', displayType: 'count', order, ...(k?.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k?.isSuperImportant ? { isSuperImportant: true } : {}), ...(k?.releaseScoped ? { releaseScoped: true } : {}) };
+}
+
 function loadKpiConfig() {
   try {
     delete require.cache[require.resolve(KPI_CONFIG_PATH)];
@@ -47,16 +55,11 @@ function loadKpiConfig() {
     // Missing file, invalid JSON, or read error
   }
   if (!config.teams || typeof config.teams !== 'object') config.teams = {};
-  // Ensure each KPI has a unique id and order (migrate legacy entries)
+  if (!Array.isArray(config.standardKpis)) config.standardKpis = [];
+  config.standardKpis = config.standardKpis.map((k, idx) => normalizeKpiEntry(k, idx));
   Object.keys(config.teams).forEach((tid) => {
     if (!Array.isArray(config.teams[tid])) config.teams[tid] = [];
-    config.teams[tid] = config.teams[tid].map((k, idx) => {
-      const order = typeof k.order === 'number' ? k.order : idx;
-      if (k && k.id) {
-        return { id: k.id, name: k.name || '', baseQuery: k.baseQuery || '', displayType: k.displayType === 'list' ? 'list' : 'count', order, ...(k.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k.isSuperImportant ? { isSuperImportant: true } : {}), ...(k.releaseScoped ? { releaseScoped: true } : {}) };
-      }
-      return { id: generateKpiId(), name: k?.name || '', baseQuery: k?.baseQuery || '', displayType: 'count', order, ...(k?.lifecyclePhase ? { lifecyclePhase: k.lifecyclePhase } : {}), ...(k?.isSuperImportant ? { isSuperImportant: true } : {}), ...(k?.releaseScoped ? { releaseScoped: true } : {}) };
-    });
+    config.teams[tid] = config.teams[tid].map((k, idx) => normalizeKpiEntry(k, idx));
   });
   return config;
 }
@@ -68,12 +71,19 @@ function sortKpisByOrder(kpis) {
 
 function saveKpiConfig(config) {
   const teams = config.teams || {};
+  const standardKpis = Array.isArray(config.standardKpis) ? config.standardKpis : [];
   const payload = {
+    standardKpis: sortKpisByOrder(standardKpis),
     teams: Object.fromEntries(
       Object.entries(teams).map(([tid, kpis]) => [tid, sortKpisByOrder(Array.isArray(kpis) ? kpis : [])])
     )
   };
   fs.writeFileSync(KPI_CONFIG_PATH, JSON.stringify(payload, null, 2), 'utf8');
+}
+
+function isStandardKpiLocked(config, kpiId) {
+  const std = config.standardKpis || [];
+  return std.some((k) => k.id === kpiId);
 }
 
 function getUsername(req) {
@@ -435,10 +445,11 @@ router.get('/kpi', (req, res) => {
   const normalizedTeamId = normalizeTeamId(teamId);
   try {
     const config = loadKpiConfig();
+    const standard = Array.isArray(config.standardKpis) ? config.standardKpis : [];
     const raw = (config.teams && config.teams[normalizedTeamId]) || [];
-    const kpis = Array.isArray(raw) ? sortKpisByOrder(raw) : [];
+    const merged = sortKpisByOrder([...standard, ...raw]);
     const { authorized: isAdmin } = checkKpiAdminAuthorization(username, teamId);
-    res.json({ kpis, isAdmin });
+    res.json({ kpis: merged, isAdmin });
   } catch (err) {
     console.error('Error loading KPI config:', err);
     res.status(500).json({ error: 'Failed to load KPI configuration' });
@@ -468,6 +479,9 @@ router.post('/kpi', express.json(), (req, res) => {
   const normalizedDisplayType = displayType === 'list' ? 'list' : 'count';
   try {
     const config = loadKpiConfig();
+    if (kpiId && isStandardKpiLocked(config, kpiId)) {
+      return res.status(403).json({ error: 'This KPI is a company-standard metric and cannot be edited. Its JQL is fixed across all teams (team scope comes from team.baseFilter).' });
+    }
     if (!config.teams[normalizedTeamId]) config.teams[normalizedTeamId] = [];
     const trimmedName = String(name).trim();
     const trimmedQuery = String(baseQuery).trim();
@@ -478,15 +492,16 @@ router.post('/kpi', express.json(), (req, res) => {
         existing.baseQuery = trimmedQuery;
         existing.displayType = normalizedDisplayType;
       } else {
-        const maxOrder = config.teams[normalizedTeamId].length === 0 ? 0 : Math.max(...config.teams[normalizedTeamId].map((k) => k.order ?? 0));
+        const maxOrder = config.teams[normalizedTeamId].length === 0 ? 0 : Math.max(...config.teams[normalizedTeamId].map((k) => k.order ?? 0), ...(config.standardKpis || []).map((k) => k.order ?? 0));
         config.teams[normalizedTeamId].push({ id: kpiId, name: trimmedName, baseQuery: trimmedQuery, displayType: normalizedDisplayType, order: maxOrder + 1 });
       }
     } else {
-      const maxOrder = config.teams[normalizedTeamId].length === 0 ? 0 : Math.max(...config.teams[normalizedTeamId].map((k) => k.order ?? 0));
+      const maxOrder = [...(config.teams[normalizedTeamId] || []), ...(config.standardKpis || [])].length === 0 ? 0 : Math.max(...[...(config.teams[normalizedTeamId] || []), ...(config.standardKpis || [])].map((k) => k.order ?? 0));
       config.teams[normalizedTeamId].push({ id: generateKpiId(), name: trimmedName, baseQuery: trimmedQuery, displayType: normalizedDisplayType, order: maxOrder + 1 });
     }
     saveKpiConfig(config);
-    res.json({ success: true, kpis: sortKpisByOrder(config.teams[normalizedTeamId]) });
+    const merged = sortKpisByOrder([...(config.standardKpis || []), ...(config.teams[normalizedTeamId] || [])]);
+    res.json({ success: true, kpis: merged });
   } catch (err) {
     console.error('Error saving KPI config:', err);
     res.status(500).json({ error: 'Failed to save KPI configuration' });
@@ -514,11 +529,15 @@ router.delete('/kpi', express.json(), (req, res) => {
   }
   try {
     const config = loadKpiConfig();
+    if (isStandardKpiLocked(config, kpiId)) {
+      return res.status(403).json({ error: 'This KPI is a company-standard metric and cannot be deleted. It is fixed across all teams.' });
+    }
     if (!config.teams) config.teams = {};
     if (!Array.isArray(config.teams[normalizedTeamId])) config.teams[normalizedTeamId] = [];
     config.teams[normalizedTeamId] = config.teams[normalizedTeamId].filter((k) => k.id !== kpiId);
     saveKpiConfig(config);
-    res.json({ success: true, kpis: sortKpisByOrder(config.teams[normalizedTeamId] || []) });
+    const merged = sortKpisByOrder([...(config.standardKpis || []), ...(config.teams[normalizedTeamId] || [])]);
+    res.json({ success: true, kpis: merged });
   } catch (err) {
     console.error('Error saving KPI config:', err);
     res.status(500).json({ error: 'Failed to delete KPI' });
@@ -549,24 +568,30 @@ router.post('/kpi-reorder', express.json(), (req, res) => {
   }
   try {
     const config = loadKpiConfig();
-    const kpis = (config.teams && config.teams[normalizedTeamId]) || [];
-    const sorted = sortKpisByOrder(Array.isArray(kpis) ? kpis : []);
-    const idx = sorted.findIndex((k) => k.id === kpiId);
+    if (isStandardKpiLocked(config, kpiId)) {
+      return res.status(403).json({ error: 'Company-standard KPIs cannot be reordered from team scope. Reordering is only for team-specific KPIs.' });
+    }
+    const rawTeam = (config.teams && config.teams[normalizedTeamId]) || [];
+    const standard = config.standardKpis || [];
+    const sortedTeam = sortKpisByOrder(Array.isArray(rawTeam) ? rawTeam : []);
+    const idx = sortedTeam.findIndex((k) => k.id === kpiId);
     if (idx === -1) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI not found (or it is a standard KPI)' });
     }
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) {
-      return res.json({ success: true, kpis: sorted });
+    if (swapIdx < 0 || swapIdx >= sortedTeam.length) {
+      const merged = sortKpisByOrder([...standard, ...sortedTeam]);
+      return res.json({ success: true, kpis: merged });
     }
-    const a = sorted[idx];
-    const b = sorted[swapIdx];
+    const a = sortedTeam[idx];
+    const b = sortedTeam[swapIdx];
     const orderA = a.order ?? idx;
     const orderB = b.order ?? swapIdx;
     a.order = orderB;
     b.order = orderA;
     saveKpiConfig(config);
-    res.json({ success: true, kpis: sortKpisByOrder(config.teams[normalizedTeamId] || []) });
+    const merged = sortKpisByOrder([...(config.standardKpis || []), ...(config.teams[normalizedTeamId] || [])]);
+    res.json({ success: true, kpis: merged });
   } catch (err) {
     console.error('Error reordering KPI config:', err);
     res.status(500).json({ error: 'Failed to reorder KPI' });

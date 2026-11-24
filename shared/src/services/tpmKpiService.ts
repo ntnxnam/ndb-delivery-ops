@@ -87,13 +87,24 @@ export function loadKpiConfig(kpiConfigPath?: string): KpiTeamsMap {
   if (!existsSync(p)) return {};
   try {
     const raw = readFileSync(p, 'utf8');
-    const parsed = JSON.parse(raw) as { teams?: Record<string, KpiEntry[]> };
+    const parsed = JSON.parse(raw) as { teams?: Record<string, KpiEntry[]>; standardKpis?: KpiEntry[] };
     if (!parsed.teams || typeof parsed.teams !== 'object') return {};
+    const standardKpis = Array.isArray((parsed as any).standardKpis) ? (parsed as any).standardKpis as KpiEntry[] : [];
     const out: KpiTeamsMap = {};
     for (const [tid, arr] of Object.entries(parsed.teams)) {
       const key = tid.trim().toLowerCase();
-      out[key] = Array.isArray(arr) ? arr : [];
+      const teamKpis = Array.isArray(arr) ? arr : [];
+      out[key] = [...standardKpis, ...teamKpis];
     }
+    // Backfill board-only teams (e.g. prism-infra with empty KPI array) so they still get standard KPIs
+    try {
+      const teamRaw = readFileSync(defaultTeamConfigPath(), 'utf8');
+      const teamParsed = JSON.parse(teamRaw) as TeamBoardConfig;
+      for (const t of teamParsed.teams ?? []) {
+        const nid = (t.id || '').trim().toLowerCase();
+        if (nid && !out[nid]) out[nid] = [...standardKpis];
+      }
+    } catch {}
     return out;
   } catch {
     return {};
