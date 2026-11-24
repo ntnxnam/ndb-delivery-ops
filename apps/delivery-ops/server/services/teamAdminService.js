@@ -116,7 +116,7 @@ function buildBaseJqlFromTeam(team) {
   const customRaw = team.custom_project_key || team.customProjectKey || null;
   const customKeys = customRaw ? dedupeTrim(String(customRaw).split(/[,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean)) : [];
 
-  // Collect DLs/handles from 8 contact rows
+  // Collect DLs/handles from 8 contact rows + Leadership DLs (PM/Dev/QA) auto-included in JQL assignee
   const contacts = team.contacts || {};
   const dlList = [];
   const handleList = [];
@@ -126,10 +126,10 @@ function buildBaseJqlFromTeam(team) {
     if (row.isDL) dlList.push(...row.entries);
     else handleList.push(...row.entries);
   }
-  // Also support leader_outlook_dls as DLs for JQL if needed — task says DLs are for JQL assignee
-  // But spec says leader_outlook_dls are for email, not JQL. Keep separate.
+  // Leadership DLs (3) automatically become assignee DLs — no re-typing needed
+  const leaderDLs = Array.isArray(team.leader_outlook_dls) ? team.leader_outlook_dls : [];
 
-  const dlParts = dedupeTrim(dlList).map(dl => `membersOf("${esc(dl)}")`);
+  const dlParts = dedupeTrim([...leaderDLs, ...dlList]).map(dl => `membersOf("${esc(dl)}")`);
   const handleParts = dedupeTrim(handleList);
   const assigneeParts = [...dlParts, ...handleParts];
 

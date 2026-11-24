@@ -199,7 +199,7 @@ function formatJql(jql) {
   return formatted;
 }
 
-function buildPreview({ isShared, customKey, components, contactRows }) {
+function buildPreview({ isShared, customKey, components, contactRows, leaderDLs }) {
   const comps = dedupeTrim(components.filter(Boolean));
   if (comps.length === 0) return '(add at least one component to preview)';
   const shared = 'ENG, FEAT, ONCALL, TH, SDL, TECHPUBS, SR, LEG, ACP, LBDR';
@@ -208,6 +208,9 @@ function buildPreview({ isShared, customKey, components, contactRows }) {
   innerParts.push(`"primary component" in (${comps.map(c => `"${esc(c)}"`).join(', ')})`);
   const dl = [];
   const handles = [];
+  // Leadership DLs (PM/Dev/QA - 3) auto-included
+  const leaderDLParts = dedupeTrim(leaderDLs || []).map(v => `membersOf("${esc(v)}")`);
+  dl.push(...leaderDLParts);
   for (const r of Object.values(contactRows)) {
     if (!r || !r.entries) continue;
     if (r.isDL) dl.push(...dedupeTrim(r.entries).map(v => `membersOf("${esc(v)}")`));
@@ -276,7 +279,7 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
     setContactRows(prev => ({ ...prev, [key]: { ...prev[key], isDL: !prev[key].isDL } }));
   };
 
-  const previewJql = buildPreview({ isShared, customKey, components, contactRows });
+  const previewJql = buildPreview({ isShared, customKey, components, contactRows, leaderDLs });
 
   // Keep baseFilter in sync with preview unless user has manually edited it
   const [baseFilterTouched, setBaseFilterTouched] = useState(false);
@@ -410,9 +413,9 @@ export default function TeamForm({ initialTeam = null, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <label style={fieldLabel}>Leadership Outlook DL(s) — for emails, not JQL</label>
-        <ChipInput value={leaderDLs} onChange={setLeaderDLs} placeholder="team-ndb-leads@nutanix.com, era-managers@nutanix.com" suggestions={[]} />
-        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Optional. For report distribution only — does not affect JQL.</p>
+        <label style={fieldLabel}>Leadership Outlook DL(s) — PM, Dev, QA (3) — auto-included in JQL</label>
+        <ChipInput value={leaderDLs} onChange={setLeaderDLs} placeholder="Team-PM-Org, Team-Dev-Org, Team-QA-Org (3)" suggestions={[]} />
+        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0' }}>Auto-added to JQL as <code>assignee in (membersOf("PM") OR membersOf("Dev") OR membersOf("QA"))</code> — no re-typing in Contacts needed. Also for email.</p>
       </div>
 
       <div style={{ marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
