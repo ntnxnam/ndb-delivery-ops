@@ -1639,14 +1639,14 @@ async function generatePageCompressBrief(story, validKeys = []) {
 
 // ── OnCall V2 — Concern (fused quant+qual) + Slice prompts ──────────────────
 
-const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly two sections.
+const ONCALL_CONCERN_SYSTEM_PROMPT = `You are a senior TPM writing a fused OnCalls concern for a VP. Output MUST be labeled with exactly two sections. Use ticket content to add value — status alone is not insight.
 
-Input: TIMEFRAME, HERO (open, aged>Xd, needInfo, waitingCustomer, closedInWindow), HEALTH (mttrMedian/p90, throughput, net, agedShare%), WORKFLOW, GAP_TAXONOMY (duds/ndbGaps/otherTeamGaps + ndbSub TH/bugs/improvements/other), HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5 OnCall fields: OnCall Relief, Root Cause, Workaround).
+Input: TIMEFRAME, HERO, HEALTH, WORKFLOW, GAP_TAXONOMY, HOTSPOT_COMPONENTS top2, STACK SAMPLE (top5: summary + OnCall Relief + Corrective + Root Cause + Workaround + Preliminary Analysis themes). Summaries carry product signals (e.g. oracle, upgrade, patch on 2.11 family).
 
 Output format (exact headings, keep order):
-Quantitative: 1 paragraph 45-55 words — headline counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. No interpretation, no chase, just numbers in plain English.
+Quantitative: 1 paragraph 45-55 words — counts only: open, aged>Xd, closedInWindow, MTTR median/p90, throughput/net, agedShare%. No interpretation, plain English.
 
-Qualitative: 1 paragraph 60-70 words — interpret: what does 58% aged + MTTR mean? Hotspot top2 verbatim like "last 7d hotspot in <A> (9) + <B> (7)" or "no component hotspot — diffuse" + gap story duds vs NDB vs other-team + ndbSub theme + workflow pressure Need Info vs Waiting (who stalls whom). Use STACK SAMPLE Root Cause/Workaround themes for hotspot narrative — do not quote full Workaround. Decisive, no table dump.
+Qualitative: 1 paragraph 60-70 words — read STACK SAMPLE content (summary + RootCause/Workaround), not status. Name the thematic hotspot (e.g. "oracle + upgrade infra on 2.11 family with MPLS timeout + stale marker pattern" vs "diffuse"), name recurring Problem/Technical Category, connect gap story (duds vs NDB other) to content, and workflow pressure in content terms. Do not parrot status labels; do not quote full Workaround commands. Decisive.
 
 Then 2-line chase: "Ask <owner> to <action> on <KEY> by <timeframe>." Copy keys verbatim — never invent.`;
 
