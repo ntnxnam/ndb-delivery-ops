@@ -7,5 +7,21 @@
     "p0": true,
     "p1": true,
     "tbv": true
+  },
+  "slaThresholds": {
+    "p0Days": 7,
+    "p1Days": 30,
+    "p2Days": 60
+  },
+  "triage": {
+    "owners": [],
+    "defaultAssignee": "",
+    "autoAssignOnCreate": false
+  },
+  "customFields": {},
+  "display": {
+    "defaultSortBy": "priority",
+    "showLinkedOncalls": true,
+    "compactCards": false
   }
 }

@@ -217,4 +217,72 @@ router.post('/clear-jira-cache', (req, res) => {
   }
 });
 
+// ── Config Manager (self-serve JSON editor) ─────────────────────────────
+const configAdminService = require('../services/configAdminService');
+
+/**
+ * GET /api/admin/configs — list allowlisted config files
+ */
+router.get('/configs', requireSuperAdmin, (req, res) => {
+  try {
+    return res.json({ success: true, configs: configAdminService.listConfigs() });
+  } catch (error) {
+    return sendError(res, error, 'Failed to list configs');
+  }
+});
+
+/**
+ * GET /api/admin/configs/:key — read a single config
+ */
+router.get('/configs/:key', requireSuperAdmin, (req, res) => {
+  try {
+    const result = configAdminService.getConfig(req.params.key);
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendError(res, error, 'Failed to load config');
+  }
+});
+
+/**
+ * PUT /api/admin/configs/:key — replace full config (atomic save with .bak)
+ * Body: { data: <object> }
+ */
+router.put('/configs/:key', requireSuperAdmin, (req, res) => {
+  try {
+    const payload = req.body?.data !== undefined ? req.body.data : req.body;
+    const result = configAdminService.saveConfig(req.params.key, payload);
+    return res.json({ success: true, ...result, message: `${result.file} saved.` });
+  } catch (error) {
+    return sendError(res, error, 'Failed to save config');
+  }
+});
+
+/**
+ * PATCH /api/admin/configs/:key/field — upsert a single dotted field
+ * Body: { fieldPath: "rag.redOpenP0", value: 2 }
+ */
+router.patch('/configs/:key/field', requireSuperAdmin, (req, res) => {
+  try {
+    const { fieldPath, value } = req.body || {};
+    const result = configAdminService.patchField(req.params.key, fieldPath, value);
+    return res.json({ success: true, ...result, message: `Field "${fieldPath}" updated.` });
+  } catch (error) {
+    return sendError(res, error, 'Failed to patch field');
+  }
+});
+
+/**
+ * DELETE /api/admin/configs/:key/field — remove a dotted field
+ * Body: { fieldPath: "customFields.myNewField" }
+ */
+router.delete('/configs/:key/field', requireSuperAdmin, (req, res) => {
+  try {
+    const fieldPath = req.body?.fieldPath || req.query?.fieldPath;
+    const result = configAdminService.deleteField(req.params.key, fieldPath);
+    return res.json({ success: true, ...result, message: `Field "${fieldPath}" removed.` });
+  } catch (error) {
+    return sendError(res, error, 'Failed to delete field');
+  }
+});
+
 module.exports = router;

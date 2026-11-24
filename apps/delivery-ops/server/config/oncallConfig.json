@@ -46,5 +46,24 @@
       "onCallProject": "OnCall",
       "techHelpProjects": ["TH", "TechHelp"]
     }
+  },
+  "slaThresholds": {
+    "p0Hours": 4,
+    "p1Hours": 24,
+    "p2Hours": 72,
+    "breachWarningPct": 80
+  },
+  "cfdCfiLinkage": {
+    "enabled": true,
+    "linkTypes": ["relates to", "caused by", "blocks"],
+    "autoLinkOnCreate": false,
+    "cfiJqlSnippet": "project = ERA AND type = Bug AND labels in (cfi)",
+    "cfdJqlSnippet": "project = ERA AND type = Bug AND labels in (cfd)"
+  },
+  "customFields": {},
+  "notificationChannels": {
+    "slackEnabled": false,
+    "slackChannel": "",
+    "emailOnBreach": false
   }
 }
