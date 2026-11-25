@@ -299,16 +299,16 @@ export function TicketsTable({ rows, jiraBase, mode = 'open' }) {
       <table className="oc-table">
         <thead>
           <tr>
-            <th>Key</th>
-            <th>Issue Type</th>
-            <th>Summary</th>
-            <th>Status</th>
-            {mode === 'past' ? <th>Resolution</th> : null}
-            <th>Priority</th>
-            <th>Assignee</th>
-            <th>{mode === 'past' ? 'Cycle' : 'Age'}</th>
-            <th>TechHelp</th>
-            <th>Eng / TechPubs</th>
+            <th scope="col">Key</th>
+            <th scope="col">Issue Type</th>
+            <th scope="col">Summary</th>
+            <th scope="col">Status</th>
+            {mode === 'past' ? <th scope="col">Resolution</th> : null}
+            <th scope="col">Priority</th>
+            <th scope="col">Assignee</th>
+            <th scope="col">{mode === 'past' ? 'Cycle' : 'Age'}</th>
+            <th scope="col">TechHelp</th>
+            <th scope="col">Eng / TechPubs</th>
           </tr>
         </thead>
         <tbody>
