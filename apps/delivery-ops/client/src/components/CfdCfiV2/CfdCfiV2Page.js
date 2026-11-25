@@ -79,7 +79,7 @@ function ChipRow({ chips, activeChip, setActiveChip }){
   return (
     <div className="cfdcfi-v2-chips" role="tablist" aria-label="Breakdown chips">
       <span style={{fontSize:'var(--fs-muted)',color:'var(--muted)'}}>Filter:</span>
-      {chips.map(c=>{ const id=`${c.kind}:${c.value}`; const active=activeChip===id; return <button key={id} type="button" role="tab" aria-selected={active} className={`cfdcfi-v2-chip ${active?'active':''}`} onClick={()=>setActiveChip(active?null:id)} title={c.jql?`Filter by ${c.label}`:c.label}><span>{c.label}</span>{c.count!=null?<span className="count">{c.count}</span>:null}</button>; })}
+      {chips.map(c=>{ const id=`${c.kind}:${c.value}`; const active=activeChip===id; return <button key={id} type="button" role="tab" aria-selected={active} className={`cfdcfi-v2-chip ${active?'active':''}`} onClick={()=>setActiveChip(active?null:id)} title={c.jql?`Filter by ${c.label}`:c.label}><span>{c.label}</span>{c.count!=null && <span className="cfdcfi-v2-chip-count">{c.count}</span>}</button>; })}
       {activeChip?<button type="button" className="cfdcfi-v2-btn" onClick={()=>setActiveChip(null)}>Clear</button>:null}
     </div>
   );
