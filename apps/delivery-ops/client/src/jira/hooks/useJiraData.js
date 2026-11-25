@@ -226,7 +226,7 @@ export const useJiraData = (options = {}) => {
     if (autoConnect && isAuthenticated) {
       testConnection();
     }
-  }, [autoConnect, isAuthenticated]); // Only run when auth status changes
+  }, [autoConnect, isAuthenticated, testConnection]);
 
   return {
     // Connection state
