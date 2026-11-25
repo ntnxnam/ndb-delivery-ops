@@ -149,8 +149,8 @@ export default function OncallsV2Page() {
   if (!hasTeamSelected) {
     return (
       <TeamRequiredGate
-        title="Select a team for OnCalls V2"
-        description="OnCalls V2 follows the selected team and global timeframe. Pick a team in the sidebar."
+        title="Select a team for OnCalls"
+        description="OnCalls follows the selected team and global timeframe. Pick a team in the sidebar."
       />
     );
   }
@@ -158,7 +158,7 @@ export default function OncallsV2Page() {
   return (
     <div className="ocv2-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h1>OnCalls V2</h1>
+        <h1>OnCalls</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {data?.asOf && <span className="oc-chip">as of {new Date(data.asOf).toLocaleString()}</span>}
           <button type="button" className="oc-btn" onClick={refresh} disabled={loading || refreshing}>
@@ -205,7 +205,7 @@ export default function OncallsV2Page() {
       </details>
 
       {error && <p className="oc-error">{error}</p>}
-      {loading && !data && <PageLoading message="Loading OnCalls V2…" />}
+      {loading && !data && <PageLoading message="Loading OnCalls…" />}
 
       {data && (
         <>
