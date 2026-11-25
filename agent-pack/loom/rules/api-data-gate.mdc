@@ -1,0 +1,55 @@
+---
+description: API Data Gate — every API touched must prove live non-empty data before merge to main
+alwaysApply: true
+---
+
+# API Data Gate (`api-data-gate`)
+
+Every pipeline run that touches an API route must prove that route returns **real, non-empty data** before merge to `main`. A `200 OK` with an empty body is still a failure — the frontend shows nothing. This gate was added after the 2026-11-25 outage where every `POST /api/ai/*` returned `finish_reason=length` (empty content) and still reached `main`.
+
+## Contract
+
+### When it applies
+
+Any of these in the diff trigger the gate:
+
+- `apps/delivery-ops/server/routes/**` — `routes/ai.js`, `routes/jira/`, `routes/config/`, `routes/teams/`, any route (broad; was too narrow before)
+- `apps/delivery-ops/server/services/naiService.js` (AI prompt or model change)
+- `apps/delivery-ops/server/config/aiConfig.json` or `apps/delivery-ops/server/.env.example` (`maxTokens` / model)
+- `shared/src/connectors/aiConnector.ts` (transport change)
+- Any client file that adds a new `fetch('/api/...')` or `authenticatedPost('/api/...')` call
+
+If none of these are touched (pure docs, pure CSS, pure client-only with no new API), the gate is `N/A` with reason logged.
+
+### What it checks
+
+For each touched endpoint, the harness (`scripts/loom/checks/check-api-data.sh`, alias `npm run check:api-data`) must:
+
+1. **Start the server** on `8001` if not already up (same contract as `port-and-env-contracts.mdc`).
+2. **Hit the endpoint live** — no mocks, no fixtures alone. Uses `supertest` against the running Express app or `curl` with a test JIRA token when available (`TEST_JIRA_TOKEN` env). If no live token is available (local dev without creds), the harness runs in `mock` mode against `__tests__` fixtures and marks the gate `STALE — needs live proof before merge to main`.
+3. **Assert the response**:
+   - HTTP status is `200` where `200` is expected (not `400`/`500` fallthrough).
+   - Body is not empty: `summary`, `versions`, `data`, `issues`, `tickets`, `history`, or the route's documented top-level key has length > 0. `{}`, `[]`, `null`, `""` → fail.
+   - **LLM routes (`POST /api/ai/exec-summary`, `/api/ai/release-summary`, `/api/ai/oncall-concern`, `/api/ai/oncall-slice`, `/api/ai/cfdcfi-concern`, `/api/ai/cfdcfi-slice`, `/api/ai/page-briefing`, etc.)**: additionally assert `finish_reason !== "length"` and `content.trim().length > 0`. An empty `content` with `finish_reason=length` means the reasoning model burned the entire `maxTokens` budget on chain-of-thought and returned nothing — this is the exact failure that shipped on 2026-11-25.
+4. **Report per-endpoint**: `endpoint → status → non-empty proof (sample key or length) → PASS/FAIL` — one line per endpoint, no silent aggregation.
+
+### Pass / fail
+
+- **PASS**: every touched endpoint listed with `ok` + non-empty proof, exit `0`, log `check:api-data PASS`.
+- **FAIL**: any endpoint missing, empty, `finish_reason=length`, or HTTP ≠ expected → exit `1`, log `check:api-data FAIL — <endpoint>: <reason>`. Fix must re-run the gate after touching the failing path.
+
+### No waivers
+
+`api-data-gate` is never waivable — same bar as `compile-gate`. If the gate cannot run live (no token), the merge is blocked until live proof is provided. Record `STALE` explicitly rather than claiming a pass on fixtures.
+
+### Integration with pipeline
+
+- Stage **8.7. API Data Gate** in `agent-pack/loom/rules/weave.mdc` — runs after Final Acceptance (8.6) and before Security (9) / Merge (10).
+- Hard constraint `api-data-gate` in the KPI contract — auto-added to every Goal KPI Card where an API is touched.
+- `package.json:check` always includes it (N/A fast-path when no API touched): `npm run check:api-data` alongside `check:compile` (`package.json:21`).
+
+## References
+
+- Outage: `finish_reason=length` on every page — reasoning model (`beam-1-501b` / `eng-pool-05`) consumed `maxTokens` budget, `aiConnector.ts:255` threw `LLM returned empty content`.
+- Fix pattern: raise `NAI_MAX_TOKENS` / `aiConfig.json:maxTokens` to cover reasoning + visible output; never cap `max_tokens` below what the model needs for reasoning.
+- Related rules: `port-and-env-contracts.mdc`, `no-localhost.mdc`, `minimal-architecture.mdc`.

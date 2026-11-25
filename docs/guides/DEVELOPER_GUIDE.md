@@ -56,7 +56,7 @@ Verify:
 # Docs hub and guides render
 node scripts/docs-build.js && bash scripts/docs-verify.sh
 # No hardcoded localhost in shipped code
-npm run check:no-localhost && npm run check:product-agnostic && npm run check:mcp
+npm run check:no-localhost && npm run check:product-agnostic && npm run check:mcp && npm run check:compile && npm run check:api-data
 # Shared build
 npm --workspace @portfolio-delivery-ops/shared run build 2>/dev/null || echo "shared: no build step — consumed as source"
 # MCP builds
@@ -353,7 +353,7 @@ src/
 
 ### Loom pack — `agent-pack/loom/` (portable cookbook, [D38](../../DECISIONS.md#d38--agent-pack-is-portable-cursor-is-one-adapter))
 
-The **loom weaver** is one-shot: discuss scope → draft plan in `~/.opencode/plan/` → execute full pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge).
+The **loom weaver** is one-shot: discuss scope → draft plan in `~/.opencode/plan/` → execute full pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → API Data Gate → Merge).
 
 | Area | Files | Purpose |
 |---|---|---|
@@ -513,7 +513,7 @@ Recovered + new rules — every change is checked against these by `npm run chec
 
 | File | Purpose | Applies to |
 |---|---|---|
-| `agent-pack/loom/rules/weave.mdc` | Primary pipeline — Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge | every non-trivial change |
+| `agent-pack/loom/rules/weave.mdc` | Primary pipeline — Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → API Data Gate → Merge | every non-trivial change |
 | `agent-pack/loom/rules/no-localhost.mdc` | No hardcoded `localhost`/`127.0.0.1` in prod code | `client/src`, `server/` |
 | `agent-pack/loom/rules/no-hardcoding.mdc` | No hardcoded product strings (D1) — use `productService` | all code |
 | `agent-pack/loom/rules/minimal-architecture.mdc` | Components render, hooks fetch, services transform; file size limits | all layers |
@@ -548,7 +548,7 @@ When a file approaches its hard limit, split before adding the next feature (ext
 | Term | Means | Decided in |
 |---|---|---|
 | **Loom** | Weaver agent — discusses scope, drafts plan in `.opencode/plan/`, executes pipeline alone via `weave.mdc` | [loom.md](../../agent-pack/loom/identity/loom.md) |
-| **Weave** | The pipeline skill: Discuss → plan → Dev → Impact Scout → Review → QA → UX → PM → Exec → JIRA → Fix → Merge (incl. link gate) | [skills/weave/SKILL.md](../../agent-pack/loom/skills/weave/SKILL.md) |
+| **Weave** | The pipeline skill: Discuss → plan → Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → API Data Gate → Merge (incl. link gate) | [skills/weave/SKILL.md](../../agent-pack/loom/skills/weave/SKILL.md) |
 | **Payload — Engineering** | `project = ERA AND (6-bucket union)` — dev-team view | [D36](../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload) |
 | **Payload — Release** | No project filter — every contributor project (ERA+FEAT+TECHPUBS+…) via `fixVersion` | [D36](../../DECISIONS.md#d36--payload-splits-into-engineering-payload-and-release-payload) — **default** since 2026-06-13 |
 | **Static mount** | `apps/bin-packing/` vanilla JS served at `/bin-packing/*`, new-tab sidebar entry | [D37](../../DECISIONS.md#d37--bin-packing-app-ships-as-a-static-mount-not-a-react-port) |

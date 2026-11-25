@@ -6,7 +6,7 @@ aliases: [multi-agent-delivery-pipeline]
 
 # Weave — Orchestrator (invoked by Loom)
 
-Invoked by **Loom** (thinker) with a locked Goal Contract + Decomposition Memo. Produce/confirm plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
+Invoked by **Loom** (thinker) with a locked Goal Contract + Decomposition Memo. Produce/confirm plan file in `/Users/namratha.singh/.opencode/plan/weave-<slug>.md`, then execute the delivery pipeline via `agent-pack/loom/rules/weave.mdc` (Dev → Impact Scout → Compile Gate → Review → QA → UX → PM → Exec → JIRA → Fix → Doc → Final Acceptance → API Data Gate → Merge), where **Final Acceptance (8.6) is QA owning UX acceptance at the end** to catch post-Fix regressions.
 
 ## Compile gate — zero compile-time errors (stage 1.7, re-checked at 8.6 and before Merge)
 

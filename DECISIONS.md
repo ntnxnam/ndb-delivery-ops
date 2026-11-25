@@ -1131,7 +1131,7 @@ no longer exists (except `open-pr.sh`, which is repo-wide).
 
 **Implications.**
 - `npm run check` runs `check:no-localhost` + `check:product-agnostic`
-  (Lighthouse) + `check:mcp` (Loom) — see `package.json:14-17`.
+  (Lighthouse) + `check:mcp` + `check:compile` + `check:api-data` (Loom) — see `package.json:14-21`.
 - A new product check/doc/jira/report script goes in
   `scripts/lighthouse/<area>/`; a new builder/archive/check script goes
   in `scripts/loom/<area>/`. Do not recreate a top-level `scripts/`
