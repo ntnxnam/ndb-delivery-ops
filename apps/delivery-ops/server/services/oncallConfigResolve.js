@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId, getTeamBaseFilter } = require('../utils/teamConfig');
+const { loadKpiConfigSync, getKpisForTeam, normalizeTeamId, getTeamBaseFilter, getTeamById } = require('../utils/teamConfig');
 
 const CONFIG_PATH = path.join(__dirname, '../config/oncallConfig.json');
 
@@ -43,6 +43,32 @@ function pushUnique(target, keys) {
   }
 }
 
+function escComponent(c) {
+  const s = String(c || '').trim();
+  if (!s) return null;
+  // JIRA component names with spaces/commas/parens must be quoted; escape " and \
+  const esc = s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  if (/[,\s"()]/.test(s)) return `"${esc}"`;
+  return esc;
+}
+
+function buildOncallTeamClause(team) {
+  if (!team) return null;
+  const parts = [];
+  // component clause — from team.components (admin chips, canonical source)
+  const comps = Array.isArray(team.components) ? team.components : [];
+  const compTokens = comps.map(escComponent).filter(Boolean);
+  if (compTokens.length) parts.push(`component in (${compTokens.join(', ')})`);
+  // assignee clause — leader DLs are team ownership signal per team-config-auto-jql
+  const dls = Array.isArray(team.leader_outlook_dls) ? team.leader_outlook_dls : [];
+  const dlTokens = dls.map((d) => String(d || '').trim()).filter(Boolean).map((d) => `membersOf("${d.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`);
+  if (dlTokens.length) parts.push(`assignee in (${dlTokens.join(', ')})`);
+  // OnCall issuetype is team-agnostic but indicates OnCall origin — always include for ONCALL project scope
+  parts.push('issuetype in ("Era Oncall", "ERA Oncall")');
+  if (!parts.length) return null;
+  return parts.join(' OR ');
+}
+
 function resolveRuntimeConfig(teamId) {
   const cfg = loadConfig();
   const requested = normalizeTeamId(teamId) || normalizeTeamId(cfg.defaultTeamId) || 'ndb';
@@ -64,11 +90,24 @@ function resolveRuntimeConfig(teamId) {
   } catch (_) {
     // keep config override / empty
   }
-  // AND with team baseFilter so OnCalls is team-scoped (NDB sees only NDB OnCalls)
+  // AND with team-scoped OnCall clause so NDB sees only NDB OnCalls.
+  // Do NOT blindly AND the full teamBaseFilter — for ONCALL project the
+  // shared `project in (ERA,NDBECO) OR (project in (ENG,FEAT,ONCALL...) AND (ownership))`
+  // branch makes `project=ONCALL AND project in (ERA,NDBECO)` impossible and
+  // zeros the pulse/hero counts (flatline). Instead scope ONCALL via ownership only.
   try {
-    const teamBaseFilter = getTeamBaseFilter(requested);
-    if (teamBaseFilter && baseScopeJql) {
-      baseScopeJql = `(${teamBaseFilter}) AND (${baseScopeJql})`;
+    const isOncallScope = /^\s*project\s*=\s*ONCALL\s*$/i.test(baseScopeJql);
+    if (isOncallScope) {
+      const team = getTeamById(requested);
+      const teamClause = buildOncallTeamClause(team);
+      if (teamClause) {
+        baseScopeJql = `(${baseScopeJql}) AND (${teamClause})`;
+      }
+    } else if (baseScopeJql) {
+      const teamBaseFilter = getTeamBaseFilter(requested);
+      if (teamBaseFilter) {
+        baseScopeJql = `(${teamBaseFilter}) AND (${baseScopeJql})`;
+      }
     }
   } catch (_) {}
 
@@ -190,4 +229,5 @@ module.exports = {
   openJql,
   pastClosedJql,
   buildHeroQueries,
+  buildOncallTeamClause,
 };
