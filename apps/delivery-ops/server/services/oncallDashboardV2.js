@@ -182,13 +182,13 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
   const t0 = Date.now();
   // Parallelize independent JIRA fetches (was serial, now ~40% faster)
   const outJql = linkedOutJql(cfg);
-  const windowOverride = computePulseWindow(normalizedTf);
+  // Pulse is longitudinal (last 2 Nutanix quarters, ~26 weeks) — not pill-sized.
+  // Pill drives heroes/health/taxonomy; pulse shows trend. Pill 7d → 2 points
+  // looked flat (2,2) and hid blue under green — see screenshot 2026-11-25.
   const pulseOpts = (() => {
     if (!cfg.baseScopeJql) return null;
     // OnCalls: all are P0 by project, so p0/p1 tiles are noise — hide them (learning #7)
-    const opts = { token, baseJql: cfg.baseScopeJql, optionalHeroes: {}, agedOpenDays: cfg.agedOpenDays };
-    if (windowOverride) opts.window = windowOverride;
-    return opts;
+    return { token, baseJql: cfg.baseScopeJql, optionalHeroes: {}, agedOpenDays: cfg.agedOpenDays };
   })();
 
   const [countsRes, openRes, closedRes, linkedOutRes, pulseRes] = await Promise.allSettled([

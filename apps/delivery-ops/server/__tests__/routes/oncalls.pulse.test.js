@@ -56,13 +56,16 @@ function fakeJiraWithCounts() {
 describe('GET /api/jira/oncalls pulse regression', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('200 and pulse.series not flatlined for 7d', async () => {
+  test('200 and pulse.series not flatlined for 7d — must be longitudinal 2Q not 2-point flatline', async () => {
     getJira.mockResolvedValue(fakeJiraWithCounts());
     const res = await request(app).get('/api/jira/oncalls').set(AUTH).query({ teamId: 'ndb', timeframe: '7d' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.pulse).toBeDefined();
     expect(Array.isArray(res.body.pulse.series)).toBe(true);
+    // Regression: 7d pill gave 2-point window (flat 2,2) — pulse must be 2Q (~26 weeks) even for 7d pill
+    expect(res.body.pulse.series.length).toBeGreaterThan(10);
+    expect(res.body.pulse.window.label).toMatch(/Last 2 Nutanix Qs/);
     const total = res.body.pulse.series.reduce((s, w) => s + (w.created?.count || 0) + (w.closed?.count || 0), 0);
     expect(total).toBeGreaterThan(0);
     expect(res.body.pulse.seriesOutflowMode).toBe('resolutiondate');
@@ -71,10 +74,11 @@ describe('GET /api/jira/oncalls pulse regression', () => {
     expect(res.body.baseScopeJql).not.toMatch(/project in \(ERA, NDBECO\) OR \(project in \(ENG, FEAT, ONCALL\)/);
   });
 
-  test('Overall also returns non-flat pulse', async () => {
+  test('Overall also returns longitudinal 2Q pulse', async () => {
     getJira.mockResolvedValue(fakeJiraWithCounts());
     const res = await request(app).get('/api/jira/oncalls').set(AUTH).query({ teamId: 'ndb', timeframe: 'Overall' });
     expect(res.status).toBe(200);
-    expect(res.body.pulse.series.length).toBeGreaterThan(2);
+    expect(res.body.pulse.series.length).toBeGreaterThan(10);
+    expect(res.body.pulse.window.label).toMatch(/Last 2 Nutanix Qs/);
   });
 });
