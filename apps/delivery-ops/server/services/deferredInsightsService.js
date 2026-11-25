@@ -55,8 +55,11 @@ function deferredLabel(release, releasePrefix, prefixForLabel) {
 }
 
 function deferredJql(release, releasePrefix, prefixForLabel) {
-  const label = deferredLabel(release, releasePrefix, prefixForLabel);
-  return `labels = "${label.replace(/"/g, '\\"')}"`;
+  const canonical = deferredLabel(release, releasePrefix, prefixForLabel);
+  const raw = `${String(release || '').trim()}-deferred`;
+  const variants = [...new Set([canonical, raw])];
+  if (variants.length === 1) return `labels = "${variants[0].replace(/"/g, '\\"')}"`;
+  return `labels in (${variants.map((v) => `"${v.replace(/"/g, '\\"')}"`).join(', ')})`;
 }
 
 function quote(v) { return `"${String(v).replace(/"/g, '\\"')}"`; }
