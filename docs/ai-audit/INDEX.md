@@ -28,6 +28,7 @@ Per-page chronological AI audit trails. See [`LEARNINGS.md`](./LEARNINGS.md) for
 | WeeklySkim | `/release/weekly-skim` | [`apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim`](../../apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim/) · [INDEX](../../apps/delivery-ops/client/src/release/ai-audit-docs/WeeklySkim/INDEX.md) |
 | ReleaseConfig | `/release-config` | [`apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig`](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig/) · [INDEX](../../apps/delivery-ops/client/src/components/ai-audit-docs/ReleaseConfig/INDEX.md) |
 | AdminPanel | `/team-management` | [`apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs`](../../apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs/INDEX.md) |
+| DeferredInsights | `/deferred-insights` | [`apps/delivery-ops/client/src/components/DeferredInsights/ai-audit-docs`](../../apps/delivery-ops/client/src/components/DeferredInsights/ai-audit-docs/) · [INDEX](../../apps/delivery-ops/client/src/components/DeferredInsights/ai-audit-docs/INDEX.md) |
 
 - Timeline: [timeline.md](./timeline.md) — all pages chronological
 - Learnings: [LEARNINGS.md](./LEARNINGS.md) — anti-repeat log

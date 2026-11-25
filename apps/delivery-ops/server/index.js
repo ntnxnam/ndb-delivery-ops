@@ -175,6 +175,9 @@ app.use('/api/config/schedules', tpmSchedulesRoutes); // TPM schedules CRUD
 app.use('/api/tpm/pulse', require('./routes/tpmPulse')); // TPM pulse — config passthrough
 app.use('/api/tpm/reports', require('./routes/tpmReports')); // TPM report preview + send (D26)
 app.use('/api/jql-builder', require('./routes/jqlBuilder')); // TPM JQL Builder
+const deferredInsightsRoutes = require('./routes/deferredInsights');
+app.use('/api/deferred-insights', deferredInsightsRoutes);
+app.use('/api/jira/deferred-insights', deferredInsightsRoutes); // alias for legacy clients
 
 // Docs hub (product docs). Served at /docs per reorg (4fed099); keep /Documentation alias for old bookmarks.
 const docsRoot = path.join(__dirname, '..', '..', '..', 'docs');

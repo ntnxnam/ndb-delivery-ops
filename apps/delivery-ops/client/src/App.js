@@ -24,6 +24,7 @@ import SystemTestScalePage from './components/SystemTestScalePage';
 import OncallsV2Page from './components/OncallsV2/OncallsV2Page';
 import CfdCfiPage from './components/CfdCfiPage';
 import CfdCfiV2Page from './components/CfdCfiV2/CfdCfiV2Page';
+import DeferredInsightsPage from './components/DeferredInsights/DeferredInsightsPage';
 import AdminPanel from './components/AdminPanel/AdminPanel';
 import ConfigManager from './components/ConfigManager/ConfigManager';
 import DesignSystemDemo from './design-system/DesignSystemDemo';
@@ -229,6 +230,17 @@ const AuthenticatedApp = () => {
                     <ProtectedRoute permissions={['kpi_view']}>
                       <Layout wide>
                         <CfdCfiPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/deferred-insights"
+                  element={
+                    <ProtectedRoute permissions={[]}>
+                      <Layout wide>
+                        <DeferredInsightsPage />
                       </Layout>
                     </ProtectedRoute>
                   }
