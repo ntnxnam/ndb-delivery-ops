@@ -4,7 +4,7 @@
 
 ## GET /api/jira/cfdcfi (V2 — timeframe-aware)
 
-**Purpose**: Live CFD/CFI V2 dashboard — timeframe-scoped heroes (Open / Aged / P0 / P1 / Closed in window), health (MTTR median/p90/throughput/aged-share), 6 breakdowns (by-component, by-fixVersion, age buckets, test-escape, root-cause, linkage), boomerang rate + by-component/by-release, KPI Pulse window override, stacks preview.
+**Purpose**: Live CFD/CFI V2 dashboard — timeframe-scoped heroes (Open / Aged / P0 / P1 / Closed in window), health (MTTR median/p90/throughput/aged-share), 7 breakdowns (Customer found categories, by-component, by-fixVersion, age buckets, test-escape, root-cause, linkage), boomerang rate + by-component/by-release, KPI Pulse window override, stacks preview.
 
 **Auth**: required — JIRA token middleware + `kpi_view` (`validateJiraTokenMiddleware` + `apiLimiter`)
 

@@ -483,3 +483,9 @@ If a better agent/model becomes available mid-run, re-evaluate and switch.
 - Return a long multi-agent transcript — return the product outcome + KPI scorecard + punch-list residue only
 - Treat a shallow "LGTM" from Code Review, UX, PM, Exec, or any single model as a pass — adversarial findings **and** MET KPIs required
 - Infinite-loop the feedback cycle past the cap without returning to the user
+
+## Learnings — CFD/CFI screenshot polish + Customer found layout (2026-11-25, fix/cfdcfi-screenshot-v2-polish)
+
+- **Screenshot → bug list before code:** Literally transcribe what is wrong in the image before touching code. This fix: (a) 72 `\uXXXX` JS escapes rendered as literal text — replace with raw UTF-8 (— ↗ → · ⚡ ✕), (b) hero numbers tiny/boxed — `button.value` kept browser border/padding, needed `border:none;background:transparent`, (c) title still "V2", (d) Customer found categories missing+buried. Listing first prevents re-introducing during rebase.
+- **Layout: WHY before WHERE:** Customer found categories (ONCALL-linked, SF≥5, EELIST/DevEx/Serviceability, Impact, NPS) = WHY it became Top-CFD/CFI. Belongs first among breakdowns, right after chips. Order: Story (AI concern) → At-a-glance (heroes/health) → WHY (Customer found) → WHERE (component/release) → HOW LONG (age) → HOW FOUND (test escape/root cause/linkage) → Boomerang → Pulse. Before: Customer found was #10 of 13 sections.
+- **CSS dedup pattern:** `.cfdcfi-v2-chips`, `.cfdcfi-v2-chip`, `.cfdcfi-v2-table-wrap` each defined twice — second silently overrides first, losing `background/border/radius/margin`. Single canonical block per selector; verify with `grep -c "selector"` == 1.

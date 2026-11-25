@@ -243,6 +243,21 @@ export default function CfdCfiV2Page(){
             <ExplainHero label="Aged share" cell={{count:`${health.agedShare??0}%`,jql:hero.agedOpen?.jql}} meta={`${hero.agedOpen?.count??0} of ${hero.open?.count??0} open`} explain="Aged / open ratio" jiraBase={jiraBase} onOpen={()=>openDrill('agedOpen',{label:'Aged share',scope:'open',jql:hero.agedOpen?.jql,count:hero.agedOpen?.count})} />
           </div>
           <ChipRow chips={chips} activeChip={activeChip} setActiveChip={setActiveChip} />
+{(breakdowns.customerFound&&breakdowns.customerFound.length>0)&&(
+            <>
+              <h3 className="cfdcfi-v2-section-title">Customer found categories</h3>
+              <p className="cfdcfi-v2-mono" style={{color:'var(--muted)',marginBottom:8}}>Which Top-CFD/CFI trigger produced each open CFD/CFI — ONCALL link, SF cases, labels, Impact, NPS. Counts are open scope + sub-clause; JQL proof = baseScope + clause.</p>
+              <div className="cfdcfi-v2-table-wrap">
+                <table className="cfdcfi-v2-table">
+                  <thead><tr><th>Category</th><th>Count</th><th>JQL proof</th></tr></thead>
+                  <tbody>
+                    {breakdowns.customerFound.map(row=>{ const label=row.label||row.key||''; const count=row.count??0; const jql=row.jql||null; const mode=`customerFound:${row.key||label}`; return <tr key={label} className="row-click" onClick={()=>openDrill(mode,{label:`Customer found: ${label}`,scope:'open',jql,count})}><td>{label}</td><td>{count}</td><td>{jql?<a href={jiraHref(jiraBase,jql)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>Open in JIRA ↗</a>:'—'}</td></tr>; })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
           {breakdowns.byComponent&&breakdowns.byComponent.length>0&&(
             <>
               <h3 className="cfdcfi-v2-section-title">By component</h3>
@@ -294,20 +309,7 @@ export default function CfdCfiV2Page(){
               </div>
             </>
           )}
-          {(breakdowns.customerFound&&breakdowns.customerFound.length>0)&&(
-            <>
-              <h3 className="cfdcfi-v2-section-title">Customer found categories</h3>
-              <p className="cfdcfi-v2-mono" style={{color:'var(--muted)',marginBottom:8}}>Which Top-CFD/CFI trigger produced each open CFD/CFI — ONCALL link, SF cases, labels, Impact, NPS. Counts are open scope + sub-clause; JQL proof = baseScope + clause.</p>
-              <div className="cfdcfi-v2-table-wrap">
-                <table className="cfdcfi-v2-table">
-                  <thead><tr><th>Category</th><th>Count</th><th>JQL proof</th></tr></thead>
-                  <tbody>
-                    {breakdowns.customerFound.map(row=>{ const label=row.label||row.key||''; const count=row.count??0; const jql=row.jql||null; const mode=`customerFound:${row.key||label}`; return <tr key={label} className="row-click" onClick={()=>openDrill(mode,{label:`Customer found: ${label}`,scope:'open',jql,count})}><td>{label}</td><td>{count}</td><td>{jql?<a href={jiraHref(jiraBase,jql)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>Open in JIRA ↗</a>:'—'}</td></tr>; })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+          
           {(breakdowns.testEscape?.length>0||breakdowns.rootCause?.length>0)&&(
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:'var(--space-3)'}}>
               {breakdowns.testEscape?.length>0&&(

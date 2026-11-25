@@ -42,7 +42,7 @@ Loom JIRA pull + prompt build → Lighthouse AI consume (dual MCP: `loom-mcp bui
 | CC-V2-02 | As a TPM, I pick a timeframe pill (7d→Overall) and every hero/health/breakdown/boomerang/pulse/concern recomputes for that window; Overall shows all closed with no date clause. |
 | CC-V2-03 | As a TPM, each hero shows count + one-line explainer + Open in JIRA proof (exact JQL) — count click drills in-app, Open in JIRA opens search. |
 | CC-V2-04 | As a TPM, I see filter chips for component / fixVersion (release) / age bucket / test-escape / TH linkage / boomerang — clicking a chip filters the drawer to that slice; Clear resets. |
-| CC-V2-05 | As a TPM, I see 6 breakdowns: By Component, By FixVersion, Age Buckets (0-7/8-30/31-90/90+), Test Escape, Root Cause, Linkage (TH linked / TechPubs) — each with count + JQL proof and in-app drill. |
+| CC-V2-05 | As a TPM, I see 7 breakdowns: By Component, By FixVersion, Age Buckets (0-7/8-30/31-90/90+), Test Escape, Root Cause, Linkage (TH linked / TechPubs) — each with count + JQL proof and in-app drill. |
 | CC-V2-06 | As a TPM, I see Boomerang rate (deferred→scope: `CFD/CFI ∩ ndb-*-deferred` / deferred total) + by-component + by-fixVersion with JQL proof; clicking drills to deferred keys. |
 | CC-V2-07 | As a TPM, health strip shows MTTR median/p90/throughput/aged-share; clicking MTTR/throughput opens closed-preview drill and regenerates AI slice. |
 | CC-V2-08 | As a TPM, opening any hero/breakdown/boomerang shows `CfdcfiDrill` drawer with per-view AI slice (2-liner + fix suggestion) plus ticket rows filtered by `activeChip`; drawer inherits pill. |
@@ -95,7 +95,7 @@ Metric-click dual-action (all pages): count → in-app drill; Open in JIRA → e
 - [x] Route `/cfdcfi` mounts `CfdCfiV2Page` for `kpi_view`; legacy at `/cfdcfi-legacy`
 - [x] Sticky global pills (8) drive all heroes/health/concern/breakdowns/boomerang/pulse; `Overall` = no date clause; pills inherited in drawers
 - [x] Each hero shows count + explain + Open in JIRA (exact JQL); count → in-app drill (dual-action)
-- [x] Chip row filters drawer (activeChip + Clear); 6 breakdowns with correct JQL proofs
+- [x] Chip row filters drawer (activeChip + Clear); 7 breakdowns with correct JQL proofs
 - [x] Boomerang rate + byComponent/byFixVersion with `key in (...)` proof; `gapMeta.boomerangKeys` correct
 - [x] Health MTTR strip distinct from heroes; throughput net shown; pulse window override per timeframe
 - [x] AI Concern fuses quant+boomerang+hotspot in ~100w and regenerates on pill/hero/chip/view; per-view AI slice regenerates on drill
