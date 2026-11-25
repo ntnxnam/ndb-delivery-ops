@@ -2,7 +2,7 @@
 
 > Mirror of `docs/pages/cfdcfi/GOALS.md` — scorer's compact view. See `GOALS.md` for verification artifacts.
 
-GOAL: Rebuild CFD/CFI dashboard as V2 with global timeframe pills (7d/15d/1M/1Q/2Q/1Y/18M/Overall), 5 heroes + 4 health with dual-click proof, chip-filtered 6 breakdowns, boomerang deferred→scope rate, KPI Pulse window reuse, and fused AI concern + per-view slice (Loom prompt → Lighthouse NAI), preserving legacy tabbed view.
+GOAL: Rebuild CFD/CFI dashboard as V2 with global timeframe pills (7d/15d/1M/1Q/2Q/1Y/18M/Overall), 5 heroes + 4 health with dual-click proof, chip-filtered 7 breakdowns, boomerang deferred→scope rate, KPI Pulse window reuse, and fused AI concern + per-view slice (Loom prompt → Lighthouse NAI), preserving legacy tabbed view.
 
 SCOPE: `apps/delivery-ops/client/src/components/CfdCfiV2/*` (`CfdCfiV2Page.js`, `CfdcfiDrill.js`, `CfdCfiV2.css`), `hooks/useCfdcfiV2.js` + `useCfdcfiSlice.js`, `App.js` route `/cfdcfi` (canonical V2) + `/cfdcfi-legacy` (tabbed fallback), `server/services/cfdcfiDashboardV2.js` + `cfdcfiConfigResolve.js` + `cfdcfiStacksService.js`, `config/cfdcfiConfig.json` (agedOpenDays/needInfoDays/waitingForCustomerDays + thresholds + customFields), `routes/jira/cfdcfi.js` (dual-path `?timeframe=&v2=` + `/v2` aliases), `routes/ai.js` (`cfdcfi-concern` + `cfdcfi-slice` with 400 NAI guard), `services/naiService.js` (`CFDCFI_CONCERN` + `CFDCFI_SLICE` prompts), `mcp/shared/tools/buildCfdcfiPrompt.ts` (Loom) + `mcp/lighthouse/src/tools/generateCfdcfiBrief.ts` (Lighthouse), `docs/pages/cfdcfi/*` + `docs/pages/CfdCfi-*` + `docs/api/cfdcfi.md`
 
@@ -12,7 +12,7 @@ DONE WHEN:
 3. AI concern fuses quant (open/aged/MTTR/net/agedShare + boomerang rate) + qual (hotspot component top2 + linkage/test-escape themes) in ~100w and regenerates on pill/hero/chip/view; drawer 2-liner + full concern retained; Loom builds prompt (no NAI), Lighthouse calls NAI; both AI routes return `400 NAI_API_KEY not configured` when key missing (never 200 fallback that hid bug)
 
 AGENT KPIs:
-  Developer: [V2 route + sticky pills + 5 heroes + 4 health + chip filter + 6 breakdowns + boomerang rate/byComponent/byFixVersion + concern + pulse via `computePulseWindow` + `KpiPulseBand` all render; server timeframe-aware with `Overall`; config thresholds + boomerang deferred-label membership wired; no `filter=142537` hard-code (D1)]
+  Developer: [V2 route + sticky pills + 5 heroes + 4 health + chip filter + 7 breakdowns + boomerang rate/byComponent/byFixVersion + concern + pulse via `computePulseWindow` + `KpiPulseBand` all render; server timeframe-aware with `Overall`; config thresholds + boomerang deferred-label membership wired; no `filter=142537` hard-code (D1)]
   Impact Scout: [All cfdcfi consumers grep'd: cfdcfiService, cfdcfiStacksService, cfdcfiConfigResolve, kpiPulseService, CfdCfiPage, KpiPulseBand, TpmPulsePage — patched or N/A; no stale `filter=` consumer missed]
   Code Review: [No localhost, no duplicate connector, `minimal-architecture` (page/hook/service) respected, no silent JQL edit without `jql-edit-approval` flag; `cfdcfiConfig.json` owns thresholds, not code]
   QA: [Counts verified: timeframe pill JQL matches hero count proof; `Overall` = no `resolved >=` clause; `p0Open`/`p1Open` JQL valid; breakdown counts + boomerang `keys.length` match drawer; live JQL spot-check for one pill]

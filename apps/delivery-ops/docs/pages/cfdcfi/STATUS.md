@@ -10,7 +10,7 @@
 |------|---------|----------|
 | G1 Global timeframe pills | MET | `cfdcfiDashboardV2.TIMEFRAMES` 8 pills `7d/15d/1M/1Q/2Q/1Y/18M/Overall`; `timeframeClause('resolved', tf)` returns `resolved >= -Nd` or `null` (Overall); `GET /api/jira/cfdcfi?teamId=ndb&timeframe=Overall&v2=1` omits date clause; pills sticky + inherit in drawers |
 | G2 Heroes 5 + health 4 dual-click | MET | `CfdCfiV2Page` 5 heroes (open/agedOpen/p0Open/p1Open/closedInWindow) + 4 health (mttrMedian/p90/throughput+net/agedShare) each `ExplainHero` count→`CfdcfiDrill` + explain + `Open in JIRA ↗` via `jiraHref(jiraBaseUrl, cell.jql)` |
-| G3 Chips + 6 breakdowns | MET | `ChipRow` activeChip + `filteredRows`; `breakdowns` byComponent/byFixVersion/ageBuckets/testEscape/rootCause/linkage (thLinked/techPubsLinked) with counts + JQL; chip click narrows drawer |
+| G3 Chips + 7 breakdowns | MET | `ChipRow` activeChip + `filteredRows`; `breakdowns` byComponent/byFixVersion/ageBuckets/testEscape/rootCause/linkage (thLinked/techPubsLinked) with counts + JQL; chip click narrows drawer |
 | G4 Boomerang | MET | `fetchDeferredBoomerangs` (labels `ndb-*-deferred` from `releaseVersionsEmailConfig.json` ∩ `baseScopeJql` membership chunked) → `boomerang { keys, rate, deferredTotal, byComponent, byFixVersion, cell }` + `gapMeta.boomerangKeys`; card shows rate + drill |
 | G5 Pulse reuse | MET | `buildPulse({ token, baseJql: baseScopeJql, window: computePulseWindow(tf) })` + `KpiPulseBand pulse={data.pulse}` titled `CFD/CFI pulse · {timeframe}`; no forked chart; `Overall` window defaults to 2Q |
 | G6 Fused AI concern + slice | MET | `POST /api/ai/cfdcfi-concern` + `cfdcfi-slice` via `naiService` `CFDCFI_CONCERN`/`CFDCFI_SLICE` prompts; 400 `NAI_API_KEY not configured` same as `oncall-concern`; `useCfdcfiV2` auto concern + per-view slice; Loom `build_cfdcfi_prompt` + Lighthouse `generate_cfdcfi_brief` (D44) |
@@ -25,7 +25,7 @@
 | `GET/POST` legacy tabbed pulse still works (no timeframe) | MET | `cfdcfi.js` falls through to `cfdcfiService.getDashboard` when no `timeframe`/`v2` |
 | `TIMEFRAMES` 8 pills, `Overall`=null, sticky + drawer inherit | MET | `cfdcfiDashboardV2.TIMEFRAMES` + `CfdCfiV2Page PillBar` |
 | `cfdcfiConfigResolve` clubbed CFD\|CFI + teamBaseFilter, no `filter=142537` | MET | `resolveRuntimeConfig` via `loadKpiConfigSync`/`getKpisForTeam` + `getTeamBaseFilter` |
-| `cfdcfiDashboardV2` 6-way parallel + 5m cache + soft-fail | MET | `Promise.allSettled` + `SimpleCache` |
+| `cfdcfiDashboardV2` 7-way parallel + 5m cache + soft-fail | MET | `Promise.allSettled` + `SimpleCache` |
 | `cfdcfiStacksService` linked roles + `cfdcfiFields` + mix | MET | `classifyStacksFromIssues` + `extractCfdcfiFields` |
 | Never hard-code `filter=142537` (D1) | MET | No hard-coded filter in V2 page/service; `baseScopeJql` from config only |
 | `CfdCfiV2Page` + `CfdcfiDrill` + `useCfdcfiV2`/`useCfdcfiSlice` + `CfdCfiV2.css` | MET | `client/src/components/CfdCfiV2/` + hooks |
