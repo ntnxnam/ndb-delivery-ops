@@ -71,7 +71,7 @@ describe('oncallDashboardV2 pulse — regression for flatline', () => {
     searchPages.mockResolvedValue([]);
   });
 
-  test('getDashboard returns pulse with non-zero Created/Closed series for 7d (not flatlined)', async () => {
+  test('getDashboard returns pulse with non-zero Created/Closed series for 7d (not flatlined) and 2Q window', async () => {
     getJira.mockResolvedValue(makeFakeJira());
     // searchPages for open/closed stacks returns empty but pulse counts are via searchCount
     const { getDashboard } = require('../../services/oncallDashboardV2');
@@ -79,7 +79,9 @@ describe('oncallDashboardV2 pulse — regression for flatline', () => {
 
     expect(data.pulse).toBeDefined();
     expect(Array.isArray(data.pulse.series)).toBe(true);
-    expect(data.pulse.series.length).toBeGreaterThan(0);
+    // Pulse is longitudinal 2Q (~26 weeks), not pill-sized 7d (2 points) — prevents flat 2-dot line
+    expect(data.pulse.series.length).toBeGreaterThan(10);
+    expect(data.pulse.window.label).toMatch(/Last 2 Nutanix Qs/);
     const totalCreated = data.pulse.series.reduce((s, w) => s + (w.created?.count || 0), 0);
     const totalClosed = data.pulse.series.reduce((s, w) => s + (w.closed?.count || 0), 0);
     // With our fake JIRA, Created and Closed should be >0 across the window
@@ -92,11 +94,12 @@ describe('oncallDashboardV2 pulse — regression for flatline', () => {
     expect(data.health.throughput).toBeGreaterThan(0);
   });
 
-  test('Overall timeframe returns pulse with many buckets and same non-zero guarantee', async () => {
+  test('Overall timeframe returns pulse with same 2Q longitudinal window', async () => {
     getJira.mockResolvedValue(makeFakeJira());
     const { getDashboard } = require('../../services/oncallDashboardV2');
     const data = await getDashboard({ token: 'fake', teamId: 'ndb', timeframe: 'Overall' });
-    expect(data.pulse.series.length).toBeGreaterThan(2);
+    expect(data.pulse.series.length).toBeGreaterThan(10);
+    expect(data.pulse.window.label).toMatch(/Last 2 Nutanix Qs/);
     const total = data.pulse.series.reduce((s, w) => s + w.created.count + w.closed.count, 0);
     expect(total).toBeGreaterThan(0);
   });
