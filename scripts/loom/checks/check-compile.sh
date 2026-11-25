@@ -70,10 +70,21 @@ $UNTRACKED"
       fi
       echo ""
     else
-      echo "▶ client (eslint exhaustive-deps): no changed client files — skip"
-      echo "✓ client (eslint) OK (no files to check)"
+      echo "▶ client (eslint exhaustive-deps): no changed client files — skip (changed-file gate)"
+      echo "✓ client (eslint changed) OK (no files to check)"
       echo ""
     fi
+    # Full exhaustive-deps gate — catches pre-existing errors that block `npm run build` even when not touched in this weave
+    echo "▶ client (eslint exhaustive-deps): full check on apps/delivery-ops/client/src"
+    ESLINT_FULL_OUT="$("$ESLINT_BIN" apps/delivery-ops/client/src --ext .js,.jsx,.ts,.tsx 2>&1 || true)"
+    if echo "$ESLINT_FULL_OUT" | grep -q "react-hooks/exhaustive-deps"; then
+      echo "✗ client (eslint full) FAILED — pre-existing react-hooks/exhaustive-deps errors in repo:"
+      echo "$ESLINT_FULL_OUT" | grep -E "exhaustive-deps" | head -n 20
+      FAIL=1
+    else
+      echo "✓ client (eslint full) OK (no exhaustive-deps errors in repo)"
+    fi
+    echo ""
   fi
 fi
 

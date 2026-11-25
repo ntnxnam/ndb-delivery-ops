@@ -36,7 +36,7 @@ export function useOncallReport({ teamId, timeframe, dashboard, aiConcern }) {
     } finally {
       setBusy(false);
     }
-  }, [teamId, timeframe, dashboard?.asOf, aiConcern]);
+  }, [teamId, timeframe, dashboard, aiConcern]);
 
   const preview = useCallback((opts = {}) => run({ ...opts, previewOnly: true }), [run]);
   const send = useCallback((opts = {}) => run({ ...opts, previewOnly: false }), [run]);

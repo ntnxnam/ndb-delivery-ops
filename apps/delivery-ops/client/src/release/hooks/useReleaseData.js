@@ -127,7 +127,7 @@ export const useReleaseData = (initialVersion = null, options = {}) => {
     if (autoFetch) {
       fetchVersions();
     }
-  }, [autoFetch]); // Only run on mount
+  }, [autoFetch, fetchVersions]);
 
   // Auto-fetch items when version changes
   useEffect(() => {
@@ -135,7 +135,7 @@ export const useReleaseData = (initialVersion = null, options = {}) => {
       fetchReleaseItems();
       fetchCheckpointHistory();
     }
-  }, [selectedVersion, autoFetch]); // Only run when selectedVersion changes
+  }, [selectedVersion, autoFetch, fetchReleaseItems, fetchCheckpointHistory]);
 
   return {
     // Data
