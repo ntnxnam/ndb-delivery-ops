@@ -81,11 +81,6 @@ export const SIDEBAR_NAV_GROUPS = [
         label: 'Release Outstanding Work',
         description: 'Post-PG deferral process and outstanding Dev / QA / discipline work',
       },
-      {
-        path: '/deferred-insights',
-        label: 'Deferred Insights',
-        description: 'Per-release deferred bugs — where they landed, what is still pending',
-      },
     ],
   },
   {
@@ -166,6 +161,11 @@ export const SIDEBAR_NAV_GROUPS = [
         path: '/cfdcfi',
         label: 'CFD / CFI',
         description: 'CFD and CFI KPI pulse — heroes, trends, open tickets',
+      },
+      {
+        path: '/deferred-insights',
+        label: 'Deferred Insights',
+        description: 'Per-release deferred bugs — where they landed, what is still pending',
       },
       {
         path: '/system-test-scale',

@@ -1,7 +1,7 @@
 # Deferred Insights — Requirements
 
 **Route:** `/deferred-insights`
-**Nav:** Release tracking → Deferred Insights
+**Nav:** Quality / KPIs → Deferred Insights
 **Permission:** `[]` (all authenticated users — KPI_VIEW restriction removed per goal)
 **Team-aware:** yes — labelPrefix/releasePrefix/projectKey from `teamBoardConfig`
 **Audience:** `tpm` (primary), `rm`, `ic`, `qa_lead` (secondary)
@@ -40,7 +40,7 @@ Per-release view of bugs that got deferred via `<prefix>-<version>-deferred` lab
 
 ## Acceptance Criteria
 - [ ] GET /deferred-insights renders DeferredInsightsPage for any authenticated user (no KPI_VIEW gate, no redirect to /)
-- [ ] Sidebar shows Deferred Insights under Release tracking for all authenticated roles
+- [ ] Sidebar shows Deferred Insights under Quality / KPIs for all authenticated roles
 - [ ] routeConfig entry exists with permissions [] and showInNav true
 - [ ] TAB_PERMISSIONS['/deferred-insights'] = []
 - [ ] Server GET /api/deferred-insights/insights and POST /api/deferred-insights/insights/refresh return 200 (not 404) with non-empty payload when JIRA reachable; alias /api/jira/deferred-insights/* also works
