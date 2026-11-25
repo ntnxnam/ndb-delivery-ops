@@ -1,34 +1,30 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>WEAVE_SMOKE_CHECKLIST — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>WEAVE_SMOKE_CHECKLIST</span></nav><div class="container"><article class="prose"><h1>Weave Smoke Checklist</h1>
-<blockquote>
-<p>Run this on every weave before Code Review. Block merge if any check fails.</p>
-</blockquote>
-<h2>1. Server smoke</h2>
-<ul>
-<li><input disabled="" type="checkbox"> <code>node -e &quot;require(&#39;./apps/delivery-ops/server/services/&lt;newService&gt;&#39;)&quot;</code> — no throw</li>
-<li><input disabled="" type="checkbox"> <code>node --check apps/delivery-ops/server/routes/&lt;newRoute&gt;.js</code> — syntax OK</li>
-</ul>
-<h2>2. Route smoke (supertest)</h2>
-<ul>
-<li><input disabled="" type="checkbox"> New <code>server/routes/*.js</code> has a test under <code>server/__tests__/**</code> referencing the route basename (e.g. <code>configAdmin</code> in <code>configAdmin.test.js</code>)</li>
-<li><input disabled="" type="checkbox"> Test hits the route via <code>supertest(app)</code> and asserts <code>200</code> + payload shape; or PR body contains <code>smoke-tested</code> with evidence</li>
-</ul>
-<h2>3. Client smoke (@testing-library)</h2>
-<ul>
-<li><input disabled="" type="checkbox"> New <code>client/src/components/**/*.js</code> page has a test under <code>client/src/__tests__/**</code> referencing it</li>
-<li><input disabled="" type="checkbox"> Test renders the page and asserts key heading/CTA; no <code>localhost</code> in JSX</li>
-</ul>
-<h2>4. Config validity</h2>
-<ul>
-<li><input disabled="" type="checkbox"> Any new <code>server/config/*.json</code> is valid JSON (<code>JSON.parse</code> passes)</li>
-<li><input disabled="" type="checkbox"> Config key is read via <code>configService</code> / <code>fieldConfig</code>, not hardcoded</li>
-</ul>
-<h2>5. Sidebar / nav wiring</h2>
-<ul>
-<li><input disabled="" type="checkbox"> Every new <code>path=&quot;/...&quot;</code> in <code>client/src/App.js</code> appears in <code>layout/utils/sidebarNavConfig.js</code></li>
-<li><input disabled="" type="checkbox"> Or the route line has an explicit opt-out comment: <code>// smoke:ignore-nav</code></li>
-</ul>
-<h2>Run</h2>
-<pre><code class="language-bash">node scripts/loom/checks/check-weave-smoke.js   # TAP PASS/FAIL, exit 1 on FAIL
-npm --workspace apps/delivery-ops test -- --testPathPattern=&lt;newRoutes&gt;
-</code></pre>
-</article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>WEAVE_SMOKE_CHECKLIST — Lighthouse Docs</title><link rel="stylesheet" href="../assets/style.css"/></head><body><header class="site-header"><div class="site-header-inner"><div class="brand"><div class="brand-mark">◐</div> Lighthouse <small>Docs</small></div><nav class="nav-links"><a href="../index.html">Home</a><a href="USER_GUIDE.html">User Guide</a><a href="ADMIN_GUIDE.html">Admin Guide</a><a href="../technical/ARCHITECTURE.html">Architecture</a></nav></div></header><nav class="breadcrumb"><a href="../index.html">Docs</a><span class="sep">/</span><a href="../index.html#guides">Guides</a><span class="sep">/</span><span>WEAVE_SMOKE_CHECKLIST</span></nav><div class="container"><article class="prose"><pre># Weave Smoke Checklist
+
+> Run this on every weave before Code Review. Block merge if any check fails.
+
+## 1. Server smoke
+- [ ] `node -e "require('./apps/delivery-ops/server/services/&lt;newService>')"` — no throw
+- [ ] `node --check apps/delivery-ops/server/routes/&lt;newRoute>.js` — syntax OK
+
+## 2. Route smoke (supertest)
+- [ ] New `server/routes/*.js` has a test under `server/__tests__/**` referencing the route basename (e.g. `configAdmin` in `configAdmin.test.js`)
+- [ ] Test hits the route via `supertest(app)` and asserts `200` + payload shape; or PR body contains `smoke-tested` with evidence
+
+## 3. Client smoke (@testing-library)
+- [ ] New `client/src/components/**/*.js` page has a test under `client/src/__tests__/**` referencing it
+- [ ] Test renders the page and asserts key heading/CTA; no `localhost` in JSX
+
+## 4. Config validity
+- [ ] Any new `server/config/*.json` is valid JSON (`JSON.parse` passes)
+- [ ] Config key is read via `configService` / `fieldConfig`, not hardcoded
+
+## 5. Sidebar / nav wiring
+- [ ] Every new `path="/..."` in `client/src/App.js` appears in `layout/utils/sidebarNavConfig.js`
+- [ ] Or the route line has an explicit opt-out comment: `// smoke:ignore-nav`
+
+## Run
+```bash
+node scripts/loom/checks/check-weave-smoke.js   # TAP PASS/FAIL, exit 1 on FAIL
+npm --workspace apps/delivery-ops test -- --testPathPattern=&lt;newRoutes>
+```
+</pre></article></div><footer class="site-footer"><span>© Nutanix · Lighthouse Docs</span><span><a href="../index.html">Home</a> · <a href="USER_GUIDE.html">User Guide</a></span></footer></body></html>

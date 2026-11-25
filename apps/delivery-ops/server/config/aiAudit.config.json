@@ -186,6 +186,13 @@
       "source": "apps/delivery-ops/client/src/components/AdminPanel",
       "auditPath": "apps/delivery-ops/client/src/components/AdminPanel/ai-audit-docs",
       "kind": "folder-page"
+    },
+    "DeferredInsights": {
+      "route": "/deferred-insights",
+      "title": "Deferred Insights",
+      "source": "apps/delivery-ops/client/src/components/DeferredInsights",
+      "auditPath": "apps/delivery-ops/client/src/components/DeferredInsights/ai-audit-docs",
+      "kind": "folder-page"
     }
   },
   "learnings": {
