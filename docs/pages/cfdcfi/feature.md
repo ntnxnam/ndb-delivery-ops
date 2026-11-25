@@ -2,7 +2,7 @@
 
 ## Outcome
 
-VP-first CFD/CFI dashboard where one timeframe pill controls the business story: 5 heroes (Open now, Aged >Nd, P0 open, P1 open, Closed in window) + 4 health tiles (MTTR median, p90, Throughput with net, Aged share) + filter chip row + 6 breakdowns (by-component, by-fixVersion, age buckets, test-escape, root-cause, linkage TH/TechPubs) + boomerang (deferred→scope rate with by-component/by-release detail) + KPI Pulse graph (window-reused, not forked) + fused AI concern and per-view slice. Drill keeps the timeframe. Legacy tabbed pulse view preserved at `/cfdcfi-legacy`.
+VP-first CFD/CFI dashboard where one timeframe pill controls the business story: 5 heroes (Open now, Aged >Nd, P0 open, P1 open, Closed in window) + 4 health tiles (MTTR median, p90, Throughput with net, Aged share) + filter chip row + 7 breakdowns (by-component, by-fixVersion, age buckets, test-escape, root-cause, linkage TH/TechPubs) + boomerang (deferred→scope rate with by-component/by-release detail) + KPI Pulse graph (window-reused, not forked) + fused AI concern and per-view slice. Drill keeps the timeframe. Legacy tabbed pulse view preserved at `/cfdcfi-legacy`.
 
 ## Constraints (preserve)
 
@@ -26,7 +26,7 @@ VP-first CFD/CFI dashboard where one timeframe pill controls the business story:
 
 **Chip row (filter):** Filter chips for component / release (fixVersion) / age bucket / test-escape / TH linkage / boomerang — clicking a chip sets `activeChip` (`kind:value`) and filters `CfdcfiDrill` rows; Clear resets.
 
-**Breakdowns (6 cards):** By Component · By FixVersion · Age Buckets (0-7/8-30/31-90/90+) · Test Escape · Root Cause · Linkage (TH linked / TechPubs linked / total). Each cell shows count + JQL stub; clicking opens `CfdcfiDrill`.
+**Breakdowns (7 cards):** By Component · By FixVersion · Age Buckets (0-7/8-30/31-90/90+) · Test Escape · Root Cause · Linkage (TH linked / TechPubs linked / total). Each cell shows count + JQL stub; clicking opens `CfdcfiDrill`.
 
 **Boomerang card:** Rate `%` (`CFD/CFI ∩ ndb-*-deferred` over deferred universe) + `deferredTotal` + by-component + by-fixVersion mini-breakdowns; `gapMeta.boomerangKeys` proof via `key in (...)`.
 
