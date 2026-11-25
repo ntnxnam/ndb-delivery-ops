@@ -58,7 +58,7 @@ function buildTimeframeHeroQueries(cfg, timeframe) {
   return { ...base, closedInWindow };
 }
 
-// Top qualifier sub-clauses per D1 company-wide locked definition — literals from kpiConfig.json TOP qualifier
+// Top qualifier sub-clauses per D1 company-wide locked definition (kpiConfig TOP qualifier OR NPS_Impacting) company-wide locked definition — literals from kpiConfig.json TOP qualifier
 // (priority in ("Blocker - P0","Critical - P1") AND (...)) OR labels in (NPS_Impacting). Not product-specific filters (D1 clean).
 const TOP_QUALIFIER_SUBCLAUSES = [
   { key: 'oncallLinked', label: 'ONCALL-linked', jql: 'issueFunction in linkedIssuesOf("Project = ONCALL")' },
@@ -68,6 +68,10 @@ const TOP_QUALIFIER_SUBCLAUSES = [
   { key: 'nps', label: 'NPS_Impacting', jql: 'labels in (NPS_Impacting)' },
 ];
 
+/** Build customerFound JQLs: (baseScope) AND (TOP sub-clause) AND (openStatusJql) for each of 5 triggers.
+ * @param {object} cfg - runtime config with openStatusJql
+ * @param {string} baseScope - baseScopeJql
+ * @returns {Record<string,string>} key -> JQL */
 function buildCustomerFoundQueries(cfg, baseScope) {
   const base = String(baseScope || (cfg && cfg.baseScopeJql) || '').trim();
   const openStatus = String((cfg && cfg.openStatusJql) || 'statusCategory != Done').trim();
@@ -80,6 +84,7 @@ function buildCustomerFoundQueries(cfg, baseScope) {
   return out;
 }
 
+/** Fetch customerFound breakdown: 5 Top-qualifier counts via runCounts. @returns {Promise<Array<{key,label,count,jql}>>} */
 async function fetchCustomerFoundBreakdown(token, cfg, baseScope) {
   const base = String(baseScope || (cfg && cfg.baseScopeJql) || '').trim();
   if (!base) return [];
@@ -286,9 +291,85 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
     churn: pulse?.heroes?.createdWindow?.count ?? 0,
   };
 
-  // Component / fixVersion mix from open stacks
-  const componentMix = topN(openData.componentMix || {}, 8);
-  const fixVersionMix = topN(openData.fixVersionMix || {}, 8);
+  // Component / fixVersion mix from open stacks — enriched per B1 (median age, oldest, priorityMix, JQL)
+  const openSeedJqlStrEarly = openJql(cfg);
+  function medianOf(nums) {
+    if (!Array.isArray(nums) || !nums.length) return null;
+    const s = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    if (s.length % 2 === 1) return s[mid];
+    return Math.round((s[mid - 1] + s[mid]) / 2);
+  }
+  function enrichComponentMix(rawMix, stacks, baseJql) {
+    const agesBy = {};
+    const priBy = {};
+    const oldestBy = {};
+    for (const st of stacks || []) {
+      const comps = Array.isArray(st.components) ? st.components : [];
+      for (const c of comps) {
+        if (!c) continue;
+        if (!agesBy[c]) agesBy[c] = [];
+        agesBy[c].push(st.ageDays ?? 0);
+        if (!priBy[c]) priBy[c] = {};
+        const p = st.priority || 'Unknown';
+        priBy[c][p] = (priBy[c][p] || 0) + 1;
+        const cur = oldestBy[c];
+        if (!cur || (st.ageDays ?? 0) > (cur.oldestAge ?? -1)) oldestBy[c] = { oldestKey: st.key, oldestAge: st.ageDays ?? 0 };
+      }
+    }
+    return (rawMix || []).map((r) => {
+      const name = r.name;
+      const ages = agesBy[name] || [];
+      const oldest = oldestBy[name] || {};
+      return {
+        name,
+        count: r.count,
+        medianAge: medianOf(ages),
+        oldestKey: oldest.oldestKey || null,
+        oldest: oldest.oldestKey || null,
+        oldestAge: oldest.oldestAge != null ? oldest.oldestAge : null,
+        priorityMix: priBy[name] || {},
+        jql: baseJql ? andParts(baseJql, `component = "${String(name).replace(/"/g, '\\"')}"`) : null,
+      };
+    });
+  }
+  function enrichFixVersionMix(rawMix, stacks, baseJql) {
+    const agesBy = {};
+    const priBy = {};
+    const oldestBy = {};
+    for (const st of stacks || []) {
+      const fvs = Array.isArray(st.fixVersions) ? st.fixVersions : [];
+      for (const v of fvs) {
+        if (!v) continue;
+        if (!agesBy[v]) agesBy[v] = [];
+        agesBy[v].push(st.ageDays ?? 0);
+        if (!priBy[v]) priBy[v] = {};
+        const p = st.priority || 'Unknown';
+        priBy[v][p] = (priBy[v][p] || 0) + 1;
+        const cur = oldestBy[v];
+        if (!cur || (st.ageDays ?? 0) > (cur.oldestAge ?? -1)) oldestBy[v] = { oldestKey: st.key, oldestAge: st.ageDays ?? 0 };
+      }
+    }
+    return (rawMix || []).map((r) => {
+      const name = r.name;
+      const ages = agesBy[name] || [];
+      const oldest = oldestBy[name] || {};
+      return {
+        name,
+        count: r.count,
+        medianAge: medianOf(ages),
+        oldestKey: oldest.oldestKey || null,
+        oldest: oldest.oldestKey || null,
+        oldestAge: oldest.oldestAge != null ? oldest.oldestAge : null,
+        priorityMix: priBy[name] || {},
+        jql: baseJql ? andParts(baseJql, `fixVersion = "${String(name).replace(/"/g, '\\"')}"`) : null,
+      };
+    });
+  }
+  const componentMixRaw = topN(openData.componentMix || {}, 8);
+  const fixVersionMixRaw = topN(openData.fixVersionMix || {}, 8);
+  const componentMix = enrichComponentMix(componentMixRaw, openData.stacks || [], openSeedJqlStrEarly);
+  const fixVersionMix = enrichFixVersionMix(fixVersionMixRaw, openData.stacks || [], openSeedJqlStrEarly);
 
   // Age buckets
   const ageBuckets = { '0-7': 0, '8-30': 0, '31-90': 0, '90+': 0 };
@@ -350,7 +431,7 @@ async function getDashboard({ token, teamId, timeframe } = {}) {
     return { level: 'GREEN', why: 'Backlog and boomerang rate look controlled.' };
   })();
 
-  const openSeedJqlStr = openJql(cfg);
+  const openSeedJqlStr = openSeedJqlStrEarly;
   const withJql = (arr, field) => arr.map((r) => ({ ...r, jql: r.jql || (r.name ? andParts(openSeedJqlStr, field + ' = "' + String(r.name).replace(/"/g, '\\"') + '"') : null) }));
   const ageBucketsWithJql = Object.entries(ageBuckets).map(([label, count]) => ({ label, count, jql: openSeedJqlStr ? andParts(openSeedJqlStr, label === '0-7' ? 'created >= -7d' : label === '8-30' ? 'created >= -30d AND created <= -8d' : label === '31-90' ? 'created >= -90d AND created <= -31d' : 'created <= -90d') : null }));
 
