@@ -17,10 +17,10 @@
 .di-asof { margin: var(--space-1) 0 0; color: var(--muted-faint); font-size: var(--fs-xs); }
 .di-header-actions { display: flex; gap: var(--space-2); align-items: center; }
 
-/* Filter bar — sticky like cfdcfi-v2-pills */
+/* Filter bar — sticky like cfdcfi-v2-pills — offset for jira-banner */
 .di-filter-bar {
   position: sticky;
-  top: 0;
+  top: var(--jira-banner-height, 0);
   z-index: var(--z-header, 20);
   display: flex;
   flex-wrap: wrap;

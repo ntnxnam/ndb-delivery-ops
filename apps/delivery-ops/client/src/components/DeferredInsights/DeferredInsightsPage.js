@@ -140,19 +140,21 @@ function ReleaseCard({ entry, jiraBase, onDrill, expandedRelease, setExpandedRel
 
   return (
     <div className="di-release-card" id={`di-release-${entry.release}`}>
-      <button type="button" className="di-release-head" onClick={() => setExpandedRelease(isExpanded ? null : entry.release)} aria-expanded={isExpanded} aria-controls={`di-release-table-${entry.release}`}>
+      <div className="di-release-head">
         <span className="di-release-title">
           <span className="di-release-name">{entry.release}</span>
           <span className="di-release-badge">{entry.deferredLabel}</span>
         </span>
         <span className="di-release-counts">
-          <span className="di-count di-count-total" role="button" tabIndex={0} title={entry.jql} onClick={(e) => { e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); } }}>{entry.total} deferred</span>
-          <span className="di-count di-count-fixed" role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); } }}>{entry.fixed} fixed</span>
-          <span className="di-count di-count-pending" role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onDrill(entry.release, entry.jql, entry.total); } }}>{entry.pending} pending</span>
-          <span className={`di-count di-count-rate ${entry.fixRate >= 70 ? 'good' : entry.fixRate >= 40 ? 'mid' : 'low'}`}>{entry.fixRate}% fixed</span>
+          <button type="button" className="di-count di-count-total" title={entry.jql} onClick={() => onDrill(entry.release, entry.jql, entry.total)} aria-label={`View ${entry.total} deferred tickets for ${entry.release}`}>{entry.total} deferred</button>
+          <button type="button" className="di-count di-count-fixed" onClick={() => onDrill(entry.release, entry.jql, entry.total)} aria-label={`View fixed breakdown for ${entry.release}`}>{entry.fixed} fixed</button>
+          <button type="button" className="di-count di-count-pending" onClick={() => onDrill(entry.release, entry.jql, entry.total)} aria-label={`View pending for ${entry.release}`}>{entry.pending} pending</button>
+          <span className={`di-count di-count-rate ${entry.fixRate >= 70 ? 'good' : entry.fixRate >= 40 ? 'mid' : 'low'}`} aria-label={`${entry.fixRate} percent fixed`}>{entry.fixRate}% fixed</span>
         </span>
-        <span className="di-expand-icon" aria-hidden="true">{isExpanded ? '▴' : '▾'}</span>
-      </button>
+        <button type="button" className="di-expand-btn" onClick={() => setExpandedRelease(isExpanded ? null : entry.release)} aria-expanded={isExpanded} aria-controls={`di-release-table-${entry.release}`} aria-label={isExpanded ? `Collapse ${entry.release}` : `Expand ${entry.release}`}>
+          <span className="di-expand-icon" aria-hidden="true">{isExpanded ? '▴' : '▾'}</span>
+        </button>
+      </div>
 
       {hasError && <p className="di-error">Failed to load {entry.release}: {entry.error}</p>}
 
@@ -203,16 +205,17 @@ function ReleaseCard({ entry, jiraBase, onDrill, expandedRelease, setExpandedRel
             <p className="di-muted">No sample tickets (count is {entry.total} but fetch returned 0 — may be a JIRA permission or page limit).</p>
           ) : (
             <>
-              <table className="di-table">
+              <table className="di-table" aria-label={`Sample deferred tickets for ${entry.release}`}>
+                <caption className="sr-only">Sample deferred tickets for {entry.release}</caption>
                 <thead>
                   <tr>
-                    <th>Key</th>
-                    <th>Summary</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Now in</th>
-                    <th>Component</th>
-                    <th>Assignee</th>
+                    <th scope="col">Key</th>
+                    <th scope="col">Summary</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Now in</th>
+                    <th scope="col">Component</th>
+                    <th scope="col">Assignee</th>
                   </tr>
                 </thead>
                 <tbody>

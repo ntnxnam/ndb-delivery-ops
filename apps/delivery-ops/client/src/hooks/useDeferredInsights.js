@@ -3,7 +3,7 @@
  * GET /api/deferred-insights/insights?teamId=&releases=&priority=&component=
  * POST /api/deferred-insights/insights/refresh  (bypass cache)
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { authenticatedGet, authenticatedPost } from '../shared/services/apiService';
 
 const creds = () => ({
@@ -18,7 +18,7 @@ export function useDeferredInsights(teamId, { releases, priority, component } = 
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
-  const releasesKey = Array.isArray(releases) ? releases.join(',') : String(releases || '');
+  const releasesKey = useMemo(() => (Array.isArray(releases) ? releases.join(',') : String(releases || '')), [releases]);
 
   const load = useCallback(async ({ force = false } = {}) => {
     if (!teamId) {
@@ -59,7 +59,7 @@ export function useDeferredInsights(teamId, { releases, priority, component } = 
         setRefreshing(false);
       }
     }
-  }, [teamId, releasesKey, priority, component]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teamId, releasesKey, priority, component]);
 
   useEffect(() => {
     setData(null);
