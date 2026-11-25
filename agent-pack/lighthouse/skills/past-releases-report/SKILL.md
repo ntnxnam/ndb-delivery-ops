@@ -30,7 +30,7 @@ Input: {
   outputDir: "docs/reports",      // slide-deck files per release
   useIntegratedVersion: true,       // D4b correction: KPIs use "Integrated Version" cf11360
   includeGantt: true,
-  includeNaiSummary: true,         // NAI beam-1-501b grouped capabilities
+  includeNaiSummary: true,         // NAI muse-spark-816b grouped capabilities
   capabilityGroupingHint: "Group by capability area (Upgrade, Provisioning, HA/DR, Backup/Restore, Security, Platform, Storage, Observability, Integration, Networking) or by DB Engine/Platform"
 }
 
@@ -70,7 +70,7 @@ Flow (must follow multi-agent pipeline):
 
 ### 5. NAI capability grouping at beginning of page (D8, D9)
 - Fetch all Feature/Initiative titles for each release via JQL `filter="VER-All" AND issuetype in (Feature, Initiative) AND ("Integrated Version"="VER" OR fixVersion="VER")` (68 titles across 3 releases: 25/25/18)
-- Pass titles to NAI (corp gateway `https://tokens.corp.nutanix.com/enterpriseai/gateway/v1`, model `beam-1-501b`, 8192 max_tokens) with prompt asking hybrid grouping: primary capability area (Upgrade, Provisioning, HA/DR, Backup/Restore, Security, Migration/Upgrade, Platform, Storage, Observability, Integration, Networking) or secondary DB Engine/platform (PostgreSQL, MySQL, SQL Server, MongoDB, Oracle, On-Prem/NC2/GCP/Azure/Hybrid)
+- Pass titles to NAI (corp gateway `https://tokens.corp.nutanix.com/enterpriseai/gateway/v1`, model `muse-spark-816b`, 16384 max_tokens) with prompt asking hybrid grouping: primary capability area (Upgrade, Provisioning, HA/DR, Backup/Restore, Security, Migration/Upgrade, Platform, Storage, Observability, Integration, Networking) or secondary DB Engine/platform (PostgreSQL, MySQL, SQL Server, MongoDB, Oracle, On-Prem/NC2/GCP/Azure/Hybrid)
 - Output JSON `reports/nai-capability-summary.json` with `overall` (2-3 sentences starting "In the last year, NDB delivered..."), `groups` (10 groups with one-liners ≤15 words), `perRelease` summaries (1-2 sentences each starting "In NDB-2.x, we ...")
 - Render at beginning of summary `id="capability-overview"` and per-release `id="capability-VER"` — before At-a-Glance; include per-release lens linking to overall
 
@@ -107,7 +107,7 @@ Live verification:
 
 NAI:
   Fetch: filter="VER-All" AND issuetype in (Feature, Initiative) AND ("Integrated Version"="VER" OR fixVersion="VER") -> titles
-  Call: POST https://tokens.corp.nutanix.com/enterpriseai/gateway/v1/chat/completions {model:beam-1-501b, max_tokens:8192, temperature:0.2, messages:[system + user prompt with all 68 titles grouped]}
+  Call: POST https://tokens.corp.nutanix.com/enterpriseai/gateway/v1/chat/completions {model:muse-spark-816b, max_tokens:16384, temperature:0.2, messages:[system + user prompt with all 68 titles grouped]}
   Save: reports/nai-capability-summary.json -> rendered at beginning of pages
 ```
 

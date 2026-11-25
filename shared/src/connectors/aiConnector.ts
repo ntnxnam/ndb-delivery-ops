@@ -85,7 +85,7 @@ export class AiConnectorError extends Error {
  *       api_key=os.environ["NAI_API_KEY"],
  *   )
  *   Equivalently in Node (this connector):
- *   completeChat(messages, { model: "ntnx-beam" })  // model defaults to aiConfig.json:defaultModel
+ *   completeChat(messages, { model: "muse-spark-816b" })  // model defaults to aiConfig.json:defaultModel
  */
 type AiConfigFallback = { baseUrl?: string; defaultModel?: string; maxTokens?: number; requestTimeoutMs?: number };
 

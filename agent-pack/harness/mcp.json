@@ -6,7 +6,12 @@
       "env": {
         "JIRA_BASE_URL": "https://jira.nutanix.com",
         "JIRA_PAT": "${env:JIRA_PAT}",
-        "HTTPS_PROXY": "${env:HTTPS_PROXY}"
+        "HTTPS_PROXY": "${env:HTTPS_PROXY}",
+        "NAI_API_BASE_URL": "${env:NAI_API_BASE_URL}",
+        "NAI_API_KEY": "${env:NAI_API_KEY}",
+        "NAI_DEFAULT_MODEL": "${env:NAI_DEFAULT_MODEL}",
+        "NAI_MAX_TOKENS": "${env:NAI_MAX_TOKENS}",
+        "NAI_REQUEST_TIMEOUT": "${env:NAI_REQUEST_TIMEOUT}"
       }
     },
     "mcp-loom": {
