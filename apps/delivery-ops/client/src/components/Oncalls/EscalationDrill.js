@@ -239,12 +239,12 @@ export default function EscalationDrill({
             <table className="oc-table">
               <thead>
                 <tr>
-                  <th>KPI</th>
-                  <th>Field ticket (CFD / CFI)</th>
-                  <th>Linked from OnCall</th>
-                  <th>Owner</th>
-                  <th>Wait / resolve</th>
-                  <th>OnCall comments</th>
+                  <th scope="col">KPI</th>
+                  <th scope="col">Field ticket (CFD / CFI)</th>
+                  <th scope="col">Linked from OnCall</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Wait / resolve</th>
+                  <th scope="col">OnCall comments</th>
                 </tr>
               </thead>
               <tbody>

@@ -56,10 +56,38 @@ function ExplainHero({ label, cell, explain, jiraBase, onOpen, meta, agedDays })
   const showJiraHint = Boolean(jiraUrl && onOpen);
   const tone = String(label || '').toLowerCase().includes('mttr') || String(label).toLowerCase().includes('throughput') || String(label).toLowerCase().includes('aged share') ? 'neutral' : '';
   const g = heroGlossary(label, agedDays);
-  const tip = [g.what && `What: ${g.what}`, g.how && `How: ${g.how}`, g.why && `Why: ${g.why}`, meta ? `Meta: ${meta}` : null].filter(Boolean).join('\n');
+  const [tipOpen, setTipOpen] = React.useState(false);
+  const tipId = React.useId();
+  const hasTip = Boolean(g.what || g.how || g.why || meta);
   return (
-    <div className={`ocv2-hero ${tone ? 'ocv2-hero-neutral' : ''}`} title={jiraUrl ? `Open in JIRA` : undefined}>
-      <div className="label">{label} <span title={tip} aria-label={`Explain ${label}`} style={{ cursor: 'help', fontWeight: 700, marginLeft: 4 }}>ℹ︎</span></div>
+    <div className={`ocv2-hero ${tone ? 'ocv2-hero-neutral' : ''}`}>
+      <div className="label ocv2-hero-label">
+        <span>{label}</span>
+        {hasTip ? (
+          <span className="ocv2-tooltip-wrap">
+            <button
+              type="button"
+              className="ocv2-info-btn"
+              aria-label={`Explain ${label}`}
+              aria-describedby={tipId}
+              aria-expanded={tipOpen}
+              onClick={() => setTipOpen((v) => !v)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setTipOpen(false); }}
+              onBlur={(e) => { if (!e.currentTarget.parentElement?.contains(e.relatedTarget)) setTipOpen(false); }}
+            >
+              ℹ︎
+            </button>
+            {tipOpen ? (
+              <span id={tipId} role="tooltip" className="ocv2-tooltip">
+                {g.what ? <span className="ocv2-tooltip-row"><strong>What:</strong> {g.what}</span> : null}
+                {g.how ? <span className="ocv2-tooltip-row"><strong>How:</strong> {g.how}</span> : null}
+                {g.why ? <span className="ocv2-tooltip-row"><strong>Why:</strong> {g.why}</span> : null}
+                {meta ? <span className="ocv2-tooltip-row"><strong>Meta:</strong> {meta}</span> : null}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+      </div>
       {onOpen ? (
         <button type="button" className="value oc-hero-open" onClick={onOpen} aria-label={`Show ${label}: ${count}`}>
           {count}
@@ -80,6 +108,29 @@ function ExplainHero({ label, cell, explain, jiraBase, onOpen, meta, agedDays })
       ) : null}
     </div>
   );
+}
+
+function getBucketTickets(openTickets, bucket) {
+  if (!Array.isArray(openTickets)) return [];
+  if (bucket === 'open') return openTickets;
+  if (bucket === 'needInfo') return openTickets.filter((t) => String(t.status || '').toLowerCase().trim() === 'need info');
+  if (bucket === 'waiting') return openTickets.filter((t) => String(t.status || '').toLowerCase().trim() === 'waiting for customer');
+  return openTickets;
+}
+function medianAgeDays(tickets) {
+  const ages = (Array.isArray(tickets) ? tickets : []).map((t) => t.ageDays).filter((v) => typeof v === 'number' && !Number.isNaN(v)).sort((a, b) => a - b);
+  if (!ages.length) return null;
+  const mid = Math.floor(ages.length / 2);
+  if (ages.length % 2 === 1) return ages[mid];
+  return Math.round((ages[mid - 1] + ages[mid]) / 2);
+}
+function oldestTicket(tickets) {
+  if (!Array.isArray(tickets) || !tickets.length) return null;
+  let oldest = tickets[0];
+  for (const t of tickets) {
+    if ((t.ageDays ?? -1) > (oldest.ageDays ?? -1)) oldest = t;
+  }
+  return oldest?.key ? oldest : null;
 }
 
 function deriveKeysForView(mode, dash, agedDays) {
@@ -157,9 +208,9 @@ export default function OncallsV2Page() {
 
   return (
     <div className="ocv2-page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div className="ocv2-header">
         <h1>OnCalls</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="ocv2-header-actions">
           {data?.asOf && <span className="oc-chip">as of {new Date(data.asOf).toLocaleString()}</span>}
           <button type="button" className="oc-btn" onClick={refresh} disabled={loading || refreshing}>
             {refreshing ? 'Pulling…' : 'Pull from JIRA'}
@@ -172,11 +223,11 @@ export default function OncallsV2Page() {
 
       <PillBar timeframe={timeframe} setTimeframe={setTimeframe} />
 
-      <details style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', marginBottom: 'var(--space-4)', background: 'var(--surface)' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 'var(--fs-small)' }}>What each number means — how to read & why it matters (ℹ︎ on each card)</summary>
-        <div style={{ marginTop: 12, overflowX: 'auto' }}>
-          <table className="ocv2-table" style={{ minWidth: 720 }}>
-            <thead><tr><th style={{ width: 160 }}>Hero</th><th>What it counts</th><th>How to read</th><th>Why it matters</th></tr></thead>
+      <details className="ocv2-details">
+        <summary className="ocv2-details-summary">What each number means — how to read & why it matters (ℹ︎ on each card)</summary>
+        <div className="ocv2-details-body">
+          <table className="ocv2-table ocv2-table--guide">
+            <thead><tr><th scope="col" className="ocv2-col-hero">Hero</th><th scope="col">What it counts</th><th scope="col">How to read</th><th scope="col">Why it matters</th></tr></thead>
             <tbody>
               {[
                 ['Open now', 'Open OnCalls in team scope (statusCategory != Done)', 'Click number → in-app list (age/status); Open in JIRA ↗ → exact JQL', 'Live customer load; rising = capacity squeeze'],
@@ -196,11 +247,11 @@ export default function OncallsV2Page() {
                 ['Improvements', 'NDB-gap subset issuetype Improvement/Story/Task', 'Filtered by issuetype improvement', 'Enhancements capacity planning'],
                 ['Other', 'Remaining NDB gaps', 'Leftover key set', 'Should stay <10% if taxonomy healthy'],
               ].map(([h, w, hr, y]) => (
-                <tr key={h}><td style={{ fontWeight: 600 }}>{h}</td><td>{w}</td><td style={{ color: 'var(--muted)' }}>{hr}</td><td>{y}</td></tr>
+                <tr key={h}><td className="ocv2-cell-strong">{h}</td><td>{w}</td><td className="ocv2-cell-muted">{hr}</td><td>{y}</td></tr>
               ))}
             </tbody>
           </table>
-          <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--muted)', marginTop: 8 }}>Every count → in-app drill (PathDrill) + Open in JIRA ↗ → exact JQL (never both external). All JIRA links open in new tab.</p>
+          <p className="ocv2-details-foot">Every count → in-app drill (PathDrill) + Open in JIRA ↗ → exact JQL (never both external). All JIRA links open in new tab.</p>
         </div>
       </details>
 
@@ -217,7 +268,7 @@ export default function OncallsV2Page() {
 
           {/* audience: team-exec — story first, then drill-down */}
           <div className="ocv2-ai-card">
-            <h3 style={{ margin: '0 0 8px' }}>AI Concern — {timeframe} <span title="AI generated" aria-label="AI generated" style={{ fontSize: '0.9em', marginLeft: 4 }}>✨</span></h3>
+            <h3 className="ocv2-ai-title">AI Concern — {timeframe} <span title="AI generated" aria-label="AI generated" className="ocv2-ai-sparkle">✨</span></h3>
             {aiConcernState === 'idle' && <p className="oc-muted">Concern generates after metrics load.</p>}
             {aiConcernState === 'loading' && <p className="oc-muted">Fusing quant+hotspot…</p>}
             {aiConcernState === 'error' && <p className="oc-error">{aiConcernError}</p>}
@@ -241,40 +292,40 @@ export default function OncallsV2Page() {
             <ExplainHero label="Aged share" cell={{ count: `${health.agedShare ?? 0}%`, jql: hero.agedOpen?.jql }} meta={`${hero.agedOpen?.count ?? 0} of ${hero.open?.count ?? 0} open`} explain="Aged / open ratio" jiraBase={jiraBase} onOpen={() => openDrill('agedOpen', 'open')} agedDays={agedDays} />
           </div>
 
-          {/* How long open table */}
+          {/* How long open table — median age + oldest derived from filtered openTickets per bucket (not MTTR) */}
           <div className="ocv2-table-wrap">
             <table className="ocv2-table">
               <thead>
                 <tr>
-                  <th>Bucket</th>
-                  <th>Count</th>
-                  <th>Median age</th>
-                  <th>Oldest</th>
-                  <th>JQL proof</th>
+                  <th scope="col">Bucket</th>
+                  <th scope="col">Count</th>
+                  <th scope="col">Median age</th>
+                  <th scope="col">Oldest</th>
+                  <th scope="col">JQL proof</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Open now</td>
-                  <td>{hero.open?.count ?? 0}</td>
-                  <td>{health.mttrMedian ?? '—'}d</td>
-                  <td>{(data.openTickets || [])[0]?.key || '—'}</td>
-                  <td>{hero.open?.jql ? <a href={jiraHref(jiraBase, hero.open.jql)} target="_blank" rel="noopener noreferrer">Open in JIRA ↗</a> : '—'}</td>
-                </tr>
-                <tr>
-                  <td>Need Info</td>
-                  <td>{data.workflow?.needInfo?.count ?? 0}</td>
-                  <td>—</td>
-                  <td>—</td>
-                  <td>{data.workflow?.needInfo?.jql ? <a href={jiraHref(jiraBase, data.workflow.needInfo.jql)} target="_blank" rel="noopener noreferrer">Open in JIRA ↗</a> : '—'}</td>
-                </tr>
-                <tr>
-                  <td>Waiting for Customer</td>
-                  <td>{data.workflow?.waiting?.count ?? 0}</td>
-                  <td>—</td>
-                  <td>—</td>
-                  <td>{data.workflow?.waiting?.jql ? <a href={jiraHref(jiraBase, data.workflow.waiting.jql)} target="_blank" rel="noopener noreferrer">Open in JIRA ↗</a> : '—'}</td>
-                </tr>
+                {(() => {
+                  const openTickets = data.openTickets || [];
+                  const buckets = [
+                    { label: 'Open now', tickets: getBucketTickets(openTickets, 'open'), count: hero.open?.count ?? 0, jql: hero.open?.jql },
+                    { label: 'Need Info', tickets: getBucketTickets(openTickets, 'needInfo'), count: data.workflow?.needInfo?.count ?? 0, jql: data.workflow?.needInfo?.jql },
+                    { label: 'Waiting for Customer', tickets: getBucketTickets(openTickets, 'waiting'), count: data.workflow?.waiting?.count ?? 0, jql: data.workflow?.waiting?.jql },
+                  ];
+                  return buckets.map((b) => {
+                    const med = medianAgeDays(b.tickets);
+                    const oldest = oldestTicket(b.tickets);
+                    return (
+                      <tr key={b.label}>
+                        <td>{b.label}</td>
+                        <td>{b.count}</td>
+                        <td>{med != null ? `${med}d` : '—'}</td>
+                        <td>{oldest ? <a href={ticketHref(jiraBase, oldest.key)} target="_blank" rel="noopener noreferrer">{oldest.key}</a> : '—'}</td>
+                        <td>{b.jql ? <a href={jiraHref(jiraBase, b.jql)} target="_blank" rel="noopener noreferrer">Open in JIRA ↗</a> : '—'}</td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -282,20 +333,29 @@ export default function OncallsV2Page() {
           {/* Created vs Resolved graph reuse KpiPulseBand */}
           <KpiPulseBand pulse={data.pulse} jiraBaseUrl={jiraBase} title={`OnCalls pulse · ${timeframe}`} domainHint="OnCalls" hideResolved loading={loading && !data.pulse} error={data.errors?.pulse || null} />
 
-          {/* Taxonomy 3 cards — count → gap drawer (past scope), Jira link → exact JQL */}
+          {/* Taxonomy 3 cards — count → in-app drill (PathDrill), Open in JIRA ↗ → exact JQL; NDB sub-drill expands via separate toggle */}
           <div className="ocv2-taxonomy">
             <ExplainHero label="Duds" cell={taxonomy.duds} explain="Duplicate / Won't Do / Cannot Reproduce / no linked fix" jiraBase={jiraBase} meta="resolution gaps" onOpen={() => openDrill('duds', 'past')} agedDays={agedDays} />
-            <button type="button" onClick={() => setShowNdbSub((v) => !v)} aria-expanded={showNdbSub} title="Toggle NDB breakdown" style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-              <ExplainHero label="NDB gaps" cell={taxonomy.ndbGaps} explain="Linked fix in NDB project family — click to expand" jiraBase={jiraBase} meta="our gaps" onOpen={() => openDrill('ndbGaps', 'past')} agedDays={agedDays} />
-            </button>
+            <div className="ocv2-ndb-wrap">
+              <ExplainHero label="NDB gaps" cell={taxonomy.ndbGaps} explain="Linked fix in NDB project family" jiraBase={jiraBase} meta="our gaps" onOpen={() => openDrill('ndbGaps', 'past')} agedDays={agedDays} />
+              <button
+                type="button"
+                className="ocv2-ndb-toggle"
+                aria-expanded={showNdbSub}
+                aria-controls="ndb-sub-drill"
+                onClick={() => setShowNdbSub((v) => !v)}
+              >
+                {showNdbSub ? 'Collapse NDB ▴' : 'Expand NDB ▾'}
+              </button>
+            </div>
             <ExplainHero label="Other-team gaps" cell={taxonomy.otherTeamGaps} explain="Linked fix outside NDB (other product teams)" jiraBase={jiraBase} meta="linked to other teams" onOpen={() => openDrill('otherTeamGaps', 'past')} agedDays={agedDays} />
           </div>
 
-          {/* NDB drill 4 sub-cards — hidden until double-click */}
+          {/* NDB drill 4 sub-cards — hidden until single click */}
           {showNdbSub && (
             <>
               <h3>NDB sub-drill (inherits {timeframe})</h3>
-              <div className="ocv2-ndb-drill">
+              <div id="ndb-sub-drill" className="ocv2-ndb-drill">
                 <ExplainHero label="TH linked" cell={ndbSub.thLinked} explain="NDB gaps with TechHelp" jiraBase={jiraBase} onOpen={() => openDrill('thLinked', 'past')} />
                 <ExplainHero label="Bugs" cell={ndbSub.bugs} explain="Linked bug type" jiraBase={jiraBase} onOpen={() => openDrill('bugs', 'past')} />
                 <ExplainHero label="Improvements" cell={ndbSub.improvements} explain="Linked improvement/story" jiraBase={jiraBase} onOpen={() => openDrill('improvements', 'past')} />

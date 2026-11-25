@@ -444,9 +444,9 @@ export default function PathDrill({
             <table className="oc-table">
               <thead>
                 <tr>
-                  <th>OnCall · status · about <span title="AI generated" aria-label="AI generated">✨</span></th>
-                  <th>Linked {linkedSpec.linkedNoun}</th>
-                  <th>OnCall comments</th>
+                  <th scope="col">OnCall · status · about <span title="AI generated" aria-label="AI generated">✨</span></th>
+                  <th scope="col">Linked {linkedSpec.linkedNoun}</th>
+                  <th scope="col">OnCall comments</th>
                 </tr>
               </thead>
               <tbody>
@@ -491,12 +491,12 @@ export default function PathDrill({
             <table className="oc-table">
               <thead>
                 <tr>
-                  <th>OnCall (customer)</th>
-                  <th>Owner</th>
-                  <th>{past ? 'Cycle' : 'Age'}</th>
-                  <th>Status</th>
-                  <th>About <span title="AI generated" aria-label="AI generated">✨</span></th>
-                  <th>Comments</th>
+                  <th scope="col">OnCall (customer)</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">{past ? 'Cycle' : 'Age'}</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">About <span title="AI generated" aria-label="AI generated">✨</span></th>
+                  <th scope="col">Comments</th>
                 </tr>
               </thead>
               <tbody>
