@@ -93,6 +93,15 @@ function compareReleases(a, b) {
 }
 
 async function discoverReleases(token, projectKey) {
+  async function fallbackFromConfig() {
+    try {
+      const cfg = require('../config/releaseVersionsEmailConfig.json');
+      const names = Object.keys(cfg.releaseGateDates || {});
+      const filtered = names.filter((n) => /\d+\.\d+/.test(n));
+      filtered.sort(compareReleases);
+      return filtered;
+    } catch (_) { return []; }
+  }
   try {
     const jira = await getJira(token);
     const versions = await jira.getProjectVersions(projectKey);
@@ -101,8 +110,14 @@ async function discoverReleases(token, projectKey) {
     // Keep only major/minor/maintenance (dotted numeric), exclude master/Era Future etc
     const filtered = names.filter((n) => /\d+\.\d+/.test(n));
     filtered.sort(compareReleases);
+    if (filtered.length) return filtered;
+    // JIRA returned no dotted releases (e.g. ERA only has master/Era Future) — fallback to config
+    const fb = await fallbackFromConfig();
+    if (fb.length) return fb;
     return filtered;
   } catch (_) {
+    const fb = await fallbackFromConfig();
+    if (fb.length) return fb;
     return [];
   }
 }
