@@ -36,9 +36,7 @@ export function useDeferredInsights(teamId, { releases, priority, component } = 
     setError(null);
     try {
       const params = { teamId };
-      if (releases && (Array.isArray(releases) ? releases.length : String(releases).trim())) {
-        params.releases = Array.isArray(releases) ? releases.join(',') : String(releases);
-      }
+      if (releasesKey) params.releases = releasesKey;
       if (priority) params.priority = priority;
       if (component) params.component = component;
       let resp;
